@@ -1,0 +1,79 @@
+/*
+Nombre del archivo: cale.tokens.css
+Ruta: C:\Users\ITSQMET\Desktop\eventos\cale\cale.tokens.css
+Función:
+- Tokens visuales base del módulo cale
+- Colores, radios, sombras, espaciados y alturas base
+- Normaliza la pantalla para que el layout sea consistente
+*/
+
+:root {
+  --cale-bg: #f3f6fb;
+  --cale-surface: #ffffff;
+  --cale-surface-2: #f8fbff;
+
+  --cale-border: #d8e2ef;
+  --cale-border-soft: #e7eef7;
+
+  --cale-text: #0f172a;
+  --cale-text-soft: #5f7088;
+
+  --cale-primary: #2563eb;
+  --cale-primary-soft: #eef4ff;
+
+  --cale-danger-soft: #fff7f7;
+
+  --cale-radius: 16px;
+  --cale-radius-sm: 12px;
+
+  --cale-gap: 10px;
+  --cale-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
+
+  /* Altura usada por cale.dayview.css para all-day */
+  --cale-allday-max-height: 260px;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  background: var(--cale-bg);
+  color: var(--cale-text);
+  font-family:
+    Inter,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+
+body {
+ /* Corrección: se elimina el ancho mínimo global forzado. */
+ /* Evita scroll horizontal y cortes visuales en ventanas más estrechas. */
+ display: flex;
+ flex-direction: column;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #8a99ae;
+}
+
+[hidden] {
+  display: none !important;
+}

@@ -1,0 +1,138 @@
+<!-- =========================================================
+Nombre del archivo: prioridad.index.html
+Ruta: /prioridad/prioridad.index.html
+Función o funciones:
+- Vista principal del módulo Prioridad
+- Carga de estilos y scripts del módulo
+- Hosts: tablero, modal, toasts
+========================================================= -->
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Prioridad · Eventos</title>
+  <link rel="icon" href="data:," />
+
+  <!-- CSS modular -->
+  <link rel="stylesheet" href="./prioridad.tokens.css" />
+  <link rel="stylesheet" href="./prioridad.styles.css" />
+  <link rel="stylesheet" href="./prioridad.board.css" />
+  <link rel="stylesheet" href="./prioridad.modal.css" />
+  <link rel="stylesheet" href="../menu/menu.styles.css" />
+</head>
+
+<body>
+  <!-- Menu superior -->
+  <div id="menuHost"></div>
+
+  <div class="wrap">
+    <section class="card">
+      <!-- Filtros en una sola fila -->
+      <div class="toolbarRow">
+        <div class="filtersRow">
+          <input id="q" type="search" placeholder="Buscar por título..." />
+
+          <select id="fKind">
+            <option value="">Tipo: Todos</option>
+            <option value="personal">Personal</option>
+            <option value="trabajo">Trabajo</option>
+          </select>
+
+          <select id="fPrio">
+            <option value="">Prioridad: Todas</option>
+            <option value="alta">Alta</option>
+            <option value="media">Media</option>
+            <option value="baja">Baja</option>
+          </select>
+
+          <select id="fAlerts">
+            <option value="">Alertas: Todas</option>
+            <option value="yes">Con alertas</option>
+            <option value="no">Sin alertas</option>
+          </select>
+        </div>
+
+        <div class="actionsRow">
+          <button class="btn ghost" id="btnNewFamily" type="button">Crear familia</button>
+          <button class="btn ghost" id="btnReload" type="button">Recargar</button>
+        </div>
+      </div>
+
+      <!-- Host del tablero -->
+      <div id="boardHost"></div>
+
+      <div class="msg" id="msg" aria-live="polite"></div>
+    </section>
+
+    <div id="modalHost"></div>
+    <div class="toastHost" id="toastHost"></div>
+
+    <footer class="foot muted">
+      <small>Prioridad · Firestore · Alertas laborables</small>
+    </footer>
+  </div>
+
+  <!-- Firebase compat -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+
+  <!-- Menu scripts -->
+  <script src="../menu/menu.config.js"></script>
+  <script src="../menu/menu.router.js"></script>
+  <script src="../menu/menu.render.js"></script>
+  <script src="../menu/menu.boot.js"></script>
+
+  <!-- Utils base -->
+  <script src="./prioridad.utils.dom.js"></script>
+  <script src="./prioridad.utils.text.js"></script>
+  <script src="./prioridad.utils.datetime.js"></script>
+  <script src="./prioridad.utils.businessdays.js"></script>
+  <script src="./prioridad.utils.js"></script>
+
+  <!-- UI -->
+  <script src="./prioridad.toast.js"></script>
+  <script src="./prioridad.notifications.js"></script>
+
+  <!-- Firebase init -->
+  <script src="./prioridad.firebase.js"></script>
+
+  <!-- DB core -->
+  <script src="./prioridad.db.core.js"></script>
+
+  <!-- DB familias -->
+  <script src="./prioridad.db.families.read.js"></script>
+  <script src="./prioridad.db.families.write.js"></script>
+
+  <!-- DB eventos -->
+  <script src="./prioridad.db.read.js"></script>
+  <script src="./prioridad.db.write.patch.js"></script>
+  <script src="./prioridad.db.write.alerts.js"></script>
+  <script src="./prioridad.db.write.progress.js"></script>
+  <script src="./prioridad.db.write.priority.js"></script>
+
+  <!-- Estado y filtros -->
+  <script src="./prioridad.state.js"></script>
+  <script src="./prioridad.filters.js"></script>
+
+  <!-- Alertas -->
+  <script src="./prioridad.alerts.generate3.js"></script>
+
+  <!-- Board -->
+  <script src="./prioridad.board.render.js"></script>
+  <script src="./prioridad.board.handlers.js"></script>
+
+  <!-- Modal -->
+  <script src="./prioridad.modal.core.js"></script>
+  <script src="./prioridad.modal.render.js"></script>
+  <script src="./prioridad.modal.handlers.js"></script>
+
+  <!-- Modal familias -->
+  <script src="./prioridad.family.modal.render.js"></script>
+  <script src="./prioridad.family.modal.handlers.js"></script>
+
+  <!-- Scheduler + App -->
+  <script src="./prioridad.scheduler.js"></script>
+  <script src="./prioridad.app.js"></script>
+</body>
+</html>

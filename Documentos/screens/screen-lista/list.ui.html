@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>documentos | lista</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232563eb'/%3E%3Cpath d='M20 18h16a8 8 0 0 1 8 8v20H20a4 4 0 0 1-4-4V22a4 4 0 0 1 4-4z' fill='white' opacity='.95'/%3E%3Cpath d='M24 28h16M24 34h16M24 40h12' stroke='%232563eb' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="./list.style.css" />
+</head>
+<body>
+  <main class="wrap" aria-label="Lista de documentos">
+    <header class="top">
+      <div class="brand">
+        <div class="logo" aria-hidden="true">D</div>
+        <div>
+          <h1>Biblioteca</h1>
+          <p>Selecciona un documento para generar o revisar</p>
+        </div>
+      </div>
+
+      <div class="actions">
+        <a class="btn ghost" href="../../index.html">Inicio</a>
+      </div>
+    </header>
+
+    <section class="panel">
+      <div class="filters">
+        <label class="field">
+          <span>Buscar</span>
+          <input id="q" type="search" placeholder="Ej: certificado, memo, antiplagio" autocomplete="off" />
+        </label>
+
+        <label class="field">
+          <span>Estado</span>
+          <select id="status">
+            <option value="all">Todos</option>
+            <option value="ready">Disponibles</option>
+            <option value="pending">Pendientes</option>
+          </select>
+        </label>
+      </div>
+
+      <div id="meta" class="meta" aria-live="polite"></div>
+      <div id="grid" class="grid" aria-label="Tarjetas de documentos"></div>
+    </section>
+
+    <footer class="foot">
+      <div class="hint">Sin modo oscuro. Diseño minimalista.</div>
+      <div class="hint">Catálogo: <code>data/docs.index.json</code></div>
+    </footer>
+  </main>
+
+  <script src="./list.logic.js"></script>
+</body>
+</html>

@@ -1,0 +1,156 @@
+/*
+ARCHIVO: pdf.styles.css
+RUTA: src/pdf/pdf.styles.css
+FUNCIÓN (FUERA DEL CÓDIGO):
+- Estilos del PDF: portada, índice, secciones, tablas y bloques de código.
+*/
+
+@page { margin: 18mm; }
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  color: #0f172a;
+  line-height: 1.35;
+}
+
+h1 {
+  font-size: 20px;
+  margin: 0 0 10px 0;
+  padding-bottom: 6px;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.cover {
+  padding: 24px;
+  border: 2px solid #e2e8f0;
+  border-radius: 14px;
+}
+
+.cover-badge {
+  display: inline-block;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  color: #2563eb;
+  background: #eff6ff;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid #bfdbfe;
+  margin-bottom: 14px;
+}
+
+.cover-title {
+  font-size: 28px;
+  font-weight: 900;
+  margin-bottom: 10px;
+}
+
+.cover-sub {
+  font-size: 12px;
+  color: #475569;
+  margin-top: 3px;
+}
+
+.small { font-size: 12px; }
+.muted { color: #475569; }
+
+.pagebreak { page-break-after: always; }
+
+.toc {
+  padding-left: 18px;
+}
+
+.toc li {
+  margin: 6px 0;
+}
+
+.toc a {
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.kv {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.kv .k {
+  font-weight: 800;
+  color: #334155;
+}
+
+.kv .v {
+  color: #0f172a;
+  word-break: break-word;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  font-size: 12px;
+}
+
+.table th, .table td {
+  border: 1px solid #e2e8f0;
+  padding: 8px;
+  vertical-align: top;
+}
+
+.table th {
+  background: #f8fafc;
+  font-weight: 900;
+  color: #0f172a;
+}
+
+.file-section {
+  margin-top: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px;
+  page-break-inside: avoid;
+}
+
+.file-header {
+  margin-bottom: 10px;
+}
+
+.file-title {
+  font-weight: 900;
+  font-size: 14px;
+}
+
+.file-meta {
+  margin-top: 6px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.pill {
+  display: inline-block;
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.codeblock {
+  margin: 0;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid #0b1220;
+  background: #0b1220;
+  color: #e5e7eb;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 10.5px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}

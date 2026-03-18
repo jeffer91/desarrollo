@@ -1,0 +1,138 @@
+/* =========================================================
+Nombre del archivo: prioridad.styles.css
+Ruta: /prioridad/prioridad.styles.css
+Función o funciones:
+- Estilos globales del dashboard
+- Hero, toolbar, mensajes, footer, toast host
+(Se mantiene, sin cambios funcionales. Solo conserva consistencia global.)
+========================================================= */
+
+.hero{
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 16px;
+  padding: 18px;
+  background:
+    linear-gradient(180deg, rgba(124,58,237,0.06), transparent 60%),
+    linear-gradient(90deg, rgba(37,99,235,0.06), transparent 62%),
+    var(--surface);
+}
+
+.heroTitle{
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  margin-bottom: 4px;
+}
+
+.heroSub{
+  color: var(--muted);
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.heroRight{
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.muted{ color: var(--muted); }
+.foot{
+  margin-top: 14px;
+  text-align: center;
+}
+.foot small{
+  color: var(--muted);
+  font-weight: 700;
+}
+
+/* Toolbar */
+.toolbarRow{
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.filtersRow{
+  display: grid;
+  grid-template-columns: 1.4fr 0.7fr 0.7fr 0.7fr;
+  gap: 10px;
+  flex: 1;
+  min-width: 420px;
+}
+
+.actionsRow{
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+/* Responsive */
+@media (max-width: 980px){
+  .filtersRow{
+    grid-template-columns: 1fr 1fr;
+    min-width: 100%;
+  }
+  .actionsRow{ width: 100%; justify-content: flex-end; }
+}
+
+@media (max-width: 560px){
+  .hero{ flex-direction: column; }
+  .heroRight{ justify-content: flex-start; }
+  .filtersRow{ grid-template-columns: 1fr; }
+}
+
+/* Mensajes */
+.msg{
+  margin-top: 10px;
+  font-weight: 800;
+  color: var(--muted);
+}
+
+/* Toast */
+.toastHost{
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  display: grid;
+  gap: 10px;
+  z-index: 9999;
+}
+.toast{
+  width: min(360px, calc(100vw - 32px));
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(10px);
+  border-radius: 14px;
+  padding: 12px 12px;
+  box-shadow: var(--shadow);
+}
+.toast .h{
+  font-weight: 950;
+  margin-bottom: 4px;
+}
+.toast .p{
+  color: var(--muted);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+/* Scrollbar suave */
+@media (pointer: fine){
+  *::-webkit-scrollbar{ width: 10px; height: 10px; }
+  *::-webkit-scrollbar-thumb{
+    background: rgba(15,23,42,0.15);
+    border-radius: 999px;
+    border: 2px solid rgba(255,255,255,0.9);
+  }
+  *::-webkit-scrollbar-track{ background: transparent; }
+}

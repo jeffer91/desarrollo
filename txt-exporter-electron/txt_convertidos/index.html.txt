@@ -1,0 +1,104 @@
+
+==============================================================================================================
+##############################################################################################################
+ARCHIVO
+##############################################################################################################
+==============================================================================================================
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+NOMBRE: index.html
+RUTA: src/ui/index.html
+
+==============================================================================================================
+##############################################################################################################
+CÓDIGO COMPLETO
+##############################################################################################################
+==============================================================================================================
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self';">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TXT Exporter</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="title">
+      <div class="appname">TXT Exporter</div>
+      <div class="subtitle">Electron · Exporta .html .js .css .json a txt_convertidos + todo.txt</div>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="panel">
+      <h2>1) Carpeta raíz</h2>
+
+      <div class="row">
+        <button id="btnPick" class="btn primary">Elegir carpeta raíz</button>
+        <div class="pathbox">
+          <div class="label">Ruta elegida</div>
+          <div id="rootPath" class="path">(sin seleccionar)</div>
+        </div>
+      </div>
+
+      <div class="row">
+        <button id="btnScan" class="btn">Escanear</button>
+        <button id="btnExport" class="btn success" disabled>Exportar TXT</button>
+      </div>
+
+      <div class="summary">
+        <div class="summaryItem">
+          <div class="label">Archivos detectados</div>
+          <div id="countFiles" class="value">0</div>
+        </div>
+        <div class="summaryItem">
+          <div class="label">Exportados</div>
+          <div id="countExported" class="value">0</div>
+        </div>
+        <div class="summaryItem">
+          <div class="label">Errores lectura</div>
+          <div id="countErrors" class="value">0</div>
+        </div>
+      </div>
+
+      <div class="options">
+        <h3>Opciones (fijas por tu configuración)</h3>
+        <ul>
+          <li>Incluye: <b>.html .js .css .json</b></li>
+          <li>Excluye: <b>node_modules, .git, dist, build, txt_convertidos</b></li>
+          <li>Salida: <b>txt_convertidos/</b> dentro de la raíz</li>
+          <li>Por archivo: <b>nombre.ext.txt</b></li>
+          <li>Maestro: <b>todo.txt</b> con muchos separadores</li>
+          <li>Si falla lectura: <b>alerta</b> y se omite el archivo</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>2) Progreso</h2>
+      <div id="progressLog" class="log"></div>
+
+      <h2>3) Errores de lectura</h2>
+      <div class="hint">Si hubo errores, aquí verás la lista de rutas cortas.</div>
+      <div id="errorLog" class="log error"></div>
+    </section>
+  </main>
+
+  <div id="alertBox" class="alert hidden">
+    <div class="alertHeader">
+      <div id="alertTitle" class="alertTitle">Alerta</div>
+      <button id="alertClose" class="btn tiny">Cerrar</button>
+    </div>
+    <div id="alertMessage" class="alertMessage"></div>
+    <pre id="alertDetails" class="alertDetails"></pre>
+  </div>
+
+  <script src="./renderer.js"></script>
+</body>
+</html>
+

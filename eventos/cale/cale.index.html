@@ -1,0 +1,440 @@
+<!-- =========================================================
+Nombre del archivo: cale.index.html
+Ubicación: /cale/cale.index.html
+Función o funciones:
+- Pantalla principal del módulo Calendario
+- Conserva los ids y hooks usados por la capa JS actual
+- Mantiene filtros + calendario como foco principal
+- Agrega un panel propio para "Pendientes del día"
+- Prepara el detalle del evento en popup/modal
+========================================================= -->
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Calendario · Eventos</title>
+  <link rel="icon" href="data:," />
+
+  <!-- Estilos del menú superior externo al módulo -->
+  <link rel="stylesheet" href="./menu/menu.styles.css" />
+
+  <!-- Librería de calendario -->
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css"
+  />
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+
+  <!-- Corrección: se cargan las librerías Firebase compat para exponer window.firebase.
+       Evita que cale.db.js falle al validar firebase.initializeApp y firebase.firestore. -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+  <link rel="stylesheet" href="./cale.css" />
+</head>
+<body>
+  <!-- Menú superior -->
+  <div id="menuHost"></div>
+
+  <!-- =====================================================
+       Aplicación principal del módulo
+       Se conserva el id base para no romper la capa JS.
+       ===================================================== -->
+  <div id="cale-app">
+    <!-- =====================================================
+         Header principal
+         Se conservan los ids usados por la navegación actual.
+         ===================================================== -->
+    <header id="cale-header">
+      <div id="cale-title-wrap" class="cale-header-block">
+        <div class="cale-header-kicker">Agenda visual</div>
+        <h1 id="cale-title">Calendario Agenda</h1>
+        <p id="cale-subtitle">
+          Vista más limpia, filtros necesarios y detalle del evento en ventana emergente.
+        </p>
+      </div>
+
+      <div id="cale-toolbar">
+        <div id="cale-nav-wrap" class="cale-toolbar-group">
+          <button id="cale-btn-prev" type="button" class="cale-btn" aria-label="Ir al periodo anterior">
+            ◀
+          </button>
+          <button id="cale-btn-today" type="button" class="cale-btn cale-btn-primary">
+            Hoy
+          </button>
+          <button id="cale-btn-next" type="button" class="cale-btn" aria-label="Ir al periodo siguiente">
+            ▶
+          </button>
+        </div>
+
+        <div id="cale-current-range" aria-live="polite">
+          Cargando rango...
+        </div>
+
+        <div id="cale-view-wrap" class="cale-toolbar-group">
+          <!-- Se conservan ids, clases y data-view usados por JS -->
+          <button
+            id="cale-view-month"
+            type="button"
+            class="cale-btn cale-view-btn"
+            data-view="dayGridMonth"
+          >
+            Mes
+          </button>
+          <button
+            id="cale-view-week"
+            type="button"
+            class="cale-btn cale-view-btn"
+            data-view="timeGridWeek"
+          >
+            Semana
+          </button>
+          <button
+            id="cale-view-day"
+            type="button"
+            class="cale-btn cale-view-btn is-active"
+            data-view="timeGridDay"
+          >
+            Día
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- =====================================================
+         Contenido principal
+         Layout real:
+         - columna 1: filtros
+         - columna 2: calendario
+         El resumen sigue disponible como bloque auxiliar,
+         pero el CSS actual lo oculta para liberar ancho útil.
+         ===================================================== -->
+    <section id="cale-content">
+      <!-- ===================================================
+           Columna izquierda · Filtros
+           Se mantienen todos los ids que usa cale.filters.js.
+           =================================================== -->
+      <aside id="cale-filters" aria-label="Filtros del calendario">
+        <div class="cale-panel-head">
+          <h2>Filtros</h2>
+          <p>Usa solo lo necesario y deja el resto en segundo nivel.</p>
+        </div>
+
+        <div class="cale-filter-stack">
+          <div class="cale-filter-group cale-filter-search">
+            <label for="cale-search">Buscar</label>
+            <input
+              id="cale-search"
+              type="text"
+              placeholder="Título, descripción o lugar..."
+              autocomplete="off"
+            />
+          </div>
+
+          <div class="cale-filter-group">
+            <label for="cale-filter-status">Estado</label>
+            <select id="cale-filter-status">
+              <option value="">Todos</option>
+              <option value="programado">Programado</option>
+              <option value="pendiente">Pendiente</option>
+              <option value="en-proceso">En proceso</option>
+              <option value="confirmado">Confirmado</option>
+              <option value="completado">Completado</option>
+              <option value="cancelado">Cancelado</option>
+            </select>
+          </div>
+
+          <div class="cale-filter-group">
+            <label for="cale-filter-family">Familia</label>
+            <select id="cale-filter-family">
+              <!-- Se conserva este select para que JS lo repueble dinámicamente -->
+              <option value="">Todas</option>
+            </select>
+          </div>
+
+          <div class="cale-filter-row-2">
+            <div class="cale-filter-group">
+              <label for="cale-filter-date-from">Desde</label>
+              <input id="cale-filter-date-from" type="date" />
+            </div>
+
+            <div class="cale-filter-group">
+              <label for="cale-filter-date-to">Hasta</label>
+              <input id="cale-filter-date-to" type="date" />
+            </div>
+          </div>
+
+          <!-- =================================================
+               Filtros secundarios
+               Se mantienen para no romper la lógica actual,
+               pero se sacan del primer plano visual.
+               ================================================= -->
+          <details class="cale-advanced-filters">
+            <summary>Más filtros</summary>
+
+            <div class="cale-advanced-filters-body">
+              <div class="cale-filter-group">
+                <label for="cale-filter-priority">Prioridad</label>
+                <select id="cale-filter-priority">
+                  <option value="">Todas</option>
+                  <option value="critica">Crítica</option>
+                  <option value="alta">Alta</option>
+                  <option value="media">Media</option>
+                  <option value="baja">Baja</option>
+                </select>
+              </div>
+
+              <div class="cale-filter-group">
+                <label for="cale-filter-type">Tipo</label>
+                <select id="cale-filter-type">
+                  <option value="">Todos</option>
+                  <option value="academico">Académico</option>
+                  <option value="administrativo">Administrativo</option>
+                  <option value="reunion">Reunión</option>
+                  <option value="entrega">Entrega</option>
+                  <option value="seguimiento">Seguimiento</option>
+                  <option value="otro">Otro</option>
+                </select>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <div class="cale-filter-group cale-filter-action">
+          <!-- Se conserva el id que usa la capa de filtros -->
+          <button id="cale-btn-clear-filters" type="button" class="cale-btn cale-btn-clear">
+            Limpiar filtros
+          </button>
+        </div>
+      </aside>
+
+      <!-- ===================================================
+           Columna central · Calendario
+           Se mantiene el contenedor principal que usa FullCalendar.
+           Corrección:
+           - se agrega un panel propio para "Pendientes del día"
+           - así evitamos depender del all-day nativo para esa vista
+           =================================================== -->
+      <main id="cale-main">
+        <section id="cale-calendar-shell" aria-label="Calendario">
+          <div class="cale-panel-head cale-panel-head-main">
+            <div>
+              <h2>Agenda</h2>
+              <p>El calendario queda como foco principal de trabajo.</p>
+            </div>
+
+            <!-- Se conserva este id para mensajes de carga / estado -->
+            <div id="cale-status" role="status" aria-live="polite">
+              Cargando eventos desde la base de datos...
+            </div>
+          </div>
+
+          <!-- Corrección:
+               panel propio para pendientes del día.
+               Se llena por JS y solo se muestra en vista Día. -->
+          <section id="cale-pending-shell" aria-label="Pendientes del día" hidden>
+            <div class="cale-pending-head">
+              <div>
+                <h2 id="cale-pending-title">Pendientes del día</h2>
+                <p id="cale-pending-subtitle">Cargando pendientes.</p>
+              </div>
+
+              <div id="cale-pending-count" aria-live="polite">0</div>
+            </div>
+
+            <div id="cale-pending-list"></div>
+          </section>
+
+          <div id="cale-calendar-wrap">
+            <div id="cale-calendar"></div>
+          </div>
+        </section>
+      </main>
+
+      <!-- ===================================================
+           Columna auxiliar · Resumen
+           Se mantiene por compatibilidad visual,
+           pero el CSS actual lo deja oculto.
+           =================================================== -->
+      <aside id="cale-summary-shell" aria-label="Resumen del calendario">
+        <div class="cale-panel-head">
+          <h2>Resumen</h2>
+          <p>Lectura rápida del evento seleccionado y de la leyenda visual.</p>
+        </div>
+
+        <section class="cale-summary-card">
+          <div class="cale-summary-title">Evento seleccionado</div>
+          <div id="cale-summary-selected-title" class="cale-summary-value">Ninguno</div>
+          <div id="cale-summary-selected-date" class="cale-summary-soft">
+            Selecciona una tarjeta del calendario.
+          </div>
+        </section>
+
+        <section class="cale-summary-card">
+          <div class="cale-summary-title">Leyenda de estado</div>
+
+          <ul class="cale-legend-list">
+            <li>
+              <span class="cale-legend-dot is-programado"></span>
+              <span>Programado</span>
+            </li>
+            <li>
+              <span class="cale-legend-dot is-pendiente"></span>
+              <span>Pendiente</span>
+            </li>
+            <li>
+              <span class="cale-legend-dot is-proceso"></span>
+              <span>En proceso</span>
+            </li>
+            <li>
+              <span class="cale-legend-dot is-confirmado"></span>
+              <span>Confirmado</span>
+            </li>
+            <li>
+              <span class="cale-legend-dot is-completado"></span>
+              <span>Completado</span>
+            </li>
+            <li>
+              <span class="cale-legend-dot is-cancelado"></span>
+              <span>Cancelado</span>
+            </li>
+          </ul>
+        </section>
+
+        <section class="cale-summary-card">
+          <div class="cale-summary-title">Uso recomendado</div>
+          <p class="cale-summary-soft">
+            Filtra a la izquierda, trabaja el calendario al centro y abre el detalle en popup.
+          </p>
+        </section>
+      </aside>
+    </section>
+  </div>
+
+  <!-- =======================================================
+       Popup / Modal de detalle
+       Se conservan los ids internos que usa la capa JS de detalle.
+       ======================================================= -->
+  <div id="cale-detail-modal" class="cale-detail-modal" hidden aria-hidden="true">
+    <div id="cale-detail-backdrop" class="cale-detail-backdrop"></div>
+
+    <section
+      id="cale-detail-shell"
+      class="cale-detail-dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="cale-detail-modal-title"
+      aria-label="Detalle del evento"
+    >
+      <div class="cale-detail-head">
+        <div class="cale-detail-head-main">
+          <div class="cale-detail-overline">Detalle del evento</div>
+          <h2 id="cale-detail-modal-title">Detalle</h2>
+        </div>
+
+        <div class="cale-detail-actions">
+          <button
+            id="cale-detail-btn-close"
+            type="button"
+            class="cale-btn"
+            aria-label="Cerrar detalle"
+          >
+            Cerrar
+          </button>
+
+          <!-- Botón visible de edición. Se conserva para futura lógica. -->
+          <button id="cale-detail-btn-edit" type="button" class="cale-btn">
+            Editar
+          </button>
+
+          <!-- Este id sí lo usa cale.app.js -->
+          <button id="cale-detail-btn-done" type="button" class="cale-btn">
+            Marcar realizado
+          </button>
+        </div>
+      </div>
+
+      <div id="cale-detail-panel">
+        <!-- Estado vacío -->
+        <div id="cale-detail-empty" class="cale-detail-empty">
+          Selecciona una tarjeta para ver el detalle del evento.
+        </div>
+
+        <!-- Contenido -->
+        <div id="cale-detail-content" class="cale-detail-content" style="display:none;">
+          <div class="cale-detail-block">
+            <div class="cale-detail-label">Título</div>
+            <div id="cale-detail-title" class="cale-detail-value">-</div>
+          </div>
+
+          <div class="cale-detail-grid">
+            <div class="cale-detail-block">
+              <div class="cale-detail-label">Fecha</div>
+              <div id="cale-detail-date" class="cale-detail-value">-</div>
+            </div>
+
+            <div class="cale-detail-block">
+              <div class="cale-detail-label">Hora</div>
+              <div id="cale-detail-time" class="cale-detail-value">-</div>
+            </div>
+
+            <div class="cale-detail-block">
+              <div class="cale-detail-label">Prioridad</div>
+              <div id="cale-detail-priority" class="cale-detail-value">-</div>
+            </div>
+
+            <div class="cale-detail-block">
+              <div class="cale-detail-label">Estado</div>
+              <div id="cale-detail-status" class="cale-detail-value">-</div>
+            </div>
+
+            <div class="cale-detail-block">
+              <div class="cale-detail-label">Tipo</div>
+              <div id="cale-detail-type" class="cale-detail-value">-</div>
+            </div>
+
+            <div class="cale-detail-block">
+              <div class="cale-detail-label">Familia</div>
+              <div id="cale-detail-family" class="cale-detail-value">-</div>
+            </div>
+          </div>
+
+          <div class="cale-detail-block">
+            <div class="cale-detail-label">Lugar</div>
+            <div id="cale-detail-place" class="cale-detail-value">-</div>
+          </div>
+
+          <div class="cale-detail-block">
+            <div class="cale-detail-label">Descripción</div>
+            <div id="cale-detail-desc" class="cale-detail-value cale-detail-desc">-</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- =======================================================
+       Scripts del módulo
+       Se conserva el orden para no romper dependencias.
+       ======================================================= -->
+  <script src="./cale.config.js"></script>
+  <script src="./cale.state.js"></script>
+  <script src="./cale.firebase.js"></script>
+  <script src="./cale.db.js"></script>
+  <script src="./cale.filters.js"></script>
+  <script src="./cale.map.js"></script>
+
+  <!-- Utilidades y capas del calendario -->
+  <script src="./cale.calendar.shared.js"></script>
+  <script src="./cale.calendar.render.js"></script>
+  <script src="./cale.calendar.collect.js"></script>
+  <script src="./cale.calendar.pager.js"></script>
+
+  <!-- Orquestadores -->
+  <script src="./cale.calendar.js"></script>
+  <script src="./cale.detail.js"></script>
+  <script src="./cale.pendingpanel.js"></script>
+  <script src="./cale.app.js"></script>
+</body>
+</html>

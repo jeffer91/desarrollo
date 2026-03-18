@@ -1,0 +1,203 @@
+/* =========================================================
+Nombre del archivo: menu.styles.css
+Ubicación: /menu/menu.styles.css
+Función o funciones:
+- Estilos reutilizables del menú superior
+- Diseño compacto, simple y profesional
+- Compatible con menú principal y módulos
+- Unifica la apariencia con los demás shells del sistema
+========================================================= */
+:root{
+  --menu-bg: #f6f8fc;
+  --menu-surface: rgba(255,255,255,.92);
+  --menu-surface-2: #f8fafc;
+  --menu-text: #111827;
+  --menu-muted: #6b7280;
+  --menu-line: rgba(15,23,42,.10);
+  --menu-line-strong: rgba(49,88,216,.20);
+
+  --menu-blue: #3158d8;
+  --menu-blue-dark: #284cc2;
+  --menu-indigo: #4c5edb;
+
+  --menu-soft-blue: rgba(49,88,216,.08);
+  --menu-focus: rgba(49,88,216,.18);
+
+  --menu-shadow-xs: 0 1px 2px rgba(15,23,42,.05);
+  --menu-shadow-sm: 0 6px 16px rgba(15,23,42,.06);
+  --menu-shadow-md: 0 10px 24px rgba(15,23,42,.08);
+
+  --menu-r: 14px;
+  --menu-r-pill: 999px;
+}
+
+#menuHost{
+  padding: 6px 0 0;
+}
+
+.menuBar{
+  background: var(--menu-surface);
+  border: 1px solid var(--menu-line);
+  border-radius: var(--menu-r);
+  box-shadow: var(--menu-shadow-sm);
+  min-height: 56px;
+  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+  backdrop-filter: blur(12px);
+}
+
+.menuLeft,
+.menuRight{
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.menuRight{
+  justify-content: flex-end;
+}
+
+.menuBrandBtn{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  padding: 2px;
+  margin: 0;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.menuBrandText{
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.menuDot{
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--menu-blue) 0%, var(--menu-indigo) 100%);
+  display: inline-block;
+  flex: 0 0 auto;
+  box-shadow: 0 0 0 4px rgba(49,88,216,.10);
+}
+
+.menuTitle{
+  font-size: 13px;
+  line-height: 1.05;
+  font-weight: 800;
+  color: var(--menu-text);
+  white-space: nowrap;
+}
+
+.menuBrandHint{
+  font-size: 10px;
+  line-height: 1.1;
+  font-weight: 700;
+  color: var(--menu-muted);
+  white-space: nowrap;
+}
+
+.menuCenter{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  min-width: 0;
+  scrollbar-width: thin;
+}
+
+.menuCenter::-webkit-scrollbar{
+  height: 7px;
+}
+
+.menuCenter::-webkit-scrollbar-thumb{
+  background: rgba(15,23,42,.14);
+  border-radius: 999px;
+}
+
+.menuItem{
+  border: 1px solid var(--menu-line);
+  background: #fff;
+  color: var(--menu-text);
+  border-radius: 14px;
+  padding: 9px 14px;
+  min-height: 38px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  transition:
+    transform .12s ease,
+    border-color .12s ease,
+    background .12s ease,
+    color .12s ease,
+    box-shadow .12s ease;
+  white-space: nowrap;
+  flex: 0 0 auto;
+  box-shadow: var(--menu-shadow-xs);
+}
+
+.menuItem:hover{
+  transform: translateY(-1px);
+  border-color: var(--menu-line-strong);
+  background: var(--menu-soft-blue);
+  color: var(--menu-blue-dark);
+  box-shadow: var(--menu-shadow-sm);
+}
+
+.menuItem:focus-visible{
+  outline: 3px solid var(--menu-focus);
+  outline-offset: 2px;
+}
+
+.menuItem.active{
+  border-color: rgba(49,88,216,.34);
+  background: linear-gradient(180deg, var(--menu-blue), var(--menu-indigo));
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(49,88,216,.16);
+}
+
+.menuHint{
+  color: var(--menu-muted);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  padding: 7px 10px;
+  border-radius: var(--menu-r-pill);
+  background: var(--menu-surface-2);
+  border: 1px solid var(--menu-line);
+  box-shadow: var(--menu-shadow-xs);
+}
+
+@media (max-width: 980px){
+  .menuBar{
+    grid-template-columns: 1fr;
+    justify-items: stretch;
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .menuLeft,
+  .menuRight{
+    justify-content: center;
+  }
+
+  .menuBrandText{
+    align-items: center;
+  }
+
+  .menuCenter{
+    justify-content: flex-start;
+  }
+}

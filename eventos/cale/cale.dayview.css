@@ -1,0 +1,102 @@
+/*
+Nombre del archivo: C:\Users\ITSQMET\Desktop\eventos\cale\cale.dayview.css
+Función:
+- Ajustes exclusivos de la vista timeGridDay
+- Expande la franja all-day
+- Agrega scroll interno sin afectar semana ni mes
+*/
+
+/* =========================================================
+   Vista Día (timeGridDay) - ALL DAY en 2 columnas
+   Nota técnica:
+   En FullCalendar (v5/v6), el all-day dentro de timeGrid se renderiza
+   como un dayGrid embebido dentro de ".fc-timegrid .fc-daygrid-body".
+   Por eso, NO dependemos de ".fc-timegrid-allday" (puede no existir).
+   ========================================================= */
+
+/* Altura mínima del bloque all-day (solo vista Día) */
+.fc .fc-timeGridDay-view .fc-timegrid .fc-daygrid-day-frame,
+.fc .fc-timegrid-day-view .fc-timegrid .fc-daygrid-day-frame {
+  min-height: calc(var(--cale-allday-max-height) + 12px);
+}
+
+/* =========================================================
+   Corrección técnica:
+   En algunos layouts el wheel/trackpad termina desplazando el scrollgrid
+   principal en lugar del all-day. Forzamos que el scroller del all-day
+   sea desplazable y “contenga” el overscroll (solo Vista Día).
+   ========================================================= */
+.fc .fc-timeGridDay-view .fc-timegrid .fc-timegrid-allday .fc-scroller,
+.fc .fc-timegrid-day-view .fc-timegrid .fc-timegrid-allday .fc-scroller {
+  overflow-y: auto;              /* habilita scroll vertical del all-day */
+  overscroll-behavior: contain;  /* evita que el scroll se “escape” al contenedor padre */
+}
+
+/* Contenedor de eventos all-day: usamos FLEX WRAP para 2 columnas estables */
+.fc .fc-timeGridDay-view .fc-timegrid .fc-daygrid-body .fc-daygrid-day-events,
+.fc .fc-timegrid-day-view .fc-timegrid .fc-daygrid-body .fc-daygrid-day-events {
+  max-height: var(--cale-allday-max-height);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 2px;
+  margin-right: 2px;
+  scrollbar-width: thin;
+
+  /* Corrección: forzamos 3 columnas reales del mismo día en la franja all-day. */
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 8px; /* mantiene separación estable entre tarjetas */
+  align-items: flex-start;
+}
+
+/* Harness: FullCalendar suele posicionarlo absolute.
+   Lo devolvemos al flujo para que el flex-wrap funcione. */
+.fc .fc-timeGridDay-view .fc-timegrid .fc-daygrid-body .fc-daygrid-day-events .fc-daygrid-event-harness,
+.fc .fc-timegrid-day-view .fc-timegrid .fc-daygrid-body .fc-daygrid-day-events .fc-daygrid-event-harness {
+  position: static !important; /* clave: permitir columnas */
+  left: auto !important;
+  right: auto !important;
+  top: auto !important;
+
+  /* Corrección: cada evento ocupa 1 de 3 columnas del mismo día. */
+  width: calc((100% - 16px) / 3) !important;
+  flex: 0 0 calc((100% - 16px) / 3) !important;
+  max-width: calc((100% - 16px) / 3) !important;
+
+  /* Evita cortes raros */
+  box-sizing: border-box;
+}
+
+/* El evento ocupa todo el ancho del “harness” */
+.fc .fc-timeGridDay-view .fc-timegrid .fc-daygrid-body .fc-daygrid-event,
+.fc .fc-timegrid-day-view .fc-timegrid .fc-daygrid-body .fc-daygrid-event {
+  margin: 0; /* el gap lo maneja el contenedor */
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Scrollbar (solo este scroller) */
+.fc .fc-timeGridDay-view .fc-timegrid .fc-daygrid-body .fc-daygrid-day-events::-webkit-scrollbar,
+.fc .fc-timegrid-day-view .fc-timegrid .fc-daygrid-body .fc-daygrid-day-events::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.fc .fc-timeGridDay-view .fc-timegrid .fc-daygrid-body .fc-daygrid-day-events::-webkit-scrollbar-thumb,
+.fc .fc-timegrid-day-view .fc-timegrid .fc-daygrid-body .fc-daygrid-day-events::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+
+.fc .fc-timeGridDay-view .fc-timegrid .fc-daygrid-body .fc-daygrid-day-events::-webkit-scrollbar-track,
+.fc .fc-timegrid-day-view .fc-timegrid .fc-daygrid-body .fc-daygrid-day-events::-webkit-scrollbar-track {
+  background: #f8fafc;
+}
+
+/* El “+N more” debe verse y ocupar todo el ancho debajo de las 2 columnas */
+.fc .fc-timeGridDay-view .fc-timegrid .fc-daygrid-body .fc-daygrid-day-bottom,
+.fc .fc-timegrid-day-view .fc-timegrid .fc-daygrid-body .fc-daygrid-day-bottom {
+  display: block;
+  width: 100%;
+  flex: 0 0 100%;
+}

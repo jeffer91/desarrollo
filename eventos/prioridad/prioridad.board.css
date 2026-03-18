@@ -1,0 +1,456 @@
+/* =========================================================
+Nombre del archivo: prioridad.board.css
+Ruta: /prioridad/prioridad.board.css
+Función:
+- Estilos tablero Kanban y tarjetas
+- Prioridad por color
+- Selección múltiple
+- Familias contenedoras
+CORRECCIÓN UI (compacto/legible):
+- Tarjeta: título arriba, meta compacta, acciones abajo (evita texto cortado).
+- Clamp 2 líneas para título.
+- Familias más “limpias” (menos padding/gap y header compacto).
+========================================================= */
+
+.board{
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-top: 12px;
+}
+
+@media (max-width: 1100px){
+  .board{ grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 620px){
+  .board{ grid-template-columns: 1fr; }
+}
+
+.col{
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: linear-gradient(180deg, rgba(15,23,42,0.02), transparent 55%), var(--surface);
+  box-shadow: var(--shadowSm);
+  overflow: hidden;
+  min-height: 420px;
+  display: flex;
+  flex-direction: column;
+}
+
+.colHead{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 12px;
+  border-bottom: 1px solid var(--line);
+  font-weight: 950;
+  letter-spacing: 0.02em;
+}
+
+.colHead .count,
+.colHead .colCount{
+  font-size: 12px;
+  font-weight: 900;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,0.7);
+}
+
+.col[data-col="pendiente"] .colHead{
+  background: linear-gradient(180deg, var(--stPending), rgba(255,255,255,0.9));
+  border-bottom-color: var(--stPendingBd);
+  color: var(--stPendingTx);
+}
+.col[data-col="en_progreso"] .colHead{
+  background: linear-gradient(180deg, var(--stProgress), rgba(255,255,255,0.9));
+  border-bottom-color: var(--stProgressBd);
+  color: var(--stProgressTx);
+}
+.col[data-col="subido"] .colHead{
+  background: linear-gradient(180deg, var(--stRaised), rgba(255,255,255,0.9));
+  border-bottom-color: var(--stRaisedBd);
+  color: var(--stRaisedTx);
+}
+.col[data-col="finalizado"] .colHead{
+  background: linear-gradient(180deg, var(--stDone), rgba(255,255,255,0.9));
+  border-bottom-color: var(--stDoneBd);
+  color: var(--stDoneTx);
+}
+
+.dropzone{
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  flex: 1;
+}
+
+.dropzone.over{
+  outline: 2px dashed rgba(37,99,235,0.35);
+  outline-offset: -8px;
+  background: linear-gradient(180deg, rgba(37,99,235,0.06), transparent 45%), var(--surface);
+}
+
+/* =========================================================
+Barra superior
+========================================================= */
+.boardTop{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: linear-gradient(180deg, rgba(15,23,42,0.02), rgba(255,255,255,0.92));
+  box-shadow: var(--shadowSm);
+}
+
+.boardTopLeft,
+.boardTopRight{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.selAll{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 900;
+  font-size: 12px;
+  color: var(--muted);
+  user-select: none;
+}
+.selAll input{
+  width: 16px;
+  height: 16px;
+  accent-color: rgba(37,99,235,0.95);
+}
+.selCount{
+  font-weight: 900;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.btnMini{
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-weight: 900;
+  font-size: 12px;
+  line-height: 1;
+}
+
+/* herramientas familia topbar */
+.familyTools{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-left: 6px;
+}
+.familyPick{
+  appearance: none;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,0.82);
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-weight: 900;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--text, #0f172a);
+  cursor: pointer;
+  max-width: 220px;
+}
+
+/* =========================================================
+Familia contenedora (más compacta)
+========================================================= */
+.familyBlock{
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,255,255,0.92));
+  box-shadow: 0 8px 14px rgba(15, 23, 42, 0.045);
+  overflow: hidden;
+}
+
+.familyBlock.noFamily{
+  background: linear-gradient(180deg, rgba(15,23,42,0.03), rgba(255,255,255,0.96));
+}
+
+.familyBlock.over{
+  outline: 2px dashed rgba(37,99,235,0.35);
+  outline-offset: -8px;
+}
+
+.familyHead{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px; /* ✅ más compacto */
+  border-bottom: 1px solid var(--line);
+}
+
+.familyTitle{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.familyName{
+  font-weight: 950;
+  font-size: 12.5px;  /* ✅ más compacto */
+  letter-spacing: -0.01em;
+  color: var(--text, #0f172a);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 220px;
+}
+
+.familyCount{
+  font-size: 12px;
+  font-weight: 950;
+  padding: 4px 8px;   /* ✅ más compacto */
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,0.75);
+  color: var(--muted);
+}
+
+.familyActions{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* botón toggle tipo icono */
+.btnFamilyToggle{
+  width: 30px;
+  height: 28px;
+  padding: 0;
+  border-radius: 10px;
+  font-weight: 950;
+  font-size: 14px;
+  display: inline-grid;
+  place-items: center;
+}
+
+.familyBody{
+  padding: 8px; /* ✅ más compacto */
+  display: grid;
+  gap: 8px;     /* ✅ menos gap */
+}
+
+.familyDropHint{
+  font-weight: 800;
+  font-size: 11.5px;
+  border: 1px dashed rgba(15,23,42,0.18);
+  border-radius: 12px;
+  padding: 8px;
+  background: rgba(15,23,42,0.02);
+}
+
+/* =========================================================
+Tarjeta evento (compacta y legible)
+========================================================= */
+.cardEvt{
+  border: 1px solid var(--line);
+  border-radius: 14px;
+
+  /* ✅ más compacto */
+  padding: 9px 10px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.96), #ffffff);
+  box-shadow: 0 8px 14px rgba(15, 23, 42, 0.055);
+
+  display: grid;
+  gap: 6px;
+  cursor: grab;
+  position: relative;
+  transition: transform .10s ease, box-shadow .12s ease, border-color .12s ease;
+}
+
+.cardEvt:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 14px 22px rgba(15, 23, 42, 0.085);
+  border-color: rgba(15,23,42,0.16);
+}
+
+.cardEvt:active{ cursor: grabbing; }
+
+.cardEvt.locked{
+  opacity: 0.92;
+  cursor: not-allowed;
+}
+
+/* strip prioridad */
+.prioStrip{
+  height: 6px;
+  border-radius: 14px 14px 0 0;
+  position: absolute;
+  left: 0; right: 0; top: 0;
+  background: rgba(15,23,42,0.10);
+}
+.prioStrip.prio-high{ background: rgba(239,68,68,0.75); }
+.prioStrip.prio-med{ background: rgba(245,158,11,0.78); }
+.prioStrip.prio-low{ background: rgba(16,185,129,0.78); }
+
+/* color tarjeta por prioridad */
+.cardEvt.prio-alta{
+  border-color: var(--prioHighBd);
+  background: linear-gradient(180deg, rgba(239,68,68,0.07), rgba(255,255,255,0.98));
+}
+.cardEvt.prio-media{
+  border-color: var(--prioMedBd);
+  background: linear-gradient(180deg, rgba(245,158,11,0.09), rgba(255,255,255,0.98));
+}
+.cardEvt.prio-baja{
+  border-color: var(--prioLowBd);
+  background: linear-gradient(180deg, rgba(16,185,129,0.09), rgba(255,255,255,0.98));
+}
+
+/* Header solo título */
+.cardHeader{ margin-top: 2px; }
+
+.cardTitle{
+  font-weight: 950;
+  letter-spacing: -0.01em;
+  font-size: 13px;
+  line-height: 1.15;
+
+  /* ✅ clamp 2 líneas (evita “letra por letra”) */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+
+  word-break: normal;
+  overflow-wrap: anywhere;
+}
+
+/* Meta en una fila */
+.cardMetaRow{
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: nowrap;
+}
+
+.cardWhen{
+  color: var(--muted);
+  font-weight: 800;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 48%;
+}
+
+.cardBadges{
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+/* Footer acciones */
+.cardFooter{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.cardFooterLeft,
+.cardFooterRight{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.selBox{
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: rgba(37,99,235,0.95);
+  cursor: pointer;
+}
+
+/* X eliminar */
+.btnX{
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 10px;
+  font-weight: 950;
+  font-size: 18px;
+  line-height: 1;
+  display: inline-grid;
+  place-items: center;
+}
+.btnX:hover{
+  border-color: rgba(239,68,68,0.35);
+  background: rgba(239,68,68,0.10);
+  color: rgba(185,28,28,1);
+}
+
+/* botón ver compacto */
+.btnCard{
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-weight: 900;
+  font-size: 12px;
+  line-height: 1;
+}
+
+/* select prioridad compacto */
+.prioSelect{
+  appearance: none;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,0.82);
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-weight: 900;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--text, #0f172a);
+  cursor: pointer;
+
+  /* ✅ más pequeño y estable */
+  width: 92px;
+  max-width: 92px;
+}
+
+/* afinar color del select por prioridad */
+.cardEvt.prio-alta .prioSelect{ border-color: var(--prioHighBd); background: var(--prioHighBg); color: var(--prioHighTx); }
+.cardEvt.prio-media .prioSelect{ border-color: var(--prioMedBd); background: var(--prioMedBg); color: var(--prioMedTx); }
+.cardEvt.prio-baja .prioSelect{ border-color: var(--prioLowBd); background: var(--prioLowBg); color: var(--prioLowTx); }
+
+/* Badges */
+.badge{
+  font-size: 11.5px;  /* ✅ un poco más compacto */
+  font-weight: 900;
+  padding: 5px 9px;   /* ✅ un poco más compacto */
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,0.78);
+  color: var(--muted);
+}
+
+/* Hint */
+.lockedHint{
+  border: 1px dashed rgba(15,23,42,0.20);
+  background: linear-gradient(180deg, rgba(15,23,42,0.03), rgba(255,255,255,0.88));
+  border-radius: 16px;
+  padding: 12px;
+  color: var(--muted);
+  font-weight: 800;
+  line-height: 1.25;
+}

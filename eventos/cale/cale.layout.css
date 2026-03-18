@@ -1,0 +1,403 @@
+/*
+Nombre del archivo: cale.layout.css
+Ruta: C:\Users\ITSQMET\Desktop\eventos\cale\cale.layout.css
+Función:
+- Layout principal del módulo
+- Header
+- Filtros
+- Botones
+- Contenedores principales
+- Reordena visualmente la pantalla sin tocar la lógica
+*/
+
+#cale-app {
+  min-height: 0;
+  flex: 1 1 auto;
+  padding: 10px 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--cale-gap);
+  box-sizing: border-box;
+}
+
+/* =========================================================
+   Header
+   Se reorganiza en dos bloques claros:
+   título / toolbar
+   Corrección:
+   - se compacta altura total de la cabecera
+   - se reduce separación interna entre bloques y controles
+   - el toolbar pasa a una sola fila en escritorio
+   ========================================================= */
+#cale-header {
+  background: var(--cale-surface);
+  border: 1px solid var(--cale-border);
+  border-radius: var(--cale-radius);
+  box-shadow: var(--cale-shadow);
+  padding: 8px 10px; /* Corrección: reduce alto visual del header sin tocar su grid. */
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(520px, auto);
+  gap: 10px; /* Corrección: reduce la separación entre título y toolbar. */
+  align-items: center;
+}
+
+#cale-title-wrap {
+  min-width: 0;
+}
+
+#cale-title {
+  margin: 0;
+  font-size: 15px; /* Corrección: compacta el bloque izquierdo del header. */
+  line-height: 1.05; /* Evita que el título consuma más altura de la necesaria. */
+  font-weight: 800;
+  color: var(--cale-text);
+}
+
+#cale-subtitle {
+  margin: 2px 0 0; /* Corrección: reduce espacio entre título y subtítulo. */
+  color: var(--cale-text-soft);
+  font-size: 11px; /* Mantiene legibilidad con menor altura total. */
+  line-height: 1.25; /* Evita crecimiento vertical del texto descriptivo. */
+}
+
+#cale-toolbar {
+  display: flex;
+  flex-direction: row; /* Corrección: coloca navegación y vistas en una sola fila. */
+  gap: 8px; /* Mantiene separación horizontal entre ambos grupos. */
+  align-items: center; /* Alinea verticalmente todos los controles del toolbar. */
+  justify-content: flex-end; /* Mantiene el toolbar alineado a la derecha del header. */
+  flex-wrap: nowrap; /* Evita que el toolbar se parta en varias filas en escritorio. */
+  min-width: 0;
+}
+
+.cale-toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 6px; /* Corrección: compacta la separación horizontal entre controles. */
+  justify-content: flex-end;
+  flex-wrap: nowrap; /* Corrección: evita saltos de línea dentro de cada grupo. */
+  min-width: 0;
+}
+
+#cale-current-range {
+  min-width: 200px; /* Corrección: evita que el rango empuje el toolbar a más altura. */
+  max-width: 280px; /* Mantiene la fecha contenida dentro de una caja más compacta. */
+  text-align: center;
+  font-weight: 800;
+  font-size: 11px; /* Ajuste de texto para acompañar la compactación del header. */
+  color: var(--cale-text);
+  background: var(--cale-surface-2);
+  border: 1px solid var(--cale-border);
+  border-radius: var(--cale-radius-sm);
+  padding: 7px 10px; /* Corrección: reduce la altura visual del rango actual. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* =========================================================
+   Botones
+   Se unifica altura, lectura y estados hover/active.
+   Corrección:
+   - se compactan solo para reducir altura del header
+   - no se cambia lógica de estados ni clases activas
+   ========================================================= */
+.cale-btn {
+  border: 1px solid var(--cale-border);
+  background: #ffffff;
+  color: var(--cale-text);
+  border-radius: var(--cale-radius-sm);
+  padding: 7px 12px; /* Corrección: reduce alto de los botones sin deformarlos. */
+  min-height: 30px; /* Evita que la fila del toolbar crezca innecesariamente. */
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 11px; /* Mantiene proporción visual con el rango de fecha compacto. */
+  line-height: 1;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+.cale-btn:hover {
+  border-color: #b9c7db;
+  background: #f8fbff;
+}
+
+.cale-btn:active {
+  transform: translateY(1px);
+}
+
+.cale-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cale-view-btn.is-active {
+  background: var(--cale-primary);
+  color: #ffffff;
+  border-color: var(--cale-primary);
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.18);
+}
+
+.cale-btn-clear {
+  background: #fff7f7;
+}
+
+/* =========================================================
+   Filtros
+   Se compacta la rejilla y se da más prioridad visual a buscar.
+   ========================================================= */
+#cale-filters {
+ background: var(--cale-surface);
+ border: 1px solid var(--cale-border);
+ border-radius: var(--cale-radius);
+ box-shadow: var(--cale-shadow);
+ padding: 12px 14px;
+ display: flex; /* Corrección previa: el aside deja de ser la grilla principal para no separar cabecera, filtros y acción. */
+ flex-direction: column;
+ gap: 10px;
+}
+
+.cale-filter-stack {
+  display: grid;
+  grid-template-columns: 1fr; /* Corrección: en la columna izquierda los filtros deben apilarse, no repartirse en varias columnas. */
+  gap: 10px;
+  align-items: stretch; /* Evita compresión visual entre Buscar, Estado y los demás campos. */
+}
+
+.cale-filter-row-2 {
+  display: grid;
+  grid-template-columns: 1fr; /* Corrección: Desde y Hasta pasan a una sola columna para respetar el ancho real del sidebar. */
+  gap: 10px;
+}
+
+.cale-filter-action {
+  align-self: stretch;
+}
+
+.cale-filter-action .cale-btn {
+  width: 100%; /* Evita que "Limpiar filtros" quede corto o desalineado. */
+}
+
+.cale-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.cale-filter-search {
+  min-width: 220px;
+}
+
+.cale-filter-action {
+  align-self: end;
+}
+
+#cale-filters label {
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 800;
+  color: #5b6b83;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+#cale-filters input,
+#cale-filters select {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid var(--cale-border);
+  border-radius: var(--cale-radius-sm);
+  background: #ffffff;
+  color: var(--cale-text);
+  padding: 0 12px;
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    background 0.18s ease;
+}
+
+#cale-filters input:focus,
+#cale-filters select:focus {
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 3px rgba(147, 197, 253, 0.18);
+  background: #ffffff;
+}
+
+/* =========================================================
+   Estado de carga / resumen
+   Se mantiene el id que usa config/selectors.status.
+   ========================================================= */
+#cale-status {
+  min-height: 18px;
+  background: var(--cale-surface);
+  border: 1px solid var(--cale-border);
+  border-radius: var(--cale-radius-sm);
+  padding: 10px 12px;
+  color: var(--cale-text-soft);
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: var(--cale-shadow);
+}
+
+/* =========================================================
+   Main layout
+   Corrección:
+   - el HTML actual usa #cale-content como grilla real
+   - se elimina la tercera columna visual para que el resumen no consuma pantalla
+   - se da altura útil al wrap del calendario para evitar que FullCalendar colapse
+   ========================================================= */
+#cale-content {
+  min-height: 0;
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: minmax(280px, 320px) minmax(0, 1fr); /* Corrección: deja solo filtros + calendario para recuperar ancho útil. */
+  gap: var(--cale-gap);
+  align-items: stretch;
+}
+
+#cale-main {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+#cale-calendar-shell,
+#cale-summary-shell {
+  min-height: 0;
+  background: var(--cale-surface);
+  border: 1px solid var(--cale-border);
+  border-radius: var(--cale-radius);
+  box-shadow: var(--cale-shadow);
+}
+
+#cale-calendar-shell {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px; /* Corrección: separa el panel de pendientes del calendario sin mezclar ambos bloques. */
+  overflow: hidden;
+}
+
+/* Corrección:
+   Este contenedor nuevo aloja los pendientes del día
+   fuera del all-day nativo de FullCalendar para evitar la lista vertical forzada. */
+#cale-pending-shell {
+  min-height: 0;
+  flex: 0 0 auto;
+}
+
+#cale-calendar-wrap {
+  min-height: 520px; /* Corrección: conserva altura útil aunque el shell ahora tenga un panel superior. */
+  flex: 1 1 auto;
+  display: flex;
+  overflow: hidden; /* Evita recortes extraños al renderizar FullCalendar. */
+}
+
+#cale-calendar {
+  min-height: 520px; /* Corrección: evita render en altura colapsada cuando arriba existe el panel de pendientes. */
+  flex: 1 1 auto;
+}
+
+#cale-summary-shell {
+  display: none; /* Corrección: oculta el panel de resumen para que no ocupe ancho ni distraiga del calendario. */
+  padding: 12px 14px;
+}
+
+/* =========================================================
+   Modal de detalle
+   Se conserva el panel visual, pero ya no participa del layout principal.
+   ========================================================= */
+#cale-detail-shell {
+  min-height: 0;
+  background: var(--cale-surface);
+  border: 1px solid var(--cale-border);
+  border-radius: var(--cale-radius);
+  box-shadow: var(--cale-shadow);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* =========================================================
+   Cabecera del detalle
+   ========================================================= */
+.cale-detail-head {
+  padding: 12px 12px 10px;
+  border-bottom: 1px solid var(--cale-border-soft);
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cale-detail-head-main h2 {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.1;
+  font-weight: 800;
+  color: var(--cale-text);
+}
+
+.cale-detail-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* =========================================================
+   Adaptación
+   ========================================================= */
+@media (max-width: 1420px) {
+  #cale-filters {
+    grid-template-columns:
+      minmax(220px, 1.8fr)
+      repeat(4, minmax(140px, 1fr))
+      repeat(2, minmax(130px, 1fr));
+  }
+
+  .cale-filter-action {
+    grid-column: 1 / -1;
+  }
+
+  .cale-filter-action .cale-btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 1220px) {
+  #cale-header {
+    grid-template-columns: 1fr;
+  }
+
+  #cale-toolbar {
+    flex-direction: column; /* Corrección: en ancho reducido vuelve a apilar para evitar desborde horizontal. */
+    align-items: stretch; /* Permite que el toolbar use todo el ancho disponible al colapsar. */
+    flex-wrap: wrap; /* Evita corte horizontal cuando el header ya no tiene espacio suficiente. */
+  }
+
+  .cale-toolbar-group {
+    justify-content: flex-end;
+    flex-wrap: wrap; /* Permite saltos de línea solo en pantallas más estrechas. */
+  }
+
+  #cale-content {
+    grid-template-columns: 1fr; /* Corrección: apila columnas reales en pantallas más estrechas. */
+  }
+
+  #cale-main {
+    min-width: 0;
+  }
+
+  #cale-calendar-wrap,
+  #cale-calendar {
+    min-height: 420px; /* Mantiene visible el calendario cuando el panel de pendientes comparte el shell. */
+  }
+}

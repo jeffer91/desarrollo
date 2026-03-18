@@ -1,0 +1,95 @@
+/* =========================================================
+Nombre del archivo: prioridad.table.css
+Ruta: /prioridad/prioridad.table.css
+Función:
+- Tabla pro (zebra, hover, sticky head) + chips prioridad
+========================================================= */
+
+.hero{
+  display:flex; align-items:flex-start; justify-content:space-between;
+  gap:12px; margin-bottom:16px;
+}
+.heroTitle{ font-size: 22px; font-weight: 900; }
+.heroSub{ color: var(--muted); margin-top: 6px; }
+.heroRight{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end; }
+
+.toolbar{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:12px; flex-wrap:wrap;
+  margin-bottom: 12px;
+}
+.filters{
+  display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+}
+.filters input{ width: 260px; }
+
+.tableWrap{
+  overflow:auto;
+  border:1px solid var(--line);
+  border-radius: 14px;
+}
+
+table{
+  width:100%;
+  border-collapse:separate;
+  border-spacing:0;
+  font-size: 13px;
+}
+thead th{
+  position: sticky;
+  top: 0;
+  background: linear-gradient(180deg, rgba(37,99,235,.10), rgba(79,70,229,.06));
+  backdrop-filter: blur(4px);
+  border-bottom:1px solid var(--line);
+  text-align:left;
+  padding: 12px;
+  font-weight: 900;
+  z-index: 2;
+}
+tbody td{
+  padding: 10px 12px;
+  border-bottom:1px solid rgba(15,23,42,.08);
+  vertical-align: middle;
+}
+tbody tr:nth-child(even){ background: rgba(15,23,42,.02); }
+tbody tr:hover{ background: rgba(37,99,235,.06); }
+
+.chip{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border:1px solid rgba(15,23,42,.10);
+  font-weight: 800;
+  background: #fff;
+}
+.chip.kind-personal{ background: rgba(59,130,246,.10); border-color: rgba(59,130,246,.22); }
+.chip.kind-trabajo{ background: rgba(16,185,129,.10); border-color: rgba(16,185,129,.22); }
+
+.pchip{ color:#0b1220; }
+.pchip.p1{ border-color: rgba(59,130,246,.25); background: rgba(59,130,246,.10); }
+.pchip.p2{ border-color: rgba(16,185,129,.25); background: rgba(16,185,129,.10); }
+.pchip.p3{ border-color: rgba(245,158,11,.25); background: rgba(245,158,11,.12); }
+.pchip.p4{ border-color: rgba(249,115,22,.25); background: rgba(249,115,22,.12); }
+.pchip.p5{ border-color: rgba(239,68,68,.25); background: rgba(239,68,68,.12); }
+
+.tdActions{
+  display:flex;
+  gap:8px;
+  justify-content:flex-end;
+  flex-wrap:wrap;
+}
+.btnMini{
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+select.prioSelect{
+  width: 86px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-weight: 900;
+}

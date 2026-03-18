@@ -1,0 +1,367 @@
+
+==============================================================================================================
+##############################################################################################################
+ARCHIVO
+##############################################################################################################
+==============================================================================================================
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+NOMBRE: app.core.js
+RUTA: src/app.core.js
+
+==============================================================================================================
+##############################################################################################################
+CÓDIGO COMPLETO
+##############################################################################################################
+==============================================================================================================
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+/**
+ * Archivo: src/app.core.js
+ * Función: Núcleo (Node). Escanea recursivo, filtra, lee texto y exporta:
+ *  - txt_convertidos/archivo.ext.txt (código completo)
+ *  - txt_convertidos/todo.txt con separadores + Archivo N + Ruta + Código
+ *  - reporta errores para alerta
+ */
+
+const fs = require("fs");
+const fsp = fs.promises;
+const path = require("path");
+
+const DEFAULT_ALLOWED_EXTS = [".html", ".js", ".css", ".json"];
+const DEFAULT_EXCLUDED_DIRS = new Set(["node_modules", ".git", "dist", "build", "txt_convertidos"]);
+
+function nowISO() {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+function shortRelPath(rootPath, fullPath) {
+  const rel = path.relative(rootPath, fullPath);
+  // Normalizar a slash para que se vea igual en todo.txt
+  return rel.split(path.sep).join("/");
+}
+
+function hugeSeparator(label = "") {
+  // “Muchos separadores”
+  const lineA = "=".repeat(110);
+  const lineB = "-".repeat(110);
+  const lineC = "#".repeat(110);
+  const mid = label ? `\n${lineA}\n${lineC}\n${label}\n${lineC}\n${lineA}\n` : `\n${lineA}\n${lineC}\n${lineA}\n`;
+  return `${mid}${lineB}\n${lineB}\n`;
+}
+
+function normalizeOptions(options) {
+  const opts = options || {};
+  const allowedExts = Array.isArray(opts.allowedExts) && opts.allowedExts.length > 0 ? opts.allowedExts : DEFAULT_ALLOWED_EXTS;
+  const excludedDirsArr = Array.isArray(opts.excludedDirs) && opts.excludedDirs.length > 0
+    ? opts.excludedDirs
+    : Array.from(DEFAULT_EXCLUDED_DIRS);
+
+  return {
+    allowedExts: allowedExts.map((e) => e.startsWith(".") ? e.toLowerCase() : `.${e.toLowerCase()}`),
+    excludedDirs: new Set(excludedDirsArr),
+    outputDirName: typeof opts.outputDirName === "string" && opts.outputDirName.trim() ? opts.outputDirName.trim() : "txt_convertidos",
+    todoFileName: typeof opts.todoFileName === "string" && opts.todoFileName.trim() ? opts.todoFileName.trim() : "todo.txt",
+    perFileMode: opts.perFileMode !== false // default true
+  };
+}
+
+async function pathExists(p) {
+  try {
+    await fsp.access(p, fs.constants.F_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function ensureDir(dirPath) {
+  if (!(await pathExists(dirPath))) {
+    await fsp.mkdir(dirPath, { recursive: true });
+  }
+}
+
+function shouldExcludeDir(dirName, excludedDirs) {
+  return excludedDirs.has(dirName);
+}
+
+function isAllowedFile(fileName, allowedExts) {
+  const ext = path.extname(fileName).toLowerCase();
+  return allowedExts.includes(ext);
+}
+
+/**
+ * Lectura robusta: UTF-8
+ * - Si falla, lanza error para que el caller lo registre y siga (según tu regla).
+ */
+async function readTextFile(fullPath) {
+  // intentamos utf-8 “normal”
+  return await fsp.readFile(fullPath, "utf8");
+}
+
+/**
+ * Escaneo recursivo
+ * Devuelve lista: [{ fullPath, relPath, baseName, ext }]
+ */
+async function scanDirectoryRecursive({ rootPath, dirPath, opts, onProgress, outList }) {
+  let entries;
+  try {
+    entries = await fsp.readdir(dirPath, { withFileTypes: true });
+  } catch (err) {
+    // si no se puede leer una carpeta, reportar progreso y continuar
+    onProgress?.({
+      stage: "scan",
+      level: "warn",
+      message: `No se pudo leer carpeta: ${shortRelPath(rootPath, dirPath)}`,
+      time: nowISO()
+    });
+    return;
+  }
+
+  for (const entry of entries) {
+    const full = path.join(dirPath, entry.name);
+
+    if (entry.isDirectory()) {
+      if (shouldExcludeDir(entry.name, opts.excludedDirs)) {
+        onProgress?.({
+          stage: "scan",
+          level: "info",
+          message: `Excluida carpeta: ${shortRelPath(rootPath, full)}`,
+          time: nowISO()
+        });
+        continue;
+      }
+      await scanDirectoryRecursive({ rootPath, dirPath: full, opts, onProgress, outList });
+      continue;
+    }
+
+    if (entry.isFile()) {
+      if (!isAllowedFile(entry.name, opts.allowedExts)) continue;
+
+      const rel = shortRelPath(rootPath, full);
+      outList.push({
+        fullPath: full,
+        relPath: rel,
+        baseName: path.basename(entry.name),
+        ext: path.extname(entry.name).toLowerCase()
+      });
+
+      if (outList.length % 50 === 0) {
+        onProgress?.({
+          stage: "scan",
+          level: "info",
+          message: `Escaneados ${outList.length} archivos (parcial)`,
+          time: nowISO()
+        });
+      }
+    }
+  }
+}
+
+async function scanRoot({ rootPath, onProgress }) {
+  if (!rootPath || typeof rootPath !== "string") {
+    throw new Error("rootPath inválido");
+  }
+
+  const opts = normalizeOptions({});
+  const files = [];
+
+  onProgress?.({ stage: "scan", level: "info", message: "Iniciando escaneo...", time: nowISO() });
+
+  await scanDirectoryRecursive({
+    rootPath,
+    dirPath: rootPath,
+    opts,
+    onProgress,
+    outList: files
+  });
+
+  files.sort((a, b) => a.relPath.localeCompare(b.relPath, "es"));
+
+  onProgress?.({
+    stage: "scan",
+    level: "ok",
+    message: `Escaneo finalizado: ${files.length} archivo(s) detectado(s)`,
+    time: nowISO()
+  });
+
+  return {
+    rootPath,
+    allowedExts: opts.allowedExts,
+    excludedDirs: Array.from(opts.excludedDirs),
+    totalFiles: files.length,
+    files
+  };
+}
+
+function buildTodoHeader({ rootPath, opts, totalFiles }) {
+  const header =
+    hugeSeparator("INFORMACIÓN GENERAL") +
+    `FECHA/HORA: ${nowISO()}\n` +
+    `RAÍZ: ${rootPath}\n` +
+    `INCLUYE: ${opts.allowedExts.join(" ")}\n` +
+    `EXCLUYE CARPETAS: ${Array.from(opts.excludedDirs).join(", ")}\n` +
+    `SALIDA: ${opts.outputDirName}/\n` +
+    `TOTAL ARCHIVOS: ${totalFiles}\n` +
+    hugeSeparator("INICIO DE CONTENIDO") +
+    "\n";
+  return header;
+}
+
+function formatTodoBlock({ index, relPath, baseName, content }) {
+  // Formato que pediste:
+  // archivo 1: nombre
+  // ruta del archivo 1
+  // código completo del archivo 1
+  // y muchos separadores
+  const label = `ARCHIVO ${index}`;
+  return (
+    hugeSeparator(label) +
+    `archivo ${index}: ${baseName}\n` +
+    `ruta del archivo ${index}: ${relPath}\n` +
+    `código completo del archivo ${index}:\n` +
+    hugeSeparator(`CÓDIGO ${index} (INICIO)`) +
+    `${content}\n` +
+    hugeSeparator(`CÓDIGO ${index} (FIN)`) +
+    "\n"
+  );
+}
+
+async function exportTxt({ rootPath, options, onProgress }) {
+  if (!rootPath || typeof rootPath !== "string") {
+    throw new Error("rootPath inválido");
+  }
+
+  const opts = normalizeOptions(options);
+
+  // 1) Escanear con opciones reales
+  const files = [];
+  onProgress?.({ stage: "scan", level: "info", message: "Iniciando escaneo para export...", time: nowISO() });
+
+  await scanDirectoryRecursive({
+    rootPath,
+    dirPath: rootPath,
+    opts,
+    onProgress,
+    outList: files
+  });
+
+  files.sort((a, b) => a.relPath.localeCompare(b.relPath, "es"));
+
+  onProgress?.({
+    stage: "scan",
+    level: "ok",
+    message: `Escaneo listo: ${files.length} archivo(s) para exportar`,
+    time: nowISO()
+  });
+
+  // 2) Preparar salida
+  const outDir = path.join(rootPath, opts.outputDirName);
+  await ensureDir(outDir);
+
+  const todoPath = path.join(outDir, opts.todoFileName);
+
+  // 3) Escribir encabezado del todo.txt (sobrescribe siempre)
+  const header = buildTodoHeader({ rootPath, opts, totalFiles: files.length });
+  await fsp.writeFile(todoPath, header, "utf8");
+
+  // 4) Procesar archivo por archivo
+  const errors = [];
+  let exportedCount = 0;
+
+  onProgress?.({ stage: "export", level: "info", message: "Exportando archivos...", time: nowISO() });
+
+  for (let i = 0; i < files.length; i++) {
+    const item = files[i];
+    const index = i + 1;
+
+    let content;
+    try {
+      content = await readTextFile(item.fullPath);
+    } catch (err) {
+      const eMsg = `${item.relPath} -> ${err?.message || String(err)}`;
+      errors.push(eMsg);
+      onProgress?.({
+        stage: "export",
+        level: "warn",
+        message: `No se pudo leer (omitido): ${item.relPath}`,
+        time: nowISO()
+      });
+      continue;
+    }
+
+    // 4a) Crear .txt por archivo (cale.html -> cale.html.txt)
+    if (opts.perFileMode) {
+      const outFileName = `${item.baseName}.txt`; // regla exacta
+      const outPath = path.join(outDir, outFileName);
+
+      // Puedes decidir si quieres encabezado también. Lo dejo con separadores para que sea útil.
+      const perFileText =
+        hugeSeparator("ARCHIVO") +
+        `NOMBRE: ${item.baseName}\n` +
+        `RUTA: ${item.relPath}\n` +
+        hugeSeparator("CÓDIGO COMPLETO") +
+        `${content}\n`;
+
+      await fsp.writeFile(outPath, perFileText, "utf8");
+    }
+
+    // 4b) Agregar bloque a todo.txt
+    const block = formatTodoBlock({
+      index,
+      relPath: item.relPath,
+      baseName: item.baseName,
+      content
+    });
+    await fsp.appendFile(todoPath, block, "utf8");
+
+    exportedCount++;
+
+    if (exportedCount % 20 === 0) {
+      onProgress?.({
+        stage: "export",
+        level: "info",
+        message: `Exportados ${exportedCount} archivo(s) (parcial)`,
+        time: nowISO()
+      });
+    }
+  }
+
+  onProgress?.({
+    stage: "export",
+    level: "ok",
+    message: `Export finalizado. Exportados: ${exportedCount}. Errores: ${errors.length}. Salida: ${opts.outputDirName}/`,
+    time: nowISO()
+  });
+
+  return {
+    rootPath,
+    outputDir: outDir,
+    todoPath,
+    perFileMode: opts.perFileMode,
+    totalFound: files.length,
+    exportedCount,
+    errors
+  };
+}
+
+function safeErrorDetails(err) {
+  try {
+    if (!err) return "";
+    const lines = [];
+    if (err.stack) lines.push(err.stack);
+    else lines.push(String(err));
+    return lines.join("\n");
+  } catch {
+    return String(err);
+  }
+}
+
+module.exports = {
+  scanRoot,
+  exportTxt,
+  safeErrorDetails
+};
+

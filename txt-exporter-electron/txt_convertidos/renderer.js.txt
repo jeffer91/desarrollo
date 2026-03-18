@@ -1,0 +1,182 @@
+
+==============================================================================================================
+##############################################################################################################
+ARCHIVO
+##############################################################################################################
+==============================================================================================================
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+NOMBRE: renderer.js
+RUTA: src/ui/renderer.js
+
+==============================================================================================================
+##############################################################################################################
+CÓDIGO COMPLETO
+##############################################################################################################
+==============================================================================================================
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+/**
+ * Archivo: src/ui/renderer.js
+ * Función: UI. Llama a window.api (preload) y pinta progreso/alertas.
+ */
+
+const elBtnPick = document.getElementById("btnPick");
+const elBtnScan = document.getElementById("btnScan");
+const elBtnExport = document.getElementById("btnExport");
+
+const elRootPath = document.getElementById("rootPath");
+const elCountFiles = document.getElementById("countFiles");
+const elCountExported = document.getElementById("countExported");
+const elCountErrors = document.getElementById("countErrors");
+
+const elProgressLog = document.getElementById("progressLog");
+const elErrorLog = document.getElementById("errorLog");
+
+const elAlertBox = document.getElementById("alertBox");
+const elAlertTitle = document.getElementById("alertTitle");
+const elAlertMessage = document.getElementById("alertMessage");
+const elAlertDetails = document.getElementById("alertDetails");
+const elAlertClose = document.getElementById("alertClose");
+
+let currentRoot = "";
+let lastScan = null;
+let lastErrors = [];
+
+function logProgress(line) {
+  const prev = elProgressLog.textContent || "";
+  elProgressLog.textContent = prev + line + "\n";
+  elProgressLog.scrollTop = elProgressLog.scrollHeight;
+}
+
+function logError(line) {
+  const prev = elErrorLog.textContent || "";
+  elErrorLog.textContent = prev + line + "\n";
+  elErrorLog.scrollTop = elErrorLog.scrollHeight;
+}
+
+function resetUIForNewRoot() {
+  lastScan = null;
+  lastErrors = [];
+  elCountFiles.textContent = "0";
+  elCountExported.textContent = "0";
+  elCountErrors.textContent = "0";
+  elProgressLog.textContent = "";
+  elErrorLog.textContent = "";
+  elBtnExport.disabled = true;
+}
+
+function showAlert({ title, message, details }) {
+  elAlertTitle.textContent = title || "Alerta";
+  elAlertMessage.textContent = message || "";
+  elAlertDetails.textContent = details || "";
+  elAlertBox.classList.remove("hidden");
+}
+
+function hideAlert() {
+  elAlertBox.classList.add("hidden");
+}
+
+elAlertClose.addEventListener("click", hideAlert);
+
+// listeners desde main
+window.api.onProgress((p) => {
+  const time = p.time ? `[${p.time}] ` : "";
+  const stage = p.stage ? `${p.stage.toUpperCase()}` : "CORE";
+  const level = p.level ? ` ${String(p.level).toUpperCase()}` : "";
+  logProgress(`${time}${stage}${level}: ${p.message || ""}`);
+});
+
+window.api.onAlert((a) => {
+  showAlert(a);
+});
+
+// Acciones
+elBtnPick.addEventListener("click", async () => {
+  const res = await window.api.selectRoot();
+  if (!res || !res.ok) return;
+
+  currentRoot = res.rootPath;
+  elRootPath.textContent = currentRoot;
+  resetUIForNewRoot();
+
+  logProgress(`[${new Date().toLocaleString()}] UI: Carpeta raíz seleccionada.`);
+});
+
+elBtnScan.addEventListener("click", async () => {
+  if (!currentRoot) {
+    showAlert({
+      title: "Falta carpeta raíz",
+      message: "Primero elige una carpeta raíz.",
+      details: ""
+    });
+    return;
+  }
+
+  elBtnExport.disabled = true;
+  logProgress(`[${new Date().toLocaleString()}] UI: Iniciando escaneo...`);
+
+  const res = await window.api.scanRoot(currentRoot);
+  if (!res || !res.ok) {
+    showAlert({
+      title: "Error",
+      message: res?.error || "No se pudo escanear",
+      details: ""
+    });
+    return;
+  }
+
+  lastScan = res.data;
+  elCountFiles.textContent = String(lastScan.totalFiles || 0);
+
+  logProgress(`[${new Date().toLocaleString()}] UI: Escaneo OK. Total: ${lastScan.totalFiles || 0}`);
+  elBtnExport.disabled = (lastScan.totalFiles || 0) === 0;
+});
+
+elBtnExport.addEventListener("click", async () => {
+  if (!currentRoot) return;
+
+  elBtnExport.disabled = true;
+  elCountExported.textContent = "0";
+  elCountErrors.textContent = "0";
+  elErrorLog.textContent = "";
+  lastErrors = [];
+
+  // Opciones fijas según tu mensaje
+  const options = {
+    allowedExts: [".html", ".js", ".css", ".json"],
+    excludedDirs: ["node_modules", ".git", "dist", "build", "txt_convertidos"],
+    outputDirName: "txt_convertidos",
+    todoFileName: "todo.txt",
+    perFileMode: true
+  };
+
+  logProgress(`[${new Date().toLocaleString()}] UI: Exportando...`);
+
+  const res = await window.api.exportTxt(currentRoot, options);
+  if (!res || !res.ok) {
+    showAlert({
+      title: "Error exportando",
+      message: res?.error || "No se pudo exportar",
+      details: ""
+    });
+    elBtnExport.disabled = false;
+    return;
+  }
+
+  const data = res.data;
+  elCountExported.textContent = String(data.exportedCount || 0);
+  elCountErrors.textContent = String((data.errors || []).length);
+
+  if (data.errors && data.errors.length > 0) {
+    for (const e of data.errors) logError(e);
+  }
+
+  logProgress(`[${new Date().toLocaleString()}] UI: Export OK.`);
+  logProgress(`Salida: ${data.outputDir}`);
+  logProgress(`Maestro: ${data.todoPath}`);
+
+  // permitir re-exportar
+  elBtnExport.disabled = false;
+});
+

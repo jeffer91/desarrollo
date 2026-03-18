@@ -1,0 +1,2078 @@
+
+==============================================================================================================
+##############################################################################################################
+INFORMACIÓN GENERAL
+##############################################################################################################
+==============================================================================================================
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+FECHA/HORA: 2026-01-19 09:18:14
+RAÍZ: C:\Users\ITSQMET\Desktop\txt-exporter-electron
+INCLUYE: .html .js .css .json
+EXCLUYE CARPETAS: node_modules, .git, dist, build, txt_convertidos
+SALIDA: txt_convertidos/
+TOTAL ARCHIVOS: 8
+
+==============================================================================================================
+##############################################################################################################
+INICIO DE CONTENIDO
+##############################################################################################################
+==============================================================================================================
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+
+
+==============================================================================================================
+##############################################################################################################
+ARCHIVO 1
+##############################################################################################################
+==============================================================================================================
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+archivo 1: package-lock.json
+ruta del archivo 1: package-lock.json
+código completo del archivo 1:
+
+==============================================================================================================
+##############################################################################################################
+CÓDIGO 1 (INICIO)
+##############################################################################################################
+==============================================================================================================
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+{
+  "name": "txt-exporter-electron",
+  "version": "1.0.0",
+  "lockfileVersion": 3,
+  "requires": true,
+  "packages": {
+    "": {
+      "name": "txt-exporter-electron",
+      "version": "1.0.0",
+      "license": "MIT",
+      "devDependencies": {
+        "electron": "^30.0.0"
+      }
+    },
+    "node_modules/@electron/get": {
+      "version": "2.0.3",
+      "resolved": "https://registry.npmjs.org/@electron/get/-/get-2.0.3.tgz",
+      "integrity": "sha512-Qkzpg2s9GnVV2I2BjRksUi43U5e6+zaQMcjoJy0C+C5oxaKl+fmckGDQFtRpZpZV0NQekuZZ+tGz7EA9TVnQtQ==",
+      "dev": true,
+      "license": "MIT",
+      "dependencies": {
+        "debug": "^4.1.1",
+        "env-paths": "^2.2.0",
+        "fs-extra": "^8.1.0",
+        "got": "^11.8.5",
+        "progress": "^2.0.3",
+        "semver": "^6.2.0",
+        "sumchecker": "^3.0.1"
+      },
+      "engines": {
+        "node": ">=12"
+      },
+      "optionalDependencies": {
+        "global-agent": "^3.0.0"
+      }
+    },
+    "node_modules/@sindresorhus/is": {
+      "version": "4.6.0",
+      "resolved": "https://registry.npmjs.org/@sindresorhus/is/-/is-4.6.0.tgz",
+      "integrity": "sha512-t09vSN3MdfsyCHoFcTRCH/iUtG7OJ0CsjzB8cjAmKc/va/kIgeDI/TxsigdncE/4be734m0cvIYwNaV4i2XqAw==",
+      "dev": true,
+      "license": "MIT",
+      "engines": {
+        "node": ">=10"
+      },
+      "funding": {
+        "url": "https://github.com/sindresorhus/is?sponsor=1"
+      }
+    },
+    "node_modules/@szmarczak/http-timer": {
+      "version": "4.0.6",
+      "resolved": "https://registry.npmjs.org/@szmarczak/http-timer/-/http-timer-4.0.6.tgz",
+      "integrity": "sha512-4BAffykYOgO+5nzBWYwE3W90sBgLJoUPRWWcL8wlyiM8IB8ipJz3UMJ9KXQd1RKQXpKp8Tutn80HZtWsu2u76w==",
+      "dev": true,
+      "license": "MIT",
+      "dependencies": {
+        "defer-to-connect": "^2.0.0"
+      },
+      "engines": {
+        "node": ">=10"
+      }
+    },
+    "node_modules/@types/cacheable-request": {
+      "version": "6.0.3",
+      "resolved": "https://registry.npmjs.org/@types/cacheable-request/-/cacheable-request-6.0.3.tgz",
+      "integrity": "sha512-IQ3EbTzGxIigb1I3qPZc1rWJnH0BmSKv5QYTalEwweFvyBDLSAe24zP0le/hyi7ecGfZVlIVAg4BZqb8WBwKqw==",
+      "dev": true,
+      "license": "MIT",
+      "dependencies": {
+        "@types/http-cache-semantics": "*",
+        "@types/keyv": "^3.1.4",
+        "@types/node": "*",
+        "@types/responselike": "^1.0.0"
+      }
+    },
+    "node_modules/@types/http-cache-semantics": {
+      "version": "4.0.4",
+      "resolved": "https://registry.npmjs.org/@types/http-cache-semantics/-/http-cache-semantics-4.0.4.tgz",
+      "integrity": "sha512-1m0bIFVc7eJWyve9S0RnuRgcQqF/Xd5QsUZAZeQFr1Q3/p9JWoQQEqmVy+DPTNpGXwhgIetAoYF8JSc33q29QA==",
+      "dev": true,
+      "license": "MIT"
+    },
+    "node_modules/@types/keyv": {
+      "version": "3.1.4",
+      "resolved": "https://registry.npmjs.org/@types/keyv/-/keyv-3.1.4.tgz",
+      "integrity": "sha512-BQ5aZNSCpj7D6K2ksrRCTmKRLEpnPvWDiLPfoGyhZ++8YtiK9d/3DBKPJgry359X/P1PfruyYwvnvwFjuEiEIg==",
+      "dev": true,
+      "license": "MIT",
+      "dependencies": {
+        "@types/node": "*"
+      }
+    },
+    "node_modules/@types/node": {
+      "version": "20.19.29",
+      "resolved": "https://registry.npmjs.org/@types/node/-/node-20.19.29.tgz",
+      "integrity": "sha512-YrT9ArrGaHForBaCNwFjoqJWmn8G1Pr7+BH/vwyLHciA9qT/wSiuOhxGCT50JA5xLvFBd6PIiGkE3afxcPE1nw==",
+      "dev": true,
+      "license": "MIT",
+      "dependencies": {
+        "undici-types": "~6.21.0"
+      }
+    },
+    "node_modules/@types/responselike": {
+      "version": "1.0.3",
+      "resolved": "https://registry.npmjs.org/@types/responselike/-/responselike-1.0.3.tgz",
+      "integrity": "sha512-H/+L+UkTV33uf49PH5pCAUBVPNj2nDBXTN+qS1dOwyyg24l3CcicicCA7ca+HMvJBZcFgl5r8e+RR6elsb4Lyw==",
+      "dev": true,
+      "license": "MIT",
+      "dependencies": {
+        "@types/node": "*"
+      }
+    },
+    "node_modules/@types/yauzl": {
+      "version": "2.10.3",
+      "resolved": "https://registry.npmjs.org/@types/yauzl/-/yauzl-2.10.3.tgz",
+      "integrity": "sha512-oJoftv0LSuaDZE3Le4DbKX+KS9G36NzOeSap90UIK0yMA/NhKJhqlSGtNDORNRaIbQfzjXDrQa0ytJ6mNRGz/Q==",
+      "dev": true,
+      "license": "MIT",
+      "optional": true,
+      "dependencies": {
+        "@types/node": "*"
+      }
+    },
+    "node_modules/boolean": {
+      "version": "3.2.0",
+      "resolved": "https://registry.npmjs.org/boolean/-/boolean-3.2.0.tgz",
+      "integrity": "sha512-d0II/GO9uf9lfUHH2BQsjxzRJZBdsjgsBiW4BvhWk/3qoKwQFjIDVN19PfX8F2D/r9PCMTtLWjYVCFrpeYUzsw==",
+      "deprecated": "Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.",
+      "dev": true,
+      "license": "MIT",
+      "optional": true
+    },
+    "node_modules/buffer-crc32": {
+      "version": "0.2.13",
+      "resolved": "https://registry.npmjs.org/buffer-crc32/-/buffer-crc32-0.2.13.tgz",
+      "integrity": "sha512-VO9Ht/+p3SN7SKWqcrgEzjGbRSJYTx+Q1pTQC0wrWqHx0vpJraQ6GtHx8tvcg1rlK1byhU5gccxgOgj7B0TDkQ==",
+      "dev": true,
+      "license": "MIT",
+      "engines": {
+        "node": "*"
+      }
+    },
+    "node_modules/cacheable-lookup": {
+      "version": "5.0.4",
+      "resolved": "https://registry.npmjs.org/cacheable-lookup/-/cacheable-lookup-5.0.4.tgz",
+      "integrity": "sha512-2/kNscPhpcxrOigMZzbiWF7dz8ilhb/nIHU3EyZiXWXpeq/au8qJ8VhdftMkty3n7Gj6HIGalQG8oiBNB3AJgA==",
+      "dev": true,
+      "license": "MIT",
+      "engines": {
+        "node": ">=10.6.0"
+      }
+    },
+    "node_modules/cacheable-request": {
+      "version": "7.0.4",
+      "resolved": "https://registry.npmjs.org/cacheable-request/-/cacheable-request-7.0.4.tgz",
+      "integrity": "sha512-v+p6ongsrp0yTGbJXjgxPow2+DL93DASP4kXCDKb8/bwRtt9OEF3whggkkDkGNzgcWy2XaF4a8nZglC7uElscg==",
+      "dev": true,
+      "license": "MIT",
+      "dependencies": {
+        "clone-response": "^1.0.2",
+        "get-stream": "^5.1.0",
+        "http-cache-semantics": "^4.0.0",
+        "keyv": "^4.0.0",
+        "lowercase-keys": "^2.0.0",
+        "normalize-url": "^6.0.1",
+        "responselike": "^2.0.0"
+      },
+      "engines": {
+        "node": ">=8"
+      }
+    },
+    "node_modules/clone-response": {
+      "version": "1.0.3",
+      "resolved": "https://registry.npmjs.org/clone-response/-/clone-response-1.0.3.tgz",
+      "integrity": "sha512-ROoL94jJH2dUVML2Y/5PEDNaSHgeOdSDicUyS7izcF63G6sTc/FTjLub4b8Il9S8S0beOfYt0TaA5qvFK+w0wA==",
+      "dev": true,
+      "license": "MIT",
+      "dependencies": {
+        "mimic-response": "^1.0.0"
+      },
+      "funding": {
+        "url": "https://github.com/sponsors/sindresorhus"
+      }
+    },
+    "node_modules/debug": {
+      "version": "4.4.3",
+      "resolved": "https://registry.npmjs.org/debug/-/debug-4.4.3.tgz",
+      "integrity": "sha512-RGwwWnwQvkVfavKVt22FGLw+xYSdzARwm0ru6DhTVA3umU5hZc28V3kO4stgYryrTlLpuvgI9GiijltAjNbcqA==",
+      "dev": true,
+      "license": "MIT",
+      "dependencies": {
+        "ms": "^2.1.3"
+      },
+      "engines": {
+        "node": ">=6.0"
+      },
+      "peerDependenciesMeta": {
+        "supports-color": {
+          "optional": true
+        }
+      }
+    },
+    "node_modules/decompress-response": {
+      "version": "6.0.0",
+      "resolved": "https://registry.npmjs.org/decompress-response/-/decompress-response-6.0.0.tgz",
+      "integrity": "sha512-aW35yZM6Bb/4oJlZncMH2LCoZtJXTRxES17vE3hoRiowU2kWHaJKFkSBDnDR+cm9J+9QhXmREyIfv0pji9ejCQ==",
+      "dev": true,
+      "license": "MIT",
+      "dependencies": {
+        "mimic-response": "^3.1.0"
+      },
+      "engines": {
+        "node": ">=10"
+      },
+      "funding": {
+        "url": "https://github.com/sponsors/sindresorhus"
+      }
+    },
+    "node_modules/decompress-response/node_modules/mimic-response": {
+      "version": "3.1.0",
+      "resolved": "https://registry.npmjs.org/mimic-response/-/mimic-response-3.1.0.tgz",
+      "integrity": "sha512-z0yWI+4FDrrweS8Zmt4Ej5HdJmky15+L2e6Wgn3+iK5fWzb6T3fhNFq2+MeTRb064c6Wr4N/wv0DzQTjNzHNGQ==",
+      "dev": true,
+      "license": "MIT",
+      "engines": {
+        "node": ">=10"
+      },
+      "funding": {
+        "url": "https://github.com/sponsors/sindresorhus"
+      }
+    },
+    "node_modules/defer-to-connect": {
+      "version": "2.0.1",
+      "resolved": "https://registry.npmjs.org/defer-to-connect/-/defer-to-connect-2.0.1.tgz",
+      "integrity": "sha512-4tvttepXG1VaYGrRibk5EwJd1t4udunSOVMdLSAL6mId1ix438oPwPZMALY41FCijukO1L0twNcGsdzS7dHgDg==",
+      "dev": true,
+      "license": "MIT",
+      "engines": {
+        "node": ">=10"
+      }
+    },
+    "node_modules/define-data-property": {
+      "version": "1.1.4",
+      "resolved": "https://registry.npmjs.org/define-data-property/-/define-data-property-1.1.4.tgz",
+      "integrity": "sha512-rBMvIzlpA8v6E+SJZoo++HAYqsLrkg7MSfIinMPFhmkorw7X+dOXVJQs+QT69zGkzMyfDnIMN2Wid1+NbL3T+A==",
+      "dev": true,
+      "license": "MIT",
+      "optional": true,
+      "dependencies": {
+        "es-define-property": "^1.0.0",
+        "es-errors": "^1.3.0",
+        "gopd": "^1.0.1"
+      },
+      "engines": {
+        "node": ">= 0.4"
+      },
+      "funding": {
+        "url": "https://github.com/sponsors/ljharb"
+      }
+    },
+    "node_modules/define-properties": {
+      "version": "1.2.1",
+      "resolved": "https://registry.npmjs.org/define-properties/-/define-properties-1.2.1.tgz",
+      "integrity": "sha512-8QmQKqEASLd5nx0U1B1okLElbUuuttJ/AnYmRXbbbGDWh6uS208EjD4Xqq/I9wK7u0v6O08XhTWnt5XtEbR6Dg==",
+      "dev": true,
+      "license": "MIT",
+      "optional": true,
+      "dependencies": {
+        "define-data-property": "^1.0.1",
+        "has-property-descriptors": "^1.0.0",
+        "object-keys": "^1.1.1"
+      },
+      "engines": {
+        "node": ">= 0.4"
+      },
+      "funding": {
+        "url": "https://github.com/sponsors/ljharb"
+      }
+    },
+    "node_modules/detect-node": {
+      "version": "2.1.0",
+      "resolved": "https://registry.npmjs.org/detect-node/-/detect-node-2.1.0.tgz",
+      "integrity": "sha512-T0NIuQpnTvFDATNuHN5roPwSBG83rFsuO+MXXH9/3N1eFbn4wcPjttvjMLEPWJ0RGUYgQE7cGgS3tNxbqCGM7g==",
+      "dev": true,
+      "license": "MIT",
+      "optional": true
+    },
+    "node_modules/electron": {
+      "version": "30.5.1",
+      "resolved": "https://registry.npmjs.org/electron/-/electron-30.5.1.tgz",
+      "integrity": "sha512-AhL7+mZ8Lg14iaNfoYTkXQ2qee8mmsQyllKdqxlpv/zrKgfxz6jNVtcRRbQtLxtF8yzcImWdfTQROpYiPumdbw==",
+      "dev": true,
+      "hasInstallScript": true,
+      "license": "MIT",
+      "dependencies": {
+        "@electron/get": "^2.0.0",
+        "@types/node": "^20.9.0",
+        "extract-zip": "^2.0.1"
+      },
+      "bin": {
+        "electron": "cli.js"
+      },
+      "engines": {
+        "node": ">= 12.20.55"
+      }
+    },
+    "node_modules/end-of-stream": {
+      "version": "1.4.5",
+      "resolved": "https://registry.npmjs.org/end-of-stream/-/end-of-stream-1.4.5.tgz",
+      "integrity": "sha512-ooEGc6HP26xXq/N+GCGOT0JKCLDGrq2bQUZrQ7gyrJiZANJ/8YDTxTpQBXGMn+WbIQXNVpyWymm7KYVICQnyOg==",
+      "dev": true,
+      "license": "MIT",
+      "dependencies": {
+        "once": "^1.4.0"
+      }
+    },
+    "node_modules/env-paths": {
+      "version": "2.2.1",
+      "resolved": "https://registry.npmjs.org/env-paths/-/env-paths-2.2.1.tgz",
+      "integrity": "sha512-+h1lkLKhZMTYjog1VEpJNG7NZJWcuc2DDk/qsqSTRRCOXiLjeQ1d1/udrUGhqMxUgAlwKNZ0cf2uqan5GLuS2A==",
+      "dev": true,
+      "license": "MIT",
+      "engines": {
+        "node": ">=6"
+      }
+    },
+    "node_modules/es-define-property": {
+      "version": "1.0.1",
+      "resolved": "https://registry.npmjs.org/es-define-property/-/es-define-property-1.0.1.tgz",
+      "integrity": "sha512-e3nRfgfUZ4rNGL232gUgX06QNyyez04KdjFrF+LTRoOXmrOgFKDg4BCdsjW8EnT69eqdYGmRpJwiPVYNrCaW3g==",
+      "dev": true,
+      "license": "MIT",
+      "optional": true,
+      "engines": {
+        "node": ">= 0.4"
+      }
+    },
+    "node_modules/es-errors": {
+      "version": "1.3.0",
+      "resolved": "https://registry.npmjs.org/es-errors/-/es-errors-1.3.0.tgz",
+      "integrity": "sha512-Zf5H2Kxt2xjTvbJvP2ZWLEICxA6j+hAmMzIlypy4xcBg1vKVnx89Wy0GbS+kf5cwCVFFzdCFh2XSCFNULS6csw==",
+      "dev": true,
+      "license": "MIT",
+      "optional": true,
+      "engines": {
+        "node": ">= 0.4"
+      }
+    },
+    "node_modules/es6-error": {
+      "version": "4.1.1",
+      "resolved": "https://registry.npmjs.org/es6-error/-/es6-error-4.1.1.tgz",
+      "integrity": "sha512-Um/+FxMr9CISWh0bi5Zv0iOD+4cFh5qLeks1qhAopKVAJw3drgKbKySikp7wGhDL0HPeaja0P5ULZrxLkniUVg==",
+      "dev": true,
+      "license": "MIT",
+      "optional": true
+    },
+    "node_modules/escape-string-regexp": {
+      "version": "4.0.0",
+      "resolved": "https://registry.npmjs.org/escape-string-regexp/-/escape-string-regexp-4.0.0.tgz",
+      "integrity": "sha512-TtpcNJ3XAzx3Gq8sWRzJaVajRs0uVxA2YAkdb1jm2YkPz4G6egUFAyA3n5vtEIZefPk5Wa4UXbKuS5fKkJWdgA==",
+      "dev": true,
+      "license": "MIT",
+      "optional": true,
+      "engines": {
+        "node": ">=10"
+      },
+      "funding": {
+        "url": "https://github.com/sponsors/sindresorhus"
+      }
+    },
+    "node_modules/extract-zip": {
+      "version": "2.0.1",
+      "resolved": "https://registry.npmjs.org/extract-zip/-/extract-zip-2.0.1.tgz",
+      "integrity": "sha512-GDhU9ntwuKyGXdZBUgTIe+vXnWj0fppUEtMDL0+idd5Sta8TGpHssn/eusA9mrPr9qNDym6SxAYZjNvCn/9RBg==",
+      "dev": true,
+      "license": "BSD-2-Clause",
+      "dependencies": {
+        "debug": "^4.1.1",
+        "get-stream": "^5.1.0",
+        "yauzl": "^2.10.0"
+      },
+      "bin": {
+        "extract-zip": "cli.js"
+      },
+      "engines": {
+        "node": ">= 10.17.0"
+      },
+      "optionalDependencies": {
+        "@types/yauzl": "^2.9.1"
+      }
+    },
+    "node_modules/fd-slicer": {
+      "version": "1.1.0",
+      "resolved": "https://registry.npmjs.org/fd-slicer/-/fd-slicer-1.1.0.tgz",
+      "integrity": "sha512-cE1qsB/VwyQozZ+q1dGxR8LBYNZeofhEdUNGSMbQD3Gw2lAzX9Zb3uIU6Ebc/Fmyjo9AWWfnn0AUCHqtevs/8g==",
+      "dev": true,
+      "license": "MIT",
+      "dependencies": {
+        "pend": "~1.2.0"
+      }
+    },
+    "node_modules/fs-extra": {
+      "version": "8.1.0",
+      "resolved": "https://registry.npmjs.org/fs-extra/-/fs-extra-8.1.0.tgz",
+      "integrity": "sha512-yhlQgA6mnOJUKOsRUFsgJdQCvkKhcz8tlZG5HBQfReYZy46OwLcY+Zia0mtdHsOo9y/hP+CxMN0TU9QxoOtG4g==",
+      "dev": true,
+      "license": "MIT",
+      "dependencies": {
+        "graceful-fs": "^4.2.0",
+        "jsonfile": "^4.0.0",
+        "universalify": "^0.1.0"
+      },
+      "engines": {
+        "node": ">=6 <7 || >=8"
+      }
+    },
+    "node_modules/get-stream": {
+      "version": "5.2.0",
+      "resolved": "https://registry.npmjs.org/get-stream/-/get-stream-5.2.0.tgz",
+      "integrity": "sha512-nBF+F1rAZVCu/p7rjzgA+Yb4lfYXrpl7a6VmJrU8wF9I1CKvP/QwPNZHnOlwbTkY6dvtFIzFMSyQXbLoTQPRpA==",
+      "dev": true,
+      "license": "MIT",
+      "dependencies": {
+        "pump": "^3.0.0"
+      },
+      "engines": {
+        "node": ">=8"
+      },
+      "funding": {
+        "url": "https://github.com/sponsors/sindresorhus"
+      }
+    },
+    "node_modules/global-agent": {
+      "version": "3.0.0",
+      "resolved": "https://registry.npmjs.org/global-agent/-/global-agent-3.0.0.tgz",
+      "integrity": "sha512-PT6XReJ+D07JvGoxQMkT6qji/jVNfX/h364XHZOWeRzy64sSFr+xJ5OX7LI3b4MPQzdL4H8Y8M0xzPpsVMwA8Q==",
+      "dev": true,
+      "license": "BSD-3-Clause",
+      "optional": true,
+      "dependencies": {
+        "boolean": "^3.0.1",
+        "es6-error": "^4.1.1",
+        "matcher": "^3.0.0",
+        "roarr": "^2.15.3",
+        "semver": "^7.3.2",
+        "serialize-error": "^7.0.1"
+      },
+      "engines": {
+        "node": ">=10.0"
+      }
+    },
+    "node_modules/global-agent/node_modules/semver": {
+      "version": "7.7.3",
+      "resolved": "https://registry.npmjs.org/semver/-/semver-7.7.3.tgz",
+      "integrity": "sha512-SdsKMrI9TdgjdweUSR9MweHA4EJ8YxHn8DFaDisvhVlUOe4BF1tLD7GAj0lIqWVl+dPb/rExr0Btby5loQm20Q==",
+      "dev": true,
+      "license": "ISC",
+      "optional": true,
+      "bin": {
+        "semver": "bin/semver.js"
+      },
+      "engines": {
+        "node": ">=10"
+      }
+    },
+    "node_modules/globalthis": {
+      "version": "1.0.4",
+      "resolved": "https://registry.npmjs.org/globalthis/-/globalthis-1.0.4.tgz",
+      "integrity": "sha512-DpLKbNU4WylpxJykQujfCcwYWiV/Jhm50Goo0wrVILAv5jOr9d+H+UR3PhSCD2rCCEIg0uc+G+muBTwD54JhDQ==",
+      "dev": true,
+      "license": "MIT",
+      "optional": true,
+      "dependencies": {
+        "define-properties": "^1.2.1",
+        "gopd": "^1.0.1"
+      },
+      "engines": {
+        "node": ">= 0.4"
+      },
+      "funding": {
+        "url": "https://github.com/sponsors/ljharb"
+      }
+    },
+    "node_modules/gopd": {
+      "version": "1.2.0",
+      "resolved": "https://registry.npmjs.org/gopd/-/gopd-1.2.0.tgz",
+      "integrity": "sha512-ZUKRh6/kUFoAiTAtTYPZJ3hw9wNxx+BIBOijnlG9PnrJsCcSjs1wyyD6vJpaYtgnzDrKYRSqf3OO6Rfa93xsRg==",
+      "dev": true,
+      "license": "MIT",
+      "optional": true,
+      "engines": {
+        "node": ">= 0.4"
+      },
+      "funding": {
+        "url": "https://github.com/sponsors/ljharb"
+      }
+    },
+    "node_modules/got": {
+      "version": "11.8.6",
+      "resolved": "https://registry.npmjs.org/got/-/got-11.8.6.tgz",
+      "integrity": "sha512-6tfZ91bOr7bOXnK7PRDCGBLa1H4U080YHNaAQ2KsMGlLEzRbk44nsZF2E1IeRc3vtJHPVbKCYgdFbaGO2ljd8g==",
+      "dev": true,
+      "license": "MIT",
+      "dependencies": {
+        "@sindresorhus/is": "^4.0.0",
+        "@szmarczak/http-timer": "^4.0.5",
+        "@types/cacheable-request": "^6.0.1",
+        "@types/responselike": "^1.0.0",
+        "cacheable-lookup": "^5.0.3",
+        "cacheable-request": "^7.0.2",
+        "decompress-response": "^6.0.0",
+        "http2-wrapper": "^1.0.0-beta.5.2",
+        "lowercase-keys": "^2.0.0",
+        "p-cancelable": "^2.0.0",
+        "responselike": "^2.0.0"
+      },
+      "engines": {
+        "node": ">=10.19.0"
+      },
+      "funding": {
+        "url": "https://github.com/sindresorhus/got?sponsor=1"
+      }
+    },
+    "node_modules/graceful-fs": {
+      "version": "4.2.11",
+      "resolved": "https://registry.npmjs.org/graceful-fs/-/graceful-fs-4.2.11.tgz",
+      "integrity": "sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==",
+      "dev": true,
+      "license": "ISC"
+    },
+    "node_modules/has-property-descriptors": {
+      "version": "1.0.2",
+      "resolved": "https://registry.npmjs.org/has-property-descriptors/-/has-property-descriptors-1.0.2.tgz",
+      "integrity": "sha512-55JNKuIW+vq4Ke1BjOTjM2YctQIvCT7GFzHwmfZPGo5wnrgkid0YQtnAleFSqumZm4az3n2BS+erby5ipJdgrg==",
+      "dev": true,
+      "license": "MIT",
+      "optional": true,
+      "dependencies": {
+        "es-define-property": "^1.0.0"
+      },
+      "funding": {
+        "url": "https://github.com/sponsors/ljharb"
+      }
+    },
+    "node_modules/http-cache-semantics": {
+      "version": "4.2.0",
+      "resolved": "https://registry.npmjs.org/http-cache-semantics/-/http-cache-semantics-4.2.0.tgz",
+      "integrity": "sha512-dTxcvPXqPvXBQpq5dUr6mEMJX4oIEFv6bwom3FDwKRDsuIjjJGANqhBuoAn9c1RQJIdAKav33ED65E2ys+87QQ==",
+      "dev": true,
+      "license": "BSD-2-Clause"
+    },
+    "node_modules/http2-wrapper": {
+      "version": "1.0.3",
+      "resolved": "https://registry.npmjs.org/http2-wrapper/-/http2-wrapper-1.0.3.tgz",
+      "integrity": "sha512-V+23sDMr12Wnz7iTcDeJr3O6AIxlnvT/bmaAAAP/Xda35C90p9599p0F1eHR/N1KILWSoWVAiOMFjBBXaXSMxg==",
+      "dev": true,
+      "license": "MIT",
+      "dependencies": {
+        "quick-lru": "^5.1.1",
+        "resolve-alpn": "^1.0.0"
+      },
+      "engines": {
+        "node": ">=10.19.0"
+      }
+    },
+    "node_modules/json-buffer": {
+      "version": "3.0.1",
+      "resolved": "https://registry.npmjs.org/json-buffer/-/json-buffer-3.0.1.tgz",
+      "integrity": "sha512-4bV5BfR2mqfQTJm+V5tPPdf+ZpuhiIvTuAB5g8kcrXOZpTT/QwwVRWBywX1ozr6lEuPdbHxwaJlm9G6mI2sfSQ==",
+      "dev": true,
+      "license": "MIT"
+    },
+    "node_modules/json-stringify-safe": {
+      "version": "5.0.1",
+      "resolved": "https://registry.npmjs.org/json-stringify-safe/-/json-stringify-safe-5.0.1.tgz",
+      "integrity": "sha512-ZClg6AaYvamvYEE82d3Iyd3vSSIjQ+odgjaTzRuO3s7toCdFKczob2i0zCh7JE8kWn17yvAWhUVxvqGwUalsRA==",
+      "dev": true,
+      "license": "ISC",
+      "optional": true
+    },
+    "node_modules/jsonfile": {
+      "version": "4.0.0",
+      "resolved": "https://registry.npmjs.org/jsonfile/-/jsonfile-4.0.0.tgz",
+      "integrity": "sha512-m6F1R3z8jjlf2imQHS2Qez5sjKWQzbuuhuJ/FKYFRZvPE3PuHcSMVZzfsLhGVOkfd20obL5SWEBew5ShlquNxg==",
+      "dev": true,
+      "license": "MIT",
+      "optionalDependencies": {
+        "graceful-fs": "^4.1.6"
+      }
+    },
+    "node_modules/keyv": {
+      "version": "4.5.4",
+      "resolved": "https://registry.npmjs.org/keyv/-/keyv-4.5.4.tgz",
+      "integrity": "sha512-oxVHkHR/EJf2CNXnWxRLW6mg7JyCCUcG0DtEGmL2ctUo1PNTin1PUil+r/+4r5MpVgC/fn1kjsx7mjSujKqIpw==",
+      "dev": true,
+      "license": "MIT",
+      "dependencies": {
+        "json-buffer": "3.0.1"
+      }
+    },
+    "node_modules/lowercase-keys": {
+      "version": "2.0.0",
+      "resolved": "https://registry.npmjs.org/lowercase-keys/-/lowercase-keys-2.0.0.tgz",
+      "integrity": "sha512-tqNXrS78oMOE73NMxK4EMLQsQowWf8jKooH9g7xPavRT706R6bkQJ6DY2Te7QukaZsulxa30wQ7bk0pm4XiHmA==",
+      "dev": true,
+      "license": "MIT",
+      "engines": {
+        "node": ">=8"
+      }
+    },
+    "node_modules/matcher": {
+      "version": "3.0.0",
+      "resolved": "https://registry.npmjs.org/matcher/-/matcher-3.0.0.tgz",
+      "integrity": "sha512-OkeDaAZ/bQCxeFAozM55PKcKU0yJMPGifLwV4Qgjitu+5MoAfSQN4lsLJeXZ1b8w0x+/Emda6MZgXS1jvsapng==",
+      "dev": true,
+      "license": "MIT",
+      "optional": true,
+      "dependencies": {
+        "escape-string-regexp": "^4.0.0"
+      },
+      "engines": {
+        "node": ">=10"
+      }
+    },
+    "node_modules/mimic-response": {
+      "version": "1.0.1",
+      "resolved": "https://registry.npmjs.org/mimic-response/-/mimic-response-1.0.1.tgz",
+      "integrity": "sha512-j5EctnkH7amfV/q5Hgmoal1g2QHFJRraOtmx0JpIqkxhBhI/lJSl1nMpQ45hVarwNETOoWEimndZ4QK0RHxuxQ==",
+      "dev": true,
+      "license": "MIT",
+      "engines": {
+        "node": ">=4"
+      }
+    },
+    "node_modules/ms": {
+      "version": "2.1.3",
+      "resolved": "https://registry.npmjs.org/ms/-/ms-2.1.3.tgz",
+      "integrity": "sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==",
+      "dev": true,
+      "license": "MIT"
+    },
+    "node_modules/normalize-url": {
+      "version": "6.1.0",
+      "resolved": "https://registry.npmjs.org/normalize-url/-/normalize-url-6.1.0.tgz",
+      "integrity": "sha512-DlL+XwOy3NxAQ8xuC0okPgK46iuVNAK01YN7RueYBqqFeGsBjV9XmCAzAdgt+667bCl5kPh9EqKKDwnaPG1I7A==",
+      "dev": true,
+      "license": "MIT",
+      "engines": {
+        "node": ">=10"
+      },
+      "funding": {
+        "url": "https://github.com/sponsors/sindresorhus"
+      }
+    },
+    "node_modules/object-keys": {
+      "version": "1.1.1",
+      "resolved": "https://registry.npmjs.org/object-keys/-/object-keys-1.1.1.tgz",
+      "integrity": "sha512-NuAESUOUMrlIXOfHKzD6bpPu3tYt3xvjNdRIQ+FeT0lNb4K8WR70CaDxhuNguS2XG+GjkyMwOzsN5ZktImfhLA==",
+      "dev": true,
+      "license": "MIT",
+      "optional": true,
+      "engines": {
+        "node": ">= 0.4"
+      }
+    },
+    "node_modules/once": {
+      "version": "1.4.0",
+      "resolved": "https://registry.npmjs.org/once/-/once-1.4.0.tgz",
+      "integrity": "sha512-lNaJgI+2Q5URQBkccEKHTQOPaXdUxnZZElQTZY0MFUAuaEqe1E+Nyvgdz/aIyNi6Z9MzO5dv1H8n58/GELp3+w==",
+      "dev": true,
+      "license": "ISC",
+      "dependencies": {
+        "wrappy": "1"
+      }
+    },
+    "node_modules/p-cancelable": {
+      "version": "2.1.1",
+      "resolved": "https://registry.npmjs.org/p-cancelable/-/p-cancelable-2.1.1.tgz",
+      "integrity": "sha512-BZOr3nRQHOntUjTrH8+Lh54smKHoHyur8We1V8DSMVrl5A2malOOwuJRnKRDjSnkoeBh4at6BwEnb5I7Jl31wg==",
+      "dev": true,
+      "license": "MIT",
+      "engines": {
+        "node": ">=8"
+      }
+    },
+    "node_modules/pend": {
+      "version": "1.2.0",
+      "resolved": "https://registry.npmjs.org/pend/-/pend-1.2.0.tgz",
+      "integrity": "sha512-F3asv42UuXchdzt+xXqfW1OGlVBe+mxa2mqI0pg5yAHZPvFmY3Y6drSf/GQ1A86WgWEN9Kzh/WrgKa6iGcHXLg==",
+      "dev": true,
+      "license": "MIT"
+    },
+    "node_modules/progress": {
+      "version": "2.0.3",
+      "resolved": "https://registry.npmjs.org/progress/-/progress-2.0.3.tgz",
+      "integrity": "sha512-7PiHtLll5LdnKIMw100I+8xJXR5gW2QwWYkT6iJva0bXitZKa/XMrSbdmg3r2Xnaidz9Qumd0VPaMrZlF9V9sA==",
+      "dev": true,
+      "license": "MIT",
+      "engines": {
+        "node": ">=0.4.0"
+      }
+    },
+    "node_modules/pump": {
+      "version": "3.0.3",
+      "resolved": "https://registry.npmjs.org/pump/-/pump-3.0.3.tgz",
+      "integrity": "sha512-todwxLMY7/heScKmntwQG8CXVkWUOdYxIvY2s0VWAAMh/nd8SoYiRaKjlr7+iCs984f2P8zvrfWcDDYVb73NfA==",
+      "dev": true,
+      "license": "MIT",
+      "dependencies": {
+        "end-of-stream": "^1.1.0",
+        "once": "^1.3.1"
+      }
+    },
+    "node_modules/quick-lru": {
+      "version": "5.1.1",
+      "resolved": "https://registry.npmjs.org/quick-lru/-/quick-lru-5.1.1.tgz",
+      "integrity": "sha512-WuyALRjWPDGtt/wzJiadO5AXY+8hZ80hVpe6MyivgraREW751X3SbhRvG3eLKOYN+8VEvqLcf3wdnt44Z4S4SA==",
+      "dev": true,
+      "license": "MIT",
+      "engines": {
+        "node": ">=10"
+      },
+      "funding": {
+        "url": "https://github.com/sponsors/sindresorhus"
+      }
+    },
+    "node_modules/resolve-alpn": {
+      "version": "1.2.1",
+      "resolved": "https://registry.npmjs.org/resolve-alpn/-/resolve-alpn-1.2.1.tgz",
+      "integrity": "sha512-0a1F4l73/ZFZOakJnQ3FvkJ2+gSTQWz/r2KE5OdDY0TxPm5h4GkqkWWfM47T7HsbnOtcJVEF4epCVy6u7Q3K+g==",
+      "dev": true,
+      "license": "MIT"
+    },
+    "node_modules/responselike": {
+      "version": "2.0.1",
+      "resolved": "https://registry.npmjs.org/responselike/-/responselike-2.0.1.tgz",
+      "integrity": "sha512-4gl03wn3hj1HP3yzgdI7d3lCkF95F21Pz4BPGvKHinyQzALR5CapwC8yIi0Rh58DEMQ/SguC03wFj2k0M/mHhw==",
+      "dev": true,
+      "license": "MIT",
+      "dependencies": {
+        "lowercase-keys": "^2.0.0"
+      },
+      "funding": {
+        "url": "https://github.com/sponsors/sindresorhus"
+      }
+    },
+    "node_modules/roarr": {
+      "version": "2.15.4",
+      "resolved": "https://registry.npmjs.org/roarr/-/roarr-2.15.4.tgz",
+      "integrity": "sha512-CHhPh+UNHD2GTXNYhPWLnU8ONHdI+5DI+4EYIAOaiD63rHeYlZvyh8P+in5999TTSFgUYuKUAjzRI4mdh/p+2A==",
+      "dev": true,
+      "license": "BSD-3-Clause",
+      "optional": true,
+      "dependencies": {
+        "boolean": "^3.0.1",
+        "detect-node": "^2.0.4",
+        "globalthis": "^1.0.1",
+        "json-stringify-safe": "^5.0.1",
+        "semver-compare": "^1.0.0",
+        "sprintf-js": "^1.1.2"
+      },
+      "engines": {
+        "node": ">=8.0"
+      }
+    },
+    "node_modules/semver": {
+      "version": "6.3.1",
+      "resolved": "https://registry.npmjs.org/semver/-/semver-6.3.1.tgz",
+      "integrity": "sha512-BR7VvDCVHO+q2xBEWskxS6DJE1qRnb7DxzUrogb71CWoSficBxYsiAGd+Kl0mmq/MprG9yArRkyrQxTO6XjMzA==",
+      "dev": true,
+      "license": "ISC",
+      "bin": {
+        "semver": "bin/semver.js"
+      }
+    },
+    "node_modules/semver-compare": {
+      "version": "1.0.0",
+      "resolved": "https://registry.npmjs.org/semver-compare/-/semver-compare-1.0.0.tgz",
+      "integrity": "sha512-YM3/ITh2MJ5MtzaM429anh+x2jiLVjqILF4m4oyQB18W7Ggea7BfqdH/wGMK7dDiMghv/6WG7znWMwUDzJiXow==",
+      "dev": true,
+      "license": "MIT",
+      "optional": true
+    },
+    "node_modules/serialize-error": {
+      "version": "7.0.1",
+      "resolved": "https://registry.npmjs.org/serialize-error/-/serialize-error-7.0.1.tgz",
+      "integrity": "sha512-8I8TjW5KMOKsZQTvoxjuSIa7foAwPWGOts+6o7sgjz41/qMD9VQHEDxi6PBvK2l0MXUmqZyNpUK+T2tQaaElvw==",
+      "dev": true,
+      "license": "MIT",
+      "optional": true,
+      "dependencies": {
+        "type-fest": "^0.13.1"
+      },
+      "engines": {
+        "node": ">=10"
+      },
+      "funding": {
+        "url": "https://github.com/sponsors/sindresorhus"
+      }
+    },
+    "node_modules/sprintf-js": {
+      "version": "1.1.3",
+      "resolved": "https://registry.npmjs.org/sprintf-js/-/sprintf-js-1.1.3.tgz",
+      "integrity": "sha512-Oo+0REFV59/rz3gfJNKQiBlwfHaSESl1pcGyABQsnnIfWOFt6JNj5gCog2U6MLZ//IGYD+nA8nI+mTShREReaA==",
+      "dev": true,
+      "license": "BSD-3-Clause",
+      "optional": true
+    },
+    "node_modules/sumchecker": {
+      "version": "3.0.1",
+      "resolved": "https://registry.npmjs.org/sumchecker/-/sumchecker-3.0.1.tgz",
+      "integrity": "sha512-MvjXzkz/BOfyVDkG0oFOtBxHX2u3gKbMHIF/dXblZsgD3BWOFLmHovIpZY7BykJdAjcqRCBi1WYBNdEC9yI7vg==",
+      "dev": true,
+      "license": "Apache-2.0",
+      "dependencies": {
+        "debug": "^4.1.0"
+      },
+      "engines": {
+        "node": ">= 8.0"
+      }
+    },
+    "node_modules/type-fest": {
+      "version": "0.13.1",
+      "resolved": "https://registry.npmjs.org/type-fest/-/type-fest-0.13.1.tgz",
+      "integrity": "sha512-34R7HTnG0XIJcBSn5XhDd7nNFPRcXYRZrBB2O2jdKqYODldSzBAqzsWoZYYvduky73toYS/ESqxPvkDf/F0XMg==",
+      "dev": true,
+      "license": "(MIT OR CC0-1.0)",
+      "optional": true,
+      "engines": {
+        "node": ">=10"
+      },
+      "funding": {
+        "url": "https://github.com/sponsors/sindresorhus"
+      }
+    },
+    "node_modules/undici-types": {
+      "version": "6.21.0",
+      "resolved": "https://registry.npmjs.org/undici-types/-/undici-types-6.21.0.tgz",
+      "integrity": "sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==",
+      "dev": true,
+      "license": "MIT"
+    },
+    "node_modules/universalify": {
+      "version": "0.1.2",
+      "resolved": "https://registry.npmjs.org/universalify/-/universalify-0.1.2.tgz",
+      "integrity": "sha512-rBJeI5CXAlmy1pV+617WB9J63U6XcazHHF2f2dbJix4XzpUF0RS3Zbj0FGIOCAva5P/d/GBOYaACQ1w+0azUkg==",
+      "dev": true,
+      "license": "MIT",
+      "engines": {
+        "node": ">= 4.0.0"
+      }
+    },
+    "node_modules/wrappy": {
+      "version": "1.0.2",
+      "resolved": "https://registry.npmjs.org/wrappy/-/wrappy-1.0.2.tgz",
+      "integrity": "sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ==",
+      "dev": true,
+      "license": "ISC"
+    },
+    "node_modules/yauzl": {
+      "version": "2.10.0",
+      "resolved": "https://registry.npmjs.org/yauzl/-/yauzl-2.10.0.tgz",
+      "integrity": "sha512-p4a9I6X6nu6IhoGmBqAcbJy1mlC4j27vEPZX9F4L4/vZT3Lyq1VkFHw/V/PUcB9Buo+DG3iHkT0x3Qya58zc3g==",
+      "dev": true,
+      "license": "MIT",
+      "dependencies": {
+        "buffer-crc32": "~0.2.3",
+        "fd-slicer": "~1.1.0"
+      }
+    }
+  }
+}
+
+
+==============================================================================================================
+##############################################################################################################
+CÓDIGO 1 (FIN)
+##############################################################################################################
+==============================================================================================================
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+
+
+==============================================================================================================
+##############################################################################################################
+ARCHIVO 2
+##############################################################################################################
+==============================================================================================================
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+archivo 2: package.json
+ruta del archivo 2: package.json
+código completo del archivo 2:
+
+==============================================================================================================
+##############################################################################################################
+CÓDIGO 2 (INICIO)
+##############################################################################################################
+==============================================================================================================
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+{
+  "name": "txt-exporter-electron",
+  "version": "1.0.0",
+  "description": "Exporta .html .js .css .json a .txt por archivo y genera un todo.txt con separadores, desde una carpeta raíz elegida.",
+  "main": "src/main.js",
+  "author": "",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^30.0.0"
+  }
+}
+
+
+==============================================================================================================
+##############################################################################################################
+CÓDIGO 2 (FIN)
+##############################################################################################################
+==============================================================================================================
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+
+
+==============================================================================================================
+##############################################################################################################
+ARCHIVO 3
+##############################################################################################################
+==============================================================================================================
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+archivo 3: app.core.js
+ruta del archivo 3: src/app.core.js
+código completo del archivo 3:
+
+==============================================================================================================
+##############################################################################################################
+CÓDIGO 3 (INICIO)
+##############################################################################################################
+==============================================================================================================
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+/**
+ * Archivo: src/app.core.js
+ * Función: Núcleo (Node). Escanea recursivo, filtra, lee texto y exporta:
+ *  - txt_convertidos/archivo.ext.txt (código completo)
+ *  - txt_convertidos/todo.txt con separadores + Archivo N + Ruta + Código
+ *  - reporta errores para alerta
+ */
+
+const fs = require("fs");
+const fsp = fs.promises;
+const path = require("path");
+
+const DEFAULT_ALLOWED_EXTS = [".html", ".js", ".css", ".json"];
+const DEFAULT_EXCLUDED_DIRS = new Set(["node_modules", ".git", "dist", "build", "txt_convertidos"]);
+
+function nowISO() {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+function shortRelPath(rootPath, fullPath) {
+  const rel = path.relative(rootPath, fullPath);
+  // Normalizar a slash para que se vea igual en todo.txt
+  return rel.split(path.sep).join("/");
+}
+
+function hugeSeparator(label = "") {
+  // “Muchos separadores”
+  const lineA = "=".repeat(110);
+  const lineB = "-".repeat(110);
+  const lineC = "#".repeat(110);
+  const mid = label ? `\n${lineA}\n${lineC}\n${label}\n${lineC}\n${lineA}\n` : `\n${lineA}\n${lineC}\n${lineA}\n`;
+  return `${mid}${lineB}\n${lineB}\n`;
+}
+
+function normalizeOptions(options) {
+  const opts = options || {};
+  const allowedExts = Array.isArray(opts.allowedExts) && opts.allowedExts.length > 0 ? opts.allowedExts : DEFAULT_ALLOWED_EXTS;
+  const excludedDirsArr = Array.isArray(opts.excludedDirs) && opts.excludedDirs.length > 0
+    ? opts.excludedDirs
+    : Array.from(DEFAULT_EXCLUDED_DIRS);
+
+  return {
+    allowedExts: allowedExts.map((e) => e.startsWith(".") ? e.toLowerCase() : `.${e.toLowerCase()}`),
+    excludedDirs: new Set(excludedDirsArr),
+    outputDirName: typeof opts.outputDirName === "string" && opts.outputDirName.trim() ? opts.outputDirName.trim() : "txt_convertidos",
+    todoFileName: typeof opts.todoFileName === "string" && opts.todoFileName.trim() ? opts.todoFileName.trim() : "todo.txt",
+    perFileMode: opts.perFileMode !== false // default true
+  };
+}
+
+async function pathExists(p) {
+  try {
+    await fsp.access(p, fs.constants.F_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function ensureDir(dirPath) {
+  if (!(await pathExists(dirPath))) {
+    await fsp.mkdir(dirPath, { recursive: true });
+  }
+}
+
+function shouldExcludeDir(dirName, excludedDirs) {
+  return excludedDirs.has(dirName);
+}
+
+function isAllowedFile(fileName, allowedExts) {
+  const ext = path.extname(fileName).toLowerCase();
+  return allowedExts.includes(ext);
+}
+
+/**
+ * Lectura robusta: UTF-8
+ * - Si falla, lanza error para que el caller lo registre y siga (según tu regla).
+ */
+async function readTextFile(fullPath) {
+  // intentamos utf-8 “normal”
+  return await fsp.readFile(fullPath, "utf8");
+}
+
+/**
+ * Escaneo recursivo
+ * Devuelve lista: [{ fullPath, relPath, baseName, ext }]
+ */
+async function scanDirectoryRecursive({ rootPath, dirPath, opts, onProgress, outList }) {
+  let entries;
+  try {
+    entries = await fsp.readdir(dirPath, { withFileTypes: true });
+  } catch (err) {
+    // si no se puede leer una carpeta, reportar progreso y continuar
+    onProgress?.({
+      stage: "scan",
+      level: "warn",
+      message: `No se pudo leer carpeta: ${shortRelPath(rootPath, dirPath)}`,
+      time: nowISO()
+    });
+    return;
+  }
+
+  for (const entry of entries) {
+    const full = path.join(dirPath, entry.name);
+
+    if (entry.isDirectory()) {
+      if (shouldExcludeDir(entry.name, opts.excludedDirs)) {
+        onProgress?.({
+          stage: "scan",
+          level: "info",
+          message: `Excluida carpeta: ${shortRelPath(rootPath, full)}`,
+          time: nowISO()
+        });
+        continue;
+      }
+      await scanDirectoryRecursive({ rootPath, dirPath: full, opts, onProgress, outList });
+      continue;
+    }
+
+    if (entry.isFile()) {
+      if (!isAllowedFile(entry.name, opts.allowedExts)) continue;
+
+      const rel = shortRelPath(rootPath, full);
+      outList.push({
+        fullPath: full,
+        relPath: rel,
+        baseName: path.basename(entry.name),
+        ext: path.extname(entry.name).toLowerCase()
+      });
+
+      if (outList.length % 50 === 0) {
+        onProgress?.({
+          stage: "scan",
+          level: "info",
+          message: `Escaneados ${outList.length} archivos (parcial)`,
+          time: nowISO()
+        });
+      }
+    }
+  }
+}
+
+async function scanRoot({ rootPath, onProgress }) {
+  if (!rootPath || typeof rootPath !== "string") {
+    throw new Error("rootPath inválido");
+  }
+
+  const opts = normalizeOptions({});
+  const files = [];
+
+  onProgress?.({ stage: "scan", level: "info", message: "Iniciando escaneo...", time: nowISO() });
+
+  await scanDirectoryRecursive({
+    rootPath,
+    dirPath: rootPath,
+    opts,
+    onProgress,
+    outList: files
+  });
+
+  files.sort((a, b) => a.relPath.localeCompare(b.relPath, "es"));
+
+  onProgress?.({
+    stage: "scan",
+    level: "ok",
+    message: `Escaneo finalizado: ${files.length} archivo(s) detectado(s)`,
+    time: nowISO()
+  });
+
+  return {
+    rootPath,
+    allowedExts: opts.allowedExts,
+    excludedDirs: Array.from(opts.excludedDirs),
+    totalFiles: files.length,
+    files
+  };
+}
+
+function buildTodoHeader({ rootPath, opts, totalFiles }) {
+  const header =
+    hugeSeparator("INFORMACIÓN GENERAL") +
+    `FECHA/HORA: ${nowISO()}\n` +
+    `RAÍZ: ${rootPath}\n` +
+    `INCLUYE: ${opts.allowedExts.join(" ")}\n` +
+    `EXCLUYE CARPETAS: ${Array.from(opts.excludedDirs).join(", ")}\n` +
+    `SALIDA: ${opts.outputDirName}/\n` +
+    `TOTAL ARCHIVOS: ${totalFiles}\n` +
+    hugeSeparator("INICIO DE CONTENIDO") +
+    "\n";
+  return header;
+}
+
+function formatTodoBlock({ index, relPath, baseName, content }) {
+  // Formato que pediste:
+  // archivo 1: nombre
+  // ruta del archivo 1
+  // código completo del archivo 1
+  // y muchos separadores
+  const label = `ARCHIVO ${index}`;
+  return (
+    hugeSeparator(label) +
+    `archivo ${index}: ${baseName}\n` +
+    `ruta del archivo ${index}: ${relPath}\n` +
+    `código completo del archivo ${index}:\n` +
+    hugeSeparator(`CÓDIGO ${index} (INICIO)`) +
+    `${content}\n` +
+    hugeSeparator(`CÓDIGO ${index} (FIN)`) +
+    "\n"
+  );
+}
+
+async function exportTxt({ rootPath, options, onProgress }) {
+  if (!rootPath || typeof rootPath !== "string") {
+    throw new Error("rootPath inválido");
+  }
+
+  const opts = normalizeOptions(options);
+
+  // 1) Escanear con opciones reales
+  const files = [];
+  onProgress?.({ stage: "scan", level: "info", message: "Iniciando escaneo para export...", time: nowISO() });
+
+  await scanDirectoryRecursive({
+    rootPath,
+    dirPath: rootPath,
+    opts,
+    onProgress,
+    outList: files
+  });
+
+  files.sort((a, b) => a.relPath.localeCompare(b.relPath, "es"));
+
+  onProgress?.({
+    stage: "scan",
+    level: "ok",
+    message: `Escaneo listo: ${files.length} archivo(s) para exportar`,
+    time: nowISO()
+  });
+
+  // 2) Preparar salida
+  const outDir = path.join(rootPath, opts.outputDirName);
+  await ensureDir(outDir);
+
+  const todoPath = path.join(outDir, opts.todoFileName);
+
+  // 3) Escribir encabezado del todo.txt (sobrescribe siempre)
+  const header = buildTodoHeader({ rootPath, opts, totalFiles: files.length });
+  await fsp.writeFile(todoPath, header, "utf8");
+
+  // 4) Procesar archivo por archivo
+  const errors = [];
+  let exportedCount = 0;
+
+  onProgress?.({ stage: "export", level: "info", message: "Exportando archivos...", time: nowISO() });
+
+  for (let i = 0; i < files.length; i++) {
+    const item = files[i];
+    const index = i + 1;
+
+    let content;
+    try {
+      content = await readTextFile(item.fullPath);
+    } catch (err) {
+      const eMsg = `${item.relPath} -> ${err?.message || String(err)}`;
+      errors.push(eMsg);
+      onProgress?.({
+        stage: "export",
+        level: "warn",
+        message: `No se pudo leer (omitido): ${item.relPath}`,
+        time: nowISO()
+      });
+      continue;
+    }
+
+    // 4a) Crear .txt por archivo (cale.html -> cale.html.txt)
+    if (opts.perFileMode) {
+      const outFileName = `${item.baseName}.txt`; // regla exacta
+      const outPath = path.join(outDir, outFileName);
+
+      // Puedes decidir si quieres encabezado también. Lo dejo con separadores para que sea útil.
+      const perFileText =
+        hugeSeparator("ARCHIVO") +
+        `NOMBRE: ${item.baseName}\n` +
+        `RUTA: ${item.relPath}\n` +
+        hugeSeparator("CÓDIGO COMPLETO") +
+        `${content}\n`;
+
+      await fsp.writeFile(outPath, perFileText, "utf8");
+    }
+
+    // 4b) Agregar bloque a todo.txt
+    const block = formatTodoBlock({
+      index,
+      relPath: item.relPath,
+      baseName: item.baseName,
+      content
+    });
+    await fsp.appendFile(todoPath, block, "utf8");
+
+    exportedCount++;
+
+    if (exportedCount % 20 === 0) {
+      onProgress?.({
+        stage: "export",
+        level: "info",
+        message: `Exportados ${exportedCount} archivo(s) (parcial)`,
+        time: nowISO()
+      });
+    }
+  }
+
+  onProgress?.({
+    stage: "export",
+    level: "ok",
+    message: `Export finalizado. Exportados: ${exportedCount}. Errores: ${errors.length}. Salida: ${opts.outputDirName}/`,
+    time: nowISO()
+  });
+
+  return {
+    rootPath,
+    outputDir: outDir,
+    todoPath,
+    perFileMode: opts.perFileMode,
+    totalFound: files.length,
+    exportedCount,
+    errors
+  };
+}
+
+function safeErrorDetails(err) {
+  try {
+    if (!err) return "";
+    const lines = [];
+    if (err.stack) lines.push(err.stack);
+    else lines.push(String(err));
+    return lines.join("\n");
+  } catch {
+    return String(err);
+  }
+}
+
+module.exports = {
+  scanRoot,
+  exportTxt,
+  safeErrorDetails
+};
+
+
+==============================================================================================================
+##############################################################################################################
+CÓDIGO 3 (FIN)
+##############################################################################################################
+==============================================================================================================
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+
+
+==============================================================================================================
+##############################################################################################################
+ARCHIVO 4
+##############################################################################################################
+==============================================================================================================
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+archivo 4: main.js
+ruta del archivo 4: src/main.js
+código completo del archivo 4:
+
+==============================================================================================================
+##############################################################################################################
+CÓDIGO 4 (INICIO)
+##############################################################################################################
+==============================================================================================================
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+/**
+ * Archivo: src/main.js
+ * Función: Proceso principal (Electron). Crea ventana, selector de carpeta raíz,
+ *         atiende IPC desde UI y ejecuta escaneo/exportación vía app.core.js
+ */
+
+const { app, BrowserWindow, ipcMain, dialog } = require("electron");
+const path = require("path");
+const Core = require("./app.core.js");
+
+let mainWindow = null;
+
+function createMainWindow() {
+  mainWindow = new BrowserWindow({
+    width: 1100,
+    height: 720,
+    minWidth: 980,
+    minHeight: 640,
+    show: true,
+    title: "TXT Exporter",
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true
+    }
+  });
+
+  mainWindow.loadFile(path.join(__dirname, "ui", "index.html"));
+
+  // Si quieres ver consola del renderer:
+  // mainWindow.webContents.openDevTools({ mode: "detach" });
+
+  mainWindow.on("closed", () => {
+    mainWindow = null;
+  });
+}
+
+function sendProgress(payload) {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  mainWindow.webContents.send("core:progress", payload);
+}
+
+function sendAlert(payload) {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  mainWindow.webContents.send("core:alert", payload);
+}
+
+app.whenReady().then(() => {
+  createMainWindow();
+
+  app.on("activate", () => {
+    if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
+  });
+});
+
+app.on("window-all-closed", () => {
+  // Windows/Linux: cerrar app totalmente
+  if (process.platform !== "darwin") app.quit();
+});
+
+/**
+ * IPC: Seleccionar carpeta raíz
+ */
+ipcMain.handle("ui:selectRoot", async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: "Selecciona la carpeta raíz",
+    properties: ["openDirectory"]
+  });
+
+  if (result.canceled || !result.filePaths || result.filePaths.length === 0) {
+    return { ok: false, canceled: true };
+  }
+
+  const rootPath = result.filePaths[0];
+  return { ok: true, rootPath };
+});
+
+/**
+ * IPC: Escanear carpeta raíz
+ */
+ipcMain.handle("ui:scanRoot", async (_event, { rootPath }) => {
+  try {
+    const scanResult = await Core.scanRoot({
+      rootPath,
+      onProgress: (p) => sendProgress(p)
+    });
+
+    return { ok: true, data: scanResult };
+  } catch (err) {
+    sendAlert({
+      title: "Error escaneando",
+      message: err?.message || String(err),
+      details: Core.safeErrorDetails(err)
+    });
+    return { ok: false, error: err?.message || String(err) };
+  }
+});
+
+/**
+ * IPC: Exportar TXT
+ */
+ipcMain.handle("ui:exportTxt", async (_event, { rootPath, options }) => {
+  try {
+    const exportResult = await Core.exportTxt({
+      rootPath,
+      options,
+      onProgress: (p) => sendProgress(p)
+    });
+
+    // Si hubo errores de lectura, lanzar alerta como pediste
+    if (exportResult.errors && exportResult.errors.length > 0) {
+      sendAlert({
+        title: "Alerta: algunos archivos no se pudieron leer",
+        message: `No se pudieron leer ${exportResult.errors.length} archivo(s). Se omitieron del export. Revisa la lista en la app.`,
+        details: exportResult.errors.slice(0, 30).join("\n")
+      });
+    }
+
+    return { ok: true, data: exportResult };
+  } catch (err) {
+    sendAlert({
+      title: "Error exportando",
+      message: err?.message || String(err),
+      details: Core.safeErrorDetails(err)
+    });
+    return { ok: false, error: err?.message || String(err) };
+  }
+});
+
+
+==============================================================================================================
+##############################################################################################################
+CÓDIGO 4 (FIN)
+##############################################################################################################
+==============================================================================================================
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+
+
+==============================================================================================================
+##############################################################################################################
+ARCHIVO 5
+##############################################################################################################
+==============================================================================================================
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+archivo 5: preload.js
+ruta del archivo 5: src/preload.js
+código completo del archivo 5:
+
+==============================================================================================================
+##############################################################################################################
+CÓDIGO 5 (INICIO)
+##############################################################################################################
+==============================================================================================================
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+/**
+ * Archivo: src/preload.js
+ * Función: Exponer API segura al renderer (UI) mediante contextBridge.
+ */
+
+const { contextBridge, ipcRenderer } = require("electron");
+
+contextBridge.exposeInMainWorld("api", {
+  selectRoot: async () => ipcRenderer.invoke("ui:selectRoot"),
+  scanRoot: async (rootPath) => ipcRenderer.invoke("ui:scanRoot", { rootPath }),
+  exportTxt: async (rootPath, options) => ipcRenderer.invoke("ui:exportTxt", { rootPath, options }),
+
+  onProgress: (callback) => {
+    ipcRenderer.removeAllListeners("core:progress");
+    ipcRenderer.on("core:progress", (_event, payload) => callback(payload));
+  },
+
+  onAlert: (callback) => {
+    ipcRenderer.removeAllListeners("core:alert");
+    ipcRenderer.on("core:alert", (_event, payload) => callback(payload));
+  }
+});
+
+
+==============================================================================================================
+##############################################################################################################
+CÓDIGO 5 (FIN)
+##############################################################################################################
+==============================================================================================================
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+
+
+==============================================================================================================
+##############################################################################################################
+ARCHIVO 6
+##############################################################################################################
+==============================================================================================================
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+archivo 6: index.html
+ruta del archivo 6: src/ui/index.html
+código completo del archivo 6:
+
+==============================================================================================================
+##############################################################################################################
+CÓDIGO 6 (INICIO)
+##############################################################################################################
+==============================================================================================================
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self';">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TXT Exporter</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="title">
+      <div class="appname">TXT Exporter</div>
+      <div class="subtitle">Electron · Exporta .html .js .css .json a txt_convertidos + todo.txt</div>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="panel">
+      <h2>1) Carpeta raíz</h2>
+
+      <div class="row">
+        <button id="btnPick" class="btn primary">Elegir carpeta raíz</button>
+        <div class="pathbox">
+          <div class="label">Ruta elegida</div>
+          <div id="rootPath" class="path">(sin seleccionar)</div>
+        </div>
+      </div>
+
+      <div class="row">
+        <button id="btnScan" class="btn">Escanear</button>
+        <button id="btnExport" class="btn success" disabled>Exportar TXT</button>
+      </div>
+
+      <div class="summary">
+        <div class="summaryItem">
+          <div class="label">Archivos detectados</div>
+          <div id="countFiles" class="value">0</div>
+        </div>
+        <div class="summaryItem">
+          <div class="label">Exportados</div>
+          <div id="countExported" class="value">0</div>
+        </div>
+        <div class="summaryItem">
+          <div class="label">Errores lectura</div>
+          <div id="countErrors" class="value">0</div>
+        </div>
+      </div>
+
+      <div class="options">
+        <h3>Opciones (fijas por tu configuración)</h3>
+        <ul>
+          <li>Incluye: <b>.html .js .css .json</b></li>
+          <li>Excluye: <b>node_modules, .git, dist, build, txt_convertidos</b></li>
+          <li>Salida: <b>txt_convertidos/</b> dentro de la raíz</li>
+          <li>Por archivo: <b>nombre.ext.txt</b></li>
+          <li>Maestro: <b>todo.txt</b> con muchos separadores</li>
+          <li>Si falla lectura: <b>alerta</b> y se omite el archivo</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>2) Progreso</h2>
+      <div id="progressLog" class="log"></div>
+
+      <h2>3) Errores de lectura</h2>
+      <div class="hint">Si hubo errores, aquí verás la lista de rutas cortas.</div>
+      <div id="errorLog" class="log error"></div>
+    </section>
+  </main>
+
+  <div id="alertBox" class="alert hidden">
+    <div class="alertHeader">
+      <div id="alertTitle" class="alertTitle">Alerta</div>
+      <button id="alertClose" class="btn tiny">Cerrar</button>
+    </div>
+    <div id="alertMessage" class="alertMessage"></div>
+    <pre id="alertDetails" class="alertDetails"></pre>
+  </div>
+
+  <script src="./renderer.js"></script>
+</body>
+</html>
+
+
+==============================================================================================================
+##############################################################################################################
+CÓDIGO 6 (FIN)
+##############################################################################################################
+==============================================================================================================
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+
+
+==============================================================================================================
+##############################################################################################################
+ARCHIVO 7
+##############################################################################################################
+==============================================================================================================
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+archivo 7: renderer.js
+ruta del archivo 7: src/ui/renderer.js
+código completo del archivo 7:
+
+==============================================================================================================
+##############################################################################################################
+CÓDIGO 7 (INICIO)
+##############################################################################################################
+==============================================================================================================
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+/**
+ * Archivo: src/ui/renderer.js
+ * Función: UI. Llama a window.api (preload) y pinta progreso/alertas.
+ */
+
+const elBtnPick = document.getElementById("btnPick");
+const elBtnScan = document.getElementById("btnScan");
+const elBtnExport = document.getElementById("btnExport");
+
+const elRootPath = document.getElementById("rootPath");
+const elCountFiles = document.getElementById("countFiles");
+const elCountExported = document.getElementById("countExported");
+const elCountErrors = document.getElementById("countErrors");
+
+const elProgressLog = document.getElementById("progressLog");
+const elErrorLog = document.getElementById("errorLog");
+
+const elAlertBox = document.getElementById("alertBox");
+const elAlertTitle = document.getElementById("alertTitle");
+const elAlertMessage = document.getElementById("alertMessage");
+const elAlertDetails = document.getElementById("alertDetails");
+const elAlertClose = document.getElementById("alertClose");
+
+let currentRoot = "";
+let lastScan = null;
+let lastErrors = [];
+
+function logProgress(line) {
+  const prev = elProgressLog.textContent || "";
+  elProgressLog.textContent = prev + line + "\n";
+  elProgressLog.scrollTop = elProgressLog.scrollHeight;
+}
+
+function logError(line) {
+  const prev = elErrorLog.textContent || "";
+  elErrorLog.textContent = prev + line + "\n";
+  elErrorLog.scrollTop = elErrorLog.scrollHeight;
+}
+
+function resetUIForNewRoot() {
+  lastScan = null;
+  lastErrors = [];
+  elCountFiles.textContent = "0";
+  elCountExported.textContent = "0";
+  elCountErrors.textContent = "0";
+  elProgressLog.textContent = "";
+  elErrorLog.textContent = "";
+  elBtnExport.disabled = true;
+}
+
+function showAlert({ title, message, details }) {
+  elAlertTitle.textContent = title || "Alerta";
+  elAlertMessage.textContent = message || "";
+  elAlertDetails.textContent = details || "";
+  elAlertBox.classList.remove("hidden");
+}
+
+function hideAlert() {
+  elAlertBox.classList.add("hidden");
+}
+
+elAlertClose.addEventListener("click", hideAlert);
+
+// listeners desde main
+window.api.onProgress((p) => {
+  const time = p.time ? `[${p.time}] ` : "";
+  const stage = p.stage ? `${p.stage.toUpperCase()}` : "CORE";
+  const level = p.level ? ` ${String(p.level).toUpperCase()}` : "";
+  logProgress(`${time}${stage}${level}: ${p.message || ""}`);
+});
+
+window.api.onAlert((a) => {
+  showAlert(a);
+});
+
+// Acciones
+elBtnPick.addEventListener("click", async () => {
+  const res = await window.api.selectRoot();
+  if (!res || !res.ok) return;
+
+  currentRoot = res.rootPath;
+  elRootPath.textContent = currentRoot;
+  resetUIForNewRoot();
+
+  logProgress(`[${new Date().toLocaleString()}] UI: Carpeta raíz seleccionada.`);
+});
+
+elBtnScan.addEventListener("click", async () => {
+  if (!currentRoot) {
+    showAlert({
+      title: "Falta carpeta raíz",
+      message: "Primero elige una carpeta raíz.",
+      details: ""
+    });
+    return;
+  }
+
+  elBtnExport.disabled = true;
+  logProgress(`[${new Date().toLocaleString()}] UI: Iniciando escaneo...`);
+
+  const res = await window.api.scanRoot(currentRoot);
+  if (!res || !res.ok) {
+    showAlert({
+      title: "Error",
+      message: res?.error || "No se pudo escanear",
+      details: ""
+    });
+    return;
+  }
+
+  lastScan = res.data;
+  elCountFiles.textContent = String(lastScan.totalFiles || 0);
+
+  logProgress(`[${new Date().toLocaleString()}] UI: Escaneo OK. Total: ${lastScan.totalFiles || 0}`);
+  elBtnExport.disabled = (lastScan.totalFiles || 0) === 0;
+});
+
+elBtnExport.addEventListener("click", async () => {
+  if (!currentRoot) return;
+
+  elBtnExport.disabled = true;
+  elCountExported.textContent = "0";
+  elCountErrors.textContent = "0";
+  elErrorLog.textContent = "";
+  lastErrors = [];
+
+  // Opciones fijas según tu mensaje
+  const options = {
+    allowedExts: [".html", ".js", ".css", ".json"],
+    excludedDirs: ["node_modules", ".git", "dist", "build", "txt_convertidos"],
+    outputDirName: "txt_convertidos",
+    todoFileName: "todo.txt",
+    perFileMode: true
+  };
+
+  logProgress(`[${new Date().toLocaleString()}] UI: Exportando...`);
+
+  const res = await window.api.exportTxt(currentRoot, options);
+  if (!res || !res.ok) {
+    showAlert({
+      title: "Error exportando",
+      message: res?.error || "No se pudo exportar",
+      details: ""
+    });
+    elBtnExport.disabled = false;
+    return;
+  }
+
+  const data = res.data;
+  elCountExported.textContent = String(data.exportedCount || 0);
+  elCountErrors.textContent = String((data.errors || []).length);
+
+  if (data.errors && data.errors.length > 0) {
+    for (const e of data.errors) logError(e);
+  }
+
+  logProgress(`[${new Date().toLocaleString()}] UI: Export OK.`);
+  logProgress(`Salida: ${data.outputDir}`);
+  logProgress(`Maestro: ${data.todoPath}`);
+
+  // permitir re-exportar
+  elBtnExport.disabled = false;
+});
+
+
+==============================================================================================================
+##############################################################################################################
+CÓDIGO 7 (FIN)
+##############################################################################################################
+==============================================================================================================
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+
+
+==============================================================================================================
+##############################################################################################################
+ARCHIVO 8
+##############################################################################################################
+==============================================================================================================
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+archivo 8: styles.css
+ruta del archivo 8: src/ui/styles.css
+código completo del archivo 8:
+
+==============================================================================================================
+##############################################################################################################
+CÓDIGO 8 (INICIO)
+##############################################################################################################
+==============================================================================================================
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+:root{
+  --bg: #0b0f17;
+  --panel: #121a28;
+  --text: #e9eef7;
+  --muted: #a6b3c7;
+  --border: #22314a;
+  --primary: #3b82f6;
+  --success: #22c55e;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+}
+
+*{ box-sizing: border-box; }
+body{
+  margin:0;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.topbar{
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+  background: #0a1220;
+}
+.appname{ font-size: 20px; font-weight: 800; }
+.subtitle{ font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+.layout{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  padding: 14px;
+}
+
+.panel{
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+  min-height: 520px;
+}
+
+h2{
+  margin: 6px 0 10px;
+  font-size: 16px;
+}
+h3{
+  margin: 12px 0 8px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.row{
+  display:flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.btn{
+  border: 1px solid var(--border);
+  background: #0a1425;
+  color: var(--text);
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor:pointer;
+  font-weight: 650;
+}
+.btn:hover{ border-color: #2f466b; }
+.btn:disabled{ opacity: .45; cursor:not-allowed; }
+
+.btn.primary{
+  background: rgba(59,130,246,.12);
+  border-color: rgba(59,130,246,.35);
+}
+.btn.success{
+  background: rgba(34,197,94,.12);
+  border-color: rgba(34,197,94,.35);
+}
+.btn.tiny{
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+}
+
+.pathbox{
+  flex:1;
+  padding: 10px 12px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+}
+.label{ font-size: 12px; color: var(--muted); }
+.path{ margin-top: 4px; font-size: 13px; word-break: break-all; }
+
+.summary{
+  display:grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin: 12px 0;
+}
+.summaryItem{
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #0a1425;
+}
+.value{
+  margin-top: 6px;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.options{
+  margin-top: 10px;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+.options ul{
+  margin: 8px 0 0;
+  padding-left: 18px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.options b{ color: var(--text); }
+
+.log{
+  height: 250px;
+  overflow:auto;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: #07101f;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  line-height: 1.35;
+  white-space: pre-wrap;
+}
+.log.error{
+  height: 170px;
+  border-color: rgba(239,68,68,.35);
+}
+
+.hint{
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.alert{
+  position: fixed;
+  right: 14px;
+  bottom: 14px;
+  width: 520px;
+  max-width: calc(100vw - 28px);
+  max-height: 70vh;
+  overflow:auto;
+  background: #0a1425;
+  border: 1px solid rgba(239,68,68,.45);
+  border-radius: 14px;
+  padding: 12px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.55);
+}
+.alert.hidden{ display:none; }
+.alertHeader{
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.alertTitle{
+  font-weight: 900;
+  color: #ffb4b4;
+}
+.alertMessage{
+  color: var(--text);
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+.alertDetails{
+  margin: 0;
+  padding: 10px;
+  border-radius: 12px;
+  background: #07101f;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+
+
+==============================================================================================================
+##############################################################################################################
+CÓDIGO 8 (FIN)
+##############################################################################################################
+==============================================================================================================
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+

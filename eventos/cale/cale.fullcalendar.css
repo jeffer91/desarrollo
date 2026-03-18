@@ -1,0 +1,218 @@
+/*
+Nombre del archivo: cale.fullcalendar.css
+Ruta: C:\Users\ITSQMET\Desktop\eventos\cale\cale.fullcalendar.css
+Función:
+- Estilos base de FullCalendar
+- Eventos, scroll, encabezados y elementos compactos
+- Ordena la vista para que respire mejor y se vea más estable
+*/
+
+.fc .fc-toolbar {
+  display: none;
+}
+
+.fc {
+  height: 100%;
+  font-size: 12px;
+  color: var(--cale-text);
+}
+
+.fc,
+.fc *,
+.fc *::before,
+.fc *::after {
+  box-sizing: border-box;
+}
+
+/* =========================================================
+   Estructura general
+   ========================================================= */
+.fc .fc-scrollgrid {
+  border: none;
+  background: #ffffff;
+}
+
+.fc .fc-scrollgrid-section-header > *,
+.fc .fc-scrollgrid-section-body > * {
+  border-color: var(--cale-border-soft);
+}
+
+.fc-theme-standard td,
+.fc-theme-standard th {
+  border-color: var(--cale-border-soft);
+}
+
+.fc .fc-scroller {
+  scrollbar-width: thin;
+}
+
+.fc .fc-scroller::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.fc .fc-scroller::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+
+.fc .fc-scroller::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* =========================================================
+   Cabeceras
+   ========================================================= */
+.fc .fc-col-header-cell {
+  background: #fafcff;
+}
+
+.fc .fc-col-header-cell-cushion,
+.fc .fc-daygrid-day-number,
+.fc .fc-timegrid-axis-cushion,
+.fc .fc-timegrid-slot-label-cushion {
+  color: var(--cale-text);
+  text-decoration: none;
+  font-weight: 800;
+  font-size: 11px;
+}
+
+.fc .fc-col-header-cell-cushion {
+  padding: 8px 4px;
+}
+
+.fc .fc-daygrid-day-number {
+  padding: 6px 8px;
+}
+
+.fc .fc-timegrid-slot-label-cushion,
+.fc .fc-timegrid-axis-cushion {
+  font-size: 10px;
+  color: var(--cale-text-soft);
+  font-weight: 700;
+}
+
+/* =========================================================
+   Día actual
+   ========================================================= */
+.fc .fc-day-today {
+  background: rgba(37, 99, 235, 0.04) !important;
+}
+
+/* =========================================================
+   Slots y celdas
+   ========================================================= */
+.fc .fc-timegrid-slot {
+  height: 1.9em;
+}
+
+.fc .fc-timegrid-slot-minor {
+  border-top-style: dotted;
+}
+
+.fc .fc-timegrid-axis-frame,
+.fc .fc-timegrid-slot-label-frame {
+  justify-content: center;
+}
+
+.fc .fc-daygrid-day-frame {
+  min-height: 110px;
+}
+
+/* =========================================================
+   Eventos
+   ========================================================= */
+.fc .fc-event {
+  border-radius: 10px;
+  padding: 1px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+  min-height: 18px;
+  overflow: hidden;
+}
+
+.fc .fc-event-main {
+  padding: 2px 4px;
+}
+
+.fc .fc-timegrid-event {
+  min-height: 26px;
+}
+
+.fc .fc-timegrid-event .fc-event-main {
+  padding: 3px 5px;
+}
+
+.fc .fc-daygrid-event {
+  margin-top: 2px;
+  margin-bottom: 2px;
+}
+
+.fc .fc-daygrid-event-dot {
+  display: none;
+}
+
+.fc .fc-event-title,
+.fc .fc-event-time {
+  font-weight: 700;
+}
+
+/* =========================================================
+   All-day y enlaces “más”
+   ========================================================= */
+.fc .fc-daygrid-more-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 800;
+  color: #1d4ed8;
+  text-decoration: none;
+  background: #eef4ff;
+  border-radius: 999px;
+  padding: 3px 7px;
+}
+
+.fc .fc-daygrid-more-link:hover {
+  background: #dbeafe;
+}
+
+/* =========================================================
+   Botones nativos de FullCalendar
+   El módulo usa su propia barra superior.
+   ========================================================= */
+.fc .fc-button,
+.fc .fc-button-primary {
+  display: none !important;
+}
+
+.fc .fc-list {
+  border: none;
+}
+
+/* =========================================================
+   Vista semana / día
+   Se refuerza el ancho de la columna horaria
+   para que la lectura no quede comprimida.
+   ========================================================= */
+.fc .fc-timegrid-axis {
+  width: 58px;
+}
+
+.fc .fc-timegrid-col-frame {
+  min-height: 100%;
+}
+
+/* =========================================================
+   Tarjetas internas generadas por JS
+   ========================================================= */
+.fc .cale-evt-wrap {
+  width: 100%;
+}
+
+.fc .cale-evt-title {
+  color: var(--cale-text);
+}
+
+.fc .cale-evt-meta {
+  color: var(--cale-text-soft);
+}

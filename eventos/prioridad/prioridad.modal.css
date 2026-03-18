@@ -1,0 +1,159 @@
+/* =========================================================
+Nombre del archivo: prioridad.modal.css
+Ruta: /prioridad/prioridad.modal.css
+Función o funciones:
+- Estilos del modal de edición avanzada (popup)
+- Acciones, chips y layout interno
+
+FIX (este cambio):
+- Evita que el modal “se vaya” largo y se corte: limita altura del modal y
+  habilita scroll interno SOLO en el body (head/foot quedan fijos).
+========================================================= */
+
+.modalBack{
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.48);
+  backdrop-filter: blur(8px);
+  display: grid;
+  place-items: center;
+  z-index: 9998;
+  padding: 18px;
+  overflow: auto; /* ✅ FIX: si el viewport es bajo, permite scroll del overlay */
+}
+
+.modal{
+  width: min(900px, 100%);
+  border-radius: var(--r);
+  background: rgba(255,255,255,0.96);
+  border: 1px solid rgba(255,255,255,0.65);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+
+  /* ✅ FIX: limitar alto del popup y crear layout con scroll interno */
+  max-height: calc(100vh - 36px); /* 18px padding arriba + 18px abajo */
+  display: flex;
+  flex-direction: column;
+}
+
+.modalHead{
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, var(--primarySoft), rgba(255,255,255,0.9));
+  flex: 0 0 auto; /* ✅ FIX: header fijo */
+}
+
+.modalTitle{
+  font-weight: 950;
+  letter-spacing: -0.01em;
+}
+
+.modalBody{
+  padding: 14px 16px;
+  display: grid;
+  gap: 12px;
+
+  /* ✅ FIX: scroll solo del contenido (no del modal completo) */
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  flex: 1 1 auto;
+  min-height: 0; /* ✅ FIX: necesario en flex para que overflow funcione bien */
+}
+
+.formGrid{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 720px){
+  .formGrid{ grid-template-columns: 1fr; }
+}
+
+.field label{
+  display: block;
+  font-weight: 900;
+  font-size: 12px;
+  margin-bottom: 6px;
+  color: var(--muted);
+}
+
+.row{
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.hr{
+  height: 1px;
+  background: var(--line);
+  margin: 6px 0;
+}
+
+.modalFoot{
+  padding: 14px 16px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  background: linear-gradient(180deg, rgba(15,23,42,0.02), rgba(255,255,255,0.96));
+  flex: 0 0 auto; /* ✅ FIX: footer fijo */
+}
+
+/* Chips */
+.chip{
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,0.75);
+  padding: 8px 10px;
+  border-radius: 999px;
+  font-weight: 900;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background .12s ease, border-color .12s ease, transform .08s ease;
+}
+.chip:hover{
+  background: rgba(37,99,235,0.10);
+  border-color: rgba(37,99,235,0.25);
+}
+.chip:active{ transform: translateY(1px); }
+
+/* Chips prioridad */
+.chip.prioHigh{ background: var(--prioHighBg); border-color: var(--prioHighBd); color: var(--prioHighTx); }
+.chip.prioMed{ background: var(--prioMedBg); border-color: var(--prioMedBd); color: var(--prioMedTx); }
+.chip.prioLow{ background: var(--prioLowBg); border-color: var(--prioLowBd); color: var(--prioLowTx); }
+
+/* Bloques de alertas */
+.alertBox{
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 12px;
+  background: linear-gradient(180deg, rgba(124,58,237,0.06), rgba(255,255,255,0.92));
+}
+
+.alertItem{
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px dashed rgba(15,23,42,0.14);
+}
+.alertItem:last-child{ border-bottom: none; }
+
+.alertMeta{
+  display: grid;
+  gap: 2px;
+}
+.alertMeta .t{
+  font-weight: 950;
+}
+.alertMeta .s{
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 800;
+}

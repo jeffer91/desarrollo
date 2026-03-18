@@ -1,0 +1,15 @@
+/*
+Nombre del archivo: cale.css
+Ruta: C:\Users\ITSQMET\Desktop\eventos\cale\cale.css
+Función:
+- Archivo principal de estilos del módulo cale
+- Importa los estilos por bloques funcionales
+*/
+
+@import url("./cale.tokens.css");
+@import url("./cale.menu.css");
+@import url("./cale.layout.css");
+@import url("./cale.detail.css");
+@import url("./cale.fullcalendar.css");
+@import url("./cale.dayview.css");
+@import url("./cale.pendingpanel.css"); /* Corrección: agrega estilos del panel propio de pendientes del día. */

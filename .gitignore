@@ -1,0 +1,36 @@
+# =========================================================
+# Nombre completo: .gitignore
+# Ruta o ubicación: /desarrollo/.gitignore
+# Función o funciones:
+# - Excluye dependencias locales como node_modules
+# - Excluye builds, dist y archivos temporales
+# - Evita subir ejecutables pesados al repositorio
+# =========================================================
+
+node_modules/
+**/node_modules/
+
+dist/
+**/dist/
+
+win-unpacked/
+**/win-unpacked/
+
+release/
+**/release/
+
+out/
+**/out/
+
+builder-debug.yml
+builder-effective-config.yaml
+latest.yml
+*.blockmap
+
+*.log
+.DS_Store
+Thumbs.db
+desktop.ini
+
+.env
+.env.*

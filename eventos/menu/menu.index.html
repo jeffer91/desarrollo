@@ -1,0 +1,364 @@
+<!-- =========================================================
+Nombre del archivo: menu.index.html
+Ubicación: /menu/menu.index.html
+Función o funciones:
+- Pantalla de entrada del proyecto
+- Renderiza el menú superior y un dashboard de navegación
+- Usa MenuConfig para construir los botones de módulos
+- Funciona en Live Server, doble click y Electron
+- Incluye enlace visible para volver al panel principal
+========================================================= -->
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Menú · Eventos</title>
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="./menu.styles.css" />
+
+  <style>
+    :root{
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color-scheme: light;
+
+      --bg:#f6f8fc;
+      --surface:#ffffff;
+      --surfaceSoft:#f8fafc;
+      --text:#111827;
+      --muted:#6b7280;
+      --line:rgba(15,23,42,.10);
+      --lineStrong:rgba(15,23,42,.14);
+
+      --blue:#3158d8;
+      --blueHover:#284cc2;
+      --indigo:#4c5edb;
+
+      --softBlue:rgba(49,88,216,.08);
+      --softBlueStrong:rgba(49,88,216,.14);
+
+      --focus:rgba(49,88,216,.18);
+      --shadowXs:0 1px 2px rgba(15,23,42,.05);
+      --shadowSm:0 6px 16px rgba(15,23,42,.06);
+      --shadowMd:0 10px 24px rgba(15,23,42,.08);
+
+      --r:14px;
+      --rPill:999px;
+    }
+
+    *{ box-sizing:border-box; }
+
+    body{
+      margin:0;
+      color:var(--text);
+      background:
+        radial-gradient(1000px 520px at 10% 0%, rgba(49,88,216,.05), transparent 58%),
+        radial-gradient(900px 500px at 100% 0%, rgba(76,94,219,.04), transparent 52%),
+        linear-gradient(180deg, #ffffff 0%, var(--bg) 58%, #ffffff 100%);
+    }
+
+    .wrap{
+      max-width: 980px;
+      margin: 12px auto 16px;
+      padding: 0 12px;
+    }
+
+    .hero{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      margin: 10px 0 12px 0;
+      padding: 14px 16px;
+      border:1px solid var(--line);
+      border-radius: var(--r);
+      background: rgba(255,255,255,.92);
+      box-shadow: var(--shadowSm);
+    }
+
+    .heroMain{
+      min-width:0;
+    }
+
+    .heroRight{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+
+    h1{
+      margin:0;
+      font-size: 18px;
+      line-height:1.15;
+      font-weight:800;
+      letter-spacing:.01em;
+    }
+
+    h2{
+      margin:0 0 10px 0;
+      font-size: 15px;
+      line-height:1.2;
+      font-weight:800;
+    }
+
+    .muted{
+      color: var(--muted);
+    }
+
+    .hero p,
+    .notes{
+      margin:5px 0 0 0;
+      font-size: 12px;
+      line-height:1.45;
+    }
+
+    .heroPill,
+    .countPill,
+    .backBtn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-height:34px;
+      padding:0 12px;
+      border-radius: var(--rPill);
+      font-size:12px;
+      font-weight:700;
+      white-space: nowrap;
+      border:1px solid var(--line);
+      background:#fff;
+      box-shadow: var(--shadowXs);
+      text-decoration:none;
+    }
+
+    .heroPill{
+      color: var(--blueHover);
+      background: var(--softBlue);
+      border-color: rgba(49,88,216,.16);
+    }
+
+    .backBtn{
+      color: var(--blueHover);
+      transition:
+        transform .12s ease,
+        border-color .12s ease,
+        background .12s ease,
+        box-shadow .12s ease;
+    }
+
+    .backBtn:hover{
+      transform: translateY(-1px);
+      border-color: rgba(49,88,216,.20);
+      background: var(--softBlue);
+      box-shadow: var(--shadowSm);
+    }
+
+    .backBtn:focus-visible{
+      outline:3px solid var(--focus);
+      outline-offset:2px;
+    }
+
+    .countPill{
+      margin-bottom:10px;
+      color: var(--muted);
+      background: var(--surfaceSoft);
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1.05fr .95fr;
+      gap: 12px;
+      align-items:start;
+    }
+
+    .card{
+      background: rgba(255,255,255,.94);
+      border:1px solid var(--line);
+      border-radius: var(--r);
+      box-shadow: var(--shadowSm);
+      padding: 14px;
+    }
+
+    .moduleStack{
+      display:flex;
+      flex-direction:column;
+      gap: 8px;
+    }
+
+    .navBtn{
+      width:100%;
+      text-align:left;
+      border:1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px 13px;
+      background: rgba(255,255,255,.98);
+      cursor:pointer;
+      box-shadow: var(--shadowXs);
+      transition:
+        transform .12s ease,
+        border-color .12s ease,
+        background .12s ease,
+        box-shadow .12s ease;
+    }
+
+    .navBtn:hover{
+      transform: translateY(-1px);
+      border-color: rgba(49,88,216,.20);
+      background: var(--softBlue);
+      box-shadow: var(--shadowSm);
+    }
+
+    .navBtn:focus-visible{
+      outline:3px solid var(--focus);
+      outline-offset:2px;
+    }
+
+    .navBtnTitle{
+      font-weight: 800;
+      font-size: 13px;
+      margin: 0 0 4px 0;
+      color: var(--text);
+      line-height:1.2;
+    }
+
+    .navBtnDesc{
+      margin:0;
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 11px;
+      line-height: 1.35;
+    }
+
+    .foot{
+      margin-top: 10px;
+      text-align:center;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    @media (max-width: 900px){
+      .grid{
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 620px){
+      .wrap{
+        margin-top:10px;
+        padding:0 10px;
+      }
+
+      .hero{
+        flex-direction:column;
+        align-items:flex-start;
+        padding: 12px;
+      }
+
+      .heroRight{
+        width:100%;
+        justify-content:flex-start;
+      }
+
+      .heroPill,
+      .backBtn{
+        width:100%;
+      }
+
+      .card{
+        padding: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div id="menuHost"></div>
+
+    <header class="hero">
+      <div class="heroMain">
+        <h1>Menú principal</h1>
+        <p class="muted">Acceso central a los módulos del sistema de eventos.</p>
+      </div>
+
+      <div class="heroRight">
+        <div class="heroPill" id="modePill">Modo: —</div>
+        <a
+          class="backBtn"
+          href="../../index.html"
+          title="Volver al panel principal"
+          aria-label="Volver al panel principal"
+        >
+          ← Volver al panel
+        </a>
+      </div>
+    </header>
+
+    <main class="grid">
+      <section class="card">
+        <div class="countPill" id="moduleCountPill">Módulos: 0</div>
+        <h2>Módulos</h2>
+        <div class="moduleStack" id="moduleStack"></div>
+      </section>
+
+      <section class="card">
+        <h2>Notas</h2>
+        <p class="muted notes">
+          Este menú centraliza la navegación. Las rutas viven en <strong>menu.config.js</strong>,
+          el pintado visual en <strong>menu.render.js</strong> y la navegación segura en
+          <strong>menu.router.js</strong>.
+        </p>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <small>Eventos · Menú</small>
+    </footer>
+  </div>
+
+  <script src="./menu.config.js"></script>
+  <script src="./menu.router.js"></script>
+  <script src="./menu.render.js"></script>
+  <script src="./menu.boot.js"></script>
+
+  <script>
+    (function(){
+      const cfg = window.MenuConfig || { items: [] };
+      const items = Array.isArray(cfg.items) ? cfg.items : [];
+      const modePill = document.getElementById("modePill");
+      const stack = document.getElementById("moduleStack");
+      const countPill = document.getElementById("moduleCountPill");
+
+      const p = String(location.protocol || "");
+      const mode =
+        (p === "file:") ? "file" :
+        (p === "http:" || p === "https:") ? "server" :
+        p.replace(":", "");
+
+      if (modePill) modePill.textContent = "Modo: " + mode;
+      if (countPill) countPill.textContent = "Módulos: " + items.length;
+
+      if (stack){
+        stack.innerHTML = items.map(it => `
+          <button class="navBtn" type="button" data-goto="${String(it.routeFromRoot || "").replaceAll('"', '&quot;')}">
+            <div class="navBtnTitle">${String(it.title || "")}</div>
+            <p class="navBtnDesc">${String(it.desc || "")}</p>
+          </button>
+        `).join("");
+      }
+
+      document.addEventListener("click", (e) => {
+        const btn = e.target && e.target.closest && e.target.closest("button[data-goto]");
+        if (!btn) return;
+
+        const route = btn.getAttribute("data-goto") || "";
+        if (window.MenuRouter && typeof window.MenuRouter.go === "function"){
+          window.MenuRouter.go(route);
+        }else{
+          location.href = "../" + route;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

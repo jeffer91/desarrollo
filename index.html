@@ -1,0 +1,88 @@
+<!-- =========================================================
+Nombre del archivo: index.html
+Ruta o ubicación: /desarrollo/index.html
+Función o funciones:
+- Pantalla principal tipo launcher del proyecto desarrollo
+- Muestra solo el listado visual de módulos
+- Mantiene hooks ocultos para no romper app.js
+- Compatible con doble clic, Live Server y Electron
+========================================================= -->
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  />
+  <title>Desarrollo · Panel principal</title>
+  <meta
+    name="description"
+    content="Panel principal para abrir los módulos del proyecto desarrollo."
+  />
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="./app/app.styles.css" />
+</head>
+<body>
+  <div class="launcher-shell">
+    <main class="launcher-main">
+      <section class="cards-section">
+        <div class="section-head">
+          <h1 class="section-title">Módulos disponibles</h1>
+          <span class="section-meta" id="cards-meta">0 resultados</span>
+        </div>
+
+        <div
+          id="module-grid"
+          class="module-grid"
+          aria-label="Listado visual de módulos"
+        ></div>
+      </section>
+    </main>
+
+    <!-- Hooks ocultos para conservar compatibilidad con app.js -->
+    <div hidden aria-hidden="true">
+      <span id="env-badge">Detectando...</span>
+      <p id="env-copy">Preparando entorno de ejecución...</p>
+
+      <input
+        id="module-search"
+        type="search"
+        autocomplete="off"
+        placeholder="Ej. audit, docentes, requisitos..."
+      />
+
+      <span id="module-count">0</span>
+      <span id="selected-module-name">Ninguno</span>
+
+      <button
+        id="open-selected-btn"
+        type="button"
+        disabled
+      >
+        Abrir módulo seleccionado
+      </button>
+
+      <span id="selected-title">Ningún módulo seleccionado</span>
+      <span id="selected-description">
+        Haz clic en una tarjeta para seleccionar el módulo que quieres abrir.
+      </span>
+
+      <button
+        id="open-selected-secondary-btn"
+        type="button"
+        disabled
+      >
+        Abrir
+      </button>
+
+      <span id="selected-group">Sin grupo</span>
+      <span id="selected-path">Sin ruta</span>
+    </div>
+  </div>
+
+  <script src="./app/app.env.js"></script>
+  <script src="./app/app.registry.js"></script>
+  <script src="./app/app.js"></script>
+</body>
+</html>

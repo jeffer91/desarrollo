@@ -1,0 +1,281 @@
+/*
+Nombre del archivo: cale.detail.css
+Ruta: C:\Users\ITSQMET\Desktop\eventos\cale\cale.detail.css
+Función:
+- Estilos del panel de detalle
+- Tarjetas, etiquetas y contenido
+- Mejora la lectura del panel sin cambiar ids ni estructura funcional
+*/
+
+/* =========================================================
+   Modal de detalle
+   Corrección:
+   - El overlay cubre toda la pantalla.
+   - El popup se centra correctamente.
+   - hidden sigue controlando apertura/cierre desde JS.
+   ========================================================= */
+#cale-detail-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+#cale-detail-modal[hidden] {
+  display: none !important;
+}
+
+/* =========================================================
+   Fondo del popup
+   Corrección:
+   - Cubre toda la ventana.
+   - Oscurece el fondo sin alterar el layout del calendario.
+   ========================================================= */
+#cale-detail-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.38);
+}
+
+/* =========================================================
+   Contenedor real del diálogo
+   Corrección:
+   - El modal visible debe vivir en #cale-detail-shell.
+   - Antes el estilo principal estaba en #cale-detail-panel y
+     el header quedaba “afuera”, por eso se veía partido/raro.
+   - Aquí unificamos header + cuerpo en una sola tarjeta.
+   ========================================================= */
+#cale-detail-shell,
+.cale-detail-dialog {
+  position: relative;
+  z-index: 1;
+  width: min(760px, 100%);
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border: 1px solid var(--cale-border);
+  border-radius: 18px;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* =========================================================
+   Cabecera del detalle
+   Corrección:
+   - Se integra visualmente al popup.
+   - Se ordenan título y acciones dentro del mismo diálogo.
+   ========================================================= */
+.cale-detail-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid var(--cale-border);
+  background: #ffffff;
+  box-sizing: border-box;
+}
+
+.cale-detail-head-main {
+  min-width: 0;
+}
+
+.cale-detail-overline {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--cale-text-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  line-height: 1.2;
+  margin-bottom: 4px;
+}
+
+#cale-detail-modal-title {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.1;
+  color: var(--cale-text);
+}
+
+/* =========================================================
+   Acciones del popup
+   Corrección:
+   - Los botones quedan dentro del header del modal.
+   - Se permite salto de línea si el ancho baja.
+   ========================================================= */
+.cale-detail-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex: 0 0 auto;
+}
+
+/* =========================================================
+   Panel interno del detalle
+   Corrección:
+   - Ahora solo maneja el scroll y el contenido.
+   - Ya no actúa como tarjeta externa del modal.
+   ========================================================= */
+#cale-detail-panel {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-height: none;
+  min-height: 0;
+  flex: 1 1 auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: auto;
+  box-sizing: border-box;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.cale-detail-empty {
+  border: 1px dashed var(--cale-border);
+  background: var(--cale-surface-2);
+  border-radius: var(--cale-radius-sm);
+  padding: 14px;
+  color: var(--cale-text-soft);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.cale-detail-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cale-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.cale-detail-block {
+  border: 1px solid var(--cale-border);
+  background: #ffffff;
+  border-radius: var(--cale-radius-sm);
+  padding: 10px 12px;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.02);
+}
+
+.cale-detail-label {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--cale-text-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+  line-height: 1;
+}
+
+.cale-detail-value {
+  font-size: 13px;
+  color: var(--cale-text);
+  font-weight: 600;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.cale-detail-desc {
+  white-space: pre-wrap;
+  font-weight: 500;
+}
+
+/* =========================================================
+   Campos editables del popup
+   Corrección:
+   - Se da estilo a inputs/select/textarea creados por JS
+     para que el modo edición no rompa el layout del detalle.
+   ========================================================= */
+.cale-detail-edit-input {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid var(--cale-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  box-sizing: border-box;
+  font: inherit;
+  color: var(--cale-text);
+  background: #ffffff;
+  outline: none;
+}
+
+.cale-detail-edit-input:focus {
+  border-color: #94a3b8;
+  box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.18);
+}
+
+.cale-detail-edit-textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+
+/* =========================================================
+   Scroll interno del panel
+   Se suaviza para que el detalle no se vea “pesado”.
+   ========================================================= */
+#cale-detail-panel {
+  scrollbar-width: thin;
+}
+
+#cale-detail-panel::-webkit-scrollbar {
+  width: 8px;
+}
+
+#cale-detail-panel::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+
+#cale-detail-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@media (max-width: 1220px) {
+  .cale-detail-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  /* Corrección:
+     - En móvil el popup usa menos margen.
+     - Header y acciones se apilan sin romper el diálogo.
+   */
+  #cale-detail-modal {
+    padding: 12px;
+  }
+
+  #cale-detail-shell,
+  .cale-detail-dialog {
+    width: 100%;
+    max-height: calc(100vh - 24px);
+  }
+
+  .cale-detail-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .cale-detail-actions {
+    justify-content: flex-start;
+  }
+
+  .cale-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}

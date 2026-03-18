@@ -1,0 +1,243 @@
+/* =========================================================
+AJUSTE VISUAL COMPACTO PARA /desarrollo/index.html
+- Reduce espacios vacíos
+- Mejora la grilla
+- Compacta tarjetas
+- Oculta rutas visuales
+- Da un estilo más limpio, moderno y consistente
+========================================================= */
+
+.launcher-shell,
+.launcher-main,
+.cards-section {
+  min-height: auto !important;
+  height: auto !important;
+}
+
+.launcher-shell {
+  width: min(1240px, calc(100% - 18px));
+  margin: 8px auto 10px;
+  padding: 0;
+}
+
+.launcher-main {
+  width: 100%;
+}
+
+.cards-section {
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(185, 198, 221, 0.9);
+  border-radius: 24px;
+  padding: 16px 18px 18px;
+  box-shadow:
+    0 10px 26px rgba(33, 56, 110, 0.07),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(6px);
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.section-title {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: clamp(1.45rem, 1.25rem + 0.6vw, 1.95rem);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  color: var(--app-text, #0f172a);
+}
+
+.section-meta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: #eef3ff;
+  border: 1px solid #d9e5ff;
+  color: #566b93;
+  font-size: 0.88rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.module-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+  align-items: stretch;
+}
+
+.module-grid > * {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 172px;
+  padding: 16px;
+  border-radius: 20px;
+  border: 1px solid #d8e2f2;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.96) 0%,
+    rgba(245, 248, 255, 0.94) 100%
+  );
+  box-shadow:
+    0 8px 22px rgba(27, 44, 94, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.76);
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease;
+}
+
+.module-grid > *:hover {
+  transform: translateY(-2px);
+  border-color: #a5bbff;
+  box-shadow:
+    0 12px 24px rgba(37, 72, 160, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.86);
+}
+
+.module-grid > *.is-selected,
+.module-grid > *[aria-selected="true"],
+.module-grid > *[data-selected="true"] {
+  border-color: #2f5eff;
+  box-shadow:
+    0 0 0 3px rgba(47, 94, 255, 0.1),
+    0 12px 24px rgba(37, 72, 160, 0.12);
+}
+
+.module-grid > * h1,
+.module-grid > * h2,
+.module-grid > * h3,
+.module-grid > * h4 {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: clamp(1.05rem, 0.98rem + 0.45vw, 1.45rem);
+  line-height: 1.15;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #0b1733;
+}
+
+.module-grid > * p {
+  margin: 0;
+  color: #5d6d88;
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.module-grid > * p:last-of-type {
+  margin-bottom: 0;
+}
+
+/* Oculta la ruta visual y cualquier meta de path */
+.module-grid > * a,
+.module-grid > * [class*="path"],
+.module-grid > * [id*="path"],
+.module-grid > * [data-role="path"] {
+  display: none !important;
+}
+
+/* Chips o badges de categoría */
+.module-grid > * [class*="chip"],
+.module-grid > * [class*="badge"],
+.module-grid > * [class*="tag"],
+.module-grid > * [class*="group"] {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 26px;
+  padding: 0 11px;
+  border-radius: 999px;
+  background: #f2f5fb;
+  border: 1px solid #e2e9f5;
+  color: #60718d;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Botones */
+.module-grid > * button {
+  appearance: none;
+  border: 1px solid #bfd0ea;
+  background: #ffffff;
+  color: #10203f;
+  border-radius: 14px;
+  min-height: 38px;
+  padding: 0 14px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    transform 0.16s ease,
+    border-color 0.16s ease,
+    background-color 0.16s ease,
+    box-shadow 0.16s ease,
+    color 0.16s ease;
+}
+
+.module-grid > * button:hover {
+  transform: translateY(-1px);
+  border-color: #9ab5ff;
+  box-shadow: 0 8px 18px rgba(47, 94, 255, 0.1);
+}
+
+.module-grid > * button:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 3px rgba(47, 94, 255, 0.14),
+    0 8px 18px rgba(47, 94, 255, 0.1);
+}
+
+.module-grid > * button:last-child {
+  background: linear-gradient(180deg, #3d69ff 0%, #2f5eff 100%);
+  border-color: #2f5eff;
+  color: #ffffff;
+}
+
+.module-grid > * button:last-child:hover {
+  background: linear-gradient(180deg, #4a74ff 0%, #2d57eb 100%);
+  border-color: #2d57eb;
+}
+
+@media (max-width: 900px) {
+  .launcher-shell {
+    width: min(100%, calc(100% - 12px));
+    margin: 6px auto 8px;
+  }
+
+  .cards-section {
+    padding: 14px 12px 14px;
+    border-radius: 20px;
+  }
+
+  .module-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .module-grid > * {
+    min-height: 156px;
+    padding: 14px;
+    border-radius: 18px;
+  }
+
+  .section-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}

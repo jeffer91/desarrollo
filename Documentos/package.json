@@ -1,0 +1,24 @@
+{
+  "name": "sistema-documentos-itsqmet",
+  "version": "1.6.0",
+  "description": "Biblioteca de documentos y certificados - ITSQMET",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build-exe": "electron-packager . sistema-documentos-itsqmet --platform=win32 --arch=x64 --out=dist --overwrite"
+  },
+  "keywords": [
+    "titulación",
+    "certificado",
+    "pdf",
+    "memo"
+  ],
+  "author": "Mgs. Jefferson Villarreal",
+  "license": "ISC",
+  "dependencies": {
+    "electron": "^28.0.0"
+  },
+  "devDependencies": {
+    "electron-packager": "^17.1.2"
+  }
+}

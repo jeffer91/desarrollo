@@ -1,0 +1,35 @@
+{
+  "app": "documentos",
+  "version": "1.6.0",
+  "updatedAt": "2026-01-23",
+  "docs": [
+    {
+      "id": "doc-certificado-titulacion",
+      "title": "Certificado de titulación",
+      "description": "Genera el certificado desde plantilla y exporta PDF.",
+      "route": "../certititu/index.html",
+      "tags": ["titulación", "certificado", "pdf"]
+    },
+    {
+      "id": "doc-memos-cronograma",
+      "title": "Memorandos de Cronograma",
+      "description": "Genera memos para Complexivo, Trabajo de Titulación y Artículos (APA 7).",
+      "route": "../memcom/index.html",
+      "tags": ["memo", "complexivo", "trabajo", "articulo", "cronograma"]
+    },
+    {
+      "id": "doc-reporte-antiplagio",
+      "title": "Reporte de antiplagio",
+      "description": "Pendiente de implementación",
+      "route": "",
+      "tags": ["antiplagio"]
+    },
+    {
+      "id": "doc-reporte-mensual-avance",
+      "title": "Reporte mensual de avance",
+      "description": "Pendiente de implementación",
+      "route": "",
+      "tags": ["reporte", "avance"]
+    }
+  ]
+}

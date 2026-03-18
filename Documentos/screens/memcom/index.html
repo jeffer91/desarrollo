@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://firestore.googleapis.com https://www.googleapis.com;">
+
+    <title>Memo Cronograma</title>
+    <link rel="stylesheet" href="./memcom.styles.css" />
+</head>
+<body>
+    <header class="topbar">
+        <div class="topbar_brand">
+            <div class="logo">M</div>
+            <div>
+                <div class="topbar_title">Memorando</div>
+                <div class="topbar_subtitle">Cronograma (APA 7)</div>
+            </div>
+        </div>
+        <div class="topbar_right">
+            <button id="mc-btn-volver" class="btn btn--small btn--ghost">⬅ Volver</button>
+            <div id="mc-status" class="status-pill">Inicializando...</div>
+        </div>
+    </header>
+
+    <main class="wrap">
+        
+        <section class="toolbar card">
+            <div class="toolbar_inputs">
+                <div class="field">
+                    <label for="mc-periodo">Periodo de Titulación</label>
+                    <select id="mc-periodo">
+                        <option value="">Cargando...</option>
+                    </select>
+                </div>
+                
+                <div class="field">
+                    <label for="mc-tipo">Tipo de Proceso</label>
+                    <select id="mc-tipo">
+                        <option value="EXAMEN COMPLEXIVO" selected>Examen Complexivo</option>
+                        <option value="TRABAJO DE TITULACIÓN">Trabajo de Titulación</option>
+                        <option value="ARTÍCULO ACADÉMICO">Artículo Académico</option>
+                    </select>
+                </div>
+
+                <div class="field full-width">
+                    <label for="mc-input-table">Pegar datos del Cronograma (Desde Excel)</label>
+                    <textarea id="mc-input-table" class="smart-area" placeholder="Copia las celdas en Excel (Actividad | Inicio | Fin) y pégalas aquí..."></textarea>
+                    <small class="help">El sistema detectará automáticamente las columnas separadas por tabulaciones.</small>
+                </div>
+            </div>
+            
+            <div class="toolbar_actions">
+                <button id="mc-btn-refrescar" class="btn btn--secondary">Refrescar</button>
+                <button id="mc-btn-preview" class="btn btn--secondary">Procesar Tabla</button>
+                <button id="mc-btn-pdf" class="btn btn--primary" disabled>
+                    <span class="icon">⬇</span> Generar Memo PDF
+                </button>
+            </div>
+        </section>
+
+        <div id="mc-table-preview" class="table-preview-container" hidden>
+            <h3>Datos detectados para el PDF:</h3>
+            <table class="preview-table">
+                <thead id="mc-table-head"></thead>
+                <tbody id="mc-table-body"></tbody>
+            </table>
+        </div>
+
+    </main>
+
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
+    <script src="./memcom.firebase-init.js"></script>
+    <script src="./memcom.data-remote.js"></script>
+    <script src="./memcom.pdf.js"></script>
+    <script src="./memcom.app.js"></script>
+</body>
+</html>

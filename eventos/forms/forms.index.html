@@ -1,0 +1,206 @@
+<!-- =========================================================
+Nombre del archivo: forms.index.html
+Ruta: /forms/forms.index.html
+Función o funciones:
+- Pantalla principal del módulo forms
+- Soporta eventos y pendientes
+- Captura responsable, familia y estado
+- Mantiene carga masiva y menú superior
+- Versión compacta sin romper los IDs usados por JS
+========================================================= -->
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Forms · Eventos y pendientes</title>
+  <link rel="icon" href="data:," />
+
+  <link rel="stylesheet" href="./forms.styles.css" />
+  <link rel="stylesheet" href="./forms.bulk.css" />
+  <link rel="stylesheet" href="../menu/menu.styles.css" />
+</head>
+<body>
+  <div id="menuHost"></div>
+
+  <div class="wrap">
+    <main class="grid">
+      <section class="card">
+        <div class="listHead">
+          <h2 id="formTitle">Nuevo evento</h2>
+          <div class="pill" id="connPill">Estado: —</div>
+        </div>
+
+        <form id="eventForm" autocomplete="off">
+          <div class="row">
+            <label>
+              Tipo de registro
+              <select id="type" name="type">
+                <option value="event" selected>Evento</option>
+                <option value="pending">Pendiente</option>
+              </select>
+            </label>
+
+            <label>
+              Título
+              <input
+                id="title"
+                name="title"
+                type="text"
+                placeholder="Ej: Elaborar informe final"
+                required
+              />
+            </label>
+          </div>
+
+          <div class="row">
+            <label id="fieldDate">
+              <span id="dateLabelText">Fecha</span>
+              <input id="date" name="date" type="date" />
+              <small class="hint" id="dateHint">Obligatoria para eventos.</small>
+            </label>
+
+            <label id="fieldTime">
+              Hora
+              <input id="time" name="time" type="time" />
+            </label>
+          </div>
+
+          <div class="row">
+            <label id="fieldPlace">
+              Lugar
+              <input
+                id="place"
+                name="place"
+                type="text"
+                placeholder="Ej: Matriz / Teams"
+              />
+            </label>
+
+            <label>
+              Responsable
+              <input
+                id="responsible"
+                name="responsible"
+                type="text"
+                placeholder="Ej: Jefferson Villarreal"
+              />
+            </label>
+          </div>
+
+          <div class="row">
+            <label>
+              Familia
+              <select id="familyId" name="familyId">
+                <option value="">Sin familia</option>
+              </select>
+              <small class="hint">Puedes dejarla vacía si no aplica.</small>
+            </label>
+
+            <label>
+              Estado
+              <select id="status" name="status">
+                <option value="programado" selected>Programado</option>
+                <option value="pendiente">Pendiente</option>
+                <option value="en_proceso">En proceso</option>
+                <option value="completado">Completado</option>
+                <option value="cancelado">Cancelado</option>
+              </select>
+            </label>
+          </div>
+
+          <label>
+            Descripción
+            <textarea
+              id="desc"
+              name="desc"
+              rows="4"
+              placeholder="Notas, avances o detalles."
+            ></textarea>
+          </label>
+
+          <div class="actions">
+            <button class="btn" type="submit" id="btnSave">Guardar</button>
+            <button class="btn ghost" type="button" id="btnClear">Limpiar</button>
+          </div>
+
+          <div class="msg" id="formMsg" aria-live="polite"></div>
+        </form>
+      </section>
+
+      <section class="card">
+        <div class="listHead">
+          <h2>Registros guardados</h2>
+
+          <div class="tools">
+            <input
+              id="q"
+              type="search"
+              placeholder="Buscar por título, responsable o nota"
+            />
+            <button class="btn ghost" id="btnReload" type="button">Recargar</button>
+            <button class="btn ghost" id="btnBulkOpen" type="button">Masiva</button>
+          </div>
+        </div>
+
+        <div class="list" id="eventsList"></div>
+      </section>
+    </main>
+
+    <footer class="muted foot">
+      <small>Forms · Firebase</small>
+    </footer>
+  </div>
+
+  <!-- Modal: Carga masiva -->
+  <div class="bulkModal" id="bulkModal" aria-hidden="true">
+    <div class="bulkBackdrop" data-bulk-close="1"></div>
+
+    <div class="card bulkCard" role="dialog" aria-modal="true" aria-labelledby="bulkTitle">
+      <div class="bulkHead">
+        <h2 id="bulkTitle" style="margin:0;">Carga masiva</h2>
+        <button class="btn ghost" type="button" id="btnBulkClose" title="Cerrar">Cerrar</button>
+      </div>
+
+      <p class="muted" style="margin:6px 0 0 0; font-size:12px; line-height:1.35;">
+        Puedes pegar el formato clásico
+        <strong>Actividad · Fecha inicio · Fecha fin</strong>
+        o un formato extendido con columnas como
+        <strong>Tipo, Título, Fecha, Hora, Lugar, Responsable, Familia, Estado, Descripción</strong>.
+      </p>
+
+      <textarea
+        id="bulkInput"
+        rows="10"
+        placeholder="Pega aquí la tabla o los datos."
+      ></textarea>
+
+      <div class="actions" style="margin-top:8px;">
+        <button class="btn ghost" type="button" id="btnBulkParse">Procesar</button>
+        <button class="btn" type="button" id="btnBulkSave" disabled>Guardar</button>
+      </div>
+
+      <div class="msg" id="bulkMsg" aria-live="polite"></div>
+      <div class="bulkPreview" id="bulkPreview"></div>
+    </div>
+  </div>
+
+  <!-- Firebase CDN compat -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+
+  <!-- Menu -->
+  <script src="../menu/menu.config.js"></script>
+  <script src="../menu/menu.router.js"></script>
+  <script src="../menu/menu.render.js"></script>
+  <script src="../menu/menu.boot.js"></script>
+
+  <!-- App -->
+  <script src="./forms.utils.js"></script>
+  <script src="./forms.firebase.js"></script>
+  <script src="./forms.db.js"></script>
+  <script src="./forms.ui.js"></script>
+  <script src="./forms.bulk.js"></script>
+  <script src="./forms.app.js"></script>
+</body>
+</html>

@@ -1,0 +1,80 @@
+<!--
+ARCHIVO: index.html
+RUTA: src/ui/index.html
+FUNCIÓN (FUERA DEL CÓDIGO):
+- Interfaz principal (tema claro).
+- Permite elegir carpeta, escanear, exportar TXT y exportar PDF con índice.
+- Muestra estructura, resumen, progreso y notificaciones con botones para abrir resultados.
+-->
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TXT Exporter</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo-dot"></div>
+      <div class="brand-text">
+        <div class="brand-title">TXT Exporter</div>
+        <div class="brand-subtitle">Exporta estructura + código a TXT y PDF (con índice)</div>
+      </div>
+    </div>
+
+    <div class="topbar-actions">
+      <button id="btnSelect" class="btn btn-secondary">Elegir carpeta</button>
+      <button id="btnScan" class="btn btn-primary">Escanear</button>
+      <button id="btnExportTxt" class="btn">Exportar TXT (Descargas)</button>
+      <button id="btnExportPdf" class="btn btn-accent">Exportar PDF con índice (Descargas)</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="card">
+      <div class="card-title">Carpeta raíz</div>
+      <div class="row">
+        <input id="rootPath" class="input" type="text" placeholder="Selecciona una carpeta…" readonly />
+      </div>
+
+      <div class="card-title mt">Estado</div>
+      <div class="status-grid">
+        <div class="status-item">
+          <div class="k">Archivos incluidos</div>
+          <div class="v" id="kIncluded">0</div>
+        </div>
+        <div class="status-item">
+          <div class="k">Omitidos</div>
+          <div class="v" id="kSkipped">0</div>
+        </div>
+        <div class="status-item">
+          <div class="k">Carpetas visitadas</div>
+          <div class="v" id="kDirs">0</div>
+        </div>
+      </div>
+
+      <div class="progress mt">
+        <div class="progress-bar" id="progressBar" style="width:0%"></div>
+      </div>
+
+      <div class="hint mt">
+        Consejo: primero escanea. Luego exporta TXT o PDF. Todo se guarda en <b>Descargas</b> y tendrás botones para abrir el resultado.
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-title">Estructura (solo archivos incluidos)</div>
+      <pre class="pre" id="treeText">(Aquí aparecerá la estructura)</pre>
+    </section>
+
+    <section class="card">
+      <div class="card-title">Notificaciones</div>
+      <div id="toastArea" class="toast-area"></div>
+    </section>
+  </main>
+
+  <script src="./renderer.js"></script>
+</body>
+</html>

@@ -1,0 +1,204 @@
+/*
+Nombre del archivo: cale.pendingpanel.css
+Ruta: C:\Users\ITSQMET\Desktop\eventos\cale\cale.pendingpanel.css
+Función:
+- Estilos del panel propio de pendientes del día
+- Evita depender del all-day nativo de FullCalendar
+- Presenta pendientes y en-proceso en una grilla estable
+*/
+
+/* =========================================================
+   Shell principal
+   ========================================================= */
+#cale-pending-shell {
+  background: #ffffff;
+  border: 1px solid var(--cale-border-soft);
+  border-radius: var(--cale-radius-sm);
+  padding: 10px;
+}
+
+#cale-pending-shell[hidden] {
+  display: none !important;
+}
+
+.cale-pending-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.cale-pending-head h2 {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.1;
+  font-weight: 800;
+  color: var(--cale-text);
+}
+
+.cale-pending-head p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--cale-text-soft);
+}
+
+#cale-pending-count {
+  flex: 0 0 auto;
+  min-width: 34px;
+  text-align: center;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 800;
+}
+
+/* =========================================================
+   Lista / grid
+   Corrección:
+   - 2 columnas reales en escritorio
+   - 1 columna en ancho reducido
+   - scroll propio para no empujar el calendario
+   ========================================================= */
+#cale-pending-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  max-height: 240px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+#cale-pending-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+#cale-pending-list::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+
+#cale-pending-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* =========================================================
+   Tarjeta
+   ========================================================= */
+.cale-pending-card {
+  width: 100%;
+  border: 1px solid var(--cale-border);
+  border-left-width: 4px; /* Corrección: el color de acento se concentra en el borde izquierdo y mejora el escaneo visual. */
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 10px 11px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease,
+    background 0.18s ease;
+}
+
+.cale-pending-card:hover {
+  border-color: #b9c7db;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+  background: #fbfdff;
+}
+
+.cale-pending-card:active {
+  transform: translateY(1px);
+}
+
+.cale-pending-card-title {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.28;
+  font-weight: 800;
+  color: var(--cale-text);
+
+  /* Corrección:
+     limitamos el título a 2 líneas para evitar tarjetas demasiado altas. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.cale-pending-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.cale-pending-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 800;
+  border: 1px solid var(--cale-border-soft);
+  background: #f8fafc;
+  color: var(--cale-text-soft);
+}
+
+.cale-pending-chip.is-status-pendiente {
+  background: #fff7ed;
+  border-color: #fed7aa;
+  color: #9a3412;
+}
+
+.cale-pending-chip.is-status-en-proceso {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+}
+
+.cale-pending-card-desc {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.38;
+  color: var(--cale-text-soft);
+
+  /* Corrección:
+     la descripción es opcional y también se limita
+     para no convertir el panel en una lista infinita. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.cale-pending-empty {
+  border: 1px dashed var(--cale-border);
+  border-radius: 12px;
+  padding: 14px 12px;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--cale-text-soft);
+  background: #fbfdff;
+}
+
+/* =========================================================
+   Responsive
+   ========================================================= */
+@media (max-width: 980px) {
+  #cale-pending-list {
+    grid-template-columns: 1fr; /* Corrección: en ancho reducido se prioriza lectura sobre densidad. */
+    max-height: 220px;
+  }
+}

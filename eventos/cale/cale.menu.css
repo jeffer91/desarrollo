@@ -1,0 +1,142 @@
+/*
+Nombre del archivo: cale.menu.css
+Ruta: C:\Users\ITSQMET\Desktop\eventos\cale\cale.menu.css
+Función:
+- Estilos del menú superior dentro de la pantalla cale
+- Lo integra visualmente con el resto del módulo
+*/
+
+#menuHost {
+  flex: 0 0 auto;
+  padding: 10px 10px 0;
+  box-sizing: border-box;
+}
+
+.menuBar {
+  background: var(--cale-surface);
+  border: 1px solid var(--cale-border);
+  border-radius: 18px;
+  box-shadow: var(--cale-shadow);
+  min-height: 60px;
+  padding: 12px 16px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 14px;
+}
+
+.menuLeft,
+.menuCenter,
+.menuRight {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.menuLeft {
+  justify-content: flex-start;
+}
+
+.menuCenter {
+  justify-content: center;
+}
+
+.menuRight {
+  justify-content: flex-end;
+}
+
+.menuBrand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.menuDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #2563eb;
+  display: inline-block;
+  flex: 0 0 auto;
+}
+
+.menuTitle {
+  font-size: 14px;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.1;
+}
+
+.menuSubtitle {
+  font-size: 11px;
+  color: var(--cale-text-soft);
+  line-height: 1.15;
+}
+
+.menuTabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.menuTab {
+  border: 1px solid var(--cale-border);
+  background: #ffffff;
+  color: var(--cale-text);
+  border-radius: 999px;
+  min-height: 34px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.menuTab:hover {
+  background: #f8fbff;
+  border-color: #b9c7db;
+}
+
+.menuTab.is-active,
+.menuTab[aria-current="page"] {
+  background: #eef4ff;
+  border-color: #7aa2ff;
+  color: #1d4ed8;
+  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.1);
+}
+
+.menuContext {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--cale-border);
+  background: var(--cale-surface-2);
+  color: var(--cale-text-soft);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+@media (max-width: 1080px) {
+  .menuBar {
+    grid-template-columns: 1fr;
+    justify-items: stretch;
+  }
+
+  .menuLeft,
+  .menuCenter,
+  .menuRight {
+    justify-content: center;
+  }
+}
