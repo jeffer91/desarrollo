@@ -3,10 +3,11 @@
 # Ruta o ubicación: /desarrollo/.github/workflows/release.yml
 # Función o funciones:
 # - Ejecuta build automático en cada push a main
+# - Permite ejecución manual desde GitHub Actions
 # - Genera una versión nueva automática para cada ejecución
 # - Compila el instalador NSIS x64
 # - Publica la release en GitHub Releases
-# - Evita errores de cache al configurar Node.js
+# - Verifica estructura mínima del proyecto antes del build
 # =========================================================
 
 name: release-desarrollo-windows-auto
@@ -15,6 +16,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -38,38 +40,13 @@ jobs:
         run: |
           Write-Host "Raíz del repositorio:"
           Get-ChildItem
+
           Write-Host ""
           Write-Host "Contenido de electron:"
           Get-ChildItem electron
 
-      - name: Instalar dependencias del shell Electron
-        working-directory: electron
-        run: npm install
-
-      - name: Generar versión automática
-        working-directory: electron
+      - name: Verificar archivos mínimos del shell Electron
         shell: pwsh
         run: |
-          $packagePath = "package.json"
-          $packageJson = Get-Content $packagePath -Raw | ConvertFrom-Json
-          $baseMajor = 1
-          $baseMinor = 0
-          $autoPatch = "${{ github.run_number }}"
-          $newVersion = "$baseMajor.$baseMinor.$autoPatch"
-          $packageJson.version = $newVersion
-          $packageJson | ConvertTo-Json -Depth 100 | Set-Content $packagePath -Encoding UTF8
-          Write-Host "Versión generada automáticamente: $newVersion"
-
-      - name: Mostrar versión final
-        working-directory: electron
-        shell: pwsh
-        run: |
-          $packageJson = Get-Content package.json -Raw | ConvertFrom-Json
-          Write-Host "Versión que se va a publicar: $($packageJson.version)"
-
-      - name: Publicar release Windows x64
-        working-directory: electron
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run release:win
+          $requiredFiles = @(
+            "electron/package
