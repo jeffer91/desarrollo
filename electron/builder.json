@@ -1,0 +1,79 @@
+{
+  "appId": "com.jeff.desarrollo.shell",
+  "productName": "Desarrollo",
+  "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+  "asar": false,
+  "compression": "normal",
+  "electronUpdaterCompatibility": ">=2.16",
+  "directories": {
+    "output": "dist",
+    "buildResources": "build"
+  },
+  "files": [
+    {
+      "from": "..",
+      "to": ".",
+      "filter": [
+        "index.html",
+        "app/**/*",
+        "audit/**/*",
+        "Curriculo/**/*",
+        "Docentes/**/*",
+        "Documentos/**/*",
+        "eventos/**/*",
+        "Requisitos/**/*",
+        "txt-exporter-electron/**/*"
+      ]
+    },
+    {
+      "from": ".",
+      "to": ".",
+      "filter": [
+        "package.json"
+      ]
+    },
+    {
+      "from": ".",
+      "to": "electron",
+      "filter": [
+        "main.js",
+        "preload.js",
+        "updater.js"
+      ]
+    }
+  ],
+  "extraMetadata": {
+    "main": "electron/main.js"
+  },
+  "publish": [
+    {
+      "provider": "github",
+      "owner": "jeffer91",
+      "repo": "desarrollo",
+      "releaseType": "release"
+    }
+  ],
+  "win": {
+    "icon": "build/icon.ico",
+    "target": [
+      {
+        "target": "nsis",
+        "arch": [
+          "x64"
+        ]
+      }
+    ]
+  },
+  "portable": {
+    "artifactName": "${productName}-Portable-${version}-${arch}.${ext}"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "perMachine": false,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "Desarrollo",
+    "artifactName": "${productName}-Setup-${version}-${arch}.${ext}"
+  }
+}

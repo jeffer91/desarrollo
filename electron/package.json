@@ -1,0 +1,26 @@
+{
+  "name": "desarrollo-shell",
+  "version": "1.0.0",
+  "description": "Shell principal Electron del proyecto desarrollo",
+  "main": "main.js",
+  "private": true,
+  "author": "Jeff",
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron .",
+    "pack": "electron-builder --config builder.json --dir",
+    "dist": "electron-builder --config builder.json --win nsis --x64",
+    "dist:portable": "electron-builder --config builder.json --win portable --x64",
+    "dist:nsis": "electron-builder --config builder.json --win nsis --x64",
+    "release:win": "electron-builder --config builder.json --win nsis --x64 --publish always"
+  },
+  "dependencies": {
+    "electron-log": "^5.4.3",
+    "electron-updater": "^6.6.7"
+  },
+  "devDependencies": {
+    "electron": "^37.10.3",
+    "electron-builder": "^26.0.12"
+  }
+}
