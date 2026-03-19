@@ -6,7 +6,7 @@
 # - Genera una versión nueva automática para cada ejecución
 # - Compila el instalador NSIS x64
 # - Publica la release en GitHub Releases
-# - Deja lista la metadata necesaria para electron-updater
+# - Evita errores de cache al configurar Node.js
 # =========================================================
 
 name: release-desarrollo-windows-auto
@@ -32,12 +32,19 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
-          cache-dependency-path: electron/package-lock.json
+
+      - name: Verificar contenido del proyecto
+        shell: pwsh
+        run: |
+          Write-Host "Raíz del repositorio:"
+          Get-ChildItem
+          Write-Host ""
+          Write-Host "Contenido de electron:"
+          Get-ChildItem electron
 
       - name: Instalar dependencias del shell Electron
         working-directory: electron
-        run: npm ci
+        run: npm install
 
       - name: Generar versión automática
         working-directory: electron
