@@ -3,8 +3,9 @@ Nombre del archivo: index.html
 Ruta o ubicación: /desarrollo/index.html
 Función o funciones:
 - Pantalla principal tipo launcher del proyecto desarrollo
-- Muestra solo el listado visual de módulos
-- Mantiene hooks ocultos para no romper app.js
+- Muestra el listado visual de módulos
+- Integra un panel visual de actualización sin romper app.js
+- Mantiene hooks ocultos para compatibilidad con el launcher actual
 - Compatible con doble clic, Live Server y Electron
 ========================================================= -->
 <!doctype html>
@@ -22,6 +23,7 @@ Función o funciones:
   />
   <link rel="icon" href="data:," />
   <link rel="stylesheet" href="./app/app.styles.css" />
+  <link rel="stylesheet" href="./app/app.updates.css" />
 </head>
 <body>
   <div class="launcher-shell">
@@ -37,6 +39,87 @@ Función o funciones:
           class="module-grid"
           aria-label="Listado visual de módulos"
         ></div>
+      </section>
+
+      <section class="cards-section updates-section" aria-label="Actualizaciones del sistema">
+        <div id="updates-panel" class="updates-panel">
+          <div class="updates-panel__top">
+            <div class="updates-panel__title-wrap">
+              <h2 class="updates-panel__title">Actualizaciones de la aplicación</h2>
+              <p class="updates-panel__subtitle">
+                Revisa nuevas versiones, descarga mejoras y mantén la app al día.
+              </p>
+            </div>
+
+            <span id="updates-badge" class="updates-badge is-idle">Sin cambios</span>
+          </div>
+
+          <div class="updates-grid">
+            <article class="updates-card">
+              <p class="updates-card__label">Versión actual</p>
+              <p id="updates-current-version" class="updates-card__value">-</p>
+            </article>
+
+            <article class="updates-card">
+              <p class="updates-card__label">Versión disponible</p>
+              <p id="updates-available-version" class="updates-card__value">No disponible</p>
+            </article>
+          </div>
+
+          <p id="updates-message" class="updates-panel__message">
+            Sin revisar actualizaciones todavía.
+          </p>
+
+          <div class="updates-panel__meta">
+            <span>
+              Última revisión:
+              <strong id="updates-last-checked">Aún no se ha revisado.</strong>
+            </span>
+          </div>
+
+          <div id="updates-progress" class="updates-progress" hidden>
+            <div class="updates-progress__top">
+              <span class="updates-progress__label">Progreso de descarga</span>
+              <span id="updates-progress-value" class="updates-progress__value">0%</span>
+            </div>
+
+            <div
+              class="updates-progress__track"
+              role="progressbar"
+              aria-label="Progreso de descarga"
+              aria-valuemin="0"
+              aria-valuemax="100"
+            >
+              <div id="updates-progress-bar" class="updates-progress__bar"></div>
+            </div>
+          </div>
+
+          <div class="updates-actions">
+            <button id="updates-btn-check" class="updates-btn" type="button">
+              Buscar actualización
+            </button>
+
+            <button
+              id="updates-btn-download"
+              class="updates-btn updates-btn--primary"
+              type="button"
+              disabled
+            >
+              Descargar actualización
+            </button>
+
+            <button
+              id="updates-btn-install"
+              class="updates-btn updates-btn--success"
+              type="button"
+              disabled
+            >
+              Reiniciar e instalar
+            </button>
+          </div>
+
+          <p id="updates-error" class="updates-error" hidden></p>
+        </div>
       </section>
     </main>
 
@@ -55,24 +138,17 @@ Función o funciones:
       <span id="module-count">0</span>
       <span id="selected-module-name">Ninguno</span>
 
-      <button
-        id="open-selected-btn"
-        type="button"
-        disabled
-      >
+      <button id="open-selected-btn" type="button" disabled>
         Abrir módulo seleccionado
       </button>
 
       <span id="selected-title">Ningún módulo seleccionado</span>
+
       <span id="selected-description">
         Haz clic en una tarjeta para seleccionar el módulo que quieres abrir.
       </span>
 
-      <button
-        id="open-selected-secondary-btn"
-        type="button"
-        disabled
-      >
+      <button id="open-selected-secondary-btn" type="button" disabled>
         Abrir
       </button>
 
@@ -84,5 +160,6 @@ Función o funciones:
   <script src="./app/app.env.js"></script>
   <script src="./app/app.registry.js"></script>
   <script src="./app/app.js"></script>
+  <script src="./app/app.updates.js"></script>
 </body>
 </html>

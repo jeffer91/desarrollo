@@ -1,0 +1,311 @@
+/* =========================================================
+Nombre del archivo: app.updates.css
+Ruta o ubicación: /desarrollo/app/app.updates.css
+Función o funciones:
+- Estiliza el panel visual de actualizaciones del launcher principal
+- Muestra estado, versiones, progreso y acciones del actualizador
+- Mantiene una línea visual compatible con el panel principal actual
+========================================================= */
+
+.updates-section {
+  margin-top: 14px;
+}
+
+.updates-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.updates-panel__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.updates-panel__title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.updates-panel__title {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: clamp(1.15rem, 1.02rem + 0.45vw, 1.45rem);
+  font-weight: 800;
+  line-height: 1.1;
+  color: #0b1733;
+}
+
+.updates-panel__subtitle {
+  margin: 0;
+  color: #5d6d88;
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.updates-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.updates-badge.is-idle {
+  background: #eef3ff;
+  border-color: #d9e5ff;
+  color: #566b93;
+}
+
+.updates-badge.is-checking {
+  background: #eef6ff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+}
+
+.updates-badge.is-available {
+  background: #fff7ed;
+  border-color: #fed7aa;
+  color: #b45309;
+}
+
+.updates-badge.is-downloading {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+  color: #4338ca;
+}
+
+.updates-badge.is-downloaded {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+  color: #047857;
+}
+
+.updates-badge.is-error {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+.updates-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.updates-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid #d8e2f2;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.96) 0%,
+    rgba(245, 248, 255, 0.94) 100%
+  );
+  box-shadow:
+    0 8px 22px rgba(27, 44, 94, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.76);
+}
+
+.updates-card__label {
+  margin: 0;
+  color: #60718d;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.updates-card__value {
+  margin: 0;
+  color: #0b1733;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.25;
+  word-break: break-word;
+}
+
+.updates-panel__message {
+  margin: 0;
+  color: #10203f;
+  font-size: 0.96rem;
+  line-height: 1.5;
+}
+
+.updates-panel__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+  color: #5d6d88;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.updates-panel__meta strong {
+  color: #10203f;
+}
+
+.updates-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.updates-progress[hidden] {
+  display: none !important;
+}
+
+.updates-progress__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.updates-progress__label,
+.updates-progress__value {
+  color: #10203f;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.updates-progress__track {
+  width: 100%;
+  height: 12px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #dfe7f3;
+  border: 1px solid #d1dbe9;
+}
+
+.updates-progress__bar {
+  width: 0%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #3d69ff 0%, #60a5fa 100%);
+  transition: width 0.25s ease;
+}
+
+.updates-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.updates-btn {
+  appearance: none;
+  border: 1px solid #bfd0ea;
+  background: #ffffff;
+  color: #10203f;
+  border-radius: 14px;
+  min-height: 40px;
+  padding: 0 14px;
+  font-size: 0.94rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    transform 0.16s ease,
+    border-color 0.16s ease,
+    background-color 0.16s ease,
+    box-shadow 0.16s ease,
+    color 0.16s ease;
+}
+
+.updates-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: #9ab5ff;
+  box-shadow: 0 8px 18px rgba(47, 94, 255, 0.1);
+}
+
+.updates-btn:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 3px rgba(47, 94, 255, 0.14),
+    0 8px 18px rgba(47, 94, 255, 0.1);
+}
+
+.updates-btn:disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.updates-btn--primary {
+  background: linear-gradient(180deg, #3d69ff 0%, #2f5eff 100%);
+  border-color: #2f5eff;
+  color: #ffffff;
+}
+
+.updates-btn--primary:hover:not(:disabled) {
+  background: linear-gradient(180deg, #4a74ff 0%, #2d57eb 100%);
+  border-color: #2d57eb;
+}
+
+.updates-btn--success {
+  background: linear-gradient(180deg, #10b981 0%, #059669 100%);
+  border-color: #059669;
+  color: #ffffff;
+}
+
+.updates-btn--success:hover:not(:disabled) {
+  background: linear-gradient(180deg, #19c58c 0%, #047857 100%);
+  border-color: #047857;
+}
+
+.updates-error {
+  display: block;
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.updates-error[hidden] {
+  display: none !important;
+}
+
+@media (max-width: 900px) {
+  .updates-panel__top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .updates-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .updates-actions {
+    flex-direction: column;
+  }
+
+  .updates-btn {
+    width: 100%;
+  }
+
+  .updates-progress__top,
+  .updates-panel__meta {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
