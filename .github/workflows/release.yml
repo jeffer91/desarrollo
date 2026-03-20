@@ -4,10 +4,10 @@
 # Función o funciones:
 # - Ejecuta build automático en cada push a main
 # - Permite ejecución manual desde GitHub Actions
+# - Verifica la estructura mínima del shell Electron antes del build
 # - Genera una versión nueva automática para cada ejecución
 # - Compila el instalador NSIS x64
 # - Publica la release en GitHub Releases
-# - Verifica estructura mínima del proyecto antes del build
 # =========================================================
 
 name: release-desarrollo-windows-auto
@@ -38,15 +38,64 @@ jobs:
       - name: Verificar contenido del proyecto
         shell: pwsh
         run: |
-          Write-Host "Raíz del repositorio:"
+          Write-Host 'Raíz del repositorio:'
           Get-ChildItem
 
-          Write-Host ""
-          Write-Host "Contenido de electron:"
+          Write-Host ''
+          Write-Host 'Contenido de electron:'
           Get-ChildItem electron
 
       - name: Verificar archivos mínimos del shell Electron
         shell: pwsh
         run: |
           $requiredFiles = @(
-            "electron/package
+            'electron/package.json',
+            'electron/package-lock.json',
+            'electron/main.js',
+            'electron/preload.js',
+            'electron/updater.js',
+            'electron/builder.json'
+          )
+
+          foreach ($file in $requiredFiles) {
+            if (-not (Test-Path $file)) {
+              Write-Error "Falta el archivo requerido: $file"
+              exit 1
+            }
+
+            Write-Host "OK -> $file"
+          }
+
+      - name: Instalar dependencias del shell Electron
+        working-directory: electron
+        run: npm install
+
+      - name: Generar versión automática
+        working-directory: electron
+        shell: pwsh
+        run: |
+          $packagePath = 'package.json'
+          $packageJson = Get-Content $packagePath -Raw | ConvertFrom-Json
+          $baseMajor = 1
+          $baseMinor = 0
+          $autoPatch = "${{ github.run_number }}"
+          $newVersion = "$baseMajor.$baseMinor.$autoPatch"
+          $packageJson.version = $newVersion
+          $packageJson | ConvertTo-Json -Depth 100 | Set-Content $packagePath -Encoding UTF8
+          Write-Host "Versión generada automáticamente: $newVersion"
+
+      - name: Mostrar versión final
+        working-directory: electron
+        shell: pwsh
+        run: |
+          $packageJson = Get-Content package.json -Raw | ConvertFrom-Json
+          Write-Host "Versión que se va a publicar: $($packageJson.version)"
+
+      - name: Publicar release Windows x64
+        working-directory: electron
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run release:win
+
+# ajuste final workflow 2026-03-20
