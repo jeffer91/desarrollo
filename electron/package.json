@@ -1,6 +1,6 @@
 {
   "name": "desarrollo-shell",
-  "version": "1.0.0",
+  "version": "1.0.4",
   "description": "Shell principal Electron del proyecto desarrollo",
   "main": "main.js",
   "private": true,

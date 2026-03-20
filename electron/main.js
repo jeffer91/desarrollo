@@ -40,13 +40,16 @@ function createMainWindow() {
     show: false,
     backgroundColor: "#f4f6fb",
     autoHideMenuBar: false,
-    webPreferences: {
-      preload: PRELOAD_PATH,
-      contextIsolation: true,
-      sandbox: false,
-      nodeIntegration: false,
-      webSecurity: true
-    }
+  webPreferences: {
+    preload: PRELOAD_PATH,
+    contextIsolation: true,
+    sandbox: false,
+    nodeIntegration: false,
+    // Corrección técnica:
+    // en la app instalada se carga por file:// y varios módulos/vistas locales
+    // pueden quedar en blanco con webSecurity=true.
+    webSecurity: false
+  }
   });
 
   mainWindow.once("ready-to-show", function onReady() {

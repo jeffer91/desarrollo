@@ -214,16 +214,22 @@ Función o funciones:
       openModule(moduleItem);
     }
 
-    function openModule(moduleItem) {
-      var targetPath = safeText(moduleItem && moduleItem.path, "");
+function openModule(moduleItem) {
+  var targetPath = safeText(moduleItem && moduleItem.path, "");
 
-      if (!targetPath) {
-        window.alert("El módulo seleccionado no tiene una ruta válida.");
-        return;
-      }
+  if (!targetPath) {
+    window.alert("El módulo seleccionado no tiene una ruta válida.");
+    return;
+  }
 
-      window.location.href = targetPath;
-    }
+  // Corrección técnica: resolver la ruta relativa contra la URL actual
+  // evita que Electron intente abrir una ruta local ambigua.
+  var targetUrl = new URL(targetPath, window.location.href).href;
+
+  // Corrección técnica: navegar usando la URL absoluta ya resuelta
+  // evita la pantalla en blanco por carga inválida del recurso local.
+  window.location.assign(targetUrl);
+}
   }
 
   document.addEventListener("DOMContentLoaded", start);

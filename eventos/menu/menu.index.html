@@ -7,6 +7,11 @@ Función o funciones:
 - Usa MenuConfig para construir los botones de módulos
 - Funciona en Live Server, doble click y Electron
 - Incluye enlace visible para volver al panel principal
+
+✅ CORRECCIÓN APLICADA:
+- Se une el menú superior y el bloque hero en un solo contenedor visual
+- Se eliminan bordes/sombras duplicadas entre ambos paneles
+- Se mantiene intacto el boot existente y la renderización de #menuHost
 ========================================================= -->
 <!doctype html>
 <html lang="es">
@@ -63,17 +68,48 @@ Función o funciones:
       padding: 0 12px;
     }
 
+    /* Corrección técnica:
+    este contenedor une el menú renderizado en #menuHost con el hero,
+    evitando que se vean como dos tarjetas separadas. */
+    .topShell{
+      margin: 10px 0 12px 0;
+      border:1px solid var(--line);
+      border-radius: var(--r);
+      background: rgba(255,255,255,.92);
+      box-shadow: var(--shadowSm);
+      overflow: hidden;
+    }
+
+    /* Corrección técnica:
+    el host ya no necesita aire superior extra porque ahora vive dentro
+    del mismo panel visual. */
+    #menuHost{
+      padding: 0;
+    }
+
+    /* Corrección técnica:
+    se anula la tarjeta individual del menú superior para integrarla
+    dentro del contenedor unificado sin doble borde/sombra. */
+    .topShell .menuBar{
+      border: 0;
+      border-radius: 0;
+      box-shadow: none;
+      background: transparent;
+      margin: 0;
+    }
+
     .hero{
       display:flex;
       align-items:center;
       justify-content:space-between;
       gap:12px;
-      margin: 10px 0 12px 0;
-      padding: 14px 16px;
-      border:1px solid var(--line);
-      border-radius: var(--r);
-      background: rgba(255,255,255,.92);
-      box-shadow: var(--shadowSm);
+      margin: 0;
+      padding: 12px 16px 14px;
+      border:0;
+      border-top:1px solid var(--line);
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
     }
 
     .heroMain{
@@ -273,26 +309,28 @@ Función o funciones:
 </head>
 <body>
   <div class="wrap">
-    <div id="menuHost"></div>
+    <section class="topShell">
+      <div id="menuHost"></div>
 
-    <header class="hero">
-      <div class="heroMain">
-        <h1>Menú principal</h1>
-        <p class="muted">Acceso central a los módulos del sistema de eventos.</p>
-      </div>
+      <header class="hero">
+        <div class="heroMain">
+          <h1>Menú principal</h1>
+          <p class="muted">Acceso central a los módulos del sistema de eventos.</p>
+        </div>
 
-      <div class="heroRight">
-        <div class="heroPill" id="modePill">Modo: —</div>
-        <a
-          class="backBtn"
-          href="../../index.html"
-          title="Volver al panel principal"
-          aria-label="Volver al panel principal"
-        >
-          ← Volver al panel
-        </a>
-      </div>
-    </header>
+        <div class="heroRight">
+          <div class="heroPill" id="modePill">Modo: —</div>
+          <a
+            class="backBtn"
+            href="../../index.html"
+            title="Volver al panel principal"
+            aria-label="Volver al panel principal"
+          >
+            ← Volver al panel
+          </a>
+        </div>
+      </header>
+    </section>
 
     <main class="grid">
       <section class="card">

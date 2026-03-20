@@ -32,7 +32,10 @@ Función o funciones:
 }
 
 #menuHost{
-  padding: 6px 0 0;
+  /* Corrección técnica:
+  reduce el espacio superior del host para que el panel no se vea tan alto
+  sin alterar la estructura del shell. */
+  padding: 2px 0 0;
 }
 
 .menuBar{
@@ -40,12 +43,17 @@ Función o funciones:
   border: 1px solid var(--menu-line);
   border-radius: var(--menu-r);
   box-shadow: var(--menu-shadow-sm);
-  min-height: 56px;
-  padding: 10px 12px;
+  /* Corrección técnica:
+  se baja la altura mínima y el padding interno del contenedor principal
+  para compactar el header superior del módulo. */
+  min-height: 46px;
+  padding: 7px 10px;
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
-  gap: 10px;
+  /* Corrección técnica:
+  se reduce el gap entre bloques para evitar aire excesivo. */
+  gap: 8px;
   position: relative;
   backdrop-filter: blur(12px);
 }
@@ -81,17 +89,22 @@ Función o funciones:
 }
 
 .menuDot{
-  width: 10px;
-  height: 10px;
+  /* Corrección técnica:
+  se reduce el tamaño del indicador para que el bloque de marca ocupe menos alto. */
+  width: 8px;
+  height: 8px;
   border-radius: 999px;
   background: linear-gradient(180deg, var(--menu-blue) 0%, var(--menu-indigo) 100%);
   display: inline-block;
   flex: 0 0 auto;
-  box-shadow: 0 0 0 4px rgba(49,88,216,.10);
+  box-shadow: 0 0 0 3px rgba(49,88,216,.10);
 }
 
 .menuTitle{
-  font-size: 13px;
+  /* Corrección técnica:
+  baja un punto la tipografía para compactar el encabezado
+  sin perder jerarquía visual. */
+  font-size: 12px;
   line-height: 1.05;
   font-weight: 800;
   color: var(--menu-text);
@@ -99,7 +112,9 @@ Función o funciones:
 }
 
 .menuBrandHint{
-  font-size: 10px;
+  /* Corrección técnica:
+  subtítulo más compacto para evitar que empuje la altura del panel. */
+  font-size: 9px;
   line-height: 1.1;
   font-weight: 700;
   color: var(--menu-muted);
@@ -110,7 +125,9 @@ Función o funciones:
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  /* Corrección técnica:
+  menor separación horizontal entre botones del menú. */
+  gap: 6px;
   flex-wrap: nowrap;
   overflow-x: auto;
   min-width: 0;
@@ -131,10 +148,13 @@ Función o funciones:
   background: #fff;
   color: var(--menu-text);
   border-radius: 14px;
-  padding: 9px 14px;
-  min-height: 38px;
+  /* Corrección técnica:
+  se baja padding, min-height y tipografía del botón
+  para lograr un menú superior más compacto. */
+  padding: 7px 12px;
+  min-height: 34px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   line-height: 1;
   transition:
@@ -170,10 +190,12 @@ Función o funciones:
 
 .menuHint{
   color: var(--menu-muted);
-  font-size: 11px;
+  /* Corrección técnica:
+  se compacta el badge derecho para que no aumente la altura del panel. */
+  font-size: 10px;
   font-weight: 700;
   white-space: nowrap;
-  padding: 7px 10px;
+  padding: 6px 9px;
   border-radius: var(--menu-r-pill);
   background: var(--menu-surface-2);
   border: 1px solid var(--menu-line);
