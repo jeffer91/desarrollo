@@ -7,6 +7,7 @@ Función o funciones:
 - Guarda título, grupo, descripción y ruta HTML real de cada módulo
 - Expone funciones para listar, buscar y validar visibilidad
 - Mantiene una sola entrada para Currículo apuntando a su menú principal
+- Corrige la ruta real de entrada del módulo audit
 =========================================================
 */
 (function attachAppRegistry(window) {
@@ -20,7 +21,9 @@ Función o funciones:
       title: "Audit",
       group: "Auditoría",
       description: "Entrada principal del módulo de auditoría y escaneo UGPA.",
-      path: "./audit/screens/shell/index.html"
+      // Corrección técnica: la ruta anterior apuntaba a screens/shell/index.html,
+      // pero ese archivo no existe en el módulo audit y provocaba pantalla en blanco.
+      path: "./audit/screens/scan/scan.index.html"
     },
     {
       id: "curriculo",
