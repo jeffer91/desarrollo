@@ -1,0 +1,409 @@
+<!--
+=========================================================
+Nombre completo: mesa-index.html
+Ruta o ubicación: /mesa-index.html
+Función o funciones:
+- Mostrar la pantalla principal del generador de invitaciones.
+- Configurar jornadas globales fijas antes de abrir el popup.
+- Permitir carga global por pegado.
+- Mostrar popup editor, popup de vista previa y popup de precarga global.
+=========================================================
+-->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Invitaciones de Incorporación</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="css/mesa-app.css" />
+</head>
+<body>
+  <div class="mesa-shell">
+    <header class="mesa-topbar">
+      <div class="mesa-topbar__left">
+        <h1>Invitaciones de Incorporación</h1>
+        <p>Configuración global de jornadas, carga por pegado y generación por docente</p>
+      </div>
+
+      <div class="mesa-topbar__right">
+        <button type="button" class="mesa-btn mesa-btn--primary" id="mesa-new-invitation-btn">
+          + Nueva invitación
+        </button>
+      </div>
+    </header>
+
+    <main class="mesa-main">
+      <aside class="mesa-panel mesa-panel--sidebar">
+        <div class="mesa-section">
+          <label class="mesa-search">
+            <input
+              type="text"
+              id="mesa-search-input"
+              placeholder="Buscar por nombre, promoción o cargo"
+              autocomplete="off"
+            />
+          </label>
+        </div>
+
+        <div class="mesa-section mesa-section--compact">
+          <div class="mesa-section__header">
+            <h2>Invitaciones</h2>
+            <span class="mesa-counter" id="mesa-invitations-count">0</span>
+          </div>
+
+          <div class="mesa-list" id="mesa-invitations-list">
+            <div class="mesa-empty">Todavía no hay invitaciones registradas.</div>
+          </div>
+        </div>
+      </aside>
+
+      <section class="mesa-panel mesa-panel--content">
+        <div class="mesa-state-card">
+          <div class="mesa-section__header">
+            <h2>Jornadas globales</h2>
+
+            <div class="mesa-inline-actions">
+              <label class="mesa-inline-field">
+                <span>Número de jornadas</span>
+                <input type="number" id="mesa-global-session-count" min="1" max="10" value="2" />
+              </label>
+            </div>
+          </div>
+
+          <div class="mesa-helper">
+            <p>
+              Define aquí la cantidad de jornadas y la fecha/hora de cada una.
+              Esta configuración queda fija y es la base para el popup manual y la carga global.
+            </p>
+          </div>
+
+          <div class="mesa-global-sessions" id="mesa-global-sessions-list"></div>
+        </div>
+
+        <div class="mesa-state-card">
+          <div class="mesa-section__header">
+            <h2>Carga global por pegado</h2>
+
+            <div class="mesa-inline-actions">
+              <button type="button" class="mesa-btn" id="mesa-global-clear-btn">Limpiar</button>
+              <button type="button" class="mesa-btn mesa-btn--primary" id="mesa-global-process-btn">
+                Procesar carga global
+              </button>
+            </div>
+          </div>
+
+          <div class="mesa-helper">
+            <p>
+              Pega aquí una tabla copiada desde Excel o similar. La app ignorará la columna
+              <strong>Confir</strong>, validará las jornadas contra la configuración global y
+              agrupará la carga final por docente.
+            </p>
+          </div>
+
+          <label class="mesa-field">
+            <span>Contenido pegado</span>
+            <textarea
+              id="mesa-global-paste-input"
+              class="mesa-global-paste"
+              rows="14"
+              placeholder="Pega aquí la tabla completa..."
+            ></textarea>
+          </label>
+
+          <div class="mesa-global-status" id="mesa-global-parse-status">
+            Aún no se ha procesado ninguna carga global.
+          </div>
+        </div>
+
+        <div class="mesa-state-card">
+          <h2>Resumen</h2>
+
+          <div class="mesa-kpis">
+            <article class="mesa-kpi">
+              <div class="mesa-kpi__label">Invitaciones</div>
+              <div class="mesa-kpi__value" id="mesa-kpi-total">0</div>
+            </article>
+
+            <article class="mesa-kpi">
+              <div class="mesa-kpi__label">Simples</div>
+              <div class="mesa-kpi__value" id="mesa-kpi-simple">0</div>
+            </article>
+
+            <article class="mesa-kpi">
+              <div class="mesa-kpi__label">Múltiples</div>
+              <div class="mesa-kpi__value" id="mesa-kpi-multiple">0</div>
+            </article>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- POPUP EDITOR -->
+  <div class="mesa-modal" id="mesa-editor-modal" aria-hidden="true">
+    <div class="mesa-modal__backdrop" data-close-modal="editor"></div>
+
+    <section
+      class="mesa-modal__dialog mesa-modal__dialog--editor"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="mesa-editor-title"
+    >
+      <header class="mesa-modal__header">
+        <div>
+          <h2 id="mesa-editor-title">Nueva invitación</h2>
+          <p id="mesa-editor-subtitle">Formulario institucional</p>
+        </div>
+
+        <button type="button" class="mesa-icon-btn" id="mesa-close-editor-btn" aria-label="Cerrar">
+          ✕
+        </button>
+      </header>
+
+      <div class="mesa-modal__body">
+        <form id="mesa-invitation-form" class="mesa-form" novalidate>
+          <section class="mesa-subcard">
+            <div class="mesa-subcard__title">Datos del documento</div>
+
+            <div class="mesa-form-grid mesa-form-grid--four">
+              <label class="mesa-field">
+                <span>Ciudad</span>
+                <input type="text" id="mesa-city" autocomplete="off" />
+              </label>
+
+              <label class="mesa-field">
+                <span>Fecha del documento</span>
+                <input
+                  type="text"
+                  id="mesa-document-date"
+                  placeholder="Quito, 2 de abril del 2026"
+                  autocomplete="off"
+                />
+              </label>
+
+              <label class="mesa-field">
+                <span>Promoción</span>
+                <input
+                  type="text"
+                  id="mesa-promotion"
+                  placeholder="ABRIL 2025 – SEPTIEMBRE 2025"
+                  autocomplete="off"
+                />
+              </label>
+
+              <label class="mesa-field">
+                <span>Resumen de jornadas</span>
+                <!-- Corrección: este campo existe para no romper el flujo documental actual
+                     y se rellena automáticamente desde la selección global / asignaciones. -->
+                <input type="text" id="mesa-session-date" readonly />
+              </label>
+            </div>
+          </section>
+
+          <section class="mesa-subcard">
+            <div class="mesa-subcard__title">Docente</div>
+
+            <div class="mesa-form-grid mesa-form-grid--four">
+              <label class="mesa-field">
+                <span>Profesor</span>
+                <select id="mesa-teacher-select">
+                  <option value="">Seleccionar profesor</option>
+                </select>
+              </label>
+
+              <label class="mesa-field">
+                <span>Identificación</span>
+                <input type="text" id="mesa-identification" autocomplete="off" />
+              </label>
+
+              <label class="mesa-field">
+                <span>Artículo</span>
+                <select id="mesa-article">
+                  <option value="">Seleccionar</option>
+                  <option value="al">al</option>
+                  <option value="a la">a la</option>
+                </select>
+              </label>
+
+              <label class="mesa-field">
+                <span>Tratamiento</span>
+                <select id="mesa-treatment-select"></select>
+              </label>
+            </div>
+
+            <div class="mesa-form-grid mesa-form-grid--three">
+              <label class="mesa-field">
+                <span>Tratamiento manual</span>
+                <input
+                  type="text"
+                  id="mesa-treatment-custom"
+                  placeholder="Solo si no está en la lista"
+                  autocomplete="off"
+                />
+              </label>
+
+              <label class="mesa-field" style="grid-column: span 2;">
+                <span>Nombre completo</span>
+                <input type="text" id="mesa-full-name" autocomplete="off" />
+              </label>
+            </div>
+          </section>
+
+          <section class="mesa-subcard">
+            <div class="mesa-section__header mesa-section__header--no-margin">
+              <div class="mesa-subcard__title">Cargos asignados</div>
+              <button type="button" class="mesa-btn" id="mesa-add-assignment-btn">
+                + Agregar cargo
+              </button>
+            </div>
+
+            <div class="mesa-helper">
+              <p>
+                Cada cargo se asigna a una o varias jornadas globales ya definidas en pantalla principal.
+              </p>
+            </div>
+
+            <div class="mesa-assignments" id="mesa-assignment-list"></div>
+          </section>
+        </form>
+      </div>
+
+      <footer class="mesa-modal__footer">
+        <div class="mesa-actions">
+          <button type="button" class="mesa-btn" id="mesa-cancel-editor-btn">Cancelar</button>
+          <button type="button" class="mesa-btn" id="mesa-preview-open-btn">Vista previa</button>
+          <button type="button" class="mesa-btn mesa-btn--primary" id="mesa-save-invitation-btn">Guardar</button>
+        </div>
+      </footer>
+    </section>
+  </div>
+
+  <!-- POPUP VISTA PREVIA -->
+  <div class="mesa-modal" id="mesa-preview-modal" aria-hidden="true">
+    <div class="mesa-modal__backdrop" data-close-modal="preview"></div>
+
+    <section
+      class="mesa-modal__dialog mesa-modal__dialog--preview"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="mesa-preview-title"
+    >
+      <header class="mesa-modal__header">
+        <div>
+          <h2 id="mesa-preview-title">Vista previa de la invitación</h2>
+          <p>Documento institucional listo para imprimir o guardar como PDF</p>
+        </div>
+
+        <button type="button" class="mesa-icon-btn" id="mesa-close-preview-btn" aria-label="Cerrar">
+          ✕
+        </button>
+      </header>
+
+      <div class="mesa-modal__body mesa-modal__body--preview">
+        <div class="mesa-preview-stage">
+          <div id="mesa-preview-document" class="mesa-preview-document">
+            Completa el formulario para ver la invitación.
+          </div>
+        </div>
+      </div>
+
+      <footer class="mesa-modal__footer">
+        <div class="mesa-actions">
+          <button type="button" class="mesa-btn" id="mesa-back-to-editor-btn">Volver al editor</button>
+          <button type="button" class="mesa-btn" id="mesa-print-btn">Imprimir</button>
+          <button type="button" class="mesa-btn mesa-btn--primary" id="mesa-pdf-btn">Guardar PDF</button>
+        </div>
+      </footer>
+    </section>
+  </div>
+
+  <!-- POPUP PRECARGA GLOBAL -->
+  <div class="mesa-modal" id="mesa-global-preview-modal" aria-hidden="true">
+    <div class="mesa-modal__backdrop" data-close-modal="globalPreview"></div>
+
+    <section
+      class="mesa-modal__dialog mesa-modal__dialog--editor"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="mesa-global-preview-title"
+    >
+      <header class="mesa-modal__header">
+        <div>
+          <h2 id="mesa-global-preview-title">Precarga global por docente</h2>
+          <p>Revisa advertencias, corrige coincidencias y genera las invitaciones</p>
+        </div>
+
+        <button
+          type="button"
+          class="mesa-icon-btn"
+          id="mesa-close-global-preview-btn"
+          aria-label="Cerrar"
+        >
+          ✕
+        </button>
+      </header>
+
+      <div class="mesa-modal__body">
+        <section class="mesa-subcard">
+          <div class="mesa-subcard__title">Datos comunes para la generación</div>
+
+          <div class="mesa-form-grid mesa-form-grid--four">
+            <label class="mesa-field">
+              <span>Ciudad</span>
+              <input type="text" id="mesa-global-batch-city" autocomplete="off" />
+            </label>
+
+            <label class="mesa-field">
+              <span>Fecha del documento</span>
+              <input type="text" id="mesa-global-batch-document-date" autocomplete="off" />
+            </label>
+
+            <label class="mesa-field">
+              <span>Promoción</span>
+              <input type="text" id="mesa-global-batch-promotion" autocomplete="off" />
+            </label>
+
+            <label class="mesa-field">
+              <span>Resumen de jornadas</span>
+              <input type="text" id="mesa-global-batch-session-summary" readonly />
+            </label>
+          </div>
+        </section>
+
+        <section class="mesa-subcard">
+          <div class="mesa-subcard__title">Resumen del análisis</div>
+          <div id="mesa-global-preview-stats" class="mesa-global-preview-stats"></div>
+          <div id="mesa-global-preview-warnings" class="mesa-global-preview-warnings"></div>
+        </section>
+
+        <section class="mesa-subcard">
+          <div class="mesa-subcard__title">Docentes detectados</div>
+          <div id="mesa-global-preview-list" class="mesa-global-preview-list"></div>
+        </section>
+      </div>
+
+      <footer class="mesa-modal__footer">
+        <div class="mesa-actions">
+          <button type="button" class="mesa-btn" id="mesa-global-preview-cancel-btn">Cancelar</button>
+          <button type="button" class="mesa-btn mesa-btn--primary" id="mesa-global-preview-confirm-btn">
+            Generar invitaciones
+          </button>
+        </div>
+      </footer>
+    </section>
+  </div>
+
+  <script src="js/mesa-constants.js"></script>
+  <script src="js/mesa-docente-schema.js"></script>
+  <script src="js/mesa-firebase-config.js"></script>
+  <script src="js/mesa-firebase.js"></script>
+  <script src="js/mesa-indexeddb.js"></script>
+  <script src="js/mesa-sync-engine.js"></script>
+  <script src="js/mesa-template-engine.js"></script>
+  <script src="js/mesa-popup.js"></script>
+  <script src="js/mesa-global-normalizer.js"></script>
+  <script src="js/mesa-global-parser.js"></script>
+  <script src="js/mesa-global-preview.js"></script>
+  <script src="js/mesa-app.js"></script>
+</body>
+</html>

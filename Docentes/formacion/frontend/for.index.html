@@ -1,0 +1,130 @@
+<!--
+Nombre completo: for.index.html
+Ruta o ubicación: formacion/frontend/for.index.html
+Función o funciones: Pantalla principal del módulo Formación con filtros, tabla, modal de edición, acciones superiores y contenedor del menú contextual de exportación
+-->
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Formación Docente</title>
+  <link rel="stylesheet" href="./for.styles.css" />
+</head>
+<body>
+  <main class="forApp">
+    <header class="forHero">
+      <div>
+        <p class="forEyebrow">Unidad de Gestión de Procesos Académicos</p>
+        <h1 class="forTitle">Formación Docente</h1>
+        <p class="forSubtitle">
+          Consulta, edición, seguimiento y exportación de expedientes de formación docente.
+        </p>
+      </div>
+
+      <div class="forHeroActions">
+        <button id="forRefreshBtn" class="forBtn forBtnSecondary" type="button">Recargar</button>
+        <button id="forClearFiltersBtn" class="forBtn forBtnSecondary" type="button">Limpiar filtros</button>
+        <button id="forNewBtn" class="forBtn" type="button">Nuevo registro</button>
+      </div>
+    </header>
+
+    <section class="forPanel">
+      <div class="forFilters">
+        <div class="forField">
+          <label for="forSearchInput">Buscar</label>
+          <input id="forSearchInput" type="text" placeholder="Docente, cédula, carrera, institución..." />
+        </div>
+
+        <div class="forField">
+          <label for="forStatusFilter">Estado</label>
+          <select id="forStatusFilter">
+            <option value="">Todos</option>
+            <option value="En curso">En curso</option>
+            <option value="Finalizado">Finalizado</option>
+            <option value="Suspendido">Suspendido</option>
+            <option value="Pendiente">Pendiente</option>
+          </select>
+        </div>
+
+        <div class="forField">
+          <label for="forModeFilter">Modalidad</label>
+          <select id="forModeFilter">
+            <option value="">Todas</option>
+            <option value="Presencial">Presencial</option>
+            <option value="Virtual">Virtual</option>
+            <option value="Híbrida">Híbrida</option>
+          </select>
+        </div>
+
+        <div class="forField">
+          <label for="forCareerFilter">Carrera o unidad</label>
+          <input id="forCareerFilter" type="text" placeholder="Ejemplo: Redes y Telecomunicaciones" />
+        </div>
+      </div>
+    </section>
+
+    <section class="forPanel">
+      <div class="forTableHeader">
+        <div>
+          <h2 class="forSectionTitle">Registros</h2>
+          <p id="forCounter" class="forCounter">0 registros</p>
+        </div>
+
+        <div class="forTableHelp">
+          <span class="forTableHelpBadge">Detalle</span>
+          <span class="forTableHelpBadge">Editar</span>
+          <span class="forTableHelpBadge forTableHelpBadgeBrand">Exportar</span>
+        </div>
+      </div>
+
+      <div class="forTableWrap">
+        <table class="forTable">
+          <thead>
+            <tr>
+              <th>Docente</th>
+              <th>Cédula</th>
+              <th>Carrera o unidad</th>
+              <th>Formación en curso</th>
+              <th>Institución</th>
+              <th>Modalidad</th>
+              <th>Avance</th>
+              <th>Estado</th>
+              <th>Anexos</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="forTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <div id="forToastZone" class="forToastZone" aria-live="polite" aria-atomic="true"></div>
+  <div id="forExportMenuRoot" class="forExportMenuRoot"></div>
+
+  <div id="forModalOverlay" class="forModalOverlay isHidden">
+    <div class="forModal">
+      <div class="forModalHeader">
+        <div>
+          <p class="forEyebrow">Detalle del registro</p>
+          <h3 id="forModalTitle">Docente</h3>
+        </div>
+
+        <button id="forCloseModalBtn" class="forIconBtn" type="button" aria-label="Cerrar">
+          ✕
+        </button>
+      </div>
+
+      <div id="forModalBody" class="forModalBody"></div>
+
+      <div class="forModalFooter">
+        <button id="forCancelModalBtn" class="forBtn forBtnSecondary" type="button">Cerrar</button>
+        <button id="forSaveModalBtn" class="forBtn" type="button">Guardar cambios</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./for.controller.js"></script>
+</body>
+</html>

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Control Curricular</title>
+  <link rel="stylesheet" href="./ctl.styles.css">
+</head>
+<body>
+  <main class="ctl-app">
+    <section class="ctl-panel">
+      <header class="ctl-header">
+        <div>
+          <p class="ctl-eyebrow">UTET · Control</p>
+          <h1 class="ctl-title">Control global de avances curriculares</h1>
+          <p class="ctl-subtitle">
+            Esta pantalla consolida el estado de lo subido en PEA, las fichas y las actas,
+            tanto a nivel global como por carrera, nivel y asignatura.
+          </p>
+        </div>
+      </header>
+
+      <section class="ctl-card">
+        <div class="ctl-card-head">
+          <div>
+            <h2 class="ctl-card-title">Filtros</h2>
+            <p class="ctl-card-text">
+              Use los filtros para revisar el avance general o centrarse en una carrera específica.
+            </p>
+          </div>
+        </div>
+
+        <div class="ctl-grid ctl-grid-4">
+          <div class="ctl-field">
+            <label for="ctlFiltroCarrera">Carrera</label>
+            <select id="ctlFiltroCarrera">
+              <option value="">Todas</option>
+            </select>
+          </div>
+
+          <div class="ctl-field">
+            <label for="ctlFiltroNivel">Nivel</label>
+            <select id="ctlFiltroNivel">
+              <option value="">Todos</option>
+            </select>
+          </div>
+
+          <div class="ctl-field">
+            <label for="ctlFiltroEstado">Estado</label>
+            <select id="ctlFiltroEstado">
+              <option value="">Todos</option>
+              <option value="completo">Completo</option>
+              <option value="pendiente">Pendiente</option>
+              <option value="sin_ficha">Sin ficha</option>
+              <option value="sin_acta">Sin acta</option>
+            </select>
+          </div>
+
+          <div class="ctl-field">
+            <label for="ctlBuscarTexto">Buscar asignatura</label>
+            <input id="ctlBuscarTexto" type="search" placeholder="Buscar por materia o carrera">
+          </div>
+        </div>
+
+        <div class="ctl-actions">
+          <button id="ctlBtnAplicar" type="button" class="ctl-btn ctl-btn-primary">
+            Aplicar filtros
+          </button>
+          <button id="ctlBtnLimpiar" type="button" class="ctl-btn ctl-btn-secondary">
+            Limpiar filtros
+          </button>
+          <button id="ctlBtnRecargar" type="button" class="ctl-btn ctl-btn-secondary">
+            Recargar
+          </button>
+        </div>
+      </section>
+
+      <section class="ctl-card">
+        <div class="ctl-card-head">
+          <div>
+            <h2 class="ctl-card-title">Resumen global</h2>
+            <p class="ctl-card-text">
+              Indicadores consolidados del estado general del sistema.
+            </p>
+          </div>
+        </div>
+
+        <div id="ctlGlobalCards" class="ctl-metrics">
+          <article class="ctl-metric-card">
+            <h3>Total carreras</h3>
+            <p>0</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="ctl-card">
+        <div class="ctl-card-head">
+          <div>
+            <h2 class="ctl-card-title">Consolidado por carrera</h2>
+            <p class="ctl-card-text">
+              Estado general de cada carrera con porcentajes de avance.
+            </p>
+          </div>
+        </div>
+
+        <div id="ctlCarreraResumen" class="ctl-table-wrap">
+          <div class="ctl-empty">No hay información disponible.</div>
+        </div>
+      </section>
+
+      <section class="ctl-card">
+        <div class="ctl-card-head">
+          <div>
+            <h2 class="ctl-card-title">Detalle por asignatura</h2>
+            <p class="ctl-card-text">
+              Revise el estado puntual de cada materia según PEA, ficha y acta.
+            </p>
+          </div>
+        </div>
+
+        <div id="ctlDetalleCarrera" class="ctl-table-wrap">
+          <div class="ctl-empty">No hay información disponible.</div>
+        </div>
+      </section>
+
+      <section id="ctlEstado" class="ctl-status" aria-live="polite">
+        Pantalla lista para trabajar.
+      </section>
+    </section>
+  </main>
+
+  <script type="module" src="./ctl.main.js"></script>
+</body>
+</html>

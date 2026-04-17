@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Docentes · Menú</title>
+  <link rel="stylesheet" href="./menu.shell.css" />
+  <link rel="icon" href="data:," />
+</head>
+<body>
+  <!-- =======================================================
+  HEADER FIJO
+  ======================================================== -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="brand">
+        <div class="logo" aria-label="Docentes">D</div>
+        <div class="brand-text">
+          <div class="brand-title">Docentes</div>
+          <div class="brand-sub">Menú principal</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="topbar-center">
+      <nav id="menuNav" class="nav" aria-label="Navegación principal"></nav>
+    </div>
+
+    <div class="topbar-right">
+      <button
+        id="menuRefresh"
+        class="refreshbtn"
+        type="button"
+        title="Actualizar pestaña activa"
+      >
+        ⟳ Refrescar
+      </button>
+
+      <div id="menuHint" class="hint">Listo.</div>
+
+      <a
+        class="backbtn"
+        href="../../index.html"
+        title="Volver al panel principal"
+        aria-label="Volver al panel principal"
+      >
+        ← Volver al panel
+      </a>
+    </div>
+  </header>
+
+  <!-- =======================================================
+  CONTENIDO: IFRAME
+  ======================================================== -->
+  <main class="main">
+    <div class="frame-wrap">
+      <iframe
+        id="menuFrame"
+        class="frame"
+        title="Contenido"
+        referrerpolicy="no-referrer"
+      ></iframe>
+    </div>
+  </main>
+
+  <!-- =======================================================
+  BOOT
+  ======================================================== -->
+  <script src="./menu.shell.memory.js"></script>
+  <script type="module" src="./menu.shell.app.js"></script>
+</body>
+</html>

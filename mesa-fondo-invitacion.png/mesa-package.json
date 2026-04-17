@@ -1,0 +1,26 @@
+{
+  "_meta": {
+    "nombreCompleto": "mesa-package.json",
+    "rutaOUbicacion": "/mesa-package.json",
+    "funcionOFunciones": [
+      "Definir la configuración base del proyecto Electron.",
+      "Declarar el archivo principal de arranque.",
+      "Incluir scripts de ejecución recomendados.",
+      "Servir como base para el futuro package.json real."
+    ],
+    "notaImportante": "Para ejecutar Electron, este contenido deberá copiarse luego a un archivo llamado package.json en la raíz."
+  },
+  "name": "mesa-invitaciones-automaticas",
+  "version": "1.0.0",
+  "description": "Aplicación para generar invitaciones institucionales automáticas de mesa directiva y ceremonias.",
+  "main": "electron/mesa-main.js",
+  "author": "Jefferson Villarreal",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^37.0.0"
+  }
+}

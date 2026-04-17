@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <!-- =========================================================
+  Nombre del archivo: ctr.index.html
+  Ruta - Ubicación: /control/ctr.docs/frontend/ctr.index.html
+  Función o funciones:
+  - Vista independiente: Control de documentos por Docente + Capacitación
+  - UI: filtros (periodo/capacitación), búsqueda, orden, export CSV
+  - Tabla y botón Guardar (flotante)
+  ========================================================= -->
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Control · Documentos</title>
+  <link rel="stylesheet" href="./ctr.index.css" />
+  <link rel="icon" href="data:,">
+</head>
+
+<body>
+  <div class="wrap">
+    <div id="ctrMsg" class="msg" data-type="info">Listo.</div>
+
+    <!-- FILTROS + HERRAMIENTAS -->
+    <section class="card controls" style="margin-top:12px;">
+      <div class="row">
+        <div class="field">
+          <label>Periodo</label>
+          <select id="ctrPeriodo" data-ctrctl="1"></select>
+        </div>
+
+        <div class="field grow">
+          <label>Capacitación</label>
+          <select id="ctrCap" data-ctrctl="1"></select>
+        </div>
+
+        <div class="field grow">
+          <label>Buscar</label>
+          <input id="ctrQ" class="in" type="text" placeholder="Cédula / apellidos / nombres" data-ctrctl="1" />
+        </div>
+
+        <div class="field">
+          <label>Orden</label>
+          <select id="ctrSort" data-ctrctl="1">
+            <option value="apellidos">Apellidos</option>
+            <option value="nombres">Nombres</option>
+            <option value="cedula">Cédula</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Export</label>
+          <button id="ctrCsv" class="btn" type="button" data-ctrctl="1">CSV</button>
+        </div>
+      </div>
+
+      <div class="row row2">
+        <div class="chips">
+          <span class="chip" id="ctrChipTotal">Docentes: 0</span>
+          <span class="chip info" id="ctrChipPend">Pendientes: 0</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- TABLA -->
+    <section class="card" style="margin-top:12px;">
+      <h3 class="title">Tabla de docentes</h3>
+      <div id="ctrTableHost"></div>
+      <div id="ctrHint" class="hint">Selecciona un periodo y/o una capacitación para listar docentes.</div>
+    </section>
+  </div>
+
+  <!-- Botón flotante Guardar -->
+  <button id="ctrSave" class="float-save" type="button" disabled data-disabled="1" data-ctrctl="1">
+    Guardar (0)
+  </button>
+
+  <!-- Overlay lock -->
+  <div id="ctrLock" class="lock" data-on="0" aria-hidden="true">
+    <div class="lockBox">
+      <div class="spin"></div>
+      <div id="ctrLockTxt">Guardando…</div>
+    </div>
+  </div>
+
+  <script src="../basedatos/ctr.firebase.config.js"></script>
+  <script src="../basedatos/ctr.config.js"></script>
+  <script type="module" src="../backend/ctr.app.js"></script>
+</body>
+</html>

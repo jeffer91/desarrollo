@@ -1,13 +1,14 @@
 /* =========================================================
-Nombre del archivo: menu.boot.js
-Ruta o ubicación: /Curriculo/menu/menu.boot.js
+Nombre completo: menu.boot.js
+Ruta o ubicación: /menu/menu.boot.js
 Función o funciones:
-- Inicializa el menú Currículo
-- Conecta configuración, router, render y frame
-- Carga Carrera por defecto
-- Permite refrescar la vista actual y navegar por menú
+- Inicializar el menú Currículo
+- Conectar configuración, router, render y frame principal
+- Cargar el módulo por defecto
+- Permitir refrescar la vista actual
+- Actualizar el hint según el módulo activo
+- Manejar errores de carga del iframe
 ========================================================= */
-
 (function bootCurriculoMenu(window, document) {
   "use strict";
 
@@ -36,7 +37,10 @@ Función o funciones:
   }
 
   function setFrameSrc(frame, item) {
-    if (!frame || !item || !item.routeFromMenu) return;
+    if (!frame || !item || !item.routeFromMenu) {
+      return;
+    }
+
     frame.src = String(item.routeFromMenu);
   }
 
@@ -53,7 +57,6 @@ Función o funciones:
     var brandBtn = byId("menuBrandBtn");
     var refreshBtn = byId("menuRefresh");
     var nav = byId("menuNav");
-
     var currentItemId = "";
 
     function syncView(nextId) {
@@ -63,12 +66,15 @@ Función o funciones:
       if (!item) {
         Render.renderNav(getItems(), "");
         Render.setHint("No hay módulos configurados.");
+        if (frame) {
+          frame.removeAttribute("src");
+        }
         return;
       }
 
       currentItemId = item.id;
       Render.renderNav(getItems(), currentItemId);
-      Render.setHint("Listo. Inicio: " + item.title);
+      Render.setHint("Cargando: " + item.title + "...");
       setFrameSrc(frame, item);
     }
 
@@ -82,42 +88,66 @@ Función o funciones:
       Router.go(cfg.defaultItemId);
     }
 
-    nav.addEventListener("click", function onNavClick(event) {
-      var button = event.target && event.target.closest
-        ? event.target.closest("button[data-id]")
-        : null;
+    if (nav) {
+      nav.addEventListener("click", function onNavClick(event) {
+        var button = event.target && event.target.closest
+          ? event.target.closest("button[data-id]")
+          : null;
 
-      if (!button) return;
-
-      var id = button.getAttribute("data-id") || "";
-      if (!id) return;
-
-      Router.go(id);
-    });
-
-    refreshBtn.addEventListener("click", function onRefreshClick() {
-      if (!frame) return;
-      try {
-        if (frame.contentWindow && frame.contentWindow.location) {
-          frame.contentWindow.location.reload();
-          Render.setHint("Vista actual refrescada.");
+        if (!button || button.disabled) {
           return;
         }
-      } catch (error) {
-        /* fallback */
-      }
 
-      if (currentItemId) {
-        syncView(currentItemId);
-        Render.setHint("Vista actual refrescada.");
-      }
-    });
+        var id = button.getAttribute("data-id") || "";
+        if (!id) {
+          return;
+        }
 
-    brandBtn.addEventListener("click", function onBrandClick() {
-      if (cfg.defaultItemId) {
-        Router.go(cfg.defaultItemId);
-      }
-    });
+        Router.go(id);
+      });
+    }
+
+    if (refreshBtn) {
+      refreshBtn.addEventListener("click", function onRefreshClick() {
+        if (!frame) return;
+
+        try {
+          if (frame.contentWindow && frame.contentWindow.location) {
+            frame.contentWindow.location.reload();
+            Render.setHint("Vista actual refrescada.");
+            return;
+          }
+        } catch (error) {
+          /* fallback */
+        }
+
+        if (currentItemId) {
+          syncView(currentItemId);
+          Render.setHint("Vista actual refrescada.");
+        }
+      });
+    }
+
+    if (brandBtn) {
+      brandBtn.addEventListener("click", function onBrandClick() {
+        if (cfg.defaultItemId) {
+          Router.go(cfg.defaultItemId);
+        }
+      });
+    }
+
+    if (frame) {
+      frame.addEventListener("load", function onFrameLoad() {
+        var item = getItemById(currentItemId);
+        Render.setHint(
+          item ? "Listo. Módulo activo: " + item.title : "Listo."
+        );
+      });
+
+      frame.addEventListener("error", function onFrameError() {
+        Render.setHint("No se pudo cargar la vista seleccionada.");
+      });
+    }
   }
 
   document.addEventListener("DOMContentLoaded", start);

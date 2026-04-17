@@ -1,0 +1,248 @@
+<!-- =========================================================
+Nombre del archivo: regman.index.html
+Ruta - Ubicación: /registro.manage/regman.index.html
+Función o funciones:
+- Pantalla "Registro · Gestión"
+
+✅ CORRECCIÓN APLICADA:
+- No se agrega encabezado interno en la vista
+- El mensaje de estado se mantiene dentro del contenido
+- Esto evita duplicar encabezado porque ya existe en el menú superior
+========================================================= -->
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Registro · Gestión</title>
+  <link rel="stylesheet" href="./regman.styles.css" />
+  <link rel="icon" href="data:,">
+</head>
+<body>
+  <div class="wrap">
+    <!-- Corrección técnica:
+    se mantiene #regmanMsg dentro del contenido porque la lógica JS lo usa
+    para mostrar estados, pero sin crear un encabezado visual propio. -->
+    <div id="regmanMsg" class="msg" data-type="info">Listo.</div>
+
+    <section class="grid">
+      <!-- Card: Formulario -->
+      <section class="card form-card">
+        <div class="h3">Formulario</div>
+        <div class="hr"></div>
+
+        <div class="row">
+          <label>Buscar docente (para ver/editar/borrar)</label>
+          <input
+            id="regmanSearch"
+            class="cell"
+            list="regmanSearchList"
+            placeholder="Escribe y elige una cédula…"
+          />
+          <datalist id="regmanSearchList"></datalist>
+          <div class="hint">
+            Tip: elige una sugerencia → se carga en el formulario. Luego usa <b>Guardar</b> (editar) o <b>Borrar</b>.
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="actions">
+          <button id="regmanBtnNew" class="btn ghost" type="button">Nuevo</button>
+          <button id="regmanBtnSave" class="btn primary" type="button">Guardar</button>
+          <button id="regmanBtnDelete" class="btn danger" type="button">Borrar</button>
+
+          <!-- ✅ NUEVO: intercambio rápido (docente seleccionado) -->
+          <button
+            id="regmanBtnSwapNA"
+            class="btn soft"
+            type="button"
+            title="Intercambia Nombres y Apellidos del docente seleccionado y guarda en Firebase"
+          >↔ Nombres/Apellidos</button>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="form">
+          <div class="row">
+            <label>Cédula</label>
+            <input id="regmanCedula" class="cell" placeholder="Ej: 1712345678" />
+          </div>
+
+          <div class="row two">
+            <div>
+              <label>Nombres</label>
+              <input id="regmanNombres" class="cell" placeholder="Ej: Jefferson" />
+            </div>
+            <div>
+              <label>Apellidos</label>
+              <input id="regmanApellidos" class="cell" placeholder="Ej: Villarreal" />
+            </div>
+          </div>
+
+          <div class="row two">
+            <div>
+              <label>Carrera</label>
+              <select id="regmanCarrera" class="cell">
+                <option value="">Cargando carreras…</option>
+              </select>
+            </div>
+            <div>
+              <label>Celular</label>
+              <input id="regmanCelular" class="cell" placeholder="Ej: 0999999999" />
+            </div>
+          </div>
+
+          <div class="row">
+            <label>Sexo</label>
+            <select id="regmanSexo" class="cell">
+              <option value="">Selecciona…</option>
+              <option value="F">Mujer</option>
+              <option value="M">Hombre</option>
+            </select>
+          </div>
+
+          <div class="row">
+            <label>Título</label>
+            <input id="regmanTitulo" class="cell" placeholder="Ej: MSc., Ing., Lic., etc." />
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="actions">
+          <button id="regmanBtnLoad" class="btn soft" type="button">Cargar</button>
+          <button id="regmanBtnFile" class="btn soft" type="button">Importar archivo</button>
+          <input id="regmanFileInput" type="file" accept=".csv,.txt" hidden />
+        </div>
+
+        <div class="hint">
+          Consejo: aquí no hay conexión con otras carpetas. Solo Firebase.
+        </div>
+      </section>
+
+      <!-- Card: Tabla -->
+      <section class="card">
+        <div class="card-head">
+          <div class="h3">Docentes</div>
+
+          <!-- ✅ NUEVO: botón Errores -->
+          <button id="regmanBtnErrors" class="btn warn" type="button" title="Ver filas con error">
+            Errores
+            <span id="regmanErrBadge" class="badge" hidden>0</span>
+          </button>
+        </div>
+
+        <div class="hr"></div>
+
+        <!-- ✅ Barra compacta 1 línea -->
+        <div class="filterbar">
+          <div class="filtergrow">
+            <label class="sr">Buscar en tabla</label>
+            <input
+              id="regmanTableSearch"
+              class="cell"
+              list="regmanTableSearchList"
+              placeholder="Buscar: cédula / nombres / apellidos…"
+            />
+            <datalist id="regmanTableSearchList"></datalist>
+          </div>
+
+          <div class="filteritem">
+            <label class="sr">Sexo</label>
+            <select id="regmanFilterSexo" class="cell">
+              <option value="">Sexo: Todos</option>
+              <option value="F">Mujer</option>
+              <option value="M">Hombre</option>
+            </select>
+          </div>
+
+          <div class="filteritem filterwide">
+            <label class="sr">Carrera</label>
+            <select id="regmanFilterCarrera" class="cell">
+              <option value="">Carrera: Todas</option>
+            </select>
+          </div>
+
+          <div class="filteritem">
+            <button id="regmanFilterClear" class="btn ghost" type="button">Limpiar</button>
+          </div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div id="regmanTableHost" class="table-host"></div>
+
+        <div class="hint">
+          Tip: clic en una fila también carga el docente al formulario. Clic en cabecera ordena.
+        </div>
+      </section>
+    </section>
+  </div>
+
+  <!-- Modal de carga masiva -->
+  <div id="regmanBulkModal" class="modal" hidden>
+    <div class="modal-card">
+      <div class="modal-head">
+        <div class="h3">Carga masiva</div>
+        <button id="regmanBulkBtnClose" class="btn ghost" type="button">Cerrar</button>
+      </div>
+      <div class="hr"></div>
+      <div class="row">
+        <label>Pega aquí (Excel / Sheets / CSV)</label>
+        <textarea
+          id="regmanBulkText"
+          class="cell pastebox"
+          rows="7"
+          placeholder="Pega aquí y presiona Procesar.
+Mínimo: Nombres, Apellidos, Cédula
+Opcional: Carrera / Plan / Tipo"></textarea>
+      </div>
+
+      <div class="actions">
+        <button id="regmanBulkBtnProcess" class="btn primary" type="button">Procesar</button>
+        <button id="regmanBulkBtnAdd" class="btn soft" type="button" disabled>Agregar</button>
+      </div>
+
+      <div class="hint" id="regmanBulkStats"></div>
+      <div class="hr"></div>
+      <div id="regmanBulkPreview" class="table-host"></div>
+    </div>
+  </div>
+
+  <!-- ✅ NUEVO: Modal de Errores -->
+  <div id="regmanErrModal" class="modal" hidden>
+    <div class="modal-card">
+      <div class="modal-head">
+        <div class="h3">Errores en tabla</div>
+        <button id="regmanErrBtnClose" class="btn ghost" type="button">Cerrar</button>
+      </div>
+      <div class="hr"></div>
+
+      <div class="err-meta">
+        <div class="muted"><b>Total con error:</b> <span id="regmanErrCount">0</span></div>
+        <div class="muted">Se detecta con la misma validación que Guardar.</div>
+      </div>
+
+      <div class="hr"></div>
+      <div id="regmanErrList" class="table-host"></div>
+    </div>
+  </div>
+
+  <script>
+    window.firebaseConfig = window.firebaseConfig || {
+      apiKey: "AIzaSyCaHf1C0BB0X_H3BDZ1o-UDAsPmLTjsZLA",
+      authDomain: "utet-4387a.firebaseapp.com",
+      projectId: "utet-4387a",
+      storageBucket: "utet-4387a.firebasestorage.app",
+      messagingSenderId: "902848131454",
+      appId: "1:902848131454:web:47f515eb6480834724c32f"
+    };
+  </script>
+
+  <script type="module">
+    import { bootRegManage } from "./regman.app.js";
+    bootRegManage();
+  </script>
+</body>
+</html>

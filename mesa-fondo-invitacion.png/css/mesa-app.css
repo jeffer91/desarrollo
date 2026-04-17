@@ -1,0 +1,718 @@
+/*
+=========================================================
+Nombre completo: mesa-app.css
+Ruta o ubicación: /css/mesa-app.css
+Función o funciones:
+- Definir el diseño general de la app.
+- Maquetar el listado principal.
+- Diseñar el popup del formulario.
+- Diseñar el popup de vista previa.
+- Dar estilo institucional a la invitación.
+=========================================================
+*/
+:root {
+  --mesa-bg: #f5f7fb;
+  --mesa-panel: #ffffff;
+  --mesa-border: #e5e7eb;
+  --mesa-text: #111827;
+  --mesa-soft: #6b7280;
+  --mesa-primary: #1d4ed8;
+  --mesa-primary-soft: #dbeafe;
+  --mesa-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+  --mesa-radius: 18px;
+  --mesa-radius-sm: 12px;
+  --mesa-danger: #991b1b;
+  --mesa-success: #166534;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--mesa-bg);
+  color: var(--mesa-text);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+body {
+  min-height: 100vh;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+textarea {
+  resize: vertical;
+}
+
+.mesa-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.mesa-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--mesa-border);
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(8px);
+}
+
+.mesa-topbar__left h1 {
+  margin: 0;
+  font-size: 26px;
+}
+
+.mesa-topbar__left p {
+  margin: 6px 0 0;
+  color: var(--mesa-soft);
+  font-size: 14px;
+}
+
+.mesa-main {
+  display: grid;
+  grid-template-columns: 430px 1fr;
+  gap: 18px;
+  padding: 18px;
+  align-items: start;
+}
+
+.mesa-panel {
+  background: var(--mesa-panel);
+  border-radius: var(--mesa-radius);
+  border: 1px solid var(--mesa-border);
+  box-shadow: var(--mesa-shadow);
+}
+
+.mesa-panel--sidebar {
+  padding: 14px;
+  position: sticky;
+  top: 18px;
+}
+
+.mesa-panel--content {
+  padding: 14px;
+  display: grid;
+  gap: 14px;
+}
+
+.mesa-section + .mesa-section {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--mesa-border);
+}
+
+.mesa-section--compact {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+.mesa-section__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.mesa-section__header--no-margin {
+  margin-bottom: 0;
+}
+
+.mesa-section__header h2,
+.mesa-state-card h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.mesa-search input,
+.mesa-field input,
+.mesa-field select,
+.mesa-field textarea {
+  width: 100%;
+  border: 1px solid var(--mesa-border);
+  border-radius: 12px;
+  padding: 11px 12px;
+  background: #fff;
+  color: var(--mesa-text);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.mesa-search input:focus,
+.mesa-field input:focus,
+.mesa-field select:focus,
+.mesa-field textarea:focus {
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 3px rgba(147, 197, 253, 0.22);
+}
+
+.mesa-btn {
+  border: none;
+  border-radius: 12px;
+  padding: 11px 14px;
+  background: #e5e7eb;
+  color: #111827;
+  font-weight: 700;
+}
+
+.mesa-btn--primary {
+  background: var(--mesa-primary);
+  color: #fff;
+}
+
+.mesa-counter {
+  min-width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
+.mesa-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: calc(100vh - 220px);
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.mesa-card {
+  border: 1px solid var(--mesa-border);
+  border-radius: 14px;
+  background: #fbfcfe;
+  padding: 12px;
+}
+
+.mesa-card__top {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: start;
+}
+
+.mesa-card__name {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.mesa-card__meta {
+  margin-top: 5px;
+  font-size: 12px;
+  color: var(--mesa-soft);
+  line-height: 1.45;
+}
+
+.mesa-card__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.mesa-card__actions button {
+  border: none;
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: #eef2f7;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.mesa-empty {
+  border: 1px dashed #cbd5e1;
+  border-radius: 14px;
+  padding: 18px;
+  text-align: center;
+  color: var(--mesa-soft);
+  background: #fafcff;
+}
+
+.mesa-state-card {
+  border: 1px solid var(--mesa-border);
+  border-radius: 16px;
+  background: #fff;
+  padding: 16px;
+}
+
+.mesa-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.mesa-kpi {
+  border: 1px solid var(--mesa-border);
+  border-radius: 14px;
+  padding: 14px;
+  background: #fbfcfe;
+}
+
+.mesa-kpi__label {
+  font-size: 12px;
+  color: var(--mesa-soft);
+  margin-bottom: 8px;
+}
+
+.mesa-kpi__value {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.mesa-helper {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.mesa-helper p {
+  margin: 0;
+  padding: 12px;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid var(--mesa-border);
+  color: #334155;
+  line-height: 1.5;
+  font-size: 14px;
+}
+
+.mesa-modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  z-index: 1000;
+}
+
+.mesa-modal.is-open {
+  display: block;
+}
+
+.mesa-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(3px);
+}
+
+.mesa-modal__dialog {
+  position: relative;
+  margin: 14px auto;
+  background: #fff;
+  border-radius: 20px;
+  border: 1px solid var(--mesa-border);
+  box-shadow: 0 28px 60px rgba(15, 23, 42, 0.25);
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  overflow: hidden;
+}
+
+.mesa-modal__dialog--editor {
+  width: min(1100px, calc(100vw - 28px));
+  max-height: calc(100vh - 28px);
+}
+
+.mesa-modal__dialog--preview {
+  width: min(1280px, calc(100vw - 28px));
+  max-height: calc(100vh - 28px);
+}
+
+.mesa-modal__header,
+.mesa-modal__footer {
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--mesa-border);
+}
+
+.mesa-modal__footer {
+  border-bottom: none;
+  border-top: 1px solid var(--mesa-border);
+}
+
+.mesa-modal__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.mesa-modal__header h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.mesa-modal__header p {
+  margin: 4px 0 0;
+  color: var(--mesa-soft);
+  font-size: 13px;
+}
+
+.mesa-modal__body {
+  padding: 16px 18px;
+  overflow: auto;
+}
+
+.mesa-modal__body--preview {
+  background: #eef2f7;
+}
+
+.mesa-icon-btn {
+  border: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: #f3f4f6;
+  font-size: 16px;
+}
+
+.mesa-form {
+  display: grid;
+  gap: 14px;
+}
+
+.mesa-form-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.mesa-form-grid--three {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+.mesa-form-grid--four {
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+}
+
+.mesa-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mesa-field span {
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.mesa-subcard {
+  border: 1px solid var(--mesa-border);
+  border-radius: 16px;
+  background: #fbfcfe;
+  padding: 14px;
+}
+
+.mesa-subcard__title {
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.mesa-assignments {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.mesa-assignment {
+  border: 1px solid #dbe3ef;
+  border-radius: 16px;
+  background: #fff;
+  padding: 12px;
+}
+
+.mesa-assignment__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.mesa-assignment__title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1d4ed8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.mesa-assignment__remove {
+  border: none;
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: #fee2e2;
+  color: #991b1b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.mesa-preview-stage {
+  min-height: 400px;
+  overflow: auto;
+  border-radius: 18px;
+  border: 1px solid var(--mesa-border);
+  background: #dde4ee;
+  padding: 20px;
+}
+
+.mesa-preview-document {
+  width: 210mm;
+  min-height: 297mm;
+  margin: 0 auto;
+  background: #fff;
+  box-shadow: 0 24px 55px rgba(0, 0, 0, 0.14);
+}
+
+.mesa-letter {
+  position: relative;
+  min-height: 297mm;
+  padding: 28mm 22mm 26mm 22mm;
+  font-family: Georgia, "Times New Roman", serif;
+  color: #171717;
+  background: #fff;
+  overflow: hidden;
+}
+
+.mesa-letter__watermark-left {
+  position: absolute;
+  left: -10mm;
+  bottom: 18mm;
+  width: 62mm;
+  height: 120mm;
+  border: 3px solid rgba(148, 163, 184, 0.14);
+  border-bottom-left-radius: 18px;
+  border-bottom-right-radius: 18px;
+  border-top-left-radius: 18px;
+  border-top-right-radius: 18px;
+  opacity: 0.6;
+}
+
+.mesa-letter__leaf-right {
+  position: absolute;
+  right: 10mm;
+  bottom: 18mm;
+  width: 34mm;
+  height: 54mm;
+  border-radius: 100px 100px 0 100px;
+  border: 2px solid rgba(161, 98, 7, 0.22);
+  transform: rotate(22deg);
+  opacity: 0.55;
+}
+
+.mesa-letter__logos {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: start;
+  gap: 12px;
+  margin-bottom: 24mm;
+}
+
+.mesa-letter__corner {
+  width: 44px;
+  height: 44px;
+  border-top: 6px solid #b08b45;
+  border-left: 6px solid #b08b45;
+  border-top-left-radius: 4px;
+}
+
+.mesa-letter__shield {
+  justify-self: center;
+  width: 82px;
+  height: 102px;
+  border: 2px solid #4b5563;
+  border-radius: 40px 40px 30px 30px;
+  position: relative;
+  background:
+    linear-gradient(to bottom, #111827 0 18%, transparent 18% 82%, #111827 82% 100%);
+}
+
+.mesa-letter__shield::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 8px;
+  width: 14px;
+  height: 14px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: #d4af37;
+}
+
+.mesa-letter__logo-text {
+  justify-self: end;
+  text-align: right;
+  line-height: 1.05;
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.mesa-letter__logo-text strong {
+  display: block;
+  font-size: 22px;
+  letter-spacing: 0.03em;
+}
+
+.mesa-letter__logo-text span {
+  display: block;
+  font-size: 10px;
+  color: #374151;
+}
+
+.mesa-letter__date {
+  text-align: right;
+  font-size: 11pt;
+  font-weight: 700;
+  margin-bottom: 16mm;
+}
+
+.mesa-letter__paragraph {
+  margin: 0 0 12px;
+  font-size: 11pt;
+  line-height: 1.45;
+  text-align: justify;
+}
+
+.mesa-letter__designation {
+  margin: 16px 0;
+  text-align: center;
+  font-weight: 700;
+  font-size: 13pt;
+  line-height: 1.28;
+}
+
+.mesa-letter__responsibilities-intro {
+  margin: 14px 0 12px;
+  font-size: 11pt;
+}
+
+.mesa-letter__groups {
+  margin: 0 0 14px 34px;
+  font-size: 11pt;
+}
+
+.mesa-letter__group + .mesa-letter__group {
+  margin-top: 12px;
+}
+
+.mesa-letter__group-title {
+  font-weight: 700;
+  margin-bottom: 5px;
+}
+
+.mesa-letter__times {
+  margin: 0;
+  padding-left: 24px;
+}
+
+.mesa-letter__times li {
+  margin: 2px 0;
+}
+
+.mesa-letter__closing {
+  margin-top: 14px;
+  font-size: 11pt;
+  text-align: justify;
+}
+
+.mesa-letter__signature {
+  margin-top: 28mm;
+  text-align: center;
+  font-size: 11pt;
+}
+
+.mesa-letter__signature-name {
+  margin-top: 30px;
+  font-weight: 700;
+}
+
+.mesa-letter__signature-role {
+  margin-top: 2px;
+}
+
+.mesa-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+@media (max-width: 1180px) {
+  .mesa-main {
+    grid-template-columns: 1fr;
+  }
+
+  .mesa-panel--sidebar {
+    position: static;
+  }
+
+  .mesa-form-grid--three,
+  .mesa-form-grid--four,
+  .mesa-kpis {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .mesa-topbar,
+  .mesa-modal__header,
+  .mesa-section__header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .mesa-modal__dialog--editor,
+  .mesa-modal__dialog--preview {
+    width: calc(100vw - 14px);
+    margin: 7px auto;
+    max-height: calc(100vh - 14px);
+  }
+
+  .mesa-preview-stage {
+    padding: 8px;
+  }
+
+  .mesa-preview-document {
+    width: 100%;
+    min-height: auto;
+  }
+
+  .mesa-letter {
+    min-height: auto;
+    padding: 18px;
+  }
+
+  .mesa-letter__logos {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+    margin-bottom: 18px;
+  }
+
+  .mesa-letter__logo-text {
+    justify-self: center;
+    text-align: center;
+  }
+}

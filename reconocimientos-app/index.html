@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Generador de Reconocimientos ITSQMET</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="hero">
+      <div class="hero__text">
+        <span class="hero__eyebrow">ITSQMET · Reconocimientos</span>
+        <h1>Generador de Reconocimientos</h1>
+        <p>
+          Genera certificados con una composición formal, equilibrada y sincronizada
+          entre la vista previa y el PDF final.
+        </p>
+      </div>
+    </header>
+
+    <main class="main-grid">
+      <section class="left-column">
+        <article class="card">
+          <div class="card__header">
+            <div>
+              <h2>1. Pegar información</h2>
+              <p class="section-note">Entrada rápida desde Excel</p>
+            </div>
+            <span class="mini-tag">Tabla</span>
+          </div>
+
+          <p class="help-text">
+            Copia y pega las columnas <strong>Carrera</strong>, <strong>nombre</strong> y
+            <strong>promedio</strong>.
+          </p>
+
+          <textarea
+            id="inputData"
+            placeholder="Carrera	nombre	promedio
+TECNOLOGÍA SUPERIOR EN ADMINISTRACIÓN	CORDOVA TORRES MAYRA ALEJANDRA	8,665"
+          ></textarea>
+
+          <div class="button-row">
+            <button id="processBtn" class="btn btn--primary">Procesar</button>
+            <button id="clearBtn" class="btn btn--secondary">Limpiar</button>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card__header">
+            <div>
+              <h2>2. Configuración general</h2>
+              <p class="section-note">Datos institucionales del certificado</p>
+            </div>
+            <span class="mini-tag">General</span>
+          </div>
+
+          <div class="form-grid">
+            <label>
+              Cohorte
+              <input id="cohorteInput" type="text" value="OCTUBRE 2025 - MARZO 2026" />
+            </label>
+          </div>
+
+          <div class="form-grid form-grid--triple">
+            <label>
+              Mes
+              <select id="mesSelect">
+                <option value="1">Enero</option>
+                <option value="2">Febrero</option>
+                <option value="3">Marzo</option>
+                <option value="4">Abril</option>
+                <option value="5">Mayo</option>
+                <option value="6">Junio</option>
+                <option value="7">Julio</option>
+                <option value="8">Agosto</option>
+                <option value="9">Septiembre</option>
+                <option value="10">Octubre</option>
+                <option value="11">Noviembre</option>
+                <option value="12">Diciembre</option>
+              </select>
+            </label>
+
+            <label>
+              Año
+              <input id="anioInput" type="number" value="2026" step="1" min="2000" max="2100" />
+            </label>
+
+            <label>
+              Fecha del certificado
+              <input id="certificateDateInput" type="date" value="2026-04-09" />
+            </label>
+          </div>
+
+          <p class="help-text help-text--small">
+            La fecha alimenta automáticamente el texto final y ayuda a mantener la composición
+            visual estable.
+          </p>
+        </article>
+
+        <article class="card">
+          <div class="card__header">
+            <div>
+              <h2>3. Editar registro seleccionado</h2>
+              <p class="section-note">Corrección puntual antes de exportar</p>
+            </div>
+            <span class="mini-tag">Manual</span>
+          </div>
+
+          <div class="form-grid">
+            <label>
+              Carrera
+              <input id="editCarrera" type="text" />
+            </label>
+
+            <label>
+              Nombre
+              <input id="editNombre" type="text" />
+            </label>
+
+            <label>
+              Promedio
+              <input id="editPromedio" type="text" />
+            </label>
+          </div>
+
+          <div class="button-row">
+            <button id="saveRecordBtn" class="btn btn--primary">Guardar cambios del registro</button>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card__header">
+            <div>
+              <h2>4. Registros detectados</h2>
+              <p class="section-note">Listado listo para generar</p>
+            </div>
+            <span id="recordsInfo" class="mini-tag mini-tag--soft">Sin procesar</span>
+          </div>
+
+          <div class="table-wrap">
+            <table id="recordsTable">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Carrera</th>
+                  <th>Nombre</th>
+                  <th>Promedio</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <section class="right-column">
+        <article class="card card--preview">
+          <div class="card__header card__header--preview">
+            <div>
+              <h2>Vista previa institucional</h2>
+              <p class="help-text help-text--small">
+                La composición del canvas y del PDF final usa el mismo motor de layout.
+              </p>
+            </div>
+
+            <div class="preview-controls">
+              <label>
+                Registro
+                <select id="recordSelect"></select>
+              </label>
+            </div>
+          </div>
+
+          <div class="preview-stage">
+            <canvas id="previewCanvas" width="1472" height="1040"></canvas>
+          </div>
+
+          <div class="button-row button-row--footer">
+            <button id="downloadCurrentBtn" class="btn btn--primary">Descargar PDF actual</button>
+            <button id="downloadAllBtn" class="btn btn--success">Descargar todos en PDF</button>
+          </div>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+  <script src="./config.js"></script>
+  <script src="./layout.js"></script>
+  <script src="./parser.js"></script>
+  <script src="./generator.js"></script>
+  <script src="./preview.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>

@@ -1,13 +1,12 @@
 /* =========================================================
-Nombre del archivo: menu.render.js
-Ruta o ubicación: /Curriculo/menu/menu.render.js
+Nombre completo: menu.render.js
+Ruta o ubicación: /menu/menu.render.js
 Función o funciones:
-- Renderiza visualmente los botones del menú Currículo
-- Marca la opción activa según el módulo seleccionado
-- Actualiza el hint de estado del shell
-- Se integra con el router y el frame principal
+- Renderizar visualmente los botones del menú Currículo
+- Marcar la opción activa según el módulo seleccionado
+- Actualizar el hint de estado del shell
+- Permitir estados normales, activos y deshabilitados en la navegación
 ========================================================= */
-
 (function attachCurriculoMenuRender(window, document) {
   "use strict";
 
@@ -28,20 +27,26 @@ Función o funciones:
     var nav = byId("menuNav");
     if (!nav) return;
 
-    nav.innerHTML = items.map(function mapItem(item) {
-      var isActive = String(item.id) === String(activeId);
+    var html = (Array.isArray(items) ? items : []).map(function mapItem(item) {
+      var isActive = String(item.id || "") === String(activeId || "");
+      var disabled = item && item.disabled === true;
+
       return [
         '<button class="navbtn" type="button" data-id="',
-        escapeHtml(item.id),
+        escapeHtml(item.id || ""),
         '" data-active="',
         isActive ? "true" : "false",
-        '" title="',
+        '"',
+        disabled ? ' disabled aria-disabled="true"' : "",
+        ' title="',
         escapeHtml(item.hint || item.title || ""),
         '">',
         escapeHtml(item.title || ""),
         "</button>"
       ].join("");
     }).join("");
+
+    nav.innerHTML = html;
   }
 
   function setHint(text) {

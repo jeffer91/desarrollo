@@ -1,0 +1,276 @@
+/*
+Nombre completo: for.print.css
+Ruta o ubicación: formacion/exportar/for.print.css
+Función o funciones: Definir el estilo de impresión y exportación del expediente de formación docente para PDF y Word, incluyendo portada, encabezados, secciones, tablas, firmas y saltos de página
+*/
+
+@page{
+  size: A4;
+  margin: 1.5cm;
+}
+
+:root{
+  --for-print-text: #161616;
+  --for-print-muted: #5b6470;
+  --for-print-line: #bfc8d6;
+  --for-print-soft: #eef3ff;
+  --for-print-brand: #1f5eff;
+}
+
+*{
+  box-sizing: border-box;
+}
+
+html,
+body{
+  margin: 0;
+  padding: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  color: var(--for-print-text);
+  background: #fff;
+  font-size: 11pt;
+  line-height: 1.4;
+}
+
+.forPrintBody{
+  margin: 0;
+  padding: 0;
+}
+
+.forPrintPage{
+  page-break-after: always;
+  min-height: calc(297mm - 3cm);
+  padding: 0;
+}
+
+.forPrintPage:last-child{
+  page-break-after: auto;
+}
+
+.forPrintPageBody{
+  padding-top: 10px;
+}
+
+.forPrintCover{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.forPrintCoverInner{
+  width: 100%;
+  max-width: 720px;
+  text-align: center;
+  padding-top: 50px;
+}
+
+.forPrintUnit{
+  margin: 0 0 12px;
+  color: var(--for-print-muted);
+  font-size: 12pt;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-weight: 700;
+}
+
+.forPrintTitle{
+  margin: 0 0 24px;
+  font-size: 22pt;
+  line-height: 1.2;
+}
+
+.forPrintCoverCard{
+  border: 1px solid var(--for-print-line);
+  border-radius: 14px;
+  padding: 18px;
+  margin: 22px 0 42px;
+  text-align: left;
+}
+
+.forPrintMetaRow{
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid #e8edf7;
+}
+
+.forPrintMetaRow:last-child{
+  border-bottom: 0;
+}
+
+.forPrintMetaLabel{
+  font-weight: 700;
+  color: var(--for-print-muted);
+}
+
+.forPrintMetaValue{
+  font-weight: 700;
+  text-align: right;
+}
+
+.forPrintSignGrid{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+  margin-top: 42px;
+}
+
+.forPrintSignBox{
+  text-align: center;
+}
+
+.forPrintSignLine{
+  height: 48px;
+  border-bottom: 1px solid #444;
+  margin-bottom: 8px;
+}
+
+.forPrintSignName{
+  margin: 0;
+  font-weight: 700;
+}
+
+.forPrintSignRole{
+  margin: 4px 0;
+  color: var(--for-print-muted);
+  font-size: 10pt;
+}
+
+.forPrintSignHint{
+  margin: 0;
+  font-size: 10pt;
+}
+
+.forPrintHeader{
+  border-bottom: 2px solid var(--for-print-brand);
+  padding-bottom: 12px;
+  margin-bottom: 18px;
+}
+
+.forPrintHeaderTop{
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+}
+
+.forPrintHeaderBrand{
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.forPrintHeaderLogo{
+  width: 70px;
+  height: auto;
+  object-fit: contain;
+}
+
+.forPrintHeaderLogoPlaceholder{
+  width: 70px;
+  height: 70px;
+  border: 1px solid var(--for-print-line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10pt;
+  font-weight: 700;
+  color: var(--for-print-brand);
+}
+
+.forPrintHeaderUnit{
+  margin: 0 0 6px;
+  color: var(--for-print-muted);
+  font-size: 10pt;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.forPrintHeaderTitle{
+  margin: 0;
+  font-size: 16pt;
+  line-height: 1.2;
+}
+
+.forPrintHeaderMeta{
+  min-width: 220px;
+  font-size: 10pt;
+  text-align: right;
+}
+
+.forPrintHeaderMeta div{
+  margin-bottom: 4px;
+}
+
+.forPrintSection{
+  margin-bottom: 20px;
+}
+
+.forPrintSectionHead{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.forPrintSectionNumber{
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--for-print-soft);
+  color: var(--for-print-brand);
+  font-weight: 700;
+}
+
+.forPrintSectionTitle{
+  margin: 0;
+  font-size: 13pt;
+}
+
+.forPrintTable{
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.forPrintTable th,
+.forPrintTable td{
+  border: 1px solid var(--for-print-line);
+  padding: 8px 10px;
+  vertical-align: top;
+  text-align: left;
+  font-size: 10.5pt;
+}
+
+.forPrintTable thead th{
+  background: var(--for-print-soft);
+}
+
+.forPrintTableKey{
+  width: 34%;
+  background: #fafcff;
+  font-weight: 700;
+}
+
+.forPrintTableValue{
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.forPrintEmptyBox{
+  border: 1px dashed var(--for-print-line);
+  padding: 18px;
+  border-radius: 10px;
+  color: var(--for-print-muted);
+}
+
+@media print{
+  html,
+  body{
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
