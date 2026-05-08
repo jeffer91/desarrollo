@@ -1,0 +1,184 @@
+/* =========================================================
+Nombre completo: titulacion-print.css
+Ruta: /Titulacion/frontend/css/titulacion-print.css
+Función o funciones:
+- Definir estilos de impresión A4.
+- Ajustar portada, índice, capítulos, tablas y anexos.
+- Mantener formato limpio para exportar desde navegador si pdfMake no está disponible.
+========================================================= */
+
+@page {
+  size: A4;
+  margin: 2cm 1.8cm 1.8cm 1.8cm;
+}
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  color: #000;
+  background: #fff;
+  margin: 0;
+}
+
+.print-document {
+  width: 100%;
+}
+
+.print-section {
+  page-break-before: always;
+}
+
+.print-section:first-child {
+  page-break-before: auto;
+}
+
+.print-section h1 {
+  font-size: 16pt;
+  margin: 0 0 16px;
+}
+
+.print-section h2 {
+  font-size: 13pt;
+  margin: 14px 0 8px;
+}
+
+.print-section p {
+  font-size: 11pt;
+  line-height: 1.35;
+  text-align: justify;
+  margin: 0 0 10px;
+}
+
+.cover-top-table,
+.cover-sign-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.cover-top-table td,
+.cover-sign-table th,
+.cover-sign-table td {
+  border: 1px solid #000;
+  padding: 6px;
+  font-size: 9pt;
+}
+
+.cover-logo-cell {
+  width: 22%;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.cover-logo {
+  max-width: 95px;
+  max-height: 65px;
+}
+
+.cover-logo-placeholder {
+  font-weight: bold;
+  color: #777;
+}
+
+.cover-unit-cell {
+  text-align: center;
+  font-weight: bold;
+  vertical-align: middle;
+}
+
+.cover-meta-label {
+  width: 15%;
+  font-weight: bold;
+}
+
+.cover-meta-value {
+  width: 25%;
+}
+
+.cover-title-box {
+  min-height: 360px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-weight: bold;
+  font-size: 18pt;
+  line-height: 1.25;
+  white-space: pre-line;
+}
+
+.cover-sign-table th {
+  text-align: center;
+  font-weight: bold;
+}
+
+.cover-sign-cell {
+  height: 135px;
+  vertical-align: bottom;
+}
+
+.cover-sign-label {
+  display: none;
+}
+
+.cover-sign-space {
+  height: 56px;
+}
+
+.cover-sign-name,
+.cover-sign-role {
+  font-size: 8.5pt;
+  line-height: 1.15;
+}
+
+.index-list {
+  list-style: decimal;
+  padding-left: 22px;
+}
+
+.index-list li {
+  margin-bottom: 8px;
+  font-size: 11pt;
+}
+
+.infografia-proceso {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.infografia-step {
+  border: 1px solid #999;
+  padding: 10px;
+  break-inside: avoid;
+}
+
+.infografia-step-number {
+  font-weight: bold;
+  font-size: 14pt;
+}
+
+.anexo-image-block {
+  break-inside: avoid;
+  text-align: center;
+  margin: 12px 0 18px;
+}
+
+.anexo-image-block img {
+  max-width: 100%;
+  max-height: 620px;
+}
+
+.anexo-image-block figcaption {
+  font-size: 9pt;
+  margin-top: 6px;
+  font-style: italic;
+}
+
+.anexo-file-block {
+  border: 1px solid #aaa;
+  padding: 8px;
+  margin-bottom: 10px;
+}
+
+.no-print {
+  display: none !important;
+}

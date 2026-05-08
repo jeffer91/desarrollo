@@ -1,0 +1,86 @@
+<!-- =========================================================
+Nombre completo: titulacion-print.html
+Ruta: /Titulacion/frontend/titulacion-print.html
+Función o funciones:
+- Mostrar una vista imprimible del documento de titulación.
+- Cargar el documento guardado en localStorage.
+- Renderizar portada, índice, capítulos y anexos en HTML.
+- Servir como respaldo si pdfMake no está disponible.
+========================================================= -->
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Vista imprimible - Titulación</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="./css/titulacion-print.css">
+</head>
+<body>
+  <main id="print-root" class="print-document"></main>
+
+  <script src="./js/core/titulacion-utils.js"></script>
+  <script src="./js/documentos/titulacion-portada.js"></script>
+  <script src="./js/documentos/titulacion-indice.js"></script>
+  <script src="./js/documentos/titulacion-anexos.js"></script>
+  <script src="./js/repositorio/titulacion-local-repo.js"></script>
+
+  <script>
+    (function () {
+      "use strict";
+
+      function esc(value) {
+        return String(value == null ? "" : value)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+      }
+
+      function renderSection(section) {
+        if (!section) return "";
+
+        if (section.tipo === "portada" && window.TITULACION_PORTADA) {
+          return window.TITULACION_PORTADA.buildCoverHtml(section.data || {});
+        }
+
+        if (section.id === "anexos" && window.TITULACION_ANEXOS) {
+          return window.TITULACION_ANEXOS.buildAnexosHtml(
+            section.data && section.data.anexos ? section.data.anexos : []
+          );
+        }
+
+        var html = ['<section class="print-section">'];
+        html.push("<h1>" + esc(section.titulo || "Sección") + "</h1>");
+
+        if (section.tipo === "infografia" && section.data && section.data.html) {
+          html.push(section.data.html);
+        } else {
+          (section.contenido || []).forEach(function (p) {
+            html.push("<p>" + esc(p) + "</p>");
+          });
+        }
+
+        html.push("</section>");
+        return html.join("");
+      }
+
+      function init() {
+        var root = document.getElementById("print-root");
+        var doc = window.TITULACION_LOCAL_REPO
+          ? window.TITULACION_LOCAL_REPO.getDocument()
+          : null;
+
+        if (!root) return;
+
+        if (!doc) {
+          root.innerHTML = "<p>No existe documento guardado para imprimir.</p>";
+          return;
+        }
+
+        root.innerHTML = (doc.secciones || []).map(renderSection).join("");
+      }
+
+      init();
+    })();
+  </script>
+</body>
+</html>

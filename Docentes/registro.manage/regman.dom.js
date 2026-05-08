@@ -1,22 +1,44 @@
 /* =========================================================
 Nombre del archivo: regman.dom.js
 Ruta - Ubicación: /registro.manage/regman.dom.js
-Función:
-- DOM refs
+Función o funciones:
+- Referencias DOM centralizadas de la pantalla Registro · Gestión
+- Referencias del formulario de docentes
+- Referencias de búsqueda, filtros y tabla
+- Referencias de carga masiva
+- Referencias de errores
+- Referencia del botón Descargar Excel
 ========================================================= */
-export function $(id){ return document.getElementById(id); }
+
+export function $(id){
+  return document.getElementById(id);
+}
 
 export const DOM = {
+  /* =========================================================
+  Mensajes
+  ========================================================== */
   msg: () => $("regmanMsg"),
 
+  /* =========================================================
+  Botones principales del formulario
+  ========================================================== */
   btnNew: () => $("regmanBtnNew"),
   btnSave: () => $("regmanBtnSave"),
   btnDelete: () => $("regmanBtnDelete"),
+  btnSwapNA: () => $("regmanBtnSwapNA"),
 
+  /* =========================================================
+  Botones de tabla / herramientas
+  ========================================================== */
   btnLoad: () => $("regmanBtnLoad"),
   btnFile: () => $("regmanBtnFile"),
+  btnExportExcel: () => $("regmanBtnExportExcel"),
   fileInput: () => $("regmanFileInput"),
 
+  /* =========================================================
+  Formulario de docente
+  ========================================================== */
   cedula: () => $("regmanCedula"),
   nombres: () => $("regmanNombres"),
   apellidos: () => $("regmanApellidos"),
@@ -25,7 +47,9 @@ export const DOM = {
   sexo: () => $("regmanSexo"),
   titulo: () => $("regmanTitulo"),
 
-  // Modal carga masiva
+  /* =========================================================
+  Carga masiva
+  ========================================================== */
   bulkModal: () => $("regmanBulkModal"),
   bulkText: () => $("regmanBulkText"),
   bulkPreview: () => $("regmanBulkPreview"),
@@ -34,10 +58,15 @@ export const DOM = {
   bulkBtnProcess: () => $("regmanBulkBtnProcess"),
   bulkBtnAdd: () => $("regmanBulkBtnAdd"),
 
-  // Buscador del formulario
+  /* =========================================================
+  Buscador del formulario
+  ========================================================== */
   search: () => $("regmanSearch"),
+  searchList: () => $("regmanSearchList"),
 
-  // Tabla: buscador predictor + filtros
+  /* =========================================================
+  Tabla: búsqueda, filtros y contenedor
+  ========================================================== */
   tableSearch: () => $("regmanTableSearch"),
   tableSearchList: () => $("regmanTableSearchList"),
   filterSexo: () => $("regmanFilterSexo"),
@@ -45,7 +74,9 @@ export const DOM = {
   filterClear: () => $("regmanFilterClear"),
   tableHost: () => $("regmanTableHost"),
 
-  // ✅ Errores
+  /* =========================================================
+  Errores
+  ========================================================== */
   btnErrors: () => $("regmanBtnErrors"),
   errBadge: () => $("regmanErrBadge"),
   errModal: () => $("regmanErrModal"),

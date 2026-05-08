@@ -1,0 +1,22 @@
+{
+  "name": "titulacion",
+  "version": "1.0.0",
+  "description": "Aplicación para generar informes finales del proceso de titulación.",
+  "main": "backend/electron-main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron ."
+  },
+  "keywords": [
+    "titulacion",
+    "reportes",
+    "electron",
+    "pdf"
+  ],
+  "author": "Unidad de Titulación y Eficiencia Terminal",
+  "license": "MIT",
+  "dependencies": {
+    "electron": "^31.0.0"
+  },
+  "devDependencies": {}
+}
