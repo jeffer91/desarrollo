@@ -15,14 +15,23 @@
       "to": ".",
       "filter": [
         "index.html",
+        "package.json",
         "app/**/*",
         "audit/**/*",
         "Curriculo/**/*",
         "Docentes/**/*",
         "Documentos/**/*",
         "eventos/**/*",
+        "incorporaciones/**/*",
+        "localsave/**/*",
         "Requisitos/**/*",
-        "txt-exporter-electron/**/*"
+        "txt-exporter-electron/package.json",
+        "txt-exporter-electron/src/**/*",
+        "!**/node_modules/**",
+        "!**/.git/**",
+        "!**/dist/**",
+        "!**/build/**",
+        "!**/txt_convertidos/**"
       ]
     },
     {
@@ -55,6 +64,7 @@
   ],
   "win": {
     "icon": "build/icon.ico",
+    "requestedExecutionLevel": "asInvoker",
     "target": [
       {
         "target": "nsis",
@@ -68,12 +78,15 @@
     "artifactName": "${productName}-Portable-${version}-${arch}.${ext}"
   },
   "nsis": {
-    "oneClick": false,
-    "allowToChangeInstallationDirectory": true,
+    "oneClick": true,
+    "allowToChangeInstallationDirectory": false,
     "perMachine": false,
+    "allowElevation": false,
+    "deleteAppDataOnUninstall": false,
     "createDesktopShortcut": true,
     "createStartMenuShortcut": true,
     "shortcutName": "Desarrollo",
+    "runAfterFinish": true,
     "artifactName": "${productName}-Setup-${version}-${arch}.${ext}"
   }
 }

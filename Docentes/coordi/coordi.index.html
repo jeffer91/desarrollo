@@ -1,0 +1,132 @@
+<!-- =========================================================
+Nombre completo: coordi.index.html
+Ruta o ubicación: /Docentes/coordi/coordi.index.html
+Función o funciones:
+- Mostrar la pantalla principal Coordi dentro del módulo Docentes.
+- Permitir gestionar la relación Carrera, Coordinador, Programa y Telegram.
+- Mostrar tabla editable tipo Excel.
+- Permitir guardar, validar, restaurar tabla base, importar y exportar.
+- Servir como pantalla de configuración para Distribución de incorporaciones.
+Con qué se une:
+- coordi.styles.css
+- coordi.state.js
+- coordi.dom.js
+- coordi.seed.js
+- coordi.normalize.js
+- coordi.validate.js
+- coordi.repo.js
+- coordi.table.js
+- coordi.import.js
+- coordi.export.js
+- coordi.app.js
+========================================================= -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Coordi | Docentes</title>
+
+  <link rel="stylesheet" href="./coordi.styles.css" />
+</head>
+
+<body>
+  <main class="coordi-page">
+    <header class="coordi-header">
+      <section>
+        <p class="coordi-kicker">Docentes</p>
+        <h1>Coordi</h1>
+        <p class="coordi-description">
+          Configuración de carreras, coordinadores, programas y Telegram para apoyar la distribución de incorporaciones.
+        </p>
+      </section>
+
+      <section class="coordi-header-actions">
+        <button id="btnRestoreSeed" type="button" class="btn btn-light">
+          Restaurar base
+        </button>
+
+        <button id="btnImport" type="button" class="btn btn-light">
+          Importar Excel
+        </button>
+
+        <button id="btnExport" type="button" class="btn btn-light">
+          Exportar
+        </button>
+
+        <button id="btnSave" type="button" class="btn btn-primary">
+          Guardar
+        </button>
+      </section>
+    </header>
+
+    <section class="coordi-card coordi-toolbar">
+      <div class="coordi-toolbar-left">
+        <label class="field">
+          <span>Buscar carrera o coordinador</span>
+          <input
+            id="coordiSearch"
+            type="search"
+            placeholder="Ejemplo: Enfermería, Rodrigo Espinoza, Tecnología Superior..."
+            autocomplete="off"
+          />
+        </label>
+      </div>
+
+      <div class="coordi-toolbar-right">
+        <button id="btnAddRow" type="button" class="btn btn-secondary">
+          Agregar fila
+        </button>
+
+        <button id="btnValidate" type="button" class="btn btn-secondary">
+          Validar
+        </button>
+      </div>
+    </section>
+
+    <section id="coordiStatus" class="coordi-status" aria-live="polite">
+      <span id="rowCounter">0 registros</span>
+      <span id="saveStatus">Sin cambios pendientes</span>
+    </section>
+
+    <section id="errorPanel" class="coordi-errors hidden"></section>
+
+    <section class="coordi-card table-card">
+      <div class="table-scroll">
+        <table class="coordi-table">
+          <thead>
+            <tr>
+              <th class="col-number">#</th>
+              <th>Carrera</th>
+              <th>Coordinador</th>
+              <th>Programa</th>
+              <th>Telegram</th>
+              <th class="col-actions">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="coordiTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <input
+      id="coordiImportFile"
+      type="file"
+      accept=".xlsx,.xls,.csv"
+      hidden
+    />
+  </main>
+
+  <script src="./coordi.state.js"></script>
+  <script src="./coordi.dom.js"></script>
+  <script src="./coordi.seed.js"></script>
+  <script src="./coordi.normalize.js"></script>
+  <script src="./coordi.validate.js"></script>
+  <script src="./coordi.repo.js"></script>
+  <script src="./coordi.table.js"></script>
+  <script src="./coordi.import.js"></script>
+  <script src="./coordi.export.js"></script>
+  <script src="./coordi.app.js"></script>
+</body>
+</html>

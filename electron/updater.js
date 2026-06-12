@@ -2,29 +2,31 @@
 =========================================================
 Nombre completo: updater.js
 Ruta o ubicación: /desarrollo/electron/updater.js
+
 Función o funciones:
-- Centraliza la lógica de auto update del shell Electron
-- Configura electron-updater para GitHub Releases
-- Revisa actualizaciones al iniciar y periódicamente
-- Muestra diálogo para descargar la nueva versión disponible
-- Permite instalar la actualización descargada al reiniciar
+1. Centraliza la lógica de actualización del shell Electron.
+2. Revisa actualizaciones en GitHub Releases cuando la app está instalada.
+3. Evita descargas e instalaciones automáticas peligrosas.
+4. Permite descargar la actualización solo cuando el usuario lo pide.
+5. Permite instalar la actualización solo al presionar el botón correspondiente.
+6. Mantiene informado al panel visual de actualizaciones mediante IPC.
 =========================================================
 */
+
 "use strict";
 
 const { app, dialog } = require("electron");
 const { autoUpdater } = require("electron-updater");
 const log = require("electron-log");
 
-const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
-const STARTUP_DELAY_MS = 15000;
+const STARTUP_DELAY_MS = 5000;
+const PERIODIC_CHECK_MS = 15 * 60 * 1000;
 
 let isConfigured = false;
 let mainWindowRef = null;
 let intervalId = null;
+let startupTimeoutId = null;
 let manualCheckRequested = false;
-let lastPromptedVersion = "";
-let lastDownloadedVersion = "";
 
 const state = {
   status: "idle",
@@ -33,12 +35,17 @@ const state = {
   available: false,
   downloaded: false,
   downloadInProgress: false,
+  installing: false,
   progressPercent: 0,
   currentVersion: app.getVersion(),
   availableVersion: "",
   lastCheckedAt: "",
   lastError: ""
 };
+
+function safeString(value) {
+  return String(value == null ? "" : value).trim();
+}
 
 function getUpdateState() {
   return {
@@ -48,6 +55,7 @@ function getUpdateState() {
     available: state.available,
     downloaded: state.downloaded,
     downloadInProgress: state.downloadInProgress,
+    installing: state.installing,
     progressPercent: state.progressPercent,
     currentVersion: state.currentVersion,
     availableVersion: state.availableVersion,
@@ -83,6 +91,7 @@ function getParentWindow() {
   if (mainWindowRef && !mainWindowRef.isDestroyed()) {
     return mainWindowRef;
   }
+
   return null;
 }
 
@@ -92,75 +101,32 @@ function consumeManualFlag() {
   return current;
 }
 
-async function showNoUpdateDialog() {
-  await dialog.showMessageBox(getParentWindow(), {
-    type: "info",
-    title: "Actualizaciones",
-    message: "No hay actualizaciones disponibles.",
-    detail: "Tu aplicación ya está en la versión más reciente.",
-    buttons: ["Aceptar"],
-    defaultId: 0
-  });
+function normalizeErrorMessage(error, fallbackMessage) {
+  if (error && error.message) {
+    return String(error.message);
+  }
+
+  if (typeof error === "string") {
+    return error;
+  }
+
+  return fallbackMessage || "Se produjo un error durante el proceso de actualización.";
 }
 
-async function showDownloadPrompt(info, forcedByManualCheck) {
-  const version = String(info && info.version ? info.version : "").trim();
-  if (!version) {
-    return;
-  }
-
-  if (!forcedByManualCheck && version === lastPromptedVersion) {
-    return;
-  }
-
-  lastPromptedVersion = version;
-
-  const result = await dialog.showMessageBox(getParentWindow(), {
-    type: "info",
-    title: "Nueva versión disponible",
-    message: "Se encontró una nueva versión de Desarrollo.",
-    detail:
-      "Versión disponible: " +
-      version +
-      "\nVersión actual: " +
-      app.getVersion() +
-      "\n\n¿Deseas descargarla ahora?",
-    buttons: ["Descargar ahora", "Más tarde"],
-    defaultId: 0,
-    cancelId: 1,
-    noLink: true
-  });
-
-  if (result.response === 0) {
-    await downloadAppUpdate();
-  }
-}
-
-async function showDownloadedPrompt(info) {
-  const version = String(info && info.version ? info.version : "").trim();
-
-  if (version && version === lastDownloadedVersion) {
-    return;
-  }
-
-  lastDownloadedVersion = version;
-
-  const result = await dialog.showMessageBox(getParentWindow(), {
-    type: "info",
-    title: "Actualización lista",
-    message: "La actualización ya se descargó correctamente.",
-    detail:
-      "Versión descargada: " +
-      (version || "Nueva versión") +
-      "\n\nPuedes reiniciar ahora para instalarla.",
-    buttons: ["Reiniciar e instalar", "Más tarde"],
-    defaultId: 0,
-    cancelId: 1,
-    noLink: true
-  });
-
-  if (result.response === 0) {
-    installDownloadedUpdate();
+async function showManualMessage(type, title, message, detail) {
+  try {
+    await dialog.showMessageBox(getParentWindow(), {
+      type: type || "info",
+      title: title || "Actualizaciones",
+      message: message || "",
+      detail: detail || "",
+      buttons: ["Aceptar"],
+      defaultId: 0,
+      cancelId: 0,
+      noLink: true
+    });
+  } catch (error) {
+    log.error("No se pudo mostrar el mensaje de actualización:", error);
   }
 }
 
@@ -169,20 +135,24 @@ async function checkForAppUpdates(options = {}) {
 
   if (!app.isPackaged) {
     setState({
-      status: "idle",
+      status: "dev",
       checking: false,
+      available: false,
+      downloaded: false,
+      downloadInProgress: false,
+      installing: false,
+      progressPercent: 0,
+      lastError: "",
       message: "Modo desarrollo detectado. El auto update solo funciona en la app instalada."
     });
 
     if (manual) {
-      await dialog.showMessageBox(getParentWindow(), {
-        type: "info",
-        title: "Actualizaciones",
-        message: "La búsqueda de actualizaciones solo funciona en la app instalada.",
-        detail: "Primero genera e instala el Setup NSIS para probar este flujo.",
-        buttons: ["Aceptar"],
-        defaultId: 0
-      });
+      await showManualMessage(
+        "info",
+        "Actualizaciones",
+        "La búsqueda de actualizaciones solo funciona en la app instalada.",
+        "Primero genera e instala el Setup NSIS para probar este flujo."
+      );
     }
 
     return {
@@ -198,36 +168,51 @@ async function checkForAppUpdates(options = {}) {
     };
   }
 
+  if (state.downloadInProgress) {
+    return {
+      ok: false,
+      message: "Ya hay una descarga de actualización en curso."
+    };
+  }
+
+  if (state.installing) {
+    return {
+      ok: false,
+      message: "Ya se está iniciando la instalación de la actualización."
+    };
+  }
+
   manualCheckRequested = manual;
 
   try {
     await autoUpdater.checkForUpdates();
+
     return {
       ok: true,
       message: "Revisión de actualizaciones iniciada."
     };
   } catch (error) {
-    const message =
-      error && error.message
-        ? error.message
-        : "No se pudo revisar si existen actualizaciones.";
+    const message = normalizeErrorMessage(
+      error,
+      "No se pudo revisar si existen actualizaciones."
+    );
 
     setState({
       status: "error",
       checking: false,
+      downloadInProgress: false,
+      installing: false,
       lastError: message,
       message: message
     });
 
     if (manual) {
-      await dialog.showMessageBox(getParentWindow(), {
-        type: "error",
-        title: "Error al revisar actualizaciones",
-        message: "No se pudo revisar si hay una nueva versión.",
-        detail: message,
-        buttons: ["Aceptar"],
-        defaultId: 0
-      });
+      await showManualMessage(
+        "error",
+        "Error al revisar actualizaciones",
+        "No se pudo revisar si hay una nueva versión.",
+        message
+      );
     }
 
     return {
@@ -245,9 +230,23 @@ async function downloadAppUpdate() {
     };
   }
 
-  if (state.downloadInProgress) {
+  if (state.installing) {
     return {
       ok: false,
+      message: "Ya se está iniciando la instalación de la actualización."
+    };
+  }
+
+  if (state.downloaded) {
+    return {
+      ok: true,
+      message: "La actualización ya está descargada. Presiona Reiniciar e instalar."
+    };
+  }
+
+  if (state.downloadInProgress) {
+    return {
+      ok: true,
       message: "La actualización ya se está descargando."
     };
   }
@@ -262,9 +261,13 @@ async function downloadAppUpdate() {
   try {
     setState({
       status: "downloading",
-      downloadInProgress: true,
+      checking: false,
+      available: true,
       downloaded: false,
+      downloadInProgress: true,
+      installing: false,
       progressPercent: 0,
+      lastError: "",
       message: "Descargando actualización..."
     });
 
@@ -275,26 +278,19 @@ async function downloadAppUpdate() {
       message: "Descarga iniciada."
     };
   } catch (error) {
-    const message =
-      error && error.message
-        ? error.message
-        : "No se pudo descargar la actualización.";
+    const message = normalizeErrorMessage(
+      error,
+      "No se pudo descargar la actualización."
+    );
 
     setState({
       status: "error",
+      checking: false,
       downloadInProgress: false,
       downloaded: false,
+      installing: false,
       lastError: message,
       message: message
-    });
-
-    await dialog.showMessageBox(getParentWindow(), {
-      type: "error",
-      title: "Error al descargar",
-      message: "No se pudo descargar la actualización.",
-      detail: message,
-      buttons: ["Aceptar"],
-      defaultId: 0
     });
 
     return {
@@ -305,6 +301,13 @@ async function downloadAppUpdate() {
 }
 
 function installDownloadedUpdate() {
+  if (!app.isPackaged) {
+    return {
+      ok: false,
+      message: "La instalación de actualizaciones solo funciona en la app instalada."
+    };
+  }
+
   if (!state.downloaded) {
     return {
       ok: false,
@@ -312,7 +315,41 @@ function installDownloadedUpdate() {
     };
   }
 
-  autoUpdater.quitAndInstall(false, true);
+  if (state.installing) {
+    return {
+      ok: true,
+      message: "La instalación ya fue iniciada."
+    };
+  }
+
+  setState({
+    status: "installing",
+    checking: false,
+    downloadInProgress: false,
+    installing: true,
+    lastError: "",
+    message: "Cerrando la app para instalar la actualización..."
+  });
+
+  setTimeout(function startSafeInstall() {
+    try {
+      autoUpdater.quitAndInstall(false, true);
+    } catch (error) {
+      const message = normalizeErrorMessage(
+        error,
+        "No se pudo iniciar la instalación de la actualización."
+      );
+
+      setState({
+        status: "error",
+        installing: false,
+        lastError: message,
+        message: message
+      });
+
+      log.error("No se pudo iniciar quitAndInstall:", error);
+    }
+  }, 800);
 
   return {
     ok: true,
@@ -321,7 +358,10 @@ function installDownloadedUpdate() {
 }
 
 function configureAutoUpdater() {
-  log.initialize();
+  if (typeof log.initialize === "function") {
+    log.initialize();
+  }
+
   log.transports.file.level = "info";
   autoUpdater.logger = log;
 
@@ -330,14 +370,16 @@ function configureAutoUpdater() {
   autoUpdater.autoRunAppAfterInstall = true;
   autoUpdater.disableWebInstaller = true;
   autoUpdater.allowPrerelease = false;
+  autoUpdater.allowDowngrade = false;
 
-  autoUpdater.on("checking-for-update", function onChecking() {
+  autoUpdater.on("checking-for-update", function onCheckingForUpdate() {
     setState({
       status: "checking",
       checking: true,
       available: false,
       downloaded: false,
       downloadInProgress: false,
+      installing: false,
       progressPercent: 0,
       lastCheckedAt: new Date().toISOString(),
       lastError: "",
@@ -347,7 +389,7 @@ function configureAutoUpdater() {
 
   autoUpdater.on("update-available", async function onUpdateAvailable(info) {
     const manual = consumeManualFlag();
-    const version = String(info && info.version ? info.version : "").trim();
+    const version = safeString(info && info.version);
 
     setState({
       status: "available",
@@ -355,15 +397,22 @@ function configureAutoUpdater() {
       available: true,
       downloaded: false,
       downloadInProgress: false,
+      installing: false,
       progressPercent: 0,
       availableVersion: version,
-      message: "Hay una nueva versión disponible."
+      lastError: "",
+      message: "Nueva versión encontrada. Presiona Descargar actualización para continuar."
     });
 
-    try {
-      await showDownloadPrompt(info, manual);
-    } catch (error) {
-      log.error("No se pudo mostrar el diálogo de actualización disponible:", error);
+    if (manual) {
+      await showManualMessage(
+        "info",
+        "Actualización disponible",
+        "Hay una nueva versión disponible.",
+        version
+          ? "Versión disponible: " + version + ". Descárgala desde el panel de actualizaciones."
+          : "Descárgala desde el panel de actualizaciones."
+      );
     }
   });
 
@@ -376,22 +425,28 @@ function configureAutoUpdater() {
       available: false,
       downloaded: false,
       downloadInProgress: false,
+      installing: false,
       progressPercent: 0,
       availableVersion: "",
+      lastError: "",
       message: "No hay actualizaciones disponibles."
     });
 
     if (manual) {
-      try {
-        await showNoUpdateDialog();
-      } catch (error) {
-        log.error("No se pudo mostrar el diálogo sin actualizaciones:", error);
-      }
+      await showManualMessage(
+        "info",
+        "Actualizaciones",
+        "No hay actualizaciones disponibles.",
+        "Tu aplicación ya está en la versión más reciente."
+      );
     }
   });
 
   autoUpdater.on("download-progress", function onDownloadProgress(progress) {
-    const percent = Number(progress && progress.percent ? progress.percent : 0);
+    const rawPercent = Number(progress && progress.percent ? progress.percent : 0);
+    const safePercent = Number.isFinite(rawPercent)
+      ? Math.max(0, Math.min(100, rawPercent))
+      : 0;
 
     setState({
       status: "downloading",
@@ -399,44 +454,48 @@ function configureAutoUpdater() {
       available: true,
       downloaded: false,
       downloadInProgress: true,
-      progressPercent: Number.isFinite(percent) ? Math.max(0, Math.min(100, percent)) : 0,
-      message:
-        "Descargando actualización... " +
-        Math.round(Number.isFinite(percent) ? percent : 0) +
-        "%"
+      installing: false,
+      progressPercent: safePercent,
+      lastError: "",
+      message: "Descargando actualización... " + Math.round(safePercent) + "%"
     });
   });
 
-  autoUpdater.on("update-downloaded", async function onUpdateDownloaded(info) {
+  autoUpdater.on("update-downloaded", function onUpdateDownloaded(info) {
+    const version = safeString(info && info.version);
+
     setState({
       status: "downloaded",
       checking: false,
       available: true,
       downloaded: true,
       downloadInProgress: false,
+      installing: false,
       progressPercent: 100,
-      availableVersion: String(info && info.version ? info.version : ""),
-      message: "Actualización descargada. Lista para instalar."
+      availableVersion: version,
+      lastError: "",
+      message: "Actualización descargada. Presiona Reiniciar e instalar cuando estés listo."
     });
 
-    try {
-      await showDownloadedPrompt(info);
-    } catch (error) {
-      log.error("No se pudo mostrar el diálogo de actualización descargada:", error);
-    }
+    log.info(
+      "Actualización descargada. Esperando confirmación manual para instalar.",
+      version || ""
+    );
   });
 
   autoUpdater.on("error", async function onError(error) {
     const manual = consumeManualFlag();
-    const message =
-      error && error.message
-        ? error.message
-        : "Se produjo un error durante el proceso de actualización.";
+
+    const message = normalizeErrorMessage(
+      error,
+      "Se produjo un error durante el proceso de actualización."
+    );
 
     setState({
       status: "error",
       checking: false,
       downloadInProgress: false,
+      installing: false,
       lastError: message,
       message: message
     });
@@ -444,42 +503,49 @@ function configureAutoUpdater() {
     log.error("Error en autoUpdater:", error);
 
     if (manual) {
-      try {
-        await dialog.showMessageBox(getParentWindow(), {
-          type: "error",
-          title: "Actualizaciones",
-          message: "Ocurrió un error durante la actualización.",
-          detail: message,
-          buttons: ["Aceptar"],
-          defaultId: 0
-        });
-      } catch (dialogError) {
-        log.error("No se pudo mostrar el diálogo de error:", dialogError);
-      }
+      await showManualMessage(
+        "error",
+        "Actualizaciones",
+        "Ocurrió un error durante la actualización.",
+        message
+      );
     }
   });
 }
 
 function scheduleAutomaticChecks() {
   if (!app.isPackaged) {
+    setState({
+      status: "dev",
+      checking: false,
+      available: false,
+      downloaded: false,
+      downloadInProgress: false,
+      installing: false,
+      progressPercent: 0,
+      message: "Modo desarrollo detectado. El auto update solo funciona en la app instalada."
+    });
+
     return;
   }
 
-  if (intervalId) {
+  if (startupTimeoutId || intervalId) {
     return;
   }
 
-  setTimeout(function delayedStartupCheck() {
-    checkForAppUpdates({ manual: false }).catch(function ignoreError() {
-      return null;
+  startupTimeoutId = setTimeout(function delayedStartupCheck() {
+    startupTimeoutId = null;
+
+    checkForAppUpdates({ manual: false }).catch(function onStartupCheckError(error) {
+      log.error("Error en revisión automática inicial:", error);
     });
   }, STARTUP_DELAY_MS);
 
   intervalId = setInterval(function periodicCheck() {
-    checkForAppUpdates({ manual: false }).catch(function ignoreError() {
-      return null;
+    checkForAppUpdates({ manual: false }).catch(function onPeriodicCheckError(error) {
+      log.error("Error en revisión automática periódica:", error);
     });
-  }, SIX_HOURS_MS);
+  }, PERIODIC_CHECK_MS);
 }
 
 function setupUpdater(options = {}) {
@@ -492,8 +558,8 @@ function setupUpdater(options = {}) {
   }
 
   configureAutoUpdater();
-  scheduleAutomaticChecks();
   isConfigured = true;
+  scheduleAutomaticChecks();
 }
 
 module.exports = {

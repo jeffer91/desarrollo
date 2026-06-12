@@ -1,3 +1,13 @@
+/* =========================================================
+Nombre completo: memcom.styles.css
+Ruta: /screens/memcom/memcom.styles.css
+Función o funciones:
+- Definir el diseño visual del módulo Memorando de Cronograma.
+- Estilizar la pantalla de carga de períodos, tipo de proceso y cantidad de tablas.
+- Estilizar los bloques dinámicos para cargar 1, 2, 3 o 4 tablas.
+- Estilizar la vista previa de tablas antes de generar el PDF.
+========================================================= */
+
 :root {
   --bg: #f1f5f9;
   --card: #ffffff;
@@ -6,11 +16,16 @@
   --line: #e2e8f0;
   --blue: #2563eb;
   --blue-hover: #1d4ed8;
+  --red: #dc2626;
+  --green: #15803d;
+  --amber: #b45309;
   --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   --paper-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
 body {
   margin: 0;
@@ -30,18 +45,39 @@ body {
   align-items: center;
 }
 
-.topbar_brand { display: flex; align-items: center; gap: 12px; }
+.topbar_brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .logo {
-  width: 36px; height: 36px;
+  width: 36px;
+  height: 36px;
   border-radius: 8px;
-  background: #475569; /* Gris oscuro para memo */
+  background: #475569;
   color: #fff;
-  display: flex; align-items: center; justify-content: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-weight: 900;
 }
-.topbar_title { font-weight: 700; font-size: 16px; }
-.topbar_subtitle { font-size: 12px; color: var(--muted); }
-.topbar_right { display: flex; align-items: center; gap: 12px; }
+
+.topbar_title {
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.topbar_subtitle {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.topbar_right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 
 .status-pill {
   font-size: 12px;
@@ -51,11 +87,34 @@ body {
   border: 1px solid var(--line);
   color: var(--muted);
   font-weight: 600;
+  max-width: 560px;
+  line-height: 1.3;
 }
 
-.wrap { max-width: 900px; margin: 20px auto; padding: 0 20px; }
+.status-pill.is-ok {
+  color: var(--green);
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
 
-/* Toolbar */
+.status-pill.is-error {
+  color: var(--red);
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.status-pill.is-info {
+  color: var(--blue);
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.wrap {
+  max-width: 980px;
+  margin: 20px auto;
+  padding: 0 20px;
+}
+
 .toolbar {
   background: var(--card);
   border-radius: 12px;
@@ -66,12 +125,33 @@ body {
   gap: 16px;
 }
 
-.toolbar_inputs { display: flex; flex-wrap: wrap; gap: 16px; }
-.field { display: flex; flex-direction: column; gap: 6px; flex: 1; }
-.field.full-width { flex-basis: 100%; }
-.field label { font-size: 12px; font-weight: 700; color: var(--muted); }
+.toolbar_inputs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
 
-input, select, textarea {
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 220px;
+}
+
+.field.full-width {
+  flex-basis: 100%;
+}
+
+.field label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+input,
+select,
+textarea {
   padding: 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -80,37 +160,125 @@ input, select, textarea {
   background: #fff;
   width: 100%;
 }
-.smart-area {
-    min-height: 100px;
-    font-family: monospace;
-    font-size: 12px;
-    resize: vertical;
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: #bfdbfe;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
 }
 
-/* Tabla Preview */
-.table-preview-container {
-    margin-top: 15px;
-    background: #fff;
-    padding: 15px;
-    border-radius: 8px;
-    border: 1px solid var(--line);
+.smart-area {
+  min-height: 110px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  resize: vertical;
 }
-.table-preview-container h3 { margin: 0 0 10px 0; font-size: 14px; color: var(--blue); }
+
+.help {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.help--strong {
+  display: block;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.mc-tables-container {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.mc-table-block {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mc-table-block__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.mc-table-block__eyebrow {
+  font-size: 11px;
+  color: var(--blue);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.mc-table-block h3 {
+  margin: 2px 0 0;
+  font-size: 14px;
+}
+
+.table-preview-container {
+  margin-top: 15px;
+  background: #fff;
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+}
+
+.table-preview-container h3 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  color: var(--blue);
+}
+
+.preview-table-section {
+  margin-bottom: 18px;
+}
+
+.preview-table-section:last-child {
+  margin-bottom: 0;
+}
+
+.preview-table-section h4 {
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  color: var(--text);
+}
 
 .preview-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 12px;
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  background: #fff;
 }
-.preview-table th, .preview-table td {
-    border: 1px solid #e2e8f0;
-    padding: 6px;
-    text-align: left;
-}
-.preview-table th { background: #f8fafc; font-weight: bold; }
 
-/* Botones */
-.toolbar_actions { display: flex; gap: 10px; justify-content: flex-end; }
+.preview-table th,
+.preview-table td {
+  border: 1px solid #e2e8f0;
+  padding: 6px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.preview-table th {
+  background: #f8fafc;
+  font-weight: bold;
+}
+
+.toolbar_actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
 .btn {
   padding: 10px 20px;
   border-radius: 8px;
@@ -118,25 +286,87 @@ input, select, textarea {
   font-size: 14px;
   border: none;
   cursor: pointer;
-  display: flex; align-items: center; gap: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
-.btn--primary { background: var(--blue); color: #fff; }
-.btn--secondary { background: #fff; border: 1px solid var(--line); color: var(--text); }
-.btn--small { padding: 6px 12px; font-size: 12px; height: 32px; }
-.btn--ghost { background: transparent; color: var(--muted); }
 
-/* Papel */
-.preview-area { display: flex; flex-direction: column; align-items: center; margin-top: 20px; }
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn--primary {
+  background: var(--blue);
+  color: #fff;
+}
+
+.btn--primary:hover:not(:disabled) {
+  background: var(--blue-hover);
+}
+
+.btn--secondary {
+  background: #fff;
+  border: 1px solid var(--line);
+  color: var(--text);
+}
+
+.btn--small {
+  padding: 6px 12px;
+  font-size: 12px;
+  height: 32px;
+}
+
+.btn--ghost {
+  background: transparent;
+  color: var(--muted);
+}
+
+.preview-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 20px;
+}
+
 .paper-sheet {
   width: 210mm;
   min-height: 297mm;
   background: #fff;
   box-shadow: var(--paper-shadow);
-  padding: 25.4mm; /* Margen APA 1 pulgada */
-  font-family: 'Times New Roman', Times, serif;
+  padding: 25.4mm;
+  font-family: "Times New Roman", Times, serif;
   font-size: 12pt;
-  line-height: 1.5; /* Visual en pantalla */
+  line-height: 1.5;
   color: #000;
   text-align: justify;
 }
-.preview-help { margin-top: 10px; font-size: 12px; color: var(--muted); }
+
+.preview-help {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+@media (max-width: 720px) {
+  .topbar {
+    align-items: flex-start;
+    gap: 12px;
+    flex-direction: column;
+  }
+
+  .topbar_right {
+    width: 100%;
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .toolbar_actions {
+    justify-content: stretch;
+  }
+
+  .btn {
+    justify-content: center;
+    width: 100%;
+  }
+}

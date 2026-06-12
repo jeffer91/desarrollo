@@ -1,0 +1,257 @@
+<!-- =========================================================
+Nombre completo: falt.html
+Ruta o ubicación: /incorporaciones/falt/falt.html
+
+Función o funciones:
+1. Mostrar la pantalla principal del módulo Faltantes.
+2. Cargar períodos desde la misma base local que usa Tabla/Requisitos.
+3. Permitir seleccionar un período académico.
+4. Abrir un pop-up para pegar cédulas y nombres mezclados.
+5. Buscar estudiantes únicamente dentro del período seleccionado.
+6. Cargar en la tabla solo los estudiantes confirmados desde el pop-up.
+7. Enviar mensajes por WhatsApp o Telegram con texto por defecto.
+8. Mantener la selección guardada hasta presionar Limpiar selección.
+
+Con qué se conecta:
+- falt.css
+- ../../Requisitos/Gestion/Excel/excel-local/excel-local.config.js
+- ../../Requisitos/Gestion/Excel/excel-local/excel-local.storage.js
+- ../../Requisitos/Gestion/Excel/excel-local/excel-local.bridge.js
+- ../../Requisitos/Gestion/Excel/excel-local.repo.js
+- falt.config.js
+- falt.state.js
+- falt.utils.js
+- falt.data.js
+- falt.filters.js
+- falt.search.js
+- falt.message.js
+- falt.history.js
+- falt.whatsapp.js
+- falt.telegram.js
+- falt.table.js
+- falt.app.js
+- falt.diagnostico.js
+========================================================= -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Faltantes de Incorporación</title>
+
+  <link rel="stylesheet" href="falt.css" />
+</head>
+
+<body>
+  <main class="falt-page">
+    <div class="falt-runtime-status" hidden>
+      <span id="falt-status" class="falt-status falt-status-neutral">Listo</span>
+      <span id="falt-loader" class="falt-loader" hidden>Cargando...</span>
+    </div>
+
+    <section class="falt-card falt-controls">
+      <div class="falt-control-grid">
+        <label class="falt-field">
+          <span>Período</span>
+          <select id="falt-periodo-select">
+            <option value="">Selecciona un período</option>
+          </select>
+        </label>
+
+        <label class="falt-field">
+          <span>Buscar en seleccionados</span>
+          <input
+            id="falt-search-input"
+            type="search"
+            placeholder="Filtrar por nombre, cédula o carrera"
+            autocomplete="off"
+          />
+        </label>
+
+        <label class="falt-field">
+          <span>Estado</span>
+          <select id="falt-estado-select">
+            <option value="todos" selected>Todos</option>
+            <option value="enviados">Enviados</option>
+            <option value="no_enviados">No enviados</option>
+          </select>
+        </label>
+
+        <label class="falt-field">
+          <span>Canal</span>
+          <select id="falt-canal-select">
+            <option value="todos" selected>Todos</option>
+            <option value="whatsapp">Con WhatsApp</option>
+            <option value="telegram">Con Telegram</option>
+            <option value="sin_contacto">Sin contacto</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="falt-actions">
+        <button id="falt-btn-buscar-estudiantes" type="button" class="falt-btn falt-btn-primary">
+          Buscar estudiantes
+        </button>
+
+        <button id="falt-btn-limpiar-seleccion" type="button" class="falt-btn falt-btn-danger">
+          Limpiar selección
+        </button>
+
+        <button id="falt-btn-recargar" type="button" class="falt-btn falt-btn-secondary">
+          Recargar período
+        </button>
+
+        <button id="falt-btn-copiar-todos" type="button" class="falt-btn falt-btn-ghost">
+          Copiar mensajes visibles
+        </button>
+      </div>
+    </section>
+
+    <section class="falt-card falt-summary">
+      <div>
+        <h2>Resumen</h2>
+        <p id="falt-resumen">
+          Selecciona un período y luego usa “Buscar estudiantes”.
+        </p>
+      </div>
+
+      <div class="falt-kpis">
+        <div class="falt-kpi">
+          <strong id="falt-kpi-total">0</strong>
+          <span>Seleccionados</span>
+        </div>
+
+        <div class="falt-kpi">
+          <strong id="falt-kpi-faltantes">0</strong>
+          <span>Pendientes</span>
+        </div>
+
+        <div class="falt-kpi">
+          <strong id="falt-kpi-enviados">0</strong>
+          <span>Enviados</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="falt-card falt-preview-card">
+      <h2>Mensaje por defecto</h2>
+      <p class="falt-muted">
+        Este mensaje se genera automáticamente para WhatsApp, Telegram o copia manual.
+      </p>
+
+      <pre id="falt-message-preview" class="falt-message-preview">Selecciona un estudiante para ver el mensaje.</pre>
+    </section>
+
+    <section class="falt-card falt-table-card">
+      <div class="falt-table-header">
+        <div>
+          <h2>Estudiantes seleccionados</h2>
+          <p class="falt-muted">
+            Aquí aparecen únicamente los estudiantes agregados desde el pop-up.
+          </p>
+        </div>
+      </div>
+
+      <div class="falt-table-scroll">
+        <table class="falt-table">
+          <thead>
+            <tr>
+              <th>Estudiante</th>
+              <th>Cédula</th>
+              <th>Carrera</th>
+              <th>Período</th>
+              <th>Motivo</th>
+              <th>Contacto</th>
+              <th>Estado</th>
+              <th class="falt-center">Acciones</th>
+            </tr>
+          </thead>
+
+          <tbody id="falt-table-body">
+            <tr>
+              <td colspan="8" class="falt-empty">
+                Selecciona un período y usa “Buscar estudiantes”.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <div id="falt-modal-busqueda" class="falt-modal is-hidden" aria-hidden="true">
+    <div class="falt-modal-backdrop" data-falt-close-modal="true"></div>
+
+    <section class="falt-modal-card" role="dialog" aria-modal="true" aria-labelledby="falt-modal-title">
+      <header class="falt-modal-header">
+        <div>
+          <p class="falt-eyebrow">Procesador de estudiantes</p>
+          <h2 id="falt-modal-title">Buscar estudiantes por cédula o nombre</h2>
+          <p>
+            Pega cédulas y nombres mezclados. El sistema buscará solo dentro del período seleccionado.
+          </p>
+        </div>
+
+        <button id="falt-modal-close" type="button" class="falt-modal-close" title="Cerrar">
+          ×
+        </button>
+      </header>
+
+      <div class="falt-modal-body">
+        <label class="falt-field">
+          <span>Cédulas o nombres</span>
+          <textarea
+            id="falt-modal-input"
+            rows="8"
+            placeholder="Ejemplo:&#10;1750204826&#10;RAMIREZ FAJARDO ALISSON&#10;0502416886, LEMA PILATASIG GISELLA"
+          ></textarea>
+        </label>
+
+        <div class="falt-modal-actions">
+          <button id="falt-modal-procesar" type="button" class="falt-btn falt-btn-primary">
+            Procesar búsqueda
+          </button>
+
+          <button id="falt-modal-confirmar" type="button" class="falt-btn falt-btn-secondary">
+            Agregar encontrados
+          </button>
+
+          <button id="falt-modal-limpiar" type="button" class="falt-btn falt-btn-ghost">
+            Limpiar texto
+          </button>
+        </div>
+
+        <div id="falt-modal-summary" class="falt-search-summary">
+          Esperando datos para procesar.
+        </div>
+
+        <div id="falt-modal-results" class="falt-search-results">
+          <!-- Resultados generados por falt.app.js -->
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Base local compartida con Requisitos / Tabla -->
+  <script src="../../Requisitos/Gestion/Excel/excel-local/excel-local.config.js"></script>
+  <script src="../../Requisitos/Gestion/Excel/excel-local/excel-local.storage.js"></script>
+  <script src="../../Requisitos/Gestion/Excel/excel-local/excel-local.bridge.js"></script>
+  <script src="../../Requisitos/Gestion/Excel/excel-local.repo.js"></script>
+
+  <!-- Módulo Falt -->
+  <script src="falt.config.js"></script>
+  <script src="falt.state.js"></script>
+  <script src="falt.utils.js"></script>
+  <script src="falt.data.js"></script>
+  <script src="falt.filters.js"></script>
+  <script src="falt.search.js"></script>
+  <script src="falt.message.js"></script>
+  <script src="falt.history.js"></script>
+  <script src="falt.whatsapp.js"></script>
+  <script src="falt.telegram.js"></script>
+  <script src="falt.table.js"></script>
+  <script src="falt.app.js"></script>
+  <script src="falt.diagnostico.js"></script>
+</body>
+</html>

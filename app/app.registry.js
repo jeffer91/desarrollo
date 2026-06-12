@@ -1,15 +1,16 @@
 /*
 =========================================================
-Nombre del archivo: app.registry.js
+Nombre completo: app.registry.js
 Ruta o ubicación: /desarrollo/app/app.registry.js
 Función o funciones:
-- Define el catálogo central de módulos del proyecto
-- Guarda título, grupo, descripción y ruta HTML real de cada módulo
-- Expone funciones para listar, buscar y validar visibilidad
-- Mantiene una sola entrada para Currículo apuntando a su menú principal
-- Corrige la ruta real de entrada del módulo audit
+1. Define el catálogo central de módulos del proyecto desarrollo.
+2. Guarda título, grupo, descripción y ruta HTML real de cada módulo.
+3. Expone funciones para listar, buscar y validar visibilidad.
+4. Agrega el módulo Incorporaciones como entorno independiente.
+5. Mantiene Requisitos separado para evitar sobrecargarlo.
 =========================================================
 */
+
 (function attachAppRegistry(window) {
   "use strict";
 
@@ -21,8 +22,6 @@ Función o funciones:
       title: "Audit",
       group: "Auditoría",
       description: "Entrada principal del módulo de auditoría y escaneo UGPA.",
-      // Corrección técnica: la ruta anterior apuntaba a screens/shell/index.html,
-      // pero ese archivo no existe en el módulo audit y provocaba pantalla en blanco.
       path: "./audit/screens/scan/scan.index.html"
     },
     {
@@ -47,11 +46,18 @@ Función o funciones:
       path: "./Documentos/index.html"
     },
     {
-      id: "eventos",
-      title: "Eventos",
-      group: "Eventos",
-      description: "Menú principal del sistema de eventos.",
-      path: "./eventos/menu/menu.index.html"
+    id: "eventos",
+    title: "Eventos",
+    group: "Eventos",
+    description: "Entrada principal del sistema de eventos AgendaJeff.",
+    path: "./eventos/renderer.html"
+    },
+    {
+      id: "incorporaciones",
+      title: "Incorporaciones",
+      group: "Titulación",
+      description: "Entorno independiente para gestionar sedes, planificación y recordatorios de incorporación.",
+      path: "./incorporaciones/index.html"
     },
     {
       id: "requisitos",

@@ -1,0 +1,52 @@
+<!--
+Nombre completo: index.html
+Ruta o ubicación: /incorporaciones-app/index.html
+
+Función o funciones:
+1. Redirigir directamente a la vista de administrador.
+2. Evitar mostrar la pantalla inicial porque la aplicación se manejará en modo local.
+3. Mantener una salida de respaldo visible solo si el navegador no ejecuta la redirección.
+-->
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Incorporaciones ITSQMET</title>
+
+  <!-- Corrección: elimina la pantalla inicial en modo local.
+       Redirige directamente al panel administrador.
+       Evita que el usuario tenga que escoger entre estudiante y administrador. -->
+  <script>
+    window.location.replace("admin.html");
+  </script>
+
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/menu.css" />
+</head>
+
+<body class="page-dark">
+  <main class="home-wrapper">
+    <section class="home-card">
+      <div class="logo-box">
+        <img src="assets/Logo.png" alt="Logo ITSQMET" class="logo-main" />
+      </div>
+
+      <h1>Redirigiendo al administrador</h1>
+
+      <p class="home-text">
+        Si la redirección no se ejecuta automáticamente, ingrese desde el siguiente botón.
+      </p>
+
+      <div class="home-actions">
+        <!-- Respaldo técnico: permite entrar manualmente si el navegador bloquea JavaScript. -->
+        <a href="admin.html" class="btn btn-primary">
+          Ir al administrador
+        </a>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

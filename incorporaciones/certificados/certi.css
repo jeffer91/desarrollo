@@ -1,0 +1,398 @@
+/*
+=========================================================
+Nombre completo: certi.css
+Ruta o ubicación: /incorporaciones/sedes/certi/certi.css
+Función o funciones:
+- Definir el diseño visual de la pantalla Certi.
+- Estilizar formularios, botones, tarjetas, alertas, tablas y paneles.
+- Mantener una interfaz limpia, moderna y fácil de usar.
+Con qué se une:
+- certi.html
+- certi.render.js
+- certi.app.js
+=========================================================
+*/
+
+:root {
+  --certi-bg: #f4f7fb;
+  --certi-card: #ffffff;
+  --certi-text: #172033;
+  --certi-muted: #667085;
+  --certi-border: #d9e2ef;
+  --certi-primary: #0d47a1;
+  --certi-primary-dark: #08306f;
+  --certi-secondary: #b71c1c;
+  --certi-success: #147a3f;
+  --certi-warning: #b86b00;
+  --certi-danger: #b42318;
+  --certi-soft-blue: #eaf2ff;
+  --certi-soft-red: #fff0f0;
+  --certi-soft-green: #edf9f1;
+  --certi-shadow: 0 16px 40px rgba(16, 24, 40, 0.08);
+  --certi-radius: 18px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--certi-bg);
+  color: var(--certi-text);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.certi-page {
+  width: min(1220px, calc(100% - 32px));
+  margin: 24px auto 48px;
+}
+
+.certi-hero {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: stretch;
+  padding: 28px;
+  border-radius: 24px;
+  background:
+    linear-gradient(135deg, rgba(13, 71, 161, 0.95), rgba(183, 28, 28, 0.86)),
+    #0d47a1;
+  color: #ffffff;
+  box-shadow: var(--certi-shadow);
+}
+
+.certi-hero h1 {
+  margin: 4px 0 8px;
+  font-size: clamp(32px, 5vw, 54px);
+  line-height: 1;
+  letter-spacing: -1px;
+}
+
+.certi-hero p {
+  max-width: 680px;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 16px;
+}
+
+.certi-eyebrow {
+  margin: 0;
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  font-weight: 700;
+}
+
+.certi-hero-badge {
+  min-width: 170px;
+  padding: 18px;
+  border-radius: 20px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+}
+
+.certi-hero-badge span {
+  display: block;
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+.certi-hero-badge strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 22px;
+}
+
+.certi-panel {
+  margin-top: 20px;
+  padding: 22px;
+  background: var(--certi-card);
+  border: 1px solid var(--certi-border);
+  border-radius: var(--certi-radius);
+  box-shadow: var(--certi-shadow);
+}
+
+.certi-panel-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+  margin-bottom: 18px;
+}
+
+.certi-panel-title h2 {
+  margin: 0;
+  font-size: 21px;
+  color: var(--certi-primary-dark);
+}
+
+.certi-panel-title p {
+  margin: 4px 0 0;
+  color: var(--certi-muted);
+  font-size: 14px;
+}
+
+.certi-form-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 0.8fr 1.2fr;
+  gap: 16px;
+}
+
+.certi-field {
+  display: grid;
+  gap: 8px;
+}
+
+.certi-field span {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--certi-primary-dark);
+}
+
+.certi-field input,
+.certi-field select {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--certi-border);
+  border-radius: 12px;
+  background: #ffffff;
+  color: var(--certi-text);
+  outline: none;
+  font-size: 14px;
+}
+
+.certi-field input:focus,
+.certi-field select:focus {
+  border-color: var(--certi-primary);
+  box-shadow: 0 0 0 3px rgba(13, 71, 161, 0.12);
+}
+
+.certi-file-field input {
+  padding: 8px;
+}
+
+.certi-actions,
+.certi-downloads {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.certi-btn {
+  min-height: 42px;
+  padding: 10px 18px;
+  border: 0;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 14px;
+  transition: transform 0.12s ease, opacity 0.12s ease, background 0.12s ease;
+}
+
+.certi-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.certi-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.certi-btn-primary {
+  color: #ffffff;
+  background: var(--certi-primary);
+}
+
+.certi-btn-primary:hover:not(:disabled) {
+  background: var(--certi-primary-dark);
+}
+
+.certi-btn-secondary {
+  color: #ffffff;
+  background: var(--certi-secondary);
+}
+
+.certi-btn-ghost {
+  color: var(--certi-primary);
+  background: var(--certi-soft-blue);
+}
+
+.certi-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(160px, 1fr));
+  gap: 14px;
+}
+
+.certi-summary-card {
+  padding: 16px;
+  border: 1px solid var(--certi-border);
+  border-radius: 16px;
+  background: #fbfdff;
+}
+
+.certi-summary-card span {
+  display: block;
+  color: var(--certi-muted);
+  font-size: 13px;
+}
+
+.certi-summary-card strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 28px;
+  color: var(--certi-primary-dark);
+}
+
+.certi-alerts {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.certi-alert {
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--certi-border);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.certi-alert strong {
+  display: block;
+  margin-bottom: 2px;
+}
+
+.certi-alert-info {
+  background: var(--certi-soft-blue);
+  color: var(--certi-primary-dark);
+}
+
+.certi-alert-success {
+  background: var(--certi-soft-green);
+  color: var(--certi-success);
+}
+
+.certi-alert-warning {
+  background: #fff7e8;
+  color: var(--certi-warning);
+}
+
+.certi-alert-danger {
+  background: var(--certi-soft-red);
+  color: var(--certi-danger);
+}
+
+.certi-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--certi-border);
+  border-radius: 14px;
+}
+
+.certi-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 820px;
+  background: #ffffff;
+}
+
+.certi-table th {
+  padding: 13px 12px;
+  text-align: left;
+  font-size: 13px;
+  background: var(--certi-primary);
+  color: #ffffff;
+}
+
+.certi-table td {
+  padding: 12px;
+  border-top: 1px solid var(--certi-border);
+  vertical-align: top;
+  font-size: 14px;
+}
+
+.certi-empty {
+  text-align: center;
+  color: var(--certi-muted);
+  padding: 24px !important;
+}
+
+.certi-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.certi-status-ok {
+  background: var(--certi-soft-green);
+  color: var(--certi-success);
+}
+
+.certi-status-warning {
+  background: #fff7e8;
+  color: var(--certi-warning);
+}
+
+.certi-status-error {
+  background: var(--certi-soft-red);
+  color: var(--certi-danger);
+}
+
+.certi-mapping-list,
+.certi-ties-list {
+  display: grid;
+  gap: 12px;
+}
+
+.certi-map-item,
+.certi-tie-item {
+  padding: 14px;
+  border: 1px solid var(--certi-border);
+  border-radius: 14px;
+  background: #fbfdff;
+}
+
+.certi-map-item h3,
+.certi-tie-item h3 {
+  margin: 0 0 10px;
+  font-size: 15px;
+  color: var(--certi-primary-dark);
+}
+
+.certi-map-item select,
+.certi-tie-item select {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 11px;
+  border: 1px solid var(--certi-border);
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.certi-hidden {
+  display: none !important;
+}
+
+@media (max-width: 900px) {
+  .certi-hero,
+  .certi-panel-title {
+    flex-direction: column;
+  }
+
+  .certi-form-grid,
+  .certi-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .certi-hero-badge {
+    width: 100%;
+  }
+}

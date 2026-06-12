@@ -1,0 +1,207 @@
+<!-- =========================================================
+Nombre completo: guiones.index.html
+Ruta o ubicación: /incorporaciones/sedes/guiones/guiones.index.html
+Función o funciones:
+- Mostrar la pantalla Guiones dentro de Incorporaciones.
+- Cargar distribución guardada por período.
+- Seleccionar jornada y generar guion por jornada.
+- Generar programa separado por jornada.
+- Permitir cargar mesa directiva y mejores graduados.
+- Mostrar guion en acordeón editable, activable, desactivable y reordenable.
+- Exportar guion y programa en Word y PDF.
+Con qué se une:
+- guiones.styles.css
+- guiones.state.js
+- guiones.dom.js
+- guiones.repo.js
+- guiones.distribucion.js
+- guiones.mesa.js
+- guiones.mejores.js
+- guiones.template.js
+- guiones.sections.js
+- guiones.accordion.js
+- guiones.programa.js
+- guiones.render.js
+- guiones.versiones.js
+- guiones.export.word.js
+- guiones.export.pdf.js
+- guiones.filenames.js
+- guiones.app.js
+========================================================= -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Guiones | Incorporaciones</title>
+
+  <link rel="stylesheet" href="./guiones.styles.css" />
+</head>
+
+<body>
+  <main class="gui-page">
+    <header class="gui-header">
+      <section>
+        <p class="gui-kicker">Incorporaciones</p>
+        <h1>Guiones</h1>
+        <p class="gui-description">
+          Genera el programa y el guion institucional de cada jornada a partir de la distribución guardada.
+        </p>
+      </section>
+
+      <section class="gui-header-actions">
+        <button id="btnSaveVersion" type="button" class="btn btn-light">
+          Guardar versión
+        </button>
+
+        <button id="btnExportProgramWord" type="button" class="btn btn-secondary">
+          Programa Word
+        </button>
+
+        <button id="btnExportScriptWord" type="button" class="btn btn-secondary">
+          Guion Word
+        </button>
+
+        <button id="btnExportProgramPdf" type="button" class="btn btn-light">
+          Programa PDF
+        </button>
+
+        <button id="btnExportScriptPdf" type="button" class="btn btn-primary">
+          Guion PDF
+        </button>
+      </section>
+    </header>
+
+    <section class="gui-layout">
+      <aside class="gui-sidebar">
+        <article class="gui-card">
+          <h2>1. Distribución</h2>
+
+          <label class="field">
+            <span>Período</span>
+            <select id="periodSelect">
+              <option value="">Cargando períodos...</option>
+            </select>
+          </label>
+
+          <button id="btnLoadDistribution" type="button" class="btn btn-primary full">
+            Cargar distribución
+          </button>
+
+          <label class="field">
+            <span>Jornada</span>
+            <select id="journeySelect">
+              <option value="">Primero carga una distribución</option>
+            </select>
+          </label>
+
+          <button id="btnGenerateScript" type="button" class="btn btn-secondary full">
+            Generar guion
+          </button>
+        </article>
+
+        <article class="gui-card">
+          <h2>2. Datos del evento</h2>
+
+          <label class="field">
+            <span>Maestro de ceremonia</span>
+            <input id="masterName" type="text" placeholder="Ejemplo: Magíster Luis Segovia" />
+          </label>
+
+          <label class="field">
+            <span>Bienvenida</span>
+            <input id="welcomeAuthority" type="text" placeholder="Nombre de autoridad" />
+          </label>
+
+          <label class="field">
+            <span>Intervención oficial</span>
+            <input id="officialAuthority" type="text" placeholder="Nombre de autoridad" />
+          </label>
+
+          <label class="field">
+            <span>Promesa solemne</span>
+            <input id="promiseAuthority" type="text" placeholder="Nombre de autoridad" />
+          </label>
+
+          <label class="field">
+            <span>Mensaje a nuevos profesionales</span>
+            <input id="messageAuthority" type="text" placeholder="Nombre de autoridad" />
+          </label>
+        </article>
+
+        <article class="gui-card">
+          <h2>3. Mesa directiva</h2>
+
+          <input id="mesaFile" type="file" accept=".xlsx,.xls,.csv" hidden />
+
+          <button id="btnImportMesa" type="button" class="btn btn-secondary full">
+            Cargar Excel de mesa
+          </button>
+
+          <button id="btnAddMesaMember" type="button" class="btn btn-light full">
+            Agregar miembro
+          </button>
+
+          <div id="mesaList" class="mini-list"></div>
+        </article>
+
+        <article class="gui-card">
+          <h2>4. Mejores graduados</h2>
+
+          <input id="mejoresFile" type="file" accept=".xlsx,.xls,.csv" hidden />
+
+          <button id="btnImportMejores" type="button" class="btn btn-secondary full">
+            Cargar mejores egresados
+          </button>
+
+          <div id="mejoresList" class="mini-list"></div>
+        </article>
+      </aside>
+
+      <section class="gui-main">
+        <section id="guiAlerts" class="gui-alerts hidden"></section>
+
+        <section class="gui-card">
+          <div class="section-title">
+            <h2>Programa</h2>
+            <p>Archivo separado del guion.</p>
+          </div>
+
+          <div id="programPreview" class="program-preview">
+            Carga una distribución y genera el guion para visualizar el programa.
+          </div>
+        </section>
+
+        <section class="gui-card">
+          <div class="section-title">
+            <h2>Guion institucional</h2>
+            <p>Abre, edita, activa, desactiva y reordena secciones.</p>
+          </div>
+
+          <div id="scriptAccordion" class="script-accordion">
+            Carga una jornada para generar el guion.
+          </div>
+        </section>
+      </section>
+    </section>
+  </main>
+
+  <script src="./guiones.state.js"></script>
+  <script src="./guiones.dom.js"></script>
+  <script src="./guiones.repo.js"></script>
+  <script src="./guiones.distribucion.js"></script>
+  <script src="./guiones.mesa.js"></script>
+  <script src="./guiones.mejores.js"></script>
+  <script src="./guiones.template.js"></script>
+  <script src="./guiones.sections.js"></script>
+  <script src="./guiones.accordion.js"></script>
+  <script src="./guiones.programa.js"></script>
+  <script src="./guiones.render.js"></script>
+  <script src="./guiones.versiones.js"></script>
+  <script src="./guiones.export.word.js"></script>
+  <script src="./guiones.export.pdf.js"></script>
+  <script src="./guiones.filenames.js"></script>
+  <script src="./guiones.app.js"></script>
+</body>
+</html>

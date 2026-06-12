@@ -1,0 +1,200 @@
+<!-- =========================================================
+Nombre completo: certi.html
+Ruta o ubicación: /incorporaciones/certificados/certi.html
+Función o funciones:
+- Cargar la pantalla principal del módulo Certi.
+- Permitir seleccionar período y fecha oficial del certificado.
+- Permitir cargar el Excel de mejores egresados.
+- Mostrar resumen de carga, alertas, empates y carreras no reconocidas.
+- Activar descarga de PDF único o PDFs individuales cuando los datos estén listos.
+- Cargar el parche definitivo para Seguridad y Prevención de Riesgos Laborales.
+Con qué se une:
+- certi.css
+- certi.config.js
+- certi.state.js
+- certi.dom.js
+- certi.utils.js
+- certi.catalogo.js
+- certi.excel.js
+- certi.logic.js
+- certi.render.js
+- certi.storage.js
+- certi.periodos.js
+- certi.template.js
+- certi.pdf.js
+- certi.app.js
+- certi.seguridad.fix.js
+========================================================= -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Certi | Certificados de mejores egresados</title>
+  <link rel="stylesheet" href="../css/menu.css" />
+  <link rel="stylesheet" href="./certi.css" />
+</head>
+<body>
+  <header id="menuSuperior" class="menu-superior"></header>
+
+  <main class="certi-page">
+    <section class="certi-hero">
+      <div>
+        <p class="certi-eyebrow">Incorporaciones</p>
+        <h1>Certi</h1>
+        <p>
+          Generación de certificados de reconocimiento para mejores egresados por carrera.
+        </p>
+      </div>
+
+      <div class="certi-hero-badge">
+        <span>PDF</span>
+        <strong>Automático</strong>
+      </div>
+    </section>
+
+    <section class="certi-panel">
+      <div class="certi-panel-title">
+        <h2>Configuración inicial</h2>
+        <p>Seleccione el período, la fecha oficial del certificado y cargue el Excel.</p>
+      </div>
+
+      <div class="certi-form-grid">
+        <label class="certi-field">
+          <span>Período</span>
+          <select id="certiPeriodo">
+            <option value="">Seleccione un período</option>
+          </select>
+        </label>
+
+        <label class="certi-field">
+          <span>Fecha del certificado</span>
+          <input id="certiFechaCertificado" type="date" />
+        </label>
+
+        <label class="certi-field certi-file-field">
+          <span>Excel de mejores egresados</span>
+          <input id="certiExcelInput" type="file" accept=".xlsx,.xls" />
+        </label>
+      </div>
+
+      <div class="certi-actions">
+        <button id="certiBtnProcesar" class="certi-btn certi-btn-primary" type="button">
+          Procesar Excel
+        </button>
+
+        <button id="certiBtnLimpiar" class="certi-btn certi-btn-ghost" type="button">
+          Limpiar
+        </button>
+      </div>
+    </section>
+
+    <section class="certi-panel">
+      <div class="certi-panel-title">
+        <h2>Resumen</h2>
+        <p>La pantalla no muestra vista previa del certificado; solo resumen y descarga directa.</p>
+      </div>
+
+      <div id="certiResumenCards" class="certi-summary-grid">
+        <article class="certi-summary-card">
+          <span>Registros leídos</span>
+          <strong>0</strong>
+        </article>
+
+        <article class="certi-summary-card">
+          <span>Carreras detectadas</span>
+          <strong>0</strong>
+        </article>
+
+        <article class="certi-summary-card">
+          <span>Certificados listos</span>
+          <strong>0</strong>
+        </article>
+
+        <article class="certi-summary-card">
+          <span>Alertas</span>
+          <strong>0</strong>
+        </article>
+      </div>
+
+      <div id="certiAlertas" class="certi-alerts" aria-live="polite"></div>
+    </section>
+
+    <section id="certiCarrerasPanel" class="certi-panel certi-hidden">
+      <div class="certi-panel-title">
+        <h2>Carreras no reconocidas</h2>
+        <p>Empareje cada nombre del Excel con una carrera oficial antes de generar.</p>
+      </div>
+
+      <div id="certiCarrerasList" class="certi-mapping-list"></div>
+    </section>
+
+    <section id="certiEmpatesPanel" class="certi-panel certi-hidden">
+      <div class="certi-panel-title">
+        <h2>Empates detectados</h2>
+        <p>Seleccione manualmente al estudiante que recibirá el certificado.</p>
+      </div>
+
+      <div id="certiEmpatesList" class="certi-ties-list"></div>
+    </section>
+
+    <section class="certi-panel">
+      <div class="certi-panel-title">
+        <h2>Mejores egresados seleccionados</h2>
+        <p>Resumen final por carrera antes de descargar.</p>
+      </div>
+
+      <div class="certi-table-wrap">
+        <table class="certi-table">
+          <thead>
+            <tr>
+              <th>Carrera oficial</th>
+              <th>Mejor egresado</th>
+              <th>Promedio</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+
+          <tbody id="certiTablaBody">
+            <tr>
+              <td colspan="4" class="certi-empty">
+                Cargue y procese el Excel para ver los resultados.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="certi-downloads">
+        <button id="certiBtnPdfUnico" class="certi-btn certi-btn-primary" type="button" disabled>
+          Descargar PDF único
+        </button>
+
+        <button id="certiBtnPdfIndividuales" class="certi-btn certi-btn-secondary" type="button" disabled>
+          Descargar PDFs individuales
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
+  <script src="../js/menu-superior.js"></script>
+
+  <script src="./certi.config.js"></script>
+  <script src="./certi.state.js"></script>
+  <script src="./certi.dom.js"></script>
+  <script src="./certi.utils.js"></script>
+  <script src="./certi.catalogo.js"></script>
+  <script src="./certi.excel.js"></script>
+  <script src="./certi.logic.js"></script>
+  <script src="./certi.render.js"></script>
+  <script src="./certi.storage.js"></script>
+  <script src="./certi.periodos.js"></script>
+  <script src="./certi.template.js"></script>
+  <script src="./certi.pdf.js"></script>
+  <script src="./certi.app.js"></script>
+  <script src="./certi.seguridad.fix.js?v=20260605"></script>
+</body>
+</html>

@@ -1,369 +1,535 @@
-(function (window) {
-    "use strict";
+/* =========================================================
+Nombre completo: memcom.app.js
+Ruta: /screens/memcom/memcom.app.js
+Función o funciones:
+- Controlar la interfaz del módulo Memorando de Cronograma.
+- Cargar los períodos de titulación disponibles.
+- Coordinar la carga de 1, 2, 3 o 4 tablas desde memcom.tables.js.
+- Reservar un código mensual de memorando antes de generar el PDF.
+- Enviar al PDF el código completo en formato MEM-ITSQMET-UTET-YYYY-MM-XX.
+- Calcular el año y mes del memorando desde la fecha de fin del período menos 3 meses.
+- Liberar la reserva si ocurre un error al generar el PDF.
+- Descargar el PDF con nombre institucional ordenado.
+========================================================= */
 
-    window.MEMCOM = window.MEMCOM || {};
+(function (window, document) {
+  "use strict";
 
-    var $ = function (id) {
-        return document.getElementById(id);
+  window.MEMCOM = window.MEMCOM || {};
+
+  function $(id) {
+    return document.getElementById(id);
+  }
+
+  var elPeriodo = $("mc-periodo");
+  var elTipo = $("mc-tipo");
+  var elStatus = $("mc-status");
+  var btnPdf = $("mc-btn-pdf");
+  var btnPreview = $("mc-btn-preview");
+  var btnVolver = $("mc-btn-volver");
+  var btnRefrescar = $("mc-btn-refrescar");
+
+  var state = {
+    periodos: [],
+    periodoSeleccionado: "",
+    periodoIdSeleccionado: "",
+    tablas: []
+  };
+
+  function setStatus(message, type) {
+    if (!elStatus) {
+      return;
+    }
+
+    elStatus.textContent = message || "";
+    elStatus.classList.remove("is-ok", "is-error", "is-info");
+
+    if (type === "ok") {
+      elStatus.classList.add("is-ok");
+    } else if (type === "err") {
+      elStatus.classList.add("is-error");
+    } else {
+      elStatus.classList.add("is-info");
+    }
+  }
+
+  function saveState() {
+    try {
+      var dataToSave = {
+        tipo: elTipo ? elTipo.value : "",
+        periodoVal: elPeriodo ? elPeriodo.value : ""
+      };
+
+      localStorage.setItem("MEMCOM_STATE", JSON.stringify(dataToSave));
+
+      if (window.MEMCOM.tables && typeof window.MEMCOM.tables.saveState === "function") {
+        window.MEMCOM.tables.saveState();
+      }
+    } catch (error) {
+      console.error("[MEMCOM_APP] Error guardando estado:", error);
+    }
+  }
+
+  function restoreState() {
+    try {
+      var saved = localStorage.getItem("MEMCOM_STATE");
+
+      if (!saved) {
+        return "";
+      }
+
+      var data = JSON.parse(saved);
+
+      if (data.tipo && elTipo) {
+        elTipo.value = data.tipo;
+      }
+
+      return data.periodoVal || "";
+    } catch (error) {
+      console.error("[MEMCOM_APP] Error restaurando estado:", error);
+      return "";
+    }
+  }
+
+  function normalizeText(value) {
+    return String(value || "")
+      .trim()
+      .replace(/\s+/g, " ");
+  }
+
+  function limpiarArchivo(value) {
+    return String(value || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^\w\-]+/g, "_")
+      .replace(/_+/g, "_")
+      .replace(/^_+|_+$/g, "")
+      .substring(0, 120);
+  }
+
+  function simpleHash(value) {
+    var str = String(value || "");
+    var hash = 0;
+    var i;
+    var chr;
+
+    if (str.length === 0) {
+      return "0";
+    }
+
+    for (i = 0; i < str.length; i++) {
+      chr = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + chr;
+      hash |= 0;
+    }
+
+    return String(Math.abs(hash));
+  }
+
+  function getPeriodoLabelFromOption(option) {
+    if (!option) {
+      return "";
+    }
+
+    return option.textContent || option.innerText || option.value || "";
+  }
+
+  function getSelectedPeriodoInfo() {
+    if (!elPeriodo || !elPeriodo.value) {
+      return {
+        id: "",
+        label: ""
+      };
+    }
+
+    var option = elPeriodo.options[elPeriodo.selectedIndex];
+
+    return {
+      id: elPeriodo.value || "",
+      label: normalizeText(getPeriodoLabelFromOption(option))
     };
+  }
 
-    // Referencias
-    var elPeriodo = $("mc-periodo");
-    var elTipo = $("mc-tipo");
-    var elInputTable = $("mc-input-table");
-    var elStatus = $("mc-status");
-    var btnPdf = $("mc-btn-pdf");
-    var btnPreview = $("mc-btn-preview");
-    var btnVolver = $("mc-btn-volver");
-    var btnRefrescar = $("mc-btn-refrescar");
-    var tablePreviewDiv = $("mc-table-preview");
-    var tHead = $("mc-table-head");
-    var tBody = $("mc-table-body");
-
-    var state = {
-        periodos: [],
-        periodoSeleccionado: "",
-        cronogramaData: []
-    };
-
-    // --- MEMORIA LOCAL DEL FORMULARIO ---
-    function saveState() {
-        try {
-            var dataToSave = {
-                tipo: elTipo ? elTipo.value : "",
-                inputTable: elInputTable ? elInputTable.value : "",
-                periodoVal: elPeriodo ? elPeriodo.value : ""
-            };
-
-            localStorage.setItem("MEMCOM_STATE", JSON.stringify(dataToSave));
-        } catch (e) {
-            console.error("Error guardando estado", e);
-        }
+  function getSequenceManager() {
+    if (!window.MEMCOM || !window.MEMCOM.sequence) {
+      throw new Error("No está cargado memcom.sequence.js.");
     }
 
-    function restoreState() {
-        try {
-            var saved = localStorage.getItem("MEMCOM_STATE");
+    return window.MEMCOM.sequence;
+  }
 
-            if (saved) {
-                var d = JSON.parse(saved);
-
-                if (d.tipo && elTipo) {
-                    elTipo.value = d.tipo;
-                }
-
-                if (d.inputTable && elInputTable) {
-                    elInputTable.value = d.inputTable;
-                }
-
-                return d.periodoVal;
-            }
-        } catch (e) {
-            console.error("Error restaurando estado", e);
-        }
-
-        return null;
+  function getTableManager() {
+    if (!window.MEMCOM || !window.MEMCOM.tables) {
+      throw new Error("No está cargado memcom.tables.js.");
     }
 
-    function setStatus(msg, type) {
-        if (!elStatus) return;
+    return window.MEMCOM.tables;
+  }
 
-        elStatus.textContent = msg;
+  function getMemoDateInfo(metadata) {
+    try {
+      var sequence = getSequenceManager();
+      var memoDate = sequence.resolveMemoDate(metadata);
+      var parts = sequence.getDateParts(memoDate);
 
-        if (type === "err") {
-            elStatus.style.color = "#9f1239";
-            elStatus.style.background = "#fee2e2";
-            elStatus.style.borderColor = "#fecdd3";
-            return;
-        }
+      return {
+        date: memoDate,
+        parts: parts,
+        fechaHumana: sequence.getFechaHumana(memoDate)
+      };
+    } catch (error) {
+      return null;
+    }
+  }
 
-        if (type === "info") {
-            elStatus.style.color = "#1d4ed8";
-            elStatus.style.background = "#dbeafe";
-            elStatus.style.borderColor = "#bfdbfe";
-            return;
-        }
+  function getNextMemoText() {
+    try {
+      var sequence = getSequenceManager();
+      var metadata = buildMemoMetadata();
+      var next = sequence.getNextInfo(metadata);
+      var memoDateInfo = getMemoDateInfo(metadata);
+      var extra = "";
 
-        elStatus.style.color = "#166534";
-        elStatus.style.background = "#dcfce7";
-        elStatus.style.borderColor = "#bbf7d0";
+      if (memoDateInfo && memoDateInfo.parts && metadata.periodo) {
+        extra = " | Mes aplicado: " + memoDateInfo.parts.codigoMes;
+      }
+
+      return "Próximo memorando: " + next.codigoCompleto + extra;
+    } catch (error) {
+      return "Próximo memorando: se asignará al generar";
+    }
+  }
+
+  function extractPeriodoId(item) {
+    return String(
+      item.id ||
+      item.periodoId ||
+      item.periodoid ||
+      item.value ||
+      item.codigo ||
+      item.periodo ||
+      item.label ||
+      ""
+    ).trim();
+  }
+
+  function extractPeriodoLabel(item) {
+    return String(
+      item.label ||
+      item.periodoLabel ||
+      item.nombre ||
+      item.name ||
+      item.periodo ||
+      item.id ||
+      item.periodoId ||
+      ""
+    ).trim();
+  }
+
+  function fillPeriodos(periodos) {
+    if (!elPeriodo) {
+      return;
     }
 
-    // --- PARSER DE EXCEL ---
-    function parseExcelData() {
-        var raw = elInputTable ? elInputTable.value.trim() : "";
+    elPeriodo.innerHTML = "";
 
-        saveState();
+    var emptyOption = document.createElement("option");
+    emptyOption.value = "";
+    emptyOption.textContent = "Seleccione un período";
+    elPeriodo.appendChild(emptyOption);
 
-        if (!raw) return [];
-
-        var lines = raw.split(/\r?\n/);
-        var data = [];
-
-        lines.forEach(function(line) {
-            var cols = line.split("\t");
-
-            cols = cols.map(function(c) {
-                return String(c || "").trim();
-            });
-
-            if (cols.some(function(c) { return c !== ""; })) {
-                data.push(cols);
-            }
-        });
-
-        return data;
+    if (!Array.isArray(periodos) || periodos.length === 0) {
+      var option = document.createElement("option");
+      option.value = "";
+      option.textContent = "No existen períodos disponibles";
+      elPeriodo.appendChild(option);
+      return;
     }
 
-    function renderTablePreview() {
-        var data = parseExcelData();
+    periodos.forEach(function (periodo) {
+      var id = extractPeriodoId(periodo);
+      var label = extractPeriodoLabel(periodo);
 
-        state.cronogramaData = data;
+      if (!id && !label) {
+        return;
+      }
 
-        if (tHead) tHead.innerHTML = "";
-        if (tBody) tBody.innerHTML = "";
+      var option = document.createElement("option");
+      option.value = id || label;
+      option.textContent = label || id;
+      elPeriodo.appendChild(option);
+    });
+  }
 
-        if (data.length === 0) {
-            if (tablePreviewDiv) tablePreviewDiv.hidden = true;
-            if (btnPdf) btnPdf.disabled = true;
-            return;
-        }
+  function tryReadTables(showError) {
+    try {
+      var tables = getTableManager().getTables();
+      state.tablas = tables;
+      return true;
+    } catch (error) {
+      state.tablas = [];
 
-        // Encabezados
-        var headers = data[0];
-        var rows = data.slice(1);
+      if (showError) {
+        setStatus(error.message || "No se pudieron procesar las tablas.", "err");
+      }
 
-        if (tHead) {
-            var trH = document.createElement("tr");
+      return false;
+    }
+  }
 
-            headers.forEach(function(h) {
-                var th = document.createElement("th");
-                th.textContent = h;
-                trH.appendChild(th);
-            });
+  function renderTablePreview() {
+    var ok = tryReadTables(true);
 
-            tHead.appendChild(trH);
-        }
+    if (!ok) {
+      getTableManager().clearPreview();
 
-        // Cuerpo
-        if (tBody) {
-            rows.forEach(function(r) {
-                var tr = document.createElement("tr");
+      if (btnPdf) {
+        btnPdf.disabled = true;
+      }
 
-                r.forEach(function(c) {
-                    var td = document.createElement("td");
-                    td.textContent = c;
-                    tr.appendChild(td);
-                });
-
-                tBody.appendChild(tr);
-            });
-        }
-
-        if (tablePreviewDiv) {
-            tablePreviewDiv.hidden = false;
-        }
-
-        checkPdfButton();
+      return false;
     }
 
-    function checkPdfButton() {
-        if (!elPeriodo || !btnPdf) return;
+    getTableManager().renderPreview(state.tablas);
+    checkPdfButton();
 
-        state.periodoSeleccionado = elPeriodo.value
-            ? elPeriodo.options[elPeriodo.selectedIndex].text
-            : "";
+    return true;
+  }
 
-        saveState();
+  function checkPdfButton() {
+    var periodoInfo = getSelectedPeriodoInfo();
 
-        if (state.periodoSeleccionado && state.cronogramaData.length > 0) {
-            btnPdf.disabled = false;
-        } else {
-            btnPdf.disabled = true;
-        }
-    }
+    state.periodoSeleccionado = periodoInfo.label;
+    state.periodoIdSeleccionado = periodoInfo.id;
 
-    function getSequenceManager() {
-        if (!window.MEMCOM || !window.MEMCOM.sequence) {
-            throw new Error("No está cargado memcom.sequence.js.");
-        }
-
-        return window.MEMCOM.sequence;
-    }
-
-    function limpiarArchivo(nombre) {
-        return String(nombre || "")
-            .normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, "")
-            .replace(/[^\w\-]+/g, "_")
-            .replace(/_+/g, "_")
-            .replace(/^_+|_+$/g, "");
-    }
-
-    function getNextMemoText() {
-        try {
-            var sequence = getSequenceManager();
-            var next = sequence.getNextInfo();
-
-            return "Próximo memorando: " + next.codigoCompleto;
-        } catch (e) {
-            return "Próximo memorando: pendiente";
-        }
-    }
-
-    // --- EVENTOS ---
-    if (elPeriodo) {
-        elPeriodo.addEventListener("change", checkPdfButton);
-    }
-
-    if (elTipo) {
-        elTipo.addEventListener("change", function() {
-            saveState();
-            setStatus("Tipo actualizado. " + getNextMemoText(), "ok");
-        });
-    }
-
-    if (elInputTable) {
-        elInputTable.addEventListener("input", saveState);
-    }
-
-    if (btnPreview) {
-        btnPreview.addEventListener("click", function() {
-            renderTablePreview();
-
-            if (state.cronogramaData.length === 0) {
-                setStatus("No se detectaron datos válidos en la tabla.", "err");
-                return;
-            }
-
-            setStatus("Datos procesados. Listo para generar. " + getNextMemoText(), "ok");
-        });
-    }
-
-    if (btnRefrescar) {
-        btnRefrescar.addEventListener("click", load);
-    }
+    saveState();
+    tryReadTables(false);
 
     if (btnPdf) {
-        btnPdf.addEventListener("click", async function() {
-            if (!state.periodoSeleccionado || state.cronogramaData.length === 0) return;
+      btnPdf.disabled = !(state.periodoSeleccionado && state.tablas.length > 0);
+    }
+  }
 
-            var sequenceInfo = null;
+  function buildMemoMetadata() {
+    var tipo = elTipo ? elTipo.value : "EXAMEN COMPLEXIVO";
+    var periodoInfo = getSelectedPeriodoInfo();
+    var tablasString = JSON.stringify(state.tablas || []);
 
-            try {
-                btnPdf.innerHTML = "Generando...";
-                btnPdf.disabled = true;
+    return {
+      tipo: tipo,
+      periodo: periodoInfo.label,
+      periodoLabel: periodoInfo.label,
+      periodoId: periodoInfo.id,
+      cronogramaHash: simpleHash(tablasString),
+      reglaFechaMemo: "FIN_PERIODO_MENOS_3_MESES"
+    };
+  }
 
-                var sequence = getSequenceManager();
+  function buildPayload(sequenceInfo) {
+    var metadata = buildMemoMetadata();
 
-                sequenceInfo = sequence.reserve();
+    return {
+      periodo: metadata.periodo,
+      periodoId: metadata.periodoId,
+      tablas: state.tablas,
+      cronograma: state.tablas.length > 0
+        ? [state.tablas[0].columnas].concat(state.tablas[0].filas)
+        : [],
+      tipo: metadata.tipo,
+      memo: sequenceInfo,
+      memoCorrelativoMensual: sequenceInfo.correlativo,
+      memoCodigoMes: sequenceInfo.codigoMes,
+      memoCodigoCompleto: sequenceInfo.codigoCompleto,
+      fechaDocumento: sequenceInfo.fechaHumana,
+      fechaDocumentoIso: sequenceInfo.fechaIso,
+      reglaFechaMemo: metadata.reglaFechaMemo
+    };
+  }
 
-                var payload = {
-                    periodo: state.periodoSeleccionado,
-                    cronograma: state.cronogramaData,
-                    tipo: elTipo ? elTipo.value : "EXAMEN COMPLEXIVO",
+  function downloadPdf(pdfBytes, filename) {
+    var blob = new Blob([pdfBytes], {
+      type: "application/pdf"
+    });
 
-                    // Datos nuevos para el memorando
-                    memo: sequenceInfo,
-                    memoCorrelativoMensual: sequenceInfo.correlativo,
-                    memoCodigoMes: sequenceInfo.codigoMes,
-                    memoCodigoCompleto: sequenceInfo.codigoCompleto,
-                    fechaDocumento: sequenceInfo.fechaHumana
-                };
+    var link = document.createElement("a");
 
-                var pdfBytes = await window.MEMCOM.pdf.generatePdfBytes(payload);
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
 
-                // Descargar
-                var blob = new Blob([pdfBytes], {
-                    type: "application/pdf"
-                });
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
 
-                var link = document.createElement("a");
+    setTimeout(function () {
+      URL.revokeObjectURL(link.href);
+    }, 1000);
+  }
 
-                link.href = URL.createObjectURL(blob);
+  async function onGeneratePdf() {
+    var processed = renderTablePreview();
 
-                link.download = (
-                    "MEMO_" +
-                    limpiarArchivo(sequenceInfo.codigoCompleto) +
-                    "_" +
-                    limpiarArchivo(payload.tipo) +
-                    "_" +
-                    limpiarArchivo(state.periodoSeleccionado) +
-                    ".pdf"
-                );
-
-                document.body.appendChild(link);
-                link.click();
-                link.remove();
-
-                setStatus("Memo descargado correctamente. " + getNextMemoText(), "ok");
-            } catch (e) {
-                console.error(e);
-
-                if (sequenceInfo && window.MEMCOM && window.MEMCOM.sequence) {
-                    window.MEMCOM.sequence.release(sequenceInfo.token);
-                }
-
-                setStatus("Error: " + e.message, "err");
-            } finally {
-                btnPdf.innerHTML = `<span class="icon">⬇</span> Generar Memo PDF`;
-                checkPdfButton();
-            }
-        });
+    if (!processed || !state.periodoSeleccionado || state.tablas.length === 0) {
+      return;
     }
 
-    if (btnVolver) {
-        btnVolver.addEventListener("click", function() {
-            window.location.href = "../screen-lista/list.ui.html";
-        });
-    }
+    var sequenceInfo = null;
 
-    // --- CARGA INICIAL ---
-    async function load() {
-        setStatus("Cargando...", "info");
+    try {
+      if (!window.MEMCOM || !window.MEMCOM.pdf || !window.MEMCOM.pdf.generatePdfBytes) {
+        throw new Error("No está cargado memcom.pdf.js.");
+      }
 
+      if (btnPdf) {
+        btnPdf.innerHTML = "Generando...";
+        btnPdf.disabled = true;
+      }
+
+      setStatus("Reservando número de memorando.", "info");
+
+      var sequence = getSequenceManager();
+      var metadata = buildMemoMetadata();
+      var memoDateInfo = getMemoDateInfo(metadata);
+
+      if (!memoDateInfo || !memoDateInfo.parts) {
+        throw new Error("No se pudo calcular la fecha del memorando desde el período seleccionado.");
+      }
+
+      sequenceInfo = await sequence.reserve(metadata);
+
+      setStatus(
+        "Generando PDF " + sequenceInfo.codigoCompleto +
+        " con mes aplicado " + sequenceInfo.codigoMes + ".",
+        "info"
+      );
+
+      var payload = buildPayload(sequenceInfo);
+      var pdfBytes = await window.MEMCOM.pdf.generatePdfBytes(payload);
+
+      var filename = [
+        "MEMO",
+        limpiarArchivo(sequenceInfo.codigoCompleto),
+        limpiarArchivo(payload.tipo),
+        limpiarArchivo(payload.periodo)
+      ].join("_") + ".pdf";
+
+      downloadPdf(pdfBytes, filename);
+
+      if (sequenceInfo.reused) {
+        setStatus("Memo descargado con código ya reservado: " + sequenceInfo.codigoCompleto + ".", "ok");
+      } else {
+        setStatus("Memo descargado correctamente: " + sequenceInfo.codigoCompleto + ".", "ok");
+      }
+    } catch (error) {
+      console.error("[MEMCOM_APP] Error generando memo:", error);
+
+      if (sequenceInfo && sequenceInfo.token) {
         try {
-            if (!window.MEMCOM || !window.MEMCOM.data) {
-                throw new Error("Faltan librerías");
-            }
-
-            var data = await window.MEMCOM.data.getAll();
-            var periodos = data.periodos || [];
-
-            state.periodos = periodos;
-
-            // Restaurar memoria si existe
-            var savedPeriodo = restoreState();
-
-            if (elPeriodo) {
-                elPeriodo.innerHTML = "<option value=''>Selecciona periodo...</option>";
-
-                periodos.forEach(function(p) {
-                    var opt = document.createElement("option");
-                    opt.value = p.value;
-                    opt.textContent = p.label;
-
-                    if (p.value === savedPeriodo) {
-                        opt.selected = true;
-                    }
-
-                    elPeriodo.appendChild(opt);
-                });
-            }
-
-            // Si hay datos restaurados, procesar tabla automáticamente
-            if (elInputTable && elInputTable.value) {
-                renderTablePreview();
-            } else {
-                checkPdfButton();
-            }
-
-            setStatus("Listo. Selecciona opciones y pega Excel. " + getNextMemoText(), "ok");
-        } catch (err) {
-            console.error(err);
-            setStatus("Error de conexión", "err");
+          await window.MEMCOM.sequence.release(sequenceInfo.token);
+        } catch (releaseError) {
+          console.error("[MEMCOM_APP] No se pudo liberar la reserva:", releaseError);
         }
-    }
+      }
 
-    load();
-})(window);
+      setStatus("Error: " + (error.message || "No se pudo generar el memo."), "err");
+    } finally {
+      if (btnPdf) {
+        btnPdf.innerHTML = '<span class="icon">⬇</span> Generar Memo PDF';
+        checkPdfButton();
+      }
+    }
+  }
+
+  function initTables() {
+    getTableManager().init({
+      countSelectId: "mc-num-tablas",
+      containerId: "mc-tables-container",
+      previewContainerId: "mc-table-preview",
+      previewListId: "mc-table-preview-list",
+      onChange: function () {
+        checkPdfButton();
+      }
+    });
+  }
+
+  async function load() {
+    try {
+      setStatus("Cargando períodos.", "info");
+
+      if (!window.MEMCOM || !window.MEMCOM.data || !window.MEMCOM.data.getAll) {
+        throw new Error("No está cargado memcom.data-remote.js.");
+      }
+
+      initTables();
+
+      var savedPeriodo = restoreState();
+      var data = await window.MEMCOM.data.getAll();
+
+      state.periodos = Array.isArray(data.periodos) ? data.periodos : [];
+
+      fillPeriodos(state.periodos);
+
+      if (savedPeriodo && elPeriodo) {
+        elPeriodo.value = savedPeriodo;
+      }
+
+      checkPdfButton();
+
+      setStatus("Listo. " + getNextMemoText(), "ok");
+    } catch (error) {
+      console.error("[MEMCOM_APP] Error cargando datos:", error);
+      setStatus("Error al cargar datos: " + error.message, "err");
+    }
+  }
+
+  if (elPeriodo) {
+    elPeriodo.addEventListener("change", function () {
+      checkPdfButton();
+      setStatus("Período actualizado. " + getNextMemoText(), "ok");
+    });
+  }
+
+  if (elTipo) {
+    elTipo.addEventListener("change", function () {
+      saveState();
+      setStatus("Tipo actualizado. " + getNextMemoText(), "ok");
+    });
+  }
+
+  if (btnPreview) {
+    btnPreview.addEventListener("click", function () {
+      var ok = renderTablePreview();
+
+      if (!ok) {
+        return;
+      }
+
+      setStatus(
+        "Tablas procesadas. Se generará un solo memorando con " +
+        state.tablas.length +
+        " tabla(s). " +
+        getNextMemoText(),
+        "ok"
+      );
+    });
+  }
+
+  if (btnRefrescar) {
+    btnRefrescar.addEventListener("click", load);
+  }
+
+  if (btnPdf) {
+    btnPdf.addEventListener("click", onGeneratePdf);
+  }
+
+  if (btnVolver) {
+    btnVolver.addEventListener("click", function () {
+      if (window.history.length > 1) {
+        window.history.back();
+      } else {
+        window.location.href = "../screen-lista/list.ui.html";
+      }
+    });
+  }
+
+  load();
+})(window, document);
