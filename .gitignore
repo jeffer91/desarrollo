@@ -1,0 +1,47 @@
+# =========================================================
+# Nombre completo: .gitignore
+# Ruta o ubicación: /desarrollo/.gitignore
+# Función o funciones:
+# - Evitar subir dependencias, builds y archivos temporales
+# - Mantener limpio el repositorio en GitHub
+# - Excluir datos locales que no deben versionarse
+# =========================================================
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build
+dist/
+build/
+out/
+release/
+
+# Electron / empaquetado
+*.blockmap
+*.exe
+*.dmg
+*.AppImage
+*.zip
+
+# Logs y temporales
+logs/
+*.log
+tmp/
+temp/
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Editores
+.vscode/*
+!.vscode/settings.json
+
+# Exportaciones locales
+txt_convertidos/
+
+# Datos locales
+localsave/data/*.json

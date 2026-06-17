@@ -1,0 +1,218 @@
+:root {
+  --bg: #f1f5f9;
+  --card: #ffffff;
+  --text: #0f172a;
+  --muted: #64748b;
+  --line: #e2e8f0;
+  --blue: #2563eb;
+  --blue-hover: #1d4ed8;
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --paper-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  min-height: 100vh;
+  padding-bottom: 40px;
+}
+
+/* Header Compacto */
+.topbar {
+  background: #fff;
+  border-bottom: 1px solid var(--line);
+  padding: 10px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.topbar_brand { display: flex; align-items: center; gap: 12px; }
+.logo {
+  width: 36px; height: 36px;
+  border-radius: 8px;
+  background: var(--blue);
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 900;
+  font-size: 14px;
+}
+.topbar_title { font-weight: 700; font-size: 16px; line-height: 1.1; }
+.topbar_subtitle { font-size: 12px; color: var(--muted); }
+
+/* Lado derecho del header (Botón Volver + Estado) */
+.topbar_right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.status-pill {
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: 99px;
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.wrap {
+  max-width: 1000px;
+  margin: 20px auto;
+  padding: 0 20px;
+}
+
+/* Barra de Herramientas */
+.toolbar {
+  background: var(--card);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.toolbar_inputs {
+  display: flex;
+  gap: 16px;
+  flex: 1;
+  min-width: 300px;
+}
+
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-size: 12px; font-weight: 700; color: var(--muted); }
+.search-field { flex: 1; position: relative; }
+
+input, select {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  background: #fff;
+  width: 100%;
+}
+input:focus, select:focus { border-color: var(--blue); }
+
+/* Sugerencias Flotantes */
+.suggest {
+  position: absolute;
+  top: 100%; left: 0; right: 0;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--paper-shadow);
+  z-index: 100;
+  margin-top: 4px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+.suggest ul { list-style: none; padding: 0; margin: 0; }
+
+/* Botones */
+.toolbar_actions { display: flex; gap: 10px; }
+.btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex; align-items: center; gap: 6px;
+}
+.btn--primary { background: var(--blue); color: #fff; box-shadow: 0 4px 6px rgba(37,99,235,0.2); }
+.btn--primary:hover:not(:disabled) { background: var(--blue-hover); transform: translateY(-1px); }
+.btn--primary:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+.btn--secondary { background: #fff; border: 1px solid var(--line); color: var(--text); }
+.btn--secondary:hover { background: #f8fafc; }
+
+/* Estilos para el botón volver (pequeño y fantasma) */
+.btn--small {
+  padding: 6px 12px;
+  font-size: 12px;
+  height: 32px;
+}
+.btn--ghost {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid transparent;
+  box-shadow: none;
+}
+.btn--ghost:hover {
+  background: #f1f5f9;
+  color: var(--text);
+  border-color: var(--line);
+}
+
+.selection-info {
+  margin: 12px 0;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--blue);
+  min-height: 20px;
+}
+
+/* Vista Previa Papel A4 */
+.preview-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 20px;
+}
+
+.paper-sheet {
+  width: 210mm;
+  min-height: 297mm;
+  background: #fff;
+  box-shadow: var(--paper-shadow);
+  padding: 25mm 25mm; /* Márgenes similares al PDF */
+  position: relative;
+  overflow: hidden;
+}
+
+.doc-content {
+  font-family: "Helvetica", "Arial", sans-serif;
+  color: #000;
+  position: relative;
+  z-index: 2;
+}
+
+/* Marca de agua sutil en pantalla */
+.paper-watermark {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: url('./fondo.png') no-repeat center center;
+  background-size: contain;
+  opacity: 0.15; /* Muy suave solo para referencia */
+  z-index: 1;
+  pointer-events: none;
+}
+
+.preview-help {
+  margin-top: 16px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Responsive para pantallas pequeñas */
+@media (max-width: 850px) {
+  .paper-sheet {
+    width: 100%;
+    min-height: auto;
+    aspect-ratio: 210/297;
+    padding: 20px;
+    font-size: 0.8em; /* Escalar texto */
+  }
+  .toolbar { flex-direction: column; align-items: stretch; }
+  .toolbar_inputs { flex-direction: column; }
+}

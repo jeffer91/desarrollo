@@ -1,0 +1,141 @@
+/*
+Nombre completo: estadisticas.css
+Ruta o ubicación: /incorporaciones-app/estadisticas/estadisticas.css
+
+Función o funciones:
+1. Estilizar la pantalla de estadísticas.
+2. Organizar tarjetas resumen, filtros, tablas y rankings.
+3. Mantener diseño responsive para celulares y escritorio.
+*/
+
+.estadisticas-container {
+  max-width: 1350px;
+}
+
+.estadisticas-login-grid {
+  grid-template-columns: minmax(240px, 420px);
+}
+
+.estadisticas-filtros-grid {
+  grid-template-columns: repeat(3, minmax(190px, 1fr));
+}
+
+.estadisticas-grid-resumen {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(150px, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.estadistica-card {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  box-shadow: var(--shadow);
+  min-height: 128px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.estadistica-card span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.estadistica-card strong {
+  color: #111827;
+  font-size: clamp(28px, 4vw, 42px);
+  line-height: 1;
+}
+
+.estadistica-card small {
+  color: var(--info);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.estadisticas-two-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+}
+
+.estadisticas-table-wrapper {
+  max-height: 460px;
+  overflow: auto;
+}
+
+.estadisticas-table {
+  min-width: 850px;
+}
+
+.estadisticas-table th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.estadisticas-table td,
+.estadisticas-table th {
+  white-space: nowrap;
+}
+
+.estadisticas-table td:first-child,
+.estadisticas-table th:first-child {
+  white-space: normal;
+  min-width: 220px;
+}
+
+.estadisticas-listado-selector {
+  margin-bottom: 14px;
+  max-width: 360px;
+}
+
+.estadisticas-empty {
+  text-align: center;
+  color: var(--muted);
+  padding: 24px;
+}
+
+.estadisticas-numero {
+  font-weight: 800;
+  color: #111827;
+}
+
+.estadisticas-porcentaje {
+  font-weight: 800;
+  color: var(--info);
+}
+
+@media (max-width: 1180px) {
+  .estadisticas-grid-resumen {
+    grid-template-columns: repeat(3, minmax(150px, 1fr));
+  }
+
+  .estadisticas-two-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .estadisticas-filtros-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .estadisticas-grid-resumen {
+    grid-template-columns: repeat(2, minmax(150px, 1fr));
+  }
+}
+
+@media (max-width: 540px) {
+  .estadisticas-grid-resumen {
+    grid-template-columns: 1fr;
+  }
+
+  .estadistica-card {
+    min-height: 110px;
+  }
+}

@@ -1,0 +1,398 @@
+<!--
+Nombre completo: admin.html
+Ruta o ubicación: /incorporaciones-app/admin.html
+
+Función o funciones:
+1. Mostrar la vista administrador.
+2. Solicitar clave de acceso.
+3. Cargar períodos desde Firebase.
+4. Crear o actualizar períodos.
+5. Activar o desactivar períodos para consulta estudiantil.
+6. Seleccionar período antes de cargar Excel.
+7. Cargar estudiantes desde Excel.
+8. Guardar estudiantes en Firebase asociados al período seleccionado.
+9. Consultar estudiantes por período automáticamente.
+10. Filtrar estudiantes por estado y sede.
+11. Mostrar la incorporación guardada en la colección incorporaciones.
+12. Exportar resultados a Excel.
+13. Crear respaldo local y JSON descargable.
+14. Permitir que solo el administrador cambie una sede desde el selector de incorporación.
+15. Mostrar estadísticas rápidas de respuestas: habilitados, respondieron, no respondieron, Quito, Manta, No iré y sin sede.
+16. Conectar con la pantalla de estadísticas.
+17. Incorporar buscador predictivo y selector directo dentro del listado de estudiantes.
+18. Permitir ordenar la tabla tocando cualquier encabezado.
+-->
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Administrador | Incorporaciones ITSQMET</title>
+
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/menu.css" />
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore-compat.js"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+
+<body class="page-light">
+  <div id="menuSuperior" data-active="admin" data-base=""></div>
+
+<header class="topbar">
+  <div class="topbar-logo">
+    <img src="assets/Logo.png" alt="Logo ITSQMET" />
+  </div>
+
+  <div>
+    <h1>Administrador</h1>
+    <p>Incorporaciones</p>
+  </div>
+</header>
+
+  <main class="container">
+<section id="loginAdminBox" class="panel hidden">
+      <h2>Acceso administrador</h2>
+
+      <p class="muted">
+        Ingrese la clave para acceder a la carga, revisión, respaldo y exportación de información.
+      </p>
+
+      <div class="form-grid">
+        <div class="field">
+          <label for="adminPassword">Clave de administrador</label>
+          <input
+            type="password"
+            id="adminPassword"
+            placeholder="Ingrese la clave"
+            autocomplete="off"
+          />
+        </div>
+      </div>
+
+      <button id="btnLoginAdmin" class="btn btn-primary">
+        Ingresar
+      </button>
+
+      <p id="loginAdminMessage" class="message"></p>
+    </section>
+
+    <section id="adminPanel" class="hidden">
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>Configuración de período</h2>
+            <p class="muted">
+              Seleccione el período con el que trabajará. Al elegir un período, los estudiantes se cargarán automáticamente.
+            </p>
+          </div>
+
+          <div class="actions-row">
+            <a href="estadisticas/index.html" class="btn btn-primary">
+              Ver estadísticas
+            </a>
+
+            <a href="index.html" class="btn btn-outline">
+              Volver al inicio
+            </a>
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <div class="field">
+            <label for="periodoSelect">Período</label>
+            <select id="periodoSelect">
+              <option value="">Cargando períodos...</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="busquedaInput">Buscar estudiante</label>
+            <input
+              type="text"
+              id="busquedaInput"
+              list="busquedaEstudiantesList"
+              placeholder="Cédula, nombre o carrera"
+              autocomplete="off"
+            />
+          </div>
+
+          <div class="field">
+            <label for="filtroEstado">Estado</label>
+            <select id="filtroEstado">
+              <option value="TODOS">Todos</option>
+              <option value="RESPONDIO">Respondieron</option>
+              <option value="PENDIENTE">Pendientes</option>
+              <option value="HABILITADO">Habilitados</option>
+              <option value="NO_HABILITADO">No habilitados</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="filtroSede">Sede incorporación</label>
+            <select id="filtroSede">
+              <option value="TODAS">Todas</option>
+              <option value="QUITO">Quito</option>
+              <option value="MANTA">Manta</option>
+              <option value="NO_IRE">No iré</option>
+              <option value="SIN_SEDE">Sin sede</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="actions-row">
+          <button id="btnCargarPeriodo" class="btn btn-primary">
+            Cargar estudiantes del período
+          </button>
+
+          <button id="btnRefrescar" class="btn btn-secondary">
+            Refrescar
+          </button>
+        </div>
+
+        <div id="periodoEstadoBox"></div>
+
+        <p id="periodoMessage" class="message"></p>
+      </section>
+
+      <section class="panel">
+        <h2>Crear / actualizar período</h2>
+
+        <p class="muted">
+          Aquí puede crear períodos y definir si estarán habilitados para consulta estudiantil. Puede haber más de un período activo.
+        </p>
+
+        <div class="form-grid">
+          <div class="field">
+            <label for="periodoIdInput">ID del período</label>
+            <input
+              type="text"
+              id="periodoIdInput"
+              placeholder="Ejemplo: ABRIL 2026 - SEPTIEMBRE 2026"
+            />
+          </div>
+
+          <div class="field">
+            <label for="periodoLabelInput">Nombre visible</label>
+            <input
+              type="text"
+              id="periodoLabelInput"
+              placeholder="Ejemplo: Abril 2026 - Septiembre 2026"
+            />
+          </div>
+
+          <div class="field">
+            <label for="periodoOrdenInput">Orden / actualidad</label>
+            <input
+              type="number"
+              id="periodoOrdenInput"
+              placeholder="Ejemplo: 202609"
+            />
+          </div>
+
+          <div class="field">
+            <label for="periodoActivoInput">Activo para estudiante</label>
+
+            <label style="display:flex; align-items:center; gap:8px; padding-top:12px;">
+              <input type="checkbox" id="periodoActivoInput" />
+              Habilitar consulta
+            </label>
+          </div>
+        </div>
+
+        <div class="actions-row">
+          <button id="btnGuardarPeriodo" class="btn btn-primary">
+            Guardar período
+          </button>
+
+          <button id="btnActivarPeriodo" class="btn btn-secondary">
+            Activar período
+          </button>
+
+          <button id="btnDesactivarPeriodo" class="btn btn-danger">
+            Desactivar período
+          </button>
+
+          <button id="btnLimpiarPeriodoForm" class="btn btn-outline">
+            Limpiar
+          </button>
+        </div>
+
+        <p id="periodoManagerMessage" class="message"></p>
+      </section>
+
+      <section class="panel">
+        <h2>Cargar estudiantes desde Excel</h2>
+
+        <p class="muted">
+          Primero seleccione el período. Luego cargue el Excel, presione “Leer Excel” y finalmente “Guardar Excel en Firebase”. El período seleccionado se anexará automáticamente a todos los estudiantes importados.
+        </p>
+
+        <div class="form-grid">
+          <div class="field">
+            <label for="excelInput">Archivo Excel</label>
+            <input
+              type="file"
+              id="excelInput"
+              accept=".xlsx,.xls"
+            />
+          </div>
+        </div>
+
+        <div class="actions-row">
+          <button id="btnLeerExcel" class="btn btn-secondary">
+            Leer Excel
+          </button>
+
+          <button id="btnGuardarExcelFirebase" class="btn btn-primary" disabled>
+            Guardar Excel en Firebase
+          </button>
+        </div>
+
+        <p id="excelMessage" class="message"></p>
+      </section>
+
+      <section class="stats-grid">
+        <article class="stat-card">
+          <span>Habilitados</span>
+          <strong id="statTotal">0</strong>
+        </article>
+
+        <article class="stat-card">
+          <span>Respondieron</span>
+          <strong id="statRespondieron">0</strong>
+        </article>
+
+        <article class="stat-card">
+          <span>No respondieron</span>
+          <strong id="statNoRespondieron">0</strong>
+        </article>
+
+        <article class="stat-card">
+          <span>Quito</span>
+          <strong id="statQuito">0</strong>
+        </article>
+
+        <article class="stat-card">
+          <span>Manta</span>
+          <strong id="statManta">0</strong>
+        </article>
+
+        <article class="stat-card">
+          <span>No iré</span>
+          <strong id="statNoIre">0</strong>
+        </article>
+
+        <article class="stat-card">
+          <span>Sin sede</span>
+          <strong id="statSinSede">0</strong>
+        </article>
+      </section>
+
+      <section class="panel" id="panelListadoEstudiantes">
+        <div class="panel-header">
+          <div>
+            <h2>Listado de estudiantes</h2>
+            <p class="muted">
+              Información cargada desde Firebase, junto con las respuestas guardadas en la colección incorporaciones.
+            </p>
+          </div>
+
+          <div class="actions-row">
+            <button id="btnExportarExcel" class="btn btn-secondary">
+              Exportar Excel
+            </button>
+
+            <button id="btnCrearRespaldoLocal" class="btn btn-outline">
+              Crear respaldo JSON
+            </button>
+
+            <button id="btnDescargarJson" class="btn btn-outline">
+              Descargar JSON
+            </button>
+
+            <button id="btnBorrarRespaldoLocal" class="btn btn-danger">
+              Borrar respaldo local
+            </button>
+          </div>
+        </div>
+
+        <div class="table-tools-panel">
+          <div class="field table-search-field">
+            <label for="busquedaTablaInput">Buscar en el listado</label>
+            <input
+              type="text"
+              id="busquedaTablaInput"
+              list="busquedaEstudiantesList"
+              placeholder="Escriba cédula, nombre o carrera"
+              autocomplete="off"
+            />
+            <datalist id="busquedaEstudiantesList"></datalist>
+          </div>
+
+          <div class="field table-selector-field">
+            <label for="selectorEstudianteTabla">Selector de estudiante</label>
+            <select id="selectorEstudianteTabla">
+              <option value="">Seleccione un estudiante...</option>
+            </select>
+          </div>
+
+          <div class="table-tools-actions">
+            <button id="btnLimpiarBusquedaTabla" class="btn btn-outline btn-small">
+              Limpiar búsqueda
+            </button>
+          </div>
+        </div>
+
+        <p class="table-help-text">
+          Puede buscar por cédula, nombre o carrera. También puede tocar cualquier encabezado de la tabla para ordenar.
+        </p>
+
+        <div class="table-wrapper">
+          <table id="tablaEstudiantesAdmin">
+            <thead>
+              <tr>
+                <th data-sort="cedula">Cédula</th>
+                <th data-sort="nombres">Nombres</th>
+                <th data-sort="carrera">Carrera</th>
+                <th data-sort="periodo">Período</th>
+                <th data-sort="habilitado">Habilitado</th>
+                <th data-sort="incorporacion">Incorporación</th>
+                <th data-sort="respondio">Respondió</th>
+                <th data-sort="fechaRegistro">Fecha registro</th>
+                <th data-sort="ultimaActualizacion">Última actualización</th>
+              </tr>
+            </thead>
+
+            <tbody id="tablaEstudiantesBody">
+              <tr>
+                <td colspan="9" class="empty-cell">
+                  Seleccione un período para cargar la información.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p id="tablaMessage" class="message"></p>
+      </section>
+    </section>
+  </main>
+
+  <script src="js/firebase-config.js"></script>
+  <script src="js/database.js"></script>
+  <script src="js/excel-reader.js"></script>
+  <script src="js/incorporaciones-manager.js"></script>
+  <script src="js/local-backup.js"></script>
+  <script src="js/json-backup.js"></script>
+  <script src="js/export-excel.js"></script>
+  <script src="js/periodos-manager.js"></script>
+  <script src="js/menu-superior.js"></script>
+  <script src="js/admin-table-tools.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>

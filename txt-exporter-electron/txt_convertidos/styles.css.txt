@@ -1,0 +1,209 @@
+
+==============================================================================================================
+##############################################################################################################
+ARCHIVO
+##############################################################################################################
+==============================================================================================================
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+NOMBRE: styles.css
+RUTA: src/ui/styles.css
+
+==============================================================================================================
+##############################################################################################################
+CÓDIGO COMPLETO
+##############################################################################################################
+==============================================================================================================
+--------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------
+:root{
+  --bg: #0b0f17;
+  --panel: #121a28;
+  --text: #e9eef7;
+  --muted: #a6b3c7;
+  --border: #22314a;
+  --primary: #3b82f6;
+  --success: #22c55e;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+}
+
+*{ box-sizing: border-box; }
+body{
+  margin:0;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.topbar{
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+  background: #0a1220;
+}
+.appname{ font-size: 20px; font-weight: 800; }
+.subtitle{ font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+.layout{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  padding: 14px;
+}
+
+.panel{
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+  min-height: 520px;
+}
+
+h2{
+  margin: 6px 0 10px;
+  font-size: 16px;
+}
+h3{
+  margin: 12px 0 8px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.row{
+  display:flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.btn{
+  border: 1px solid var(--border);
+  background: #0a1425;
+  color: var(--text);
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor:pointer;
+  font-weight: 650;
+}
+.btn:hover{ border-color: #2f466b; }
+.btn:disabled{ opacity: .45; cursor:not-allowed; }
+
+.btn.primary{
+  background: rgba(59,130,246,.12);
+  border-color: rgba(59,130,246,.35);
+}
+.btn.success{
+  background: rgba(34,197,94,.12);
+  border-color: rgba(34,197,94,.35);
+}
+.btn.tiny{
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+}
+
+.pathbox{
+  flex:1;
+  padding: 10px 12px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+}
+.label{ font-size: 12px; color: var(--muted); }
+.path{ margin-top: 4px; font-size: 13px; word-break: break-all; }
+
+.summary{
+  display:grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin: 12px 0;
+}
+.summaryItem{
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #0a1425;
+}
+.value{
+  margin-top: 6px;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.options{
+  margin-top: 10px;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+.options ul{
+  margin: 8px 0 0;
+  padding-left: 18px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.options b{ color: var(--text); }
+
+.log{
+  height: 250px;
+  overflow:auto;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: #07101f;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  line-height: 1.35;
+  white-space: pre-wrap;
+}
+.log.error{
+  height: 170px;
+  border-color: rgba(239,68,68,.35);
+}
+
+.hint{
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.alert{
+  position: fixed;
+  right: 14px;
+  bottom: 14px;
+  width: 520px;
+  max-width: calc(100vw - 28px);
+  max-height: 70vh;
+  overflow:auto;
+  background: #0a1425;
+  border: 1px solid rgba(239,68,68,.45);
+  border-radius: 14px;
+  padding: 12px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.55);
+}
+.alert.hidden{ display:none; }
+.alertHeader{
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.alertTitle{
+  font-weight: 900;
+  color: #ffb4b4;
+}
+.alertMessage{
+  color: var(--text);
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+.alertDetails{
+  margin: 0;
+  padding: 10px;
+  border-radius: 12px;
+  background: #07101f;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+

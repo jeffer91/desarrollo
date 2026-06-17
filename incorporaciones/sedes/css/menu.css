@@ -1,0 +1,96 @@
+/*
+Nombre completo: menu.css
+Ruta o ubicación: /incorporaciones-app/css/menu.css
+
+Función o funciones:
+1. Estilizar el menú superior reutilizable.
+2. Mostrar accesos a Inicio, Administrador y Estadísticas.
+3. Marcar visualmente la pantalla activa.
+4. Adaptar el menú a celulares y escritorio.
+*/
+
+.menu-superior {
+  width: 100%;
+  background: #000000;
+  border-bottom: 1px solid rgba(201, 169, 106, 0.35);
+  color: #ffffff;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.menu-superior-inner {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 10px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.menu-superior-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.menu-superior-brand strong {
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  color: #ffffff;
+}
+
+.menu-superior-brand span {
+  font-size: 12px;
+  color: #d1d5db;
+}
+
+.menu-superior-links {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.menu-superior-link {
+  color: #e5e7eb;
+  text-decoration: none;
+  padding: 9px 14px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 700;
+  border: 1px solid transparent;
+  transition: 0.2s ease;
+}
+
+.menu-superior-link:hover {
+  color: #111827;
+  background: #c9a96a;
+}
+
+.menu-superior-link.activo {
+  color: #111827;
+  background: #c9a96a;
+  border-color: #c9a96a;
+}
+
+@media (max-width: 720px) {
+  .menu-superior-inner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .menu-superior-links {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .menu-superior-link {
+    width: 100%;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.06);
+  }
+}

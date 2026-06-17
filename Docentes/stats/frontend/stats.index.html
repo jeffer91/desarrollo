@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Stats · Capacitaciones</title>
+  <link rel="stylesheet" href="./stats.styles.css" />
+  <link rel="icon" href="data:," />
+</head>
+<body>
+  <div class="stats-shell">
+    <!-- Se oculta el header completo para quitar el título y los botones sin eliminar los nodos ni romper los bindings JS por id. -->
+<header class="stats-header-fixed" style="display:none;">
+      <div class="stats-header-container">
+    <div class="stats-header-left">
+      <!-- Se elimina el logo visible, pero se conserva el contenedor para no alterar la distribución del header. -->
+    </div>
+
+    <div class="stats-header-center">
+      <!-- Se elimina el texto auxiliar superior para dejar solo el título principal. -->
+      <h1 class="stats-page-title">Detalle por período y capacitación</h1>
+</div>
+
+        <div class="stats-header-right">
+          <div class="stats-hero-actions">
+            <button id="statsReloadBtn" class="stats-btn stats-btn-primary" type="button">Recargar</button>
+            <button id="statsResetFiltersBtn" class="stats-btn" type="button">Limpiar</button>
+            <button id="statsExportBtn" class="stats-btn" type="button">Exportar</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="stats-main">
+      <section class="stats-panel">
+        <div id="statsMessageHost"></div>
+      </section>
+
+    <section class="stats-panel">
+      <!-- Se reemplaza details/summary para evitar el comportamiento nativo de acordeón. -->
+      <!-- Se mantiene el host original para no romper el render ni los bindings de filtros. -->
+      <div class="stats-accordion-summary-main">
+        <span class="stats-section-title">Filtros principales</span>
+        <span class="stats-summary-line">Filtros de período, capacitación, carrera, sexo y búsqueda</span>
+      </div>
+      <div id="statsFiltersHost"></div>
+    </section>
+
+      <section class="stats-panel">
+        <!-- Corrección: se elimina el acordeón solo en Ficha técnica para dejar el bloque visible por defecto cuando el filtro ya tenga datos. -->
+        <div class="stats-accordion-summary-main">
+          <span class="stats-section-title">Ficha técnica</span>
+          <span class="stats-summary-line">Información base de la capacitación o del filtro activo</span>
+        </div>
+        <div class="stats-accordion-body">
+          <div id="statsDetailHeaderHost"></div>
+        </div>
+      </section>
+
+      <details class="stats-panel stats-accordion">
+        <summary class="stats-accordion-summary">
+          <div class="stats-accordion-summary-main">
+            <span class="stats-section-title">Indicadores principales</span>
+            <span class="stats-summary-line">Abrir KPIs globales o KPIs del detalle seleccionado</span>
+          </div>
+          <span class="stats-accordion-icon" aria-hidden="true"></span>
+        </summary>
+        <div class="stats-accordion-body">
+          <div id="statsKpisHost"></div>
+        </div>
+      </details>
+
+      <details class="stats-panel stats-accordion">
+        <summary class="stats-accordion-summary">
+          <div class="stats-accordion-summary-main">
+            <span class="stats-section-title">División por capacitaciones</span>
+            <span class="stats-summary-line">Abrir distribución visual y resumen de asignaciones por capacitación</span>
+          </div>
+          <span class="stats-accordion-icon" aria-hidden="true"></span>
+        </summary>
+        <div class="stats-accordion-body">
+          <div id="statsDistributionChartHost"></div>
+          <div id="statsDistributionTableHost" style="display:none;"></div>
+        </div>
+      </details>
+
+      <details class="stats-panel stats-accordion">
+        <summary class="stats-accordion-summary">
+          <div class="stats-accordion-summary-main">
+            <span class="stats-section-title">Gráficos de la vista activa</span>
+            <span class="stats-summary-line">Abrir los gráficos vinculados al filtro activo o a la capacitación seleccionada</span>
+          </div>
+          <span class="stats-accordion-icon" aria-hidden="true"></span>
+        </summary>
+        <div class="stats-accordion-body">
+          <div id="statsDetailChartsHost"></div>
+        </div>
+      </details>
+
+      <details class="stats-panel stats-accordion">
+        <summary class="stats-accordion-summary">
+          <div class="stats-accordion-summary-main">
+            <span class="stats-section-title">Tablas de resultados</span>
+            <span class="stats-summary-line">Abrir cada tabla en su propio panel independiente, sin unir bloques</span>
+          </div>
+          <span class="stats-accordion-icon" aria-hidden="true"></span>
+        </summary>
+        <div class="stats-accordion-body">
+          <div id="statsDetailTablesHost"></div>
+        </div>
+      </details>
+
+      <details class="stats-panel stats-accordion">
+        <summary class="stats-accordion-summary">
+          <div class="stats-accordion-summary-main">
+            <span class="stats-section-title">Control de calidad de datos</span>
+            <span class="stats-summary-line">Abrir inconsistencias detectadas con el filtro activo</span>
+          </div>
+          <span class="stats-accordion-icon" aria-hidden="true"></span>
+        </summary>
+        <div class="stats-accordion-body">
+          <div id="statsIssuesHost"></div>
+        </div>
+      </details>
+    </main>
+  </div>
+
+  <div id="statsModalRoot" class="stats-modal-root" aria-hidden="true"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+  <script src="../basededatos/stats.firebase.config.js"></script>
+  <script src="../basededatos/stats.config.js"></script>
+  <script src="../backend/stats.helpers.js"></script>
+  <script src="../backend/stats.validators.js"></script>
+  <script src="../backend/stats.adapters.js"></script>
+  <script src="../backend/stats.manifest.js"></script>
+  <script src="../backend/stats.firebase.js"></script>
+  <script src="../backend/stats.store.js"></script>
+  <script src="../backend/stats.repository.js"></script>
+  <script src="../backend/stats.periods.js"></script>
+  <script src="../backend/stats.normalize.js"></script>
+  <script src="../backend/stats.crossing.js"></script>
+  <script src="../backend/stats.metrics.js"></script>
+  <script src="../backend/stats.export.js"></script>
+  <script src="../backend/stats.app.js"></script>
+  <script src="./stats.tables.js"></script>
+  <script src="./stats.filters.js"></script>
+  <script src="./stats.modal.js"></script>
+  <script src="./stats.charts.js"></script>
+  <script src="./stats.distribution.js"></script>
+  <script src="./detail/stats.detail.helpers.js"></script>
+  <script src="./detail/stats.detail.header.js"></script>
+  <script src="./detail/stats.detail.kpis.js"></script>
+  <script src="./detail/stats.detail.charts.js"></script>
+  <script src="./detail/stats.detail.tables.js"></script>
+  <script src="./detail/stats.detail.modals.js"></script>
+  <script src="./detail/stats.detail.issues.js"></script>
+  <script src="./stats.detail.js"></script>
+  <script src="./stats.ui.js"></script>
+</body>
+</html>

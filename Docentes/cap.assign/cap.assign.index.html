@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="es">
+<head>
+ <!-- =========================================================
+ Nombre del archivo: cap.assign.index.html
+ Ruta - Ubicación: /cap.assign/cap.assign.index.html
+ Función o funciones:
+ - Vista principal Asignación Docentes ↔ Capacitaciones
+ - Define window.firebaseConfig
+ - Boot de la app
+ - Agrega filtro superior por período y sincroniza el modal de asignación masiva
+ - ✅ Nuevo: botón Exportar CSV
+ ========================================================= -->
+ <meta charset="UTF-8" />
+ <meta name="viewport" content="width=device-width,initial-scale=1" />
+ <title>Capacitaciones · Asignar docentes</title>
+ <link rel="stylesheet" href="./cap.assign.styles.css" />
+ <link rel="icon" href="data:," />
+</head>
+<body>
+ <div class="wrap">
+  <div id="capMsg" class="msg" data-type="info">Cargando…</div>
+
+  <section class="card controls" style="margin-top:12px;">
+   <div class="row row--period">
+    <div class="field field--period">
+     <label>Período</label>
+     <select id="periodSelect"></select>
+    </div>
+   </div>
+
+   <div class="row row--main">
+    <div class="field">
+     <label>Capacitación</label>
+     <select id="capSelect"></select>
+    </div>
+
+    <div class="field">
+     <label>Carrera</label>
+     <select id="carSelect">
+      <option value="">Todas</option>
+     </select>
+    </div>
+   </div>
+
+   <div class="row row--filters">
+    <div class="field field--state">
+     <label>Estado</label>
+     <select id="inoutSelect">
+      <option value="all">Todos</option>
+      <option value="in">EN</option>
+      <option value="out">FUERA</option>
+     </select>
+    </div>
+
+    <div class="field grow">
+     <label>Buscar docente</label>
+     <input id="docSearch" placeholder="Buscar por nombre o cédula…" />
+    </div>
+   </div>
+
+   <div class="row row2">
+    <div class="chips">
+     <span class="chip" id="chipTotal">Total: 0</span>
+     <span class="chip ok" id="chipIn">EN: 0</span>
+     <span class="chip" id="chipOut">FUERA: 0</span>
+     <span class="chip warn" id="chipSel">Seleccionados: 0</span>
+     <span class="chip info" id="chipPend">Pendientes: 0</span>
+    </div>
+
+    <div class="actions">
+     <button id="btnSelAll" class="btn ghost" type="button">Seleccionar visibles</button>
+     <button id="btnSelNone" class="btn ghost" type="button">Limpiar selección</button>
+     <button id="btnAddSel" class="btn ghost" type="button">Asignar seleccionados</button>
+     <button id="btnDelSel" class="btn ghost danger" type="button">Quitar seleccionados</button>
+     <button id="btnErrors" class="btn ghost" type="button">Errores</button>
+     <button id="btnExport" class="btn ghost" type="button">Exportar CSV</button>
+     <button id="btnMassOpen" class="btn primary" type="button">Asignación masiva</button>
+    </div>
+   </div>
+  </section>
+
+  <section class="card table-card" style="margin-top:12px;">
+   <div class="table-head">
+    <div>
+     <div class="h3">Docentes</div>
+     <div class="muted">Acciones por fila: Ver, asignar o quitar. También puedes trabajar por selección masiva.</div>
+    </div>
+   </div>
+
+   <div class="hr"></div>
+   <div id="docTableHost" class="table-host"></div>
+  </section>
+ </div>
+
+ <button id="floatSave" class="float-save" type="button" aria-label="Guardar pendientes">
+  Guardar (0)
+ </button>
+
+ <div id="massModal" class="modal" data-open="0" aria-hidden="true">
+  <div class="modal__backdrop" data-close="1"></div>
+  <div class="modal__panel" role="dialog" aria-modal="true" aria-label="Asignación masiva">
+   <div class="modal__head">
+    <div>
+     <div class="h3">Asignación masiva</div>
+     <div class="muted">Pega cédulas o nombres y se agregarán a pendientes.</div>
+    </div>
+    <button id="btnMassClose" class="btn ghost" type="button" aria-label="Cerrar">Cerrar</button>
+   </div>
+
+   <div class="modal__body">
+    <div class="modal__grid">
+     <div class="field">
+      <label>Período</label>
+      <select id="massPeriodSelect"></select>
+     </div>
+
+     <div class="field">
+      <label>Capacitación</label>
+      <select id="massCapSelect"></select>
+     </div>
+
+     <div class="field">
+      <label>Cédulas / Nombres</label>
+      <textarea id="massInput" rows="7" placeholder="Ejemplo:
+1101122233
+Juan Pérez
+1109988776, Ana López"></textarea>
+     </div>
+
+     <div id="massResult" class="modal__result" data-type="info">Listo para procesar.</div>
+
+     <div class="modal__actions">
+      <button id="btnMassApply" class="btn primary" type="button">Agregar a pendientes</button>
+     </div>
+    </div>
+   </div>
+  </div>
+ </div>
+
+ <div id="docViewModal" class="modal" data-open="0" aria-hidden="true">
+  <div class="modal__backdrop" data-close="1"></div>
+  <div class="modal__panel" role="dialog" aria-modal="true" aria-label="Ver docente">
+   <div class="modal__head">
+    <div>
+     <div class="h3">Información del docente</div>
+     <div class="muted">Vista informativa sin afectar asignación.</div>
+    </div>
+    <button id="docViewClose" class="btn ghost" type="button" aria-label="Cerrar">Cerrar</button>
+   </div>
+
+   <div class="modal__body" id="docViewBody"></div>
+  </div>
+ </div>
+
+ <script>
+  window.firebaseConfig = {
+   apiKey: "AIzaSyCaHf1C0BB0X_H3BDZ1o-UDAsPmLTjsZLA",
+   authDomain: "utet-4387a.firebaseapp.com",
+   projectId: "utet-4387a",
+   storageBucket: "utet-4387a.firebasestorage.app",
+   messagingSenderId: "902848131454",
+   appId: "1:902848131454:web:47f515eb6480834724c32f"
+  };
+ </script>
+
+ <script type="module">
+  import { bootCapAssign } from "./cap.assign.app.js";
+  import { bindDocViewModal } from "./cap.assign.doc.view.ui.js";
+
+  bindDocViewModal();
+  bootCapAssign();
+ </script>
+</body>
+</html>

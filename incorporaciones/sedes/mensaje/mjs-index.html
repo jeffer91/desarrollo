@@ -1,0 +1,230 @@
+<!--
+=========================================================
+Nombre completo: mjs-index.html
+Ruta o ubicación: /incorporaciones/sedes/mensaje/mjs-index.html
+Función o funciones:
+1. Mostrar la pantalla de mensajes WhatsApp para estudiantes.
+2. Cargar estudiantes por período desde Firebase.
+3. Filtrar por período, carrera, sede y estado.
+4. Mostrar estados: Pendiente, Avisado y Cumplido.
+5. Incluir buscador predictor por cédula, nombre o carrera.
+6. Abrir WhatsApp con un mensaje formal listo para enviar.
+7. Trabajar sin clave de administrador.
+=========================================================
+-->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Mensajes | Incorporaciones ITSQMET</title>
+
+  <link rel="stylesheet" href="../css/styles.css" />
+  <link rel="stylesheet" href="../css/menu.css" />
+  <link rel="stylesheet" href="./mjs-styles.css" />
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore-compat.js"></script>
+</head>
+
+<body class="page-light">
+  <div id="menuSuperior" data-active="mensaje" data-base="../"></div>
+
+  <header class="topbar">
+    <div class="topbar-logo">
+      <img src="../assets/Logo.png" alt="Logo ITSQMET" />
+    </div>
+
+    <div>
+      <h1>Mensajes WhatsApp</h1>
+      <p>Recordatorio para estudiantes sobre la encuesta de sede de incorporación</p>
+    </div>
+  </header>
+
+  <main class="container mjs-container">
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <h2>Filtros de consulta</h2>
+          <p class="muted">
+            Seleccione un período y revise el estado de los estudiantes frente a la encuesta de sede.
+          </p>
+        </div>
+
+        <div class="actions-row">
+          <a href="../admin.html" class="btn btn-outline">Administrador</a>
+          <a href="../index.html" class="btn btn-outline">Inicio</a>
+        </div>
+      </div>
+
+      <div class="form-grid mjs-filtros-grid">
+        <div class="field">
+          <label for="mjsPeriodoSelect">Período</label>
+          <select id="mjsPeriodoSelect">
+            <option value="">Cargando períodos...</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="mjsCarreraSelect">Carrera</label>
+          <select id="mjsCarreraSelect">
+            <option value="TODAS">Todas</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="mjsSedeSelect">Sede</label>
+          <select id="mjsSedeSelect">
+            <option value="TODAS">Todas</option>
+          </select>
+        </div>
+
+<div class="field">
+  <label for="mjsEstadoSelect">Estado</label>
+  <select id="mjsEstadoSelect">
+    <option value="TODOS">Todos</option>
+    <option value="PENDIENTE">Pendiente</option>
+    <option value="AVISADO">Avisado</option>
+    <option value="CUMPLIDO">Cumplido</option>
+  </select>
+</div>
+
+<!-- Corrección: agrega filtro de habilitación para separar estudiantes habilitados y no habilitados.
+     Evita revisar manualmente registros que no deben recibir mensaje de WhatsApp. -->
+<div class="field">
+  <label for="mjsHabilitadoSelect">Habilitación</label>
+  <select id="mjsHabilitadoSelect">
+    <option value="TODOS">Todos</option>
+    <option value="HABILITADO">Habilitados</option>
+    <option value="NO_HABILITADO">No habilitados</option>
+  </select>
+</div>
+      </div>
+
+      <div class="actions-row">
+        <button id="mjsBtnCargar" class="btn btn-primary">
+          Cargar estudiantes
+        </button>
+
+        <button id="mjsBtnRefrescar" class="btn btn-secondary">
+          Refrescar
+        </button>
+
+        <button id="mjsBtnLimpiarFiltros" class="btn btn-outline">
+          Limpiar filtros
+        </button>
+      </div>
+
+      <p id="mjsMensajeEstado" class="message"></p>
+    </section>
+
+    <section class="stats-grid mjs-stats-grid">
+      <article class="stat-card">
+        <span>Total</span>
+        <strong id="mjsStatTotal">0</strong>
+      </article>
+
+      <article class="stat-card">
+        <span>Pendiente</span>
+        <strong id="mjsStatPendiente">0</strong>
+      </article>
+
+      <article class="stat-card">
+        <span>Avisado</span>
+        <strong id="mjsStatAvisado">0</strong>
+      </article>
+
+      <article class="stat-card">
+        <span>Cumplido</span>
+        <strong id="mjsStatCumplido">0</strong>
+      </article>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <div>
+          <h2>Tabla de mensajes</h2>
+          <p class="muted">
+            El botón de WhatsApp abre el mensaje listo para enviar. Al abrirlo, el estudiante queda marcado como Avisado.
+          </p>
+        </div>
+      </div>
+
+      <div class="mjs-aviso">
+        <strong>Estados:</strong>
+        Pendiente = no se ha enviado mensaje;
+        Avisado = ya se abrió WhatsApp;
+        Cumplido = ya llenó la encuesta.
+      </div>
+
+      <div class="table-tools-panel mjs-table-tools">
+        <div class="field table-search-field">
+          <label for="mjsBusquedaInput">Buscar estudiante</label>
+          <input
+            type="text"
+            id="mjsBusquedaInput"
+            list="mjsEstudiantesDatalist"
+            placeholder="Escriba cédula, nombre o carrera"
+            autocomplete="off"
+          />
+          <datalist id="mjsEstudiantesDatalist"></datalist>
+        </div>
+
+        <div class="field table-selector-field">
+          <label for="mjsSelectorEstudiante">Selector predictor</label>
+          <select id="mjsSelectorEstudiante">
+            <option value="">Seleccione un estudiante...</option>
+          </select>
+        </div>
+
+        <div class="table-tools-actions">
+          <button id="mjsBtnLimpiarBusqueda" class="btn btn-outline btn-small">
+            Limpiar búsqueda
+          </button>
+        </div>
+      </div>
+
+      <p class="table-help-text">
+        Puede buscar por cédula, nombre o carrera. También puede elegir un estudiante desde el selector.
+      </p>
+
+      <div class="table-wrapper mjs-table-wrapper">
+        <table id="mjsTablaMensajes">
+          <thead>
+            <tr>
+              <th>Cédula</th>
+              <th>Nombre</th>
+              <th>Carrera</th>
+              <th>Período</th>
+              <th>Sede</th>
+              <th>Celular</th>
+              <th>Estado</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
+
+          <tbody id="mjsTablaBody">
+            <tr>
+              <td colspan="8" class="empty-cell">
+                Seleccione un período para cargar la información.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p id="mjsTablaMensaje" class="message"></p>
+    </section>
+  </main>
+
+  <script src="../js/firebase-config.js"></script>
+  <script src="../js/database.js"></script>
+  <script src="../js/menu-superior.js"></script>
+
+  <script src="./mjs-status.js"></script>
+  <script src="./mjs-whatsapp.js"></script>
+  <script src="./mjs-data.js"></script>
+  <script src="./mjs-main.js"></script>
+</body>
+</html>

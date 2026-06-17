@@ -1,0 +1,407 @@
+<!--
+Nombre completo: index.html
+Ruta o ubicación: /incorporaciones-app/estadisticas/index.html
+
+Función o funciones:
+1. Mostrar la pantalla de estadísticas de incorporaciones.
+2. Solicitar clave de administrador antes de mostrar información.
+3. Cargar períodos desde Firebase.
+4. Consolidar estudiantes e incorporaciones.
+5. Mostrar estadísticas de respondieron, no respondieron, Quito, Manta y sin sede.
+6. Mostrar estadísticas por carrera, modalidad y sede institucional.
+7. Permitir exportar resultados.
+-->
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Estadísticas | Incorporaciones ITSQMET</title>
+
+  <link rel="stylesheet" href="../css/styles.css" />
+  <link rel="stylesheet" href="../css/menu.css" />
+  <link rel="stylesheet" href="estadisticas.css" />
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+
+<body class="page-light">
+  <div id="menuSuperior" data-active="estadisticas" data-base="../"></div>
+
+  <header class="topbar compact-topbar">
+    <div class="topbar-logo">
+      <img src="../assets/Logo.png" alt="Logo ITSQMET" />
+    </div>
+
+    <div>
+      <h1>Estadísticas de Incorporaciones</h1>
+      <p>Dashboard administrativo de respuestas y sedes</p>
+    </div>
+  </header>
+
+  <main class="container estadisticas-container">
+<!-- Corrección: en modo local no se muestra el acceso por contraseña.
+     Se mantiene el nodo para no romper las referencias actuales de estadisticas.js. -->
+<section id="statsLoginBox" class="panel hidden">
+      <h2>Acceso a estadísticas</h2>
+
+      <p class="muted">
+        Ingrese la clave de administrador para consultar las estadísticas de incorporación.
+      </p>
+
+      <div class="form-grid estadisticas-login-grid">
+        <div class="field">
+          <label for="statsPassword">Clave de administrador</label>
+          <input
+            type="password"
+            id="statsPassword"
+            placeholder="Ingrese la clave"
+            autocomplete="off"
+          />
+        </div>
+      </div>
+
+      <button id="btnStatsLogin" class="btn btn-primary">
+        Ingresar
+      </button>
+
+      <p id="statsLoginMessage" class="message"></p>
+    </section>
+
+    <section id="statsPanel" class="hidden">
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>Filtros principales</h2>
+            <p class="muted">
+              Seleccione un período y filtre por carrera, modalidad, sede institucional o sede de incorporación.
+            </p>
+          </div>
+
+          <div class="actions-row">
+            <button id="btnCargarEstadisticas" class="btn btn-primary">
+              Cargar estadísticas
+            </button>
+
+            <button id="btnRefrescarEstadisticas" class="btn btn-secondary">
+              Refrescar
+            </button>
+          </div>
+        </div>
+
+        <div class="form-grid estadisticas-filtros-grid">
+          <div class="field">
+            <label for="periodoStatsSelect">Período</label>
+            <select id="periodoStatsSelect">
+              <option value="">Cargando períodos...</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="filtroCarreraStats">Carrera</label>
+            <select id="filtroCarreraStats">
+              <option value="TODAS">Todas</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="filtroModalidadStats">Modalidad</label>
+            <select id="filtroModalidadStats">
+              <option value="TODAS">Todas</option>
+              <option value="ONLINE">Online</option>
+              <option value="NO_ONLINE">No online</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="filtroSedeInstitucionalStats">Sede institucional</label>
+            <select id="filtroSedeInstitucionalStats">
+              <option value="TODAS">Todas</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="filtroSedeIncorporacionStats">Sede incorporación</label>
+            <select id="filtroSedeIncorporacionStats">
+              <option value="TODAS">Todas</option>
+              <option value="QUITO">Quito</option>
+              <option value="MANTA">Manta</option>
+              <option value="SIN_SEDE">Sin sede</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="filtroRespuestaStats">Estado de respuesta</label>
+            <select id="filtroRespuestaStats">
+              <option value="TODOS">Todos</option>
+              <option value="RESPONDIERON">Respondieron</option>
+              <option value="NO_RESPONDIERON">No respondieron</option>
+            </select>
+          </div>
+        </div>
+
+        <p id="statsMessage" class="message"></p>
+      </section>
+
+      <section class="estadisticas-grid-resumen">
+        <article class="estadistica-card">
+          <span>Total estudiantes</span>
+          <strong id="statTotalEstudiantes">0</strong>
+          <small>Período seleccionado</small>
+        </article>
+
+        <article class="estadistica-card">
+          <span>Respondieron</span>
+          <strong id="statRespondieron">0</strong>
+          <small id="statRespondieronPct">0%</small>
+        </article>
+
+        <article class="estadistica-card">
+          <span>No respondieron</span>
+          <strong id="statNoRespondieron">0</strong>
+          <small id="statNoRespondieronPct">0%</small>
+        </article>
+
+        <article class="estadistica-card">
+          <span>Quito</span>
+          <strong id="statQuito">0</strong>
+          <small id="statQuitoPct">0%</small>
+        </article>
+
+        <article class="estadistica-card">
+          <span>Manta</span>
+          <strong id="statManta">0</strong>
+          <small id="statMantaPct">0%</small>
+        </article>
+
+        <article class="estadistica-card">
+          <span>Sin sede</span>
+          <strong id="statSinSede">0</strong>
+          <small id="statSinSedePct">0%</small>
+        </article>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>Exportaciones</h2>
+            <p class="muted">
+              Descargue las estadísticas según el análisis que necesite.
+            </p>
+          </div>
+
+          <div class="actions-row">
+            <button id="btnExportarResumen" class="btn btn-outline">Resumen</button>
+            <button id="btnExportarCarrera" class="btn btn-outline">Por carrera</button>
+            <button id="btnExportarPendientes" class="btn btn-outline">Pendientes</button>
+            <button id="btnExportarQuito" class="btn btn-outline">Quito</button>
+            <button id="btnExportarManta" class="btn btn-outline">Manta</button>
+            <button id="btnExportarTodo" class="btn btn-secondary">Exportar todo</button>
+          </div>
+        </div>
+
+        <p id="exportMessage" class="message"></p>
+      </section>
+
+      <section class="estadisticas-two-columns">
+        <section class="panel">
+          <h2>Por carrera</h2>
+          <p class="muted">Distribución de respuestas y sedes por carrera.</p>
+
+          <div class="table-wrapper estadisticas-table-wrapper">
+            <table class="estadisticas-table">
+              <thead>
+                <tr>
+                  <th>Carrera</th>
+                  <th>Total</th>
+                  <th>Respondieron</th>
+                  <th>No respondieron</th>
+                  <th>Quito</th>
+                  <th>Manta</th>
+                  <th>Sin sede</th>
+                  <th>% respuesta</th>
+                </tr>
+              </thead>
+              <tbody id="tablaCarreraBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>Por modalidad</h2>
+          <p class="muted">Comparación entre estudiantes online y no online.</p>
+
+          <div class="table-wrapper estadisticas-table-wrapper">
+            <table class="estadisticas-table">
+              <thead>
+                <tr>
+                  <th>Modalidad</th>
+                  <th>Total</th>
+                  <th>Respondieron</th>
+                  <th>No respondieron</th>
+                  <th>Quito</th>
+                  <th>Manta</th>
+                  <th>Sin sede</th>
+                  <th>% respuesta</th>
+                </tr>
+              </thead>
+              <tbody id="tablaModalidadBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <section class="panel">
+        <h2>Por sede institucional</h2>
+        <p class="muted">
+          Esta sede corresponde al campo institucional del estudiante, por ejemplo Matriz, Norte, Sur o Manta.
+        </p>
+
+        <div class="table-wrapper estadisticas-table-wrapper">
+          <table class="estadisticas-table">
+            <thead>
+              <tr>
+                <th>Sede institucional</th>
+                <th>Total</th>
+                <th>Respondieron</th>
+                <th>No respondieron</th>
+                <th>Quito</th>
+                <th>Manta</th>
+                <th>Sin sede</th>
+                <th>% respuesta</th>
+              </tr>
+            </thead>
+            <tbody id="tablaSedeInstitucionalBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="estadisticas-two-columns">
+        <section class="panel">
+          <h2>Cruce carrera vs sede</h2>
+          <p class="muted">Cuántos estudiantes de cada carrera van a Quito, Manta o siguen sin sede.</p>
+
+          <div class="table-wrapper estadisticas-table-wrapper">
+            <table class="estadisticas-table">
+              <thead>
+                <tr>
+                  <th>Carrera</th>
+                  <th>Quito</th>
+                  <th>Manta</th>
+                  <th>Sin sede</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody id="tablaCruceCarreraSedeBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>Cruce modalidad vs sede</h2>
+          <p class="muted">Distribución de online y no online por sede de incorporación.</p>
+
+          <div class="table-wrapper estadisticas-table-wrapper">
+            <table class="estadisticas-table">
+              <thead>
+                <tr>
+                  <th>Modalidad</th>
+                  <th>Quito</th>
+                  <th>Manta</th>
+                  <th>Sin sede</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody id="tablaCruceModalidadSedeBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <section class="panel">
+        <h2>Cruce sede institucional vs sede de incorporación</h2>
+        <p class="muted">
+          Permite saber desde qué sucursal o sede institucional vienen los estudiantes y a qué incorporación van.
+        </p>
+
+        <div class="table-wrapper estadisticas-table-wrapper">
+          <table class="estadisticas-table">
+            <thead>
+              <tr>
+                <th>Sede institucional</th>
+                <th>Quito</th>
+                <th>Manta</th>
+                <th>Sin sede</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody id="tablaCruceSedeInstitucionalBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="estadisticas-two-columns">
+        <section class="panel">
+          <h2>Carreras con más pendientes</h2>
+          <p class="muted">Ranking de carreras con estudiantes que aún no han elegido sede.</p>
+
+          <div class="table-wrapper estadisticas-table-wrapper">
+            <table class="estadisticas-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Carrera</th>
+                  <th>No respondieron</th>
+                  <th>Total</th>
+                  <th>% pendiente</th>
+                </tr>
+              </thead>
+              <tbody id="tablaRankingPendientesBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>Listado detallado</h2>
+
+          <div class="field estadisticas-listado-selector">
+            <label for="tipoListadoStats">Mostrar listado</label>
+            <select id="tipoListadoStats">
+              <option value="PENDIENTES">Pendientes por responder</option>
+              <option value="QUITO">Estudiantes que van a Quito</option>
+              <option value="MANTA">Estudiantes que van a Manta</option>
+            </select>
+          </div>
+
+          <div class="table-wrapper estadisticas-table-wrapper">
+            <table class="estadisticas-table">
+              <thead>
+                <tr>
+                  <th>Cédula</th>
+                  <th>Nombres</th>
+                  <th>Carrera</th>
+                  <th>Modalidad</th>
+                  <th>Sede institucional</th>
+                  <th>Sede incorporación</th>
+                </tr>
+              </thead>
+              <tbody id="tablaListadoDetalleBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+    </section>
+  </main>
+
+  <script src="../js/firebase-config.js"></script>
+  <script src="../js/database.js"></script>
+  <script src="../js/incorporaciones-manager.js"></script>
+  <script src="../js/menu-superior.js"></script>
+  <script src="estadisticas-export.js"></script>
+  <script src="estadisticas.js"></script>
+</body>
+</html>

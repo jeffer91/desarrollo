@@ -1,0 +1,543 @@
+/*
+=========================================================
+Nombre completo: falt.css
+Ruta o ubicación: /incorporaciones/falt/falt.css
+
+Función o funciones:
+1. Diseñar la pantalla principal del módulo Faltantes.
+2. Estilizar controles, resumen, tabla y botones.
+3. Estilizar el pop-up de búsqueda de estudiantes.
+4. Mostrar visualmente encontrados, coincidencias múltiples y no encontrados.
+5. Mantener coherencia con el menú superior de Incorporaciones.
+
+Con qué se conecta:
+- falt.html
+- falt.table.js
+- falt.app.js
+=========================================================
+*/
+
+:root {
+  --falt-bg: #f3f6fb;
+  --falt-card: #ffffff;
+  --falt-text: #172033;
+  --falt-muted: #667085;
+  --falt-border: #d9e2ef;
+  --falt-primary: #1f4f8f;
+  --falt-primary-dark: #173d70;
+  --falt-primary-soft: #e9f1ff;
+  --falt-success: #147a3f;
+  --falt-success-soft: #eaf8ef;
+  --falt-warning: #b86b00;
+  --falt-warning-soft: #fff7e8;
+  --falt-danger: #b42318;
+  --falt-danger-soft: #fff0f0;
+  --falt-shadow: 0 16px 40px rgba(16, 24, 40, 0.08);
+  --falt-radius: 18px;
+  --falt-font: Arial, Helvetica, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  background: var(--falt-bg);
+  color: var(--falt-text);
+  font-family: var(--falt-font);
+}
+
+.falt-page {
+  width: min(1240px, calc(100% - 28px));
+  margin: 18px auto 46px;
+}
+
+.falt-card {
+  margin-bottom: 16px;
+  padding: 20px;
+  border: 1px solid var(--falt-border);
+  border-radius: var(--falt-radius);
+  background: var(--falt-card);
+  box-shadow: var(--falt-shadow);
+}
+
+.falt-controls {
+  display: grid;
+  gap: 18px;
+}
+
+.falt-control-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr 0.8fr 0.8fr;
+  gap: 14px;
+}
+
+.falt-field {
+  display: grid;
+  gap: 8px;
+}
+
+.falt-field span {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--falt-primary-dark);
+}
+
+.falt-field input,
+.falt-field select,
+.falt-field textarea {
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 12px;
+  border: 1px solid var(--falt-border);
+  border-radius: 12px;
+  background: #ffffff;
+  color: var(--falt-text);
+  outline: none;
+  font-size: 14px;
+  font-family: var(--falt-font);
+}
+
+.falt-field textarea {
+  min-height: 150px;
+  resize: vertical;
+  line-height: 1.45;
+}
+
+.falt-field input:focus,
+.falt-field select:focus,
+.falt-field textarea:focus {
+  border-color: var(--falt-primary);
+  box-shadow: 0 0 0 3px rgba(31, 79, 143, 0.12);
+}
+
+.falt-actions,
+.falt-modal-actions,
+.falt-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.falt-btn {
+  min-height: 40px;
+  padding: 9px 15px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+  font-family: var(--falt-font);
+  transition: background 0.15s ease, transform 0.15s ease, border-color 0.15s ease;
+}
+
+.falt-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.falt-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.falt-btn-primary {
+  background: var(--falt-primary);
+  border-color: var(--falt-primary);
+  color: #ffffff;
+}
+
+.falt-btn-primary:hover:not(:disabled) {
+  background: var(--falt-primary-dark);
+}
+
+.falt-btn-secondary {
+  background: var(--falt-primary-soft);
+  border-color: #bfd4f6;
+  color: var(--falt-primary-dark);
+}
+
+.falt-btn-ghost {
+  background: #ffffff;
+  border-color: var(--falt-border);
+  color: var(--falt-primary);
+}
+
+.falt-btn-danger {
+  background: var(--falt-danger-soft);
+  border-color: #fecaca;
+  color: var(--falt-danger);
+}
+
+.falt-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.falt-summary h2,
+.falt-preview-card h2,
+.falt-table-header h2 {
+  margin: 0 0 4px;
+  color: var(--falt-primary-dark);
+  font-size: 20px;
+}
+
+.falt-summary p,
+.falt-muted,
+.falt-table-header p {
+  margin: 0;
+  color: var(--falt-muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.falt-kpis {
+  display: flex;
+  gap: 12px;
+}
+
+.falt-kpi {
+  min-width: 120px;
+  padding: 13px 15px;
+  border: 1px solid var(--falt-border);
+  border-radius: 16px;
+  background: #fbfdff;
+  text-align: center;
+}
+
+.falt-kpi strong {
+  display: block;
+  font-size: 28px;
+  color: var(--falt-primary-dark);
+}
+
+.falt-kpi span {
+  display: block;
+  color: var(--falt-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.falt-message-preview {
+  min-height: 120px;
+  margin: 12px 0 0;
+  padding: 14px;
+  border: 1px solid var(--falt-border);
+  border-radius: 14px;
+  background: #fbfdff;
+  white-space: pre-wrap;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--falt-text);
+}
+
+.falt-table-header {
+  margin-bottom: 14px;
+}
+
+.falt-table-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--falt-border);
+  border-radius: 14px;
+}
+
+.falt-table {
+  width: 100%;
+  min-width: 980px;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+
+.falt-table th {
+  padding: 12px;
+  text-align: left;
+  background: var(--falt-primary);
+  color: #ffffff;
+  font-size: 13px;
+}
+
+.falt-table td {
+  padding: 12px;
+  border-top: 1px solid var(--falt-border);
+  vertical-align: top;
+  font-size: 13px;
+}
+
+.falt-table tr:hover td {
+  background: #fbfdff;
+}
+
+.falt-empty {
+  padding: 28px !important;
+  text-align: center;
+  color: var(--falt-muted);
+}
+
+.falt-center {
+  text-align: center;
+}
+
+.falt-student-name {
+  display: block;
+  font-weight: 800;
+  color: var(--falt-text);
+}
+
+.falt-student-meta {
+  display: block;
+  margin-top: 3px;
+  color: var(--falt-muted);
+  font-size: 12px;
+}
+
+.falt-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.falt-badge-warning {
+  background: var(--falt-warning-soft);
+  color: var(--falt-warning);
+}
+
+.falt-badge-success {
+  background: var(--falt-success-soft);
+  color: var(--falt-success);
+}
+
+.falt-badge-danger {
+  background: var(--falt-danger-soft);
+  color: var(--falt-danger);
+}
+
+.falt-badge-muted {
+  background: #f1f5f9;
+  color: var(--falt-muted);
+}
+
+.falt-contact-list {
+  display: grid;
+  gap: 4px;
+}
+
+.falt-contact-item {
+  color: var(--falt-muted);
+  font-size: 12px;
+}
+
+.falt-row-actions {
+  justify-content: center;
+}
+
+.falt-row-actions .falt-btn {
+  min-height: 32px;
+  padding: 6px 9px;
+  border-radius: 10px;
+  font-size: 12px;
+}
+
+.falt-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+}
+
+.falt-modal.is-hidden {
+  display: none;
+}
+
+.falt-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.56);
+  backdrop-filter: blur(3px);
+}
+
+.falt-modal-card {
+  position: relative;
+  z-index: 2;
+  width: min(980px, 100%);
+  max-height: calc(100vh - 44px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border-radius: 24px;
+  background: #ffffff;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.28);
+}
+
+.falt-modal-header {
+  padding: 22px 24px;
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  border-bottom: 1px solid var(--falt-border);
+  background: linear-gradient(135deg, #ffffff, #f8fbff);
+}
+
+.falt-modal-header h2 {
+  margin: 4px 0 6px;
+  color: var(--falt-primary-dark);
+  font-size: 24px;
+}
+
+.falt-modal-header p {
+  margin: 0;
+  color: var(--falt-muted);
+  line-height: 1.45;
+}
+
+.falt-eyebrow {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--falt-primary);
+}
+
+.falt-modal-close {
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--falt-border);
+  border-radius: 12px;
+  background: #ffffff;
+  color: var(--falt-text);
+  cursor: pointer;
+  font-size: 26px;
+  line-height: 1;
+}
+
+.falt-modal-body {
+  padding: 22px 24px;
+  overflow: auto;
+  display: grid;
+  gap: 16px;
+}
+
+.falt-search-summary {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--falt-primary-soft);
+  color: var(--falt-primary-dark);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.falt-search-results {
+  display: grid;
+  gap: 14px;
+}
+
+.falt-result-section {
+  border: 1px solid var(--falt-border);
+  border-radius: 16px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.falt-result-section h3 {
+  margin: 0;
+  padding: 12px 14px;
+  background: #fbfdff;
+  border-bottom: 1px solid var(--falt-border);
+  color: var(--falt-primary-dark);
+  font-size: 15px;
+}
+
+.falt-result-list {
+  display: grid;
+  gap: 0;
+}
+
+.falt-result-item {
+  padding: 12px 14px;
+  border-top: 1px solid var(--falt-border);
+}
+
+.falt-result-item:first-child {
+  border-top: 0;
+}
+
+.falt-result-main {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.falt-result-main strong {
+  display: block;
+  color: var(--falt-text);
+}
+
+.falt-result-main span {
+  display: block;
+  margin-top: 3px;
+  color: var(--falt-muted);
+  font-size: 12px;
+}
+
+.falt-options {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.falt-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--falt-border);
+  border-radius: 12px;
+  background: #fbfdff;
+  cursor: pointer;
+}
+
+.falt-option input {
+  margin-top: 3px;
+}
+
+.falt-no-found {
+  color: var(--falt-danger);
+  font-weight: 800;
+}
+
+@media (max-width: 920px) {
+  .falt-control-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .falt-summary {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .falt-kpis {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .falt-modal {
+    padding: 12px;
+  }
+
+  .falt-modal-header {
+    flex-direction: column;
+  }
+}

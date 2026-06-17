@@ -1,0 +1,526 @@
+/* =========================================================
+Nombre del archivo: cap.manage.styles.css
+Ruta - Ubicación: /cap.manage/cap.manage.styles.css
+Función:
+- Estilos pantalla Gestión Capacitaciones
+- Corrección visual:
+  Se alinea esta pantalla con la misma paleta clara y profesional
+  usada en /menu/menu.shell.css y /cap.assign/cap.assign.styles.css.
+  Esto evita que Gestión use un clima visual distinto al resto.
+- Mantiene look UTET (gradientes suaves + acentos vivos)
+- Mejor alineación: grids, hero, botones, tabla, controles (sin tocar HTML)
+
+CORRECCIÓN (Compacto + Alineación):
+- ✅ Más compacto: reduce alturas/paddings/gaps (sin cambiar estructura HTML)
+- ✅ Alinea steppers: .stepper + .iconbtn para que (- / año / +) queden centrados y parejos
+========================================================= */
+
+/* =========================================================
+1) TOKENS – ALINEADOS al shell común
+========================================================= */
+:root{
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+  color-scheme: light;
+
+  /* Corrección técnica:
+  se usa la misma base cromática común para que esta vista no se vea distinta. */
+  --bg:#f4f7ff;
+  --surface:#ffffff;
+  --surface2:#ffffff;
+
+  --text:#0b1220;
+  --muted:#475569;
+
+  --line: rgba(2,6,23,.12);
+  --line2: rgba(2,6,23,.16);
+
+  /* Acción */
+  --blue:#2563eb;
+  --blueHover:#1d4ed8;
+  --indigo:#4f46e5;
+
+  /* Soft */
+  --softBlue: rgba(37,99,235,.12);
+  --softIndigo: rgba(79,70,229,.10);
+
+  /* Estados */
+  --green:#16a34a;
+  --softGreen: rgba(34,197,94,.12);
+
+  --amber:#d97706;
+  --softAmber: rgba(245,158,11,.14);
+
+  --red:#dc2626;
+  --softRed: rgba(244,63,94,.12);
+
+  --graySoft:#f1f5f9;
+
+  /* Corrección técnica:
+  mismas sombras del sistema para mantener profundidad consistente. */
+  --shadowSm: 0 10px 18px rgba(2,6,23,.10);
+  --shadowMd: 0 14px 26px rgba(2,6,23,.12);
+
+  --radius:18px;
+  --rCtl:14px;
+  --rPill:999px;
+
+  /* Tipos */
+  --fsTitle:16px;
+  --fsH3:14px;
+  --fsBase:13px;
+  --fsSmall:12px;
+
+  /* Espacios */
+  --gap: 8px;
+  --gapLg: 12px;
+  --padCard: 10px;
+
+  /* Controles */
+  --controlH: 36px;
+  --padCtlX: 10px;
+
+  /* Layout */
+  --wrapMax: 1200px;
+  --wrapPad: 10px;
+
+  /* Tabla */
+  --minTable: 980px;
+
+  /* Anchos sugeridos (no rompe el grid) */
+  --w-month: 220px;
+  --w-year: 110px;
+  --w-date: 220px;
+  --w-duration: 220px;
+  --w-search: 280px;
+}
+
+*{ box-sizing:border-box; }
+html, body{ height:100%; }
+
+/* Scrollbar (desktop) */
+*::-webkit-scrollbar{ height:10px; width:10px; }
+*::-webkit-scrollbar-thumb{
+  background: rgba(2,6,23,.16);
+  border-radius: 999px;
+}
+*::-webkit-scrollbar-thumb:hover{ background: rgba(2,6,23,.24); }
+*::-webkit-scrollbar-track{ background: rgba(2,6,23,.06); }
+
+/* =========================================================
+2) BODY / FONDO (alineado al shell común)
+========================================================= */
+body{
+  margin:0;
+  color: var(--text);
+  /* Corrección técnica:
+  se replica el fondo visual del shell para que la pantalla mantenga el mismo clima. */
+  background:
+    radial-gradient(1200px 700px at 18% 0%, rgba(37,99,235,.14), transparent 60%),
+    radial-gradient(900px 600px at 90% 10%, rgba(79,70,229,.12), transparent 55%),
+    linear-gradient(180deg, #ffffff 0%, var(--bg) 55%, #ffffff 100%);
+}
+
+/* =========================================================
+3) LAYOUT / TARJETAS
+========================================================= */
+.wrap{
+  padding: var(--wrapPad);
+  max-width: var(--wrapMax);
+  margin: 0 auto;
+}
+
+.card{
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--padCard);
+  box-shadow: var(--shadowSm);
+}
+
+/* Cards “grandes” (hero/form/tabla) */
+.hero,
+.card.form,
+.table-card{
+  box-shadow: var(--shadowMd);
+}
+
+/* =========================================================
+4) HERO / SECCIONES (alineación izquierda, sin centrados)
+========================================================= */
+.hero{
+  display:flex;
+  gap: var(--gapLg);
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+
+  border-left: 6px solid var(--blue);
+  background: linear-gradient(180deg, rgba(37,99,235,.10), transparent);
+}
+
+.card.form{
+  border-left: 6px solid var(--indigo);
+  background: linear-gradient(180deg, rgba(79,70,229,.10), transparent);
+  margin-top: 10px;
+}
+
+.table-card{
+  margin-top: 10px;
+  border-left: 6px solid var(--green);
+  background: linear-gradient(180deg, rgba(22,163,74,.10), transparent);
+}
+
+.title{
+  font-size: var(--fsTitle);
+  font-weight: 950;
+  letter-spacing: .2px;
+  line-height: 1.1;
+}
+
+.subtitle{
+  font-size: var(--fsSmall);
+  color: var(--muted);
+  margin-top: 4px;
+  line-height: 1.35;
+}
+
+/* =========================================================
+5) MENSAJES
+========================================================= */
+.msg{
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: var(--rCtl);
+  border: 1px solid var(--line);
+  background: #fbfcff;
+  font-size: var(--fsBase);
+  line-height: 1.35;
+  box-shadow: 0 1px 0 rgba(2,6,23,.03);
+  color: var(--text);
+}
+
+.msg[data-type="ok"]{
+  background: linear-gradient(180deg, rgba(34,197,94,.12), rgba(255,255,255,.90));
+  border-color: rgba(22,163,74,.20);
+}
+.msg[data-type="err"]{
+  background: linear-gradient(180deg, rgba(244,63,94,.12), rgba(255,255,255,.90));
+  border-color: rgba(220,38,38,.22);
+}
+.msg[data-type="info"]{
+  background: linear-gradient(180deg, rgba(37,99,235,.12), rgba(255,255,255,.90));
+  border-color: rgba(37,99,235,.20);
+}
+.msg[data-type="warn"]{
+  background: linear-gradient(180deg, rgba(245,158,11,.14), rgba(255,255,255,.90));
+  border-color: rgba(217,119,6,.22);
+}
+
+/* =========================================================
+6) CONTROLES (altura consistente + alineación)
+========================================================= */
+label{
+  font-size: var(--fsSmall);
+  color: var(--muted);
+  margin-bottom: 6px;
+  display:block;
+}
+
+input, select, textarea{
+  width: 100%;
+  min-height: var(--controlH);
+  border-radius: var(--rCtl);
+  border: 1px solid var(--line2);
+  background: var(--surface);
+  color: var(--text);
+  padding: 0 var(--padCtlX);
+  font-size: var(--fsBase);
+  font-weight: 900;
+  outline: none;
+  box-shadow: 0 1px 0 rgba(2,6,23,.03);
+  line-height: 1.2;
+}
+
+textarea{
+  padding: 10px var(--padCtlX);
+  min-height: 78px;
+  resize: vertical;
+}
+
+input::placeholder, textarea::placeholder{
+  color: rgba(71,85,105,.80);
+}
+
+input:focus, select:focus, textarea:focus{
+  border-color: rgba(37,99,235,.35);
+  box-shadow: 0 0 0 4px rgba(37,99,235,.14);
+}
+
+/* =========================================================
+6.1) ✅ STEPPER (alineación - / año / +)
+========================================================= */
+.stepper{
+  display:flex;
+  align-items:center;
+  gap: 8px;
+}
+
+.stepper input{
+  /* Comentario: asegura mismo alto y centrado del año */
+  min-height: var(--controlH);
+  height: var(--controlH);
+  text-align: center;
+  font-weight: 950;
+  padding: 0 10px;
+}
+
+.iconbtn{
+  /* Comentario: el botón del stepper debe ser cuadrado y centrado
+     para evitar que “flote” o se desalineen los signos */
+  width: var(--controlH);
+  height: var(--controlH);
+  min-width: var(--controlH);
+  padding: 0;
+  border-radius: 999px;
+  line-height: 1;
+  font-size: 16px;
+  font-weight: 950;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+}
+
+/* =========================================================
+7) BOTONES
+========================================================= */
+button{
+  height: var(--controlH);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap: 8px;
+
+  border-radius: var(--rPill);
+  border: 1px solid rgba(37,99,235,.22);
+  background: rgba(255,255,255,.92);
+  color: var(--text);
+  padding: 0 12px;
+  box-shadow: var(--shadowSm);
+  font-size: var(--fsBase);
+  font-weight: 950;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: transform .06s ease, filter .12s ease, background .12s ease, border-color .12s ease;
+}
+
+button:hover{
+  filter: brightness(1.03);
+  border-color: rgba(37,99,235,.32);
+}
+
+button:active{ transform: translateY(1px); }
+
+button:focus-visible{
+  box-shadow: 0 0 0 4px rgba(37,99,235,.14), var(--shadowSm);
+  border-color: rgba(37,99,235,.35);
+}
+
+button[disabled],
+button[data-disabled="1"]{
+  opacity: .55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn{ cursor:pointer; font-weight: 950; }
+
+/* Primario */
+.btn.primary{
+  color:#fff;
+  border-color: transparent;
+  background: linear-gradient(180deg, var(--blue), var(--indigo));
+}
+.btn.primary:hover{
+  background: linear-gradient(180deg, #2f6df2, #564eea);
+}
+
+/* Ghost */
+.btn.ghost{
+  background: rgba(37,99,235,.08);
+  border-color: rgba(37,99,235,.20);
+  color: #1d4ed8;
+}
+.btn.ghost:hover{
+  background: rgba(37,99,235,.12);
+  border-color: rgba(37,99,235,.28);
+}
+
+/* Danger ghost */
+.btn.ghost.danger{
+  background: rgba(220,38,38,.10);
+  border-color: rgba(220,38,38,.22);
+  color: #b91c1c;
+}
+.btn.ghost.danger:hover{
+  background: rgba(220,38,38,.14);
+  border-color: rgba(220,38,38,.30);
+}
+
+/* Opcionales */
+.btn.success{
+  color:#fff;
+  border-color: transparent;
+  background: var(--green);
+}
+.btn.secondary{
+  color:#fff;
+  border-color: transparent;
+  background: var(--indigo);
+}
+
+/* =========================================================
+8) TEXTOS
+========================================================= */
+.h3{
+  font-size: var(--fsH3);
+  font-weight: 950;
+  letter-spacing: .15px;
+}
+.muted{ color: var(--muted); font-size: var(--fsSmall); }
+
+/* =========================================================
+9) FORM GRID (3 → 2 → 1) + alineación fina
+========================================================= */
+.grid{
+  display:grid;
+  grid-template-columns: repeat(3, minmax(240px, 1fr));
+  gap: var(--gapLg);
+  align-items: end;
+}
+
+.span-2{ grid-column: span 3; }
+
+/* Anchitos sugeridos (sin romper) */
+#capMesIni, #capMesFin{ max-width: var(--w-month); }
+#capFechaIni, #capFechaFin{ max-width: var(--w-date); }
+#capHoras{ max-width: var(--w-duration); }
+
+.actions,
+.row-actions{
+  display:flex;
+  gap: var(--gap);
+  align-items:center;
+  flex-wrap:wrap;
+  margin-top: 10px;
+}
+
+/* =========================================================
+10) TABLA
+========================================================= */
+.hr{
+  height:1px;
+  background: rgba(2,6,23,.08);
+  margin: 10px 0;
+}
+
+.table-host{
+  overflow:auto;
+  border-radius: var(--rCtl);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadowSm);
+}
+
+/* Tabla con spacing tipo cards */
+table{
+  width:100%;
+  min-width: var(--minTable);
+  border-collapse: separate;
+  border-spacing: 0 8px;
+  padding: 8px;
+}
+
+thead th{
+  position: sticky;
+  top: 0;
+  z-index: 5;
+
+  background: linear-gradient(180deg, rgba(37,99,235,.10), rgba(255,255,255,1));
+  font-size: var(--fsSmall);
+  color: var(--muted);
+  text-align: left;
+  padding: 8px 10px;
+  border: 0;
+  font-weight: 950;
+}
+
+tbody tr{
+  background: #fff;
+  box-shadow: var(--shadowSm);
+}
+
+tbody td{
+  padding: 8px 10px;
+  font-size: var(--fsBase);
+  text-align: left;
+  vertical-align: middle;
+  border: 0;
+  font-weight: 850;
+  color: var(--text);
+}
+
+tbody tr td:first-child{
+  border-top-left-radius: 12px;
+  border-bottom-left-radius: 12px;
+}
+tbody tr td:last-child{
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
+
+tbody tr:hover td{
+  background: rgba(37,99,235,.06);
+}
+
+/* =========================================================
+11) BREAKPOINTS
+========================================================= */
+@media (max-width: 980px){
+  .grid{ grid-template-columns: repeat(2, minmax(240px, 1fr)); }
+  .span-2{ grid-column: span 2; }
+}
+
+@media (max-width: 740px){
+  :root{
+    --wrapPad: 10px;
+    --minTable: 760px;
+    --w-search: 100%;
+  }
+
+  .grid{ grid-template-columns: 1fr; }
+  .span-2{ grid-column:auto; }
+
+  #capMesIni,
+  #capMesFin,
+  #capFechaIni,
+  #capFechaFin,
+  #capHoras{
+    max-width:none;
+    width:100%;
+  }
+
+  button{
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* ✅ En móvil, stepper apila sin “saltar” */
+  .stepper{
+    width: 100%;
+    justify-content: space-between;
+  }
+  .stepper input{
+    flex: 1;
+    margin: 0 8px;
+  }
+}

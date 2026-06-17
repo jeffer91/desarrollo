@@ -1,0 +1,367 @@
+/*
+=========================================================
+Nombre completo: coordi.styles.css
+Ruta o ubicación: /Docentes/coordi/coordi.styles.css
+Función o funciones:
+- Dar estilo visual a la pantalla Coordi.
+- Diseñar tabla editable tipo Excel.
+- Estilizar botones, encabezado, filtros, alertas y estados.
+- Mantener una presentación limpia e institucional.
+Con qué se une:
+- coordi.index.html
+=========================================================
+*/
+
+:root {
+  --coordi-bg: #f4f7fb;
+  --coordi-card: #ffffff;
+  --coordi-primary: #0d47a1;
+  --coordi-primary-dark: #08306f;
+  --coordi-secondary: #eef4ff;
+  --coordi-border: #d8e2ef;
+  --coordi-text: #1f2937;
+  --coordi-muted: #64748b;
+  --coordi-danger: #b91c1c;
+  --coordi-warning: #92400e;
+  --coordi-success: #166534;
+  --coordi-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+  --coordi-radius: 18px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--coordi-bg);
+  color: var(--coordi-text);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.coordi-page {
+  width: min(1450px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 28px 0 48px;
+}
+
+.coordi-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: flex-start;
+  margin-bottom: 22px;
+}
+
+.coordi-kicker {
+  margin: 0 0 6px;
+  color: var(--coordi-primary);
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.coordi-header h1 {
+  margin: 0;
+  color: var(--coordi-primary-dark);
+  font-size: clamp(28px, 4vw, 42px);
+  line-height: 1.05;
+}
+
+.coordi-description {
+  max-width: 780px;
+  margin: 10px 0 0;
+  color: var(--coordi-muted);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.coordi-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+  min-width: 360px;
+}
+
+.coordi-card {
+  background: var(--coordi-card);
+  border: 1px solid var(--coordi-border);
+  border-radius: var(--coordi-radius);
+  box-shadow: var(--coordi-shadow);
+}
+
+.coordi-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: end;
+  padding: 18px;
+  margin-bottom: 14px;
+}
+
+.coordi-toolbar-left {
+  flex: 1;
+}
+
+.coordi-toolbar-right {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.field {
+  display: grid;
+  gap: 7px;
+}
+
+.field span {
+  color: var(--coordi-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.field input {
+  width: 100%;
+  height: 42px;
+  padding: 0 13px;
+  border: 1px solid var(--coordi-border);
+  border-radius: 12px;
+  color: var(--coordi-text);
+  background: #fff;
+  outline: none;
+  font-size: 14px;
+}
+
+.field input:focus {
+  border-color: var(--coordi-primary);
+  box-shadow: 0 0 0 3px rgba(13, 71, 161, 0.12);
+}
+
+.btn {
+  height: 40px;
+  padding: 0 15px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 800;
+  font-size: 13px;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+.btn-primary {
+  background: var(--coordi-primary);
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(13, 71, 161, 0.22);
+}
+
+.btn-primary:hover {
+  background: var(--coordi-primary-dark);
+}
+
+.btn-secondary {
+  background: var(--coordi-secondary);
+  color: var(--coordi-primary-dark);
+  border-color: #c9daf7;
+}
+
+.btn-light {
+  background: #fff;
+  color: var(--coordi-primary-dark);
+  border-color: var(--coordi-border);
+}
+
+.btn-danger {
+  background: #fee2e2;
+  color: var(--coordi-danger);
+  border-color: #fecaca;
+}
+
+.coordi-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin: 0 0 14px;
+  color: var(--coordi-muted);
+  font-size: 13px;
+}
+
+.coordi-status span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 5px 10px;
+  border: 1px solid var(--coordi-border);
+  border-radius: 999px;
+  background: #fff;
+}
+
+.coordi-errors {
+  margin-bottom: 14px;
+  padding: 14px 16px;
+  border: 1px solid #fecaca;
+  border-radius: 16px;
+  background: #fff1f2;
+  color: var(--coordi-danger);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.coordi-errors strong {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.coordi-errors ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.table-card {
+  overflow: hidden;
+}
+
+.table-scroll {
+  width: 100%;
+  overflow: auto;
+}
+
+.coordi-table {
+  width: 100%;
+  min-width: 980px;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.coordi-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #f8fafc;
+  color: #334155;
+  border-bottom: 1px solid var(--coordi-border);
+  font-size: 12px;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 13px 12px;
+}
+
+.coordi-table tbody td {
+  border-bottom: 1px solid #edf2f7;
+  padding: 8px 10px;
+  vertical-align: middle;
+}
+
+.coordi-table tbody tr:hover {
+  background: #f8fbff;
+}
+
+.col-number {
+  width: 64px;
+  text-align: center !important;
+}
+
+.col-actions {
+  width: 130px;
+  text-align: center !important;
+}
+
+.row-number {
+  color: var(--coordi-muted);
+  text-align: center;
+  font-weight: 800;
+}
+
+.coordi-cell-input {
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--coordi-text);
+  outline: none;
+  font-size: 14px;
+}
+
+.coordi-cell-input:hover {
+  border-color: #dbe7f5;
+  background: #fff;
+}
+
+.coordi-cell-input:focus {
+  border-color: var(--coordi-primary);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(13, 71, 161, 0.12);
+}
+
+.coordi-cell-input.invalid {
+  border-color: #ef4444;
+  background: #fff1f2;
+}
+
+.row-actions {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.icon-btn {
+  width: 34px;
+  height: 34px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid var(--coordi-border);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--coordi-muted);
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.icon-btn:hover {
+  border-color: var(--coordi-primary);
+  color: var(--coordi-primary);
+}
+
+.icon-btn.delete:hover {
+  border-color: #fecaca;
+  background: #fff1f2;
+  color: var(--coordi-danger);
+}
+
+.empty-row {
+  padding: 32px 16px !important;
+  text-align: center;
+  color: var(--coordi-muted);
+}
+
+@media (max-width: 900px) {
+  .coordi-header {
+    display: grid;
+  }
+
+  .coordi-header-actions {
+    justify-content: flex-start;
+    min-width: unset;
+  }
+
+  .coordi-toolbar {
+    display: grid;
+  }
+}

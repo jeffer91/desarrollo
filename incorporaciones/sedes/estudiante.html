@@ -1,0 +1,186 @@
+<!--
+Nombre completo: estudiante.html
+Ruta o ubicación: /incorporaciones-app/estudiante.html
+
+Función o funciones:
+1. Mostrar la vista del estudiante.
+2. Buscar al estudiante por número de cédula dentro de los períodos activos.
+3. Tomar el período activo más actual si el estudiante aparece en más de uno.
+4. Mostrar datos principales de forma compacta.
+5. Validar que el estudiante esté habilitado.
+6. Permitir escoger sede de incorporación: Quito o Manta.
+7. Bloquear cambio de sede si ya respondió.
+8. Guardar la sede en la colección incorporaciones.
+9. Guardar copia de compatibilidad en Estudiantes.
+10. Guardar respaldo local en el navegador.
+11. Capturar Telegram del estudiante antes de guardar la respuesta.
+12. Permitir registrar que el estudiante no irá a la incorporación.
+-->
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Estudiante | Incorporaciones ITSQMET</title>
+
+  <link rel="stylesheet" href="css/styles.css" />
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore-compat.js"></script>
+</head>
+
+<body class="page-light">
+  <header class="topbar compact-topbar">
+    <div class="topbar-logo">
+      <img src="assets/Logo.png" alt="Logo ITSQMET" />
+    </div>
+
+    <div>
+      <h1>Registro de Sede de Incorporación</h1>
+      <p>Consulta y selección de sede</p>
+    </div>
+  </header>
+
+  <main class="container student-container compact-student-container">
+
+    <section class="panel compact-panel">
+      <h2>Consulta de estudiante</h2>
+
+      <p class="muted compact-muted">
+        Ingrese su número de cédula para verificar su información.
+      </p>
+
+      <div class="compact-search-row">
+        <div class="field compact-field">
+          <label for="cedulaInput">Número de cédula</label>
+          <input
+            type="text"
+            id="cedulaInput"
+            placeholder="Ejemplo: 1002173340"
+            inputmode="numeric"
+            autocomplete="off"
+          />
+        </div>
+
+        <button id="btnBuscarCedula" class="btn btn-primary">
+          Consultar
+        </button>
+      </div>
+
+      <p id="consultaMessage" class="message"></p>
+    </section>
+
+    <section id="datosEstudianteBox" class="panel compact-panel hidden">
+      <div class="compact-student-header">
+        <div>
+          <h2>Datos del estudiante</h2>
+          <p class="muted compact-muted">
+            Revise que su información sea correcta antes de seleccionar sede.
+          </p>
+        </div>
+      </div>
+
+      <div class="student-compact-card">
+        <div>
+          <span>Cédula</span>
+          <strong id="datoCedula">-</strong>
+        </div>
+
+        <div>
+          <span>Nombres</span>
+          <strong id="datoNombres">-</strong>
+        </div>
+
+        <div>
+          <span>Carrera</span>
+          <strong id="datoCarrera">-</strong>
+        </div>
+
+        <div>
+          <span>Período</span>
+          <strong id="datoPeriodo">-</strong>
+        </div>
+
+        <div>
+          <span>Sede registrada</span>
+          <strong id="datoSedeActual">Sin registrar</strong>
+        </div>
+      </div>
+    </section>
+
+    <section id="sedeBox" class="panel compact-panel hidden">
+      <h2>Seleccione la sede de incorporación</h2>
+
+      <p class="muted compact-muted">
+        Esta selección solo podrá ser modificada por el administrador.
+      </p>
+
+      <!-- Corrección: se agrega el campo Telegram antes de guardar la respuesta.
+           Permite que estudiante.js lea este valor y lo envíe junto con la sede a Firebase. -->
+      <div class="field compact-field">
+        <label for="telegramInput">Telegram</label>
+        <input
+          type="text"
+          id="telegramInput"
+          placeholder="Ejemplo: @usuario o número de Telegram"
+          autocomplete="off"
+        />
+      </div>
+
+      <div class="sede-grid compact-sede-grid">
+        <button class="sede-option compact-sede-option" data-sede="QUITO">
+          <span>Quito</span>
+          <small>Seleccionar Quito</small>
+        </button>
+
+        <button class="sede-option compact-sede-option" data-sede="MANTA">
+          <span>Manta</span>
+          <small>Seleccionar Manta</small>
+        </button>
+      </div>
+
+      <!-- Corrección: botón independiente para registrar que el estudiante no irá.
+           El id propio evita mezclar esta acción con la selección normal de Quito o Manta. -->
+      <div class="center compact-return">
+        <button id="btnNoIre" type="button" class="btn btn-outline btn-small">
+          No iré
+        </button>
+      </div>
+
+      <p id="sedeMessage" class="message"></p>
+    </section>
+
+    <section id="yaRespondioBox" class="panel compact-panel warning-panel hidden">
+      <h2>Sede ya registrada</h2>
+
+      <p id="yaRespondioTexto">
+        Usted ya registra una sede de incorporación.
+      </p>
+    </section>
+
+    <section id="noHabilitadoBox" class="panel compact-panel warning-panel hidden">
+      <h2>No habilitado/a para selección de sede</h2>
+
+      <p>
+        Actualmente no puede seleccionar sede. Por favor, contacte con el Coordinador de Titulación.
+      </p>
+
+      <div id="requisitosPendientesBox" class="pending-list compact-pending-list"></div>
+    </section>
+
+    <div class="center compact-return">
+      <a href="index.html" class="btn btn-outline">
+        Volver al inicio
+      </a>
+    </div>
+  </main>
+
+  <script src="js/firebase-config.js"></script>
+  <script src="js/database.js"></script>
+  <script src="js/incorporaciones-manager.js"></script>
+  <script src="js/local-backup.js"></script>
+  <script src="js/estudiante.js"></script>
+</body>
+</html>

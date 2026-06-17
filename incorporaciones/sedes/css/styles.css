@@ -1,0 +1,891 @@
+/*
+Nombre completo: styles.css
+Ruta o ubicación: /incorporaciones-app/css/styles.css
+
+Función o funciones:
+1. Definir el diseño general de la aplicación.
+2. Aplicar fondo oscuro en la pantalla inicial para resaltar el logo institucional.
+3. Estilizar formularios, botones, tablas, tarjetas y mensajes.
+4. Compactar la pantalla del estudiante para reducir scroll.
+5. Estilizar la gestión de períodos activos.
+6. Estilizar el buscador, selector de estudiantes y encabezados ordenables del administrador.
+7. Adaptar la app a celulares, tablets y pantallas de escritorio.
+*/
+
+:root {
+  --bg-dark: #050505;
+  --bg-light: #f4f6fa;
+  --panel: #ffffff;
+  --text: #1f2937;
+  --muted: #6b7280;
+  --primary: #c9a96a;
+  --primary-dark: #9d7d42;
+  --secondary: #111827;
+  --danger: #b91c1c;
+  --danger-light: #fee2e2;
+  --warning: #92400e;
+  --warning-light: #fff7ed;
+  --border: #e5e7eb;
+  --success: #166534;
+  --success-light: #dcfce7;
+  --info: #1d4ed8;
+  --info-light: #dbeafe;
+  --shadow: 0 12px 35px rgba(15, 23, 42, 0.12);
+  --radius: 18px;
+  --radius-sm: 10px;
+  --max-width: 1200px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  color: var(--text);
+}
+
+.page-dark {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top, rgba(201, 169, 106, 0.22), transparent 35%),
+    linear-gradient(135deg, #000000, #111111);
+}
+
+.page-light {
+  min-height: 100vh;
+  background: var(--bg-light);
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* =========================
+   PANTALLA INICIAL
+========================= */
+
+.home-wrapper {
+  min-height: 100vh;
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.home-card {
+  width: 100%;
+  max-width: 680px;
+  padding: 42px 34px;
+  border: 1px solid rgba(201, 169, 106, 0.35);
+  border-radius: 28px;
+  background: rgba(0, 0, 0, 0.72);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+  text-align: center;
+}
+
+.logo-box {
+  width: 100%;
+  padding: 22px;
+  margin-bottom: 20px;
+  border-radius: 22px;
+  background: #000000;
+}
+
+.logo-main {
+  width: 100%;
+  max-width: 480px;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+
+.home-card h1 {
+  margin: 18px 0 12px;
+  color: #ffffff;
+  font-size: clamp(28px, 4vw, 42px);
+  line-height: 1.1;
+}
+
+.home-text {
+  margin: 0 auto 26px;
+  color: #e5e7eb;
+  font-size: 17px;
+  line-height: 1.5;
+}
+
+/* =========================
+   BOTONES
+========================= */
+
+.home-actions,
+.actions-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.home-actions {
+  justify-content: center;
+}
+
+.btn {
+  border: none;
+  border-radius: 999px;
+  padding: 12px 20px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  transition: 0.2s ease;
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: #111827;
+}
+
+.btn-primary:hover {
+  background: var(--primary-dark);
+  color: #ffffff;
+}
+
+.btn-secondary {
+  background: var(--secondary);
+  color: #ffffff;
+}
+
+.btn-secondary:hover {
+  background: #374151;
+}
+
+.btn-outline {
+  background: #ffffff;
+  color: var(--secondary);
+  border: 1px solid var(--border);
+}
+
+.btn-outline:hover {
+  background: #f3f4f6;
+}
+
+.btn-danger {
+  background: var(--danger);
+  color: #ffffff;
+}
+
+.btn-danger:hover {
+  background: #7f1d1d;
+}
+
+.btn-small {
+  min-height: 34px;
+  padding: 8px 12px;
+  font-size: 12px;
+}
+
+/* =========================
+   CABECERA
+========================= */
+
+/* Corrección: compacta la cabecera del administrador.
+   Mantiene logo y texto en una sola fila y reduce la altura visual del encabezado. */
+.topbar {
+  background: #000000;
+  color: #ffffff;
+  padding: 8px 20px;
+  display: flex;
+  flex-direction: row;
+  gap: 14px;
+  align-items: center;
+  box-shadow: var(--shadow);
+}
+
+/* Corrección: reduce el tamaño del logo en la cabecera.
+   Evita que el encabezado ocupe demasiado alto en modo local. */
+.topbar-logo {
+  width: 170px;
+  max-width: 32vw;
+  padding: 6px;
+  border-radius: 12px;
+  background: #000000;
+  border: 1px solid rgba(201, 169, 106, 0.28);
+}
+
+.topbar-logo img {
+  width: 100%;
+  display: block;
+}
+
+/* Corrección: reduce el texto principal del encabezado.
+   Evita que el título administrativo domine visualmente la pantalla. */
+.topbar h1 {
+  margin: 0;
+  font-size: clamp(20px, 2.4vw, 28px);
+}
+
+.topbar p {
+  margin: 2px 0 0;
+  color: #d1d5db;
+  font-size: 14px;
+}
+
+.compact-topbar {
+  padding: 10px 24px;
+}
+
+.compact-topbar .topbar-logo {
+  width: 180px;
+}
+
+.compact-topbar h1 {
+  font-size: clamp(20px, 2.5vw, 28px);
+}
+
+.compact-topbar p {
+  margin-top: 3px;
+  font-size: 14px;
+}
+
+/* =========================
+   CONTENEDORES Y PANELES
+========================= */
+
+.container {
+  width: 100%;
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 28px 18px 42px;
+}
+
+.student-container {
+  max-width: 850px;
+}
+
+.compact-student-container {
+  max-width: 920px;
+  padding-top: 16px;
+  padding-bottom: 24px;
+}
+
+.panel {
+  background: var(--panel);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 22px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+
+.compact-panel {
+  padding: 16px 18px;
+  margin-bottom: 14px;
+  border-radius: 16px;
+}
+
+.panel h2 {
+  margin: 0 0 8px;
+  color: #111827;
+  font-size: 24px;
+}
+
+.compact-panel h2 {
+  font-size: 20px;
+  margin-bottom: 6px;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 18px;
+}
+
+.muted {
+  color: var(--muted);
+  margin: 0 0 18px;
+  line-height: 1.5;
+}
+
+.compact-muted {
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+
+/* =========================
+   FORMULARIOS
+========================= */
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(160px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.field label {
+  font-size: 14px;
+  font-weight: 700;
+  color: #374151;
+}
+
+.field input,
+.field select {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 12px;
+  padding: 12px 13px;
+  font-size: 15px;
+  outline: none;
+  background: #ffffff;
+}
+
+.field input:focus,
+.field select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(201, 169, 106, 0.22);
+}
+
+.compact-search-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.compact-field input {
+  padding: 10px 12px;
+}
+
+/* =========================
+   MENSAJES
+========================= */
+
+.message {
+  margin: 14px 0 0;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.message.ok {
+  color: var(--success);
+}
+
+.message.error {
+  color: var(--danger);
+}
+
+.message.info {
+  color: var(--info);
+}
+
+/* =========================
+   ESTADÍSTICAS
+========================= */
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(130px, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.stat-card {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  box-shadow: var(--shadow);
+}
+
+.stat-card span {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.stat-card strong {
+  font-size: 30px;
+  color: #111827;
+}
+
+/* =========================
+   HERRAMIENTAS DE TABLA ADMIN
+========================= */
+
+.table-tools-panel {
+  display: grid;
+  grid-template-columns: minmax(240px, 1.2fr) minmax(260px, 1.5fr) auto;
+  gap: 14px;
+  align-items: end;
+  background: #f9fafb;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 14px;
+  margin-bottom: 10px;
+}
+
+.table-search-field input,
+.table-selector-field select {
+  min-height: 44px;
+}
+
+.table-tools-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: end;
+}
+
+.table-help-text {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+/* =========================
+   TABLAS
+========================= */
+
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+  min-width: 1100px;
+}
+
+th,
+td {
+  padding: 12px 13px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+  font-size: 14px;
+}
+
+th {
+  background: #111827;
+  color: #ffffff;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.sortable-th {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  transition: background 0.2s ease;
+}
+
+.sortable-th:hover {
+  background: #1f2937;
+}
+
+.sortable-th span:first-child {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.sort-icon {
+  display: inline-block;
+  margin-left: 8px;
+  color: var(--primary);
+  font-size: 11px;
+  vertical-align: middle;
+}
+
+.sortable-th.sort-asc,
+.sortable-th.sort-desc {
+  background: #000000;
+  color: #ffffff;
+}
+
+tbody tr:hover {
+  background: #f9fafb;
+}
+
+.fila-seleccionada-admin {
+  animation: filaSeleccionadaAdmin 2.6s ease;
+}
+
+@keyframes filaSeleccionadaAdmin {
+  0% {
+    background: #fff7ed;
+    box-shadow: inset 4px 0 0 var(--primary);
+  }
+
+  50% {
+    background: #fffbeb;
+    box-shadow: inset 4px 0 0 var(--primary);
+  }
+
+  100% {
+    background: transparent;
+    box-shadow: inset 0 0 0 transparent;
+  }
+}
+
+.empty-cell {
+  text-align: center;
+  color: var(--muted);
+  padding: 30px;
+}
+
+.badge {
+  display: inline-flex;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.badge-ok {
+  background: var(--success-light);
+  color: var(--success);
+}
+
+.badge-error {
+  background: var(--danger-light);
+  color: var(--danger);
+}
+
+.badge-warning {
+  background: var(--warning-light);
+  color: var(--warning);
+}
+
+.badge-info {
+  background: var(--info-light);
+  color: var(--info);
+}
+
+.incorporacionSelect {
+  min-width: 118px;
+  border: 1px solid var(--primary);
+  border-radius: 999px;
+  padding: 7px 28px 7px 12px;
+  background: #fffaf0;
+  color: #111827;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+/* =========================
+   ESTUDIANTE COMPACTO
+========================= */
+
+.student-card {
+  display: grid;
+  gap: 10px;
+}
+
+.student-card p {
+  margin: 0;
+  padding: 13px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #f9fafb;
+}
+
+.student-card span {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.student-card strong {
+  color: #111827;
+}
+
+.student-compact-card {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.student-compact-card div {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #f9fafb;
+  min-height: 70px;
+}
+
+.student-compact-card span {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 700;
+  margin-bottom: 5px;
+}
+
+.student-compact-card strong {
+  display: block;
+  color: #111827;
+  font-size: 14px;
+  line-height: 1.25;
+  word-break: break-word;
+}
+
+.compact-student-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* =========================
+   SEDES
+========================= */
+
+.sede-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.sede-option {
+  border: 2px solid var(--border);
+  border-radius: 18px;
+  padding: 24px;
+  background: #ffffff;
+  cursor: pointer;
+  text-align: left;
+  transition: 0.2s ease;
+}
+
+.sede-option:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
+}
+
+.sede-option span {
+  display: block;
+  font-size: 25px;
+  font-weight: 900;
+  color: #111827;
+  margin-bottom: 6px;
+}
+
+.sede-option small {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.compact-sede-grid {
+  gap: 12px;
+}
+
+.compact-sede-option {
+  padding: 16px 18px;
+  border-radius: 14px;
+}
+
+.compact-sede-option span {
+  font-size: 22px;
+  margin-bottom: 4px;
+}
+
+/* =========================
+   ALERTAS Y PENDIENTES
+========================= */
+
+.warning-panel {
+  border-color: #fed7aa;
+  background: var(--warning-light);
+}
+
+.warning-panel h2 {
+  color: var(--warning);
+}
+
+.pending-list {
+  margin-top: 14px;
+  display: grid;
+  gap: 8px;
+}
+
+.compact-pending-list {
+  margin-top: 10px;
+}
+
+.pending-item {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid #fed7aa;
+  color: var(--warning);
+  font-weight: 700;
+}
+
+/* =========================
+   GESTIÓN DE PERÍODOS
+========================= */
+
+.periodo-activo-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #f9fafb;
+  margin-top: 12px;
+}
+
+.periodo-activo-card strong {
+  color: #111827;
+}
+
+.periodo-activo-card span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* =========================
+   UTILIDADES
+========================= */
+
+.center {
+  text-align: center;
+}
+
+.compact-return {
+  margin-top: 8px;
+}
+
+/* =========================
+   RESPONSIVE
+========================= */
+
+@media (max-width: 1100px) {
+  .student-compact-card {
+    grid-template-columns: repeat(2, minmax(150px, 1fr));
+  }
+
+  .student-compact-card div:last-child {
+    grid-column: span 2;
+  }
+
+  .table-tools-panel {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .table-tools-actions {
+    grid-column: span 2;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 900px) {
+  .topbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .topbar-logo {
+    width: 100%;
+    max-width: 360px;
+  }
+
+  .panel-header {
+    flex-direction: column;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .sede-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .compact-search-row {
+    grid-template-columns: 1fr;
+  }
+
+  .table-tools-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .table-tools-actions {
+    grid-column: span 1;
+  }
+}
+
+@media (max-width: 540px) {
+  .home-card {
+    padding: 28px 18px;
+  }
+
+  .panel {
+    padding: 18px;
+  }
+
+  .compact-panel {
+    padding: 14px;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .actions-row,
+  .home-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .btn {
+    width: 100%;
+  }
+
+  .student-compact-card {
+    grid-template-columns: 1fr;
+  }
+
+  .student-compact-card div:last-child {
+    grid-column: span 1;
+  }
+
+  .compact-topbar {
+    padding: 12px 16px;
+  }
+
+  .table-tools-panel {
+    padding: 12px;
+  }
+}

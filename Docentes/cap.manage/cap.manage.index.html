@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="es">
+<head>
+ <!-- =========================================================
+ Nombre del archivo: cap.manage.index.html
+ Ruta - Ubicación: /cap.manage/cap.manage.index.html
+ Función o funciones:
+ - Vista principal Gestión Capacitaciones (crear/editar/listar/buscar/eliminar)
+ - Define window.firebaseConfig (requerido por firebase.js de esta pantalla)
+ - Boot de la app (cap.manage.app.js)
+
+ ✅ CORRECCIÓN APLICADA:
+ - Se elimina el encabezado interno de la pantalla
+ - El mensaje de estado se conserva dentro del contenido principal
+ - Esto evita duplicar encabezado porque ya existe en el menú superior
+ ========================================================= -->
+ <meta charset="UTF-8" />
+ <meta name="viewport" content="width=device-width,initial-scale=1" />
+ <title>Capacitaciones · Gestión</title>
+ <link rel="stylesheet" href="./cap.manage.styles.css" />
+ <link rel="icon" href="data:,">
+</head>
+<body>
+ <div class="wrap">
+  <!-- Corrección técnica:
+  se elimina <header class="hero card"> para no duplicar encabezado visual.
+  El host del mensaje #capMsg se mantiene porque la lógica JS lo usa para estados de carga/error. -->
+  <div id="capMsg" class="msg" data-type="info">Listo.</div>
+
+  <!-- FORM: Crear/Editar -->
+  <section class="card form" style="margin-top:12px;">
+   <div class="form-head">
+    <div>
+     <div class="h3" id="capFormTitle">Nueva capacitación</div>
+     <div class="muted">Gestiona el catálogo de capacitaciones. La asignación se realiza en otra pantalla.</div>
+    </div>
+    <div class="form-head-right">
+     <button id="capBtnClear" class="btn ghost" type="button">Limpiar</button>
+     <button id="capBtnSave" class="btn primary" type="button">Crear capacitación</button>
+    </div>
+   </div>
+
+   <div class="grid">
+    <!-- =========================================================
+    FILA 1: Nombre + Horas
+    ========================================================= -->
+    <div class="span-2">
+     <div style="display:grid; grid-template-columns: 1fr minmax(180px, 240px); gap:10px; align-items:end;">
+      <div>
+       <label>Nombre de la capacitación</label>
+       <input id="capNombre" placeholder="Ej: Cultura de la investigación" />
+      </div>
+      <div>
+       <label>Duración (horas)</label>
+       <input id="capHoras" type="number" min="1" step="1" placeholder="Ej: 40" />
+      </div>
+     </div>
+    </div>
+
+    <!-- =========================================================
+    FILA 2: Periodo académico (Mes/Año inicio → Mes/Año fin)
+    ========================================================= -->
+    <div class="span-2">
+     <div style="display:grid; grid-template-columns: repeat(4, minmax(160px, 1fr)); gap:10px; align-items:end;">
+      <div>
+       <label>Periodo inicio (Mes)</label>
+       <select id="capMesIni"></select>
+      </div>
+      <div>
+       <label>Periodo inicio (Año)</label>
+       <div class="stepper">
+        <button id="capYearIniDec" class="iconbtn" type="button">−</button>
+        <input id="capYearIni" inputmode="numeric" />
+        <button id="capYearIniInc" class="iconbtn" type="button">+</button>
+       </div>
+      </div>
+      <div>
+       <label>Periodo fin (Mes)</label>
+       <select id="capMesFin"></select>
+      </div>
+      <div>
+       <label>Periodo fin (Año)</label>
+       <div class="stepper">
+        <button id="capYearFinDec" class="iconbtn" type="button">−</button>
+        <input id="capYearFin" inputmode="numeric" />
+        <button id="capYearFinInc" class="iconbtn" type="button">+</button>
+       </div>
+      </div>
+     </div>
+    </div>
+
+    <!-- =========================================================
+    FILA 3: Fechas reales de la capacitación (Inicio → Fin)
+    ========================================================= -->
+    <div class="span-2">
+     <div style="display:grid; grid-template-columns: repeat(2, minmax(220px, 1fr)); gap:10px; align-items:end;">
+      <div>
+       <label>Fecha inicio</label>
+       <input id="capFechaIni" type="date" />
+      </div>
+      <div>
+       <label>Fecha fin</label>
+       <input id="capFechaFin" type="date" />
+      </div>
+     </div>
+    </div>
+
+    <!-- =========================================================
+    FILA 4: NUEVOS CAMPOS (Modalidad / Tipo cap. / Tipo evento / Ámbito)
+    (✅ IDs nuevos; evita romper lógica actual)
+    ========================================================= -->
+    <div class="span-2">
+     <div style="display:grid; grid-template-columns: repeat(4, minmax(160px, 1fr)); gap:10px; align-items:end;">
+      <div>
+       <label>Modalidad</label>
+       <select id="capModalidad">
+        <option value="presencial">Presencial</option>
+        <option value="semipresencial">Semipresencial</option>
+        <option value="virtual">Virtual</option>
+        <option value="hibrida">Híbrida</option>
+       </select>
+      </div>
+      <div>
+       <label>Capacitación</label>
+       <select id="capTipoCap">
+        <option value="generica">Genérica</option>
+        <option value="especifica">Específica</option>
+       </select>
+      </div>
+      <div>
+       <label>Tipo</label>
+       <select id="capTipoEvento">
+        <option value="curso">Curso</option>
+        <option value="taller">Taller</option>
+        <option value="seminario">Seminario</option>
+        <option value="diplomado">Diplomado</option>
+        <option value="conferencia">Conferencia</option>
+       </select>
+      </div>
+      <div>
+       <label>Ámbito</label>
+       <select id="capAmbito">
+        <option value="nacional">Nacional</option>
+        <option value="internacional">Internacional</option>
+       </select>
+      </div>
+     </div>
+    </div>
+
+    <!-- =========================================================
+    FILA 5: Quién imparte
+    ========================================================= -->
+    <div class="span-2">
+     <div style="display:grid; grid-template-columns: 1fr; gap:10px; align-items:end;">
+      <div>
+       <label>¿Quién da la capacitación?</label>
+       <input id="capImparte" placeholder="Ej: Dr. Juan Pérez / Institución ..." />
+      </div>
+     </div>
+    </div>
+   </div>
+  </section>
+
+  <!-- LISTADO -->
+  <section class="card table-card" style="margin-top:12px;">
+   <div class="table-head">
+    <div>
+     <div class="h3">Capacitaciones creadas</div>
+     <div class="muted">Tabla de capacitaciones registradas.</div>
+    </div>
+    <div class="table-tools">
+     <input id="capSearch" class="search" placeholder="Buscar por nombre, periodo o detalles…" />
+    </div>
+   </div>
+   <div class="hr"></div>
+   <div id="capTableHost" class="table-host"></div>
+  </section>
+ </div>
+
+ <!-- ⚙️ Firebase Config (OBLIGATORIO) -->
+ <script>
+ window.firebaseConfig = {
+  apiKey: "AIzaSyCaHf1C0BB0X_H3BDZ1o-UDAsPmLTjsZLA",
+  authDomain: "utet-4387a.firebaseapp.com",
+  projectId: "utet-4387a",
+  storageBucket: "utet-4387a.firebasestorage.app",
+  messagingSenderId: "902848131454",
+  appId: "1:902848131454:web:47f515eb6480834724c32f"
+ };
+ </script>
+
+ <!-- 🚀 Boot -->
+ <script type="module">
+ import { bootCapManage } from "./cap.manage.app.js";
+ bootCapManage();
+ </script>
+</body>
+</html>
