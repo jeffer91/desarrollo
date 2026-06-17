@@ -1,0 +1,426 @@
+/*
+=========================================================
+Nombre completo: coordi.css
+Ruta o ubicación: /Coordi/coordi.css
+Función o funciones:
+1. Dar diseño visual a la pantalla Coordi.
+2. Mantener filtros, tarjetas, mensajes y tablas claros.
+3. Usar estilos independientes para no tocar Gestión.
+=========================================================
+*/
+
+:root {
+  --coordi-bg: #f4f7fb;
+  --coordi-card: #ffffff;
+  --coordi-text: #172033;
+  --coordi-muted: #667085;
+  --coordi-border: #d9e2ef;
+  --coordi-primary: #123d6b;
+  --coordi-primary-hover: #0d3157;
+  --coordi-gold: #c7a767;
+  --coordi-soft: #eef4fb;
+  --coordi-danger: #b42318;
+  --coordi-success: #027a48;
+  --coordi-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--coordi-bg);
+  color: var(--coordi-text);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.coordi-app {
+  width: min(1380px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 28px 0 40px;
+}
+
+.coordi-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+
+.coordi-header h1 {
+  margin: 4px 0 8px;
+  font-size: clamp(26px, 3vw, 40px);
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+}
+
+.coordi-subtitle {
+  max-width: 760px;
+  margin: 0;
+  color: var(--coordi-muted);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.coordi-eyebrow {
+  margin: 0;
+  color: var(--coordi-gold);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.coordi-header-actions,
+.coordi-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.coordi-btn {
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  transition: 0.18s ease;
+}
+
+.coordi-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.coordi-btn-primary {
+  background: var(--coordi-primary);
+  color: #ffffff;
+}
+
+.coordi-btn-primary:hover:not(:disabled) {
+  background: var(--coordi-primary-hover);
+}
+
+.coordi-btn-light {
+  background: #ffffff;
+  color: var(--coordi-primary);
+  border-color: var(--coordi-border);
+}
+
+.coordi-btn-light:hover:not(:disabled) {
+  background: var(--coordi-soft);
+}
+
+.coordi-panel,
+.coordi-card,
+.coordi-kpi {
+  background: var(--coordi-card);
+  border: 1px solid var(--coordi-border);
+  border-radius: 18px;
+  box-shadow: var(--coordi-shadow);
+}
+
+.coordi-panel {
+  padding: 18px;
+  margin-bottom: 16px;
+}
+
+.coordi-filters {
+  display: grid;
+  grid-template-columns: 1.2fr 1.2fr 1fr 1.1fr;
+  gap: 14px;
+}
+
+.coordi-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.coordi-field label,
+.coordi-message-block label {
+  font-size: 13px;
+  color: var(--coordi-muted);
+  font-weight: 700;
+}
+
+.coordi-field select,
+.coordi-field input,
+.coordi-message-block textarea {
+  width: 100%;
+  border: 1px solid var(--coordi-border);
+  border-radius: 12px;
+  background: #ffffff;
+  color: var(--coordi-text);
+  font-size: 14px;
+  outline: none;
+}
+
+.coordi-field select,
+.coordi-field input {
+  height: 44px;
+  padding: 0 12px;
+}
+
+.coordi-field select:focus,
+.coordi-field input:focus,
+.coordi-message-block textarea:focus {
+  border-color: var(--coordi-primary);
+  box-shadow: 0 0 0 3px rgba(18, 61, 107, 0.12);
+}
+
+.coordi-status {
+  margin-top: 14px;
+  border-radius: 12px;
+  background: var(--coordi-soft);
+  color: var(--coordi-primary);
+  padding: 11px 12px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.coordi-status.is-error {
+  background: #fff1f3;
+  color: var(--coordi-danger);
+}
+
+.coordi-status.is-ok {
+  background: #ecfdf3;
+  color: var(--coordi-success);
+}
+
+.coordi-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.coordi-kpi {
+  padding: 16px;
+}
+
+.coordi-kpi span {
+  display: block;
+  color: var(--coordi-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.coordi-kpi strong {
+  display: block;
+  margin-top: 7px;
+  font-size: 22px;
+  line-height: 1.1;
+}
+
+.coordi-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.coordi-card {
+  padding: 18px;
+}
+
+.coordi-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.coordi-card-head h2 {
+  margin: 4px 0 0;
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.coordi-badge {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  border-radius: 999px;
+  background: var(--coordi-soft);
+  color: var(--coordi-primary);
+  font-size: 12px;
+  font-weight: 800;
+  padding: 7px 10px;
+}
+
+.coordi-muted {
+  color: var(--coordi-muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.coordi-message-block {
+  margin-top: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.coordi-message-block textarea {
+  min-height: 180px;
+  resize: vertical;
+  padding: 12px;
+  line-height: 1.45;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+#coordi-email-message {
+  min-height: 220px;
+}
+
+.coordi-coordinators-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.coordi-coordinator-item {
+  border: 1px solid var(--coordi-border);
+  border-radius: 16px;
+  padding: 14px;
+  background: #fbfdff;
+}
+
+.coordi-coordinator-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.coordi-coordinator-title strong {
+  display: block;
+  font-size: 15px;
+}
+
+.coordi-coordinator-title small {
+  display: block;
+  color: var(--coordi-muted);
+  margin-top: 3px;
+}
+
+.coordi-coordinator-item textarea {
+  width: 100%;
+  min-height: 150px;
+  border: 1px solid var(--coordi-border);
+  border-radius: 12px;
+  padding: 10px;
+  resize: vertical;
+  font-family: Arial, Helvetica, sans-serif;
+  line-height: 1.45;
+}
+
+.coordi-alert {
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  background: #fff8e6;
+  color: #8a6100;
+  margin-top: 8px;
+}
+
+.coordi-table-wrap {
+  width: 100%;
+  overflow: auto;
+  border: 1px solid var(--coordi-border);
+  border-radius: 14px;
+}
+
+.coordi-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 980px;
+  background: #ffffff;
+}
+
+.coordi-table th {
+  text-align: left;
+  background: var(--coordi-primary);
+  color: #ffffff;
+  font-size: 13px;
+  padding: 12px;
+  white-space: nowrap;
+}
+
+.coordi-table td {
+  border-top: 1px solid var(--coordi-border);
+  padding: 11px 12px;
+  font-size: 13px;
+  vertical-align: top;
+}
+
+.coordi-table tbody tr:hover {
+  background: #f8fbff;
+}
+
+.coordi-empty {
+  text-align: center;
+  color: var(--coordi-muted);
+  padding: 22px !important;
+}
+
+.coordi-pill {
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 5px 9px;
+  font-size: 12px;
+  font-weight: 800;
+  background: #fff1f3;
+  color: var(--coordi-danger);
+}
+
+@media (max-width: 1100px) {
+  .coordi-filters,
+  .coordi-grid,
+  .coordi-kpis {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .coordi-app {
+    width: min(100% - 20px, 1380px);
+    padding-top: 18px;
+  }
+
+  .coordi-header {
+    flex-direction: column;
+  }
+
+  .coordi-filters,
+  .coordi-grid,
+  .coordi-kpis {
+    grid-template-columns: 1fr;
+  }
+
+  .coordi-card-head {
+    flex-direction: column;
+  }
+
+  .coordi-header-actions,
+  .coordi-actions {
+    width: 100%;
+  }
+
+  .coordi-btn {
+    width: 100%;
+  }
+}
