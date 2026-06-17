@@ -1,0 +1,511 @@
+/*
+Nombre completo: for.styles.css
+Ruta o ubicación: formacion/frontend/for.styles.css
+Función o funciones: Estilos completos del módulo Formación, incluyendo pantalla principal, tabla, modal, formulario, anexos, toasts y menú contextual de exportación
+*/
+
+:root{
+  --for-bg: #f5f7fb;
+  --for-panel: #ffffff;
+  --for-line: #d8dfeb;
+  --for-text: #18212f;
+  --for-muted: #5f6b7b;
+  --for-brand: #1f5eff;
+  --for-brand-soft: #e8efff;
+  --for-ok: #0c8a4b;
+  --for-warn: #9a6b00;
+  --for-bad: #c52a2a;
+  --for-shadow: 0 10px 30px rgba(16, 24, 40, 0.10);
+  --for-radius: 16px;
+}
+
+*{
+  box-sizing: border-box;
+}
+
+html,
+body{
+  margin: 0;
+  padding: 0;
+  background: var(--for-bg);
+  color: var(--for-text);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+body{
+  min-height: 100vh;
+}
+
+button,
+input,
+select,
+textarea{
+  font: inherit;
+}
+
+.forApp{
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.forHero{
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.forEyebrow{
+  margin: 0 0 6px;
+  color: var(--for-muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.forTitle{
+  margin: 0 0 8px;
+  font-size: 32px;
+  line-height: 1.1;
+}
+
+.forSubtitle{
+  margin: 0;
+  color: var(--for-muted);
+  max-width: 780px;
+}
+
+.forHeroActions{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.forPanel{
+  background: var(--for-panel);
+  border: 1px solid var(--for-line);
+  border-radius: var(--for-radius);
+  box-shadow: var(--for-shadow);
+  padding: 18px;
+  margin-bottom: 18px;
+}
+
+.forFilters{
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 2fr;
+  gap: 14px;
+}
+
+.forField{
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.forField label,
+.forModalGrid label{
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.forField input,
+.forField select,
+.forModalGrid input,
+.forModalGrid select,
+.forModalGrid textarea{
+  width: 100%;
+  border: 1px solid var(--for-line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #fff;
+  color: var(--for-text);
+}
+
+.forField input:focus,
+.forField select:focus,
+.forModalGrid input:focus,
+.forModalGrid select:focus,
+.forModalGrid textarea:focus{
+  outline: 2px solid rgba(31, 94, 255, 0.18);
+  border-color: var(--for-brand);
+}
+
+.forModalGrid input[readonly]{
+  background: #f8faff;
+  color: var(--for-muted);
+}
+
+.forBtn{
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 14px;
+  background: var(--for-brand);
+  color: #fff;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.forBtn:hover{
+  filter: brightness(.98);
+}
+
+.forBtnSecondary{
+  background: #fff;
+  color: var(--for-text);
+  border: 1px solid var(--for-line);
+}
+
+.forSectionTitle{
+  margin: 0 0 4px;
+  font-size: 20px;
+}
+
+.forCounter{
+  margin: 0;
+  color: var(--for-muted);
+  font-size: 13px;
+}
+
+.forTableHeader{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.forTableHelp{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.forTableHelpBadge{
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border: 1px solid var(--for-line);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  background: #fff;
+  color: var(--for-muted);
+}
+
+.forTableHelpBadgeBrand{
+  border-color: rgba(31, 94, 255, 0.18);
+  background: var(--for-brand-soft);
+  color: var(--for-brand);
+}
+
+.forTableWrap{
+  overflow: auto;
+}
+
+.forTable{
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 1200px;
+}
+
+.forTable th,
+.forTable td{
+  padding: 12px 10px;
+  border-bottom: 1px solid var(--for-line);
+  text-align: left;
+  vertical-align: top;
+  font-size: 14px;
+}
+
+.forTable th{
+  background: #f8faff;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+}
+
+.forTable tbody tr:hover{
+  background: #fafcff;
+}
+
+.forCellSub{
+  margin-top: 4px;
+  color: var(--for-muted);
+  font-size: 12px;
+}
+
+.forActions{
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.forMiniBtn{
+  border: 1px solid var(--for-line);
+  background: #fff;
+  border-radius: 8px;
+  padding: 7px 10px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.forMiniBtn:hover{
+  background: #f8faff;
+}
+
+.forMiniBtnBrand{
+  border-color: rgba(31, 94, 255, 0.20);
+  background: var(--for-brand-soft);
+  color: var(--for-brand);
+}
+
+.forBadge{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.forBadgeOk{
+  background: #ebfff4;
+  color: var(--for-ok);
+}
+
+.forBadgeWarn{
+  background: #fff7df;
+  color: var(--for-warn);
+}
+
+.forBadgeBad{
+  background: #fff0f0;
+  color: var(--for-bad);
+}
+
+.forBadgeInfo{
+  background: var(--for-brand-soft);
+  color: var(--for-brand);
+}
+
+.forModalOverlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(12, 18, 32, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 1000;
+}
+
+.forModalOverlay.isHidden{
+  display: none;
+}
+
+.forModal{
+  width: min(1120px, 100%);
+  max-height: 92vh;
+  overflow: hidden;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: var(--for-shadow);
+  display: flex;
+  flex-direction: column;
+}
+
+.forModalHeader,
+.forModalFooter{
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--for-line);
+}
+
+.forModalFooter{
+  border-bottom: 0;
+  border-top: 1px solid var(--for-line);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.forModalHeader{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.forModalBody{
+  padding: 18px;
+  overflow: auto;
+}
+
+.forIconBtn{
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid var(--for-line);
+  background: #fff;
+  cursor: pointer;
+}
+
+.forModalSection{
+  margin-bottom: 18px;
+}
+
+.forModalSection h4{
+  margin: 0 0 12px;
+  font-size: 16px;
+}
+
+.forModalGrid{
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.forModalGrid .forFull{
+  grid-column: 1 / -1;
+}
+
+.forModalGrid textarea{
+  min-height: 110px;
+  resize: vertical;
+}
+
+.forRadioGroup{
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.forRadioOption{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--for-line);
+  background: #fff;
+  border-radius: 999px;
+  padding: 9px 12px;
+  cursor: pointer;
+}
+
+.forRadioOption input{
+  width: auto;
+  margin: 0;
+}
+
+.forFormErrors{
+  background: #fff0f0;
+  border: 1px solid #f2bcbc;
+  color: #862626;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 14px;
+}
+
+.forFormErrors ul{
+  margin: 8px 0 0 18px;
+  padding: 0;
+}
+
+.isHidden{
+  display: none !important;
+}
+
+.forAttachmentsBox{
+  border: 1px dashed var(--for-line);
+  border-radius: 14px;
+  padding: 14px;
+  background: #fcfdff;
+}
+
+.forAttachmentListWrap{
+  margin-top: 14px;
+}
+
+.forEmpty{
+  text-align: center;
+  padding: 30px 14px;
+  color: var(--for-muted);
+}
+
+.forToastZone{
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 1200;
+}
+
+.forToast{
+  min-width: 280px;
+  max-width: 380px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  color: #fff;
+  box-shadow: var(--for-shadow);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.forToastSuccess{ background: var(--for-ok); }
+.forToastError{ background: var(--for-bad); }
+.forToastInfo{ background: var(--for-brand); }
+
+.forExportMenuRoot{
+  position: relative;
+  z-index: 1300;
+}
+
+.forExportMenu{
+  position: absolute;
+  min-width: 180px;
+  background: #fff;
+  border: 1px solid var(--for-line);
+  border-radius: 12px;
+  box-shadow: var(--for-shadow);
+  padding: 8px;
+}
+
+.forExportMenuItem{
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 10px 12px;
+  border-radius: 8px;
+  text-align: left;
+  cursor: pointer;
+  color: var(--for-text);
+  font-weight: 700;
+}
+
+.forExportMenuItem:hover{
+  background: #f8faff;
+}
+
+@media (max-width: 980px){
+  .forHero{
+    flex-direction: column;
+  }
+
+  .forFilters,
+  .forModalGrid{
+    grid-template-columns: 1fr;
+  }
+
+  .forRadioGroup{
+    flex-direction: column;
+  }
+
+  .forTableHeader{
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

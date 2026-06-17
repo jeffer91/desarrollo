@@ -1,0 +1,537 @@
+/* =========================================================
+Nombre del archivo: regman.styles.css
+Ruta - Ubicación: /registro.manage/regman.styles.css
+Función:
+- Estilos UI (Registro · Gestión)
+- Corrección visual:
+  Se alinea esta pantalla con la misma paleta clara y profesional
+  usada en /menu/menu.shell.css, /cap.assign/cap.assign.styles.css
+  y /cap.manage/cap.manage.styles.css.
+  Esto evita que Registro use un clima visual distinto al resto.
+========================================================= */
+:root{
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+  color-scheme: light;
+
+  /* Corrección técnica:
+  se usa la misma base cromática común del sistema para unificar la UI. */
+  --bg:#f4f7ff;
+  --surface:#ffffff;
+  --surface2:#ffffff;
+  --text:#0b1220;
+  --muted:#475569;
+  --line: rgba(2,6,23,.12);
+  --line2: rgba(2,6,23,.16);
+  --blue:#2563eb;
+  --blueHover:#1d4ed8;
+  --green:#16a34a;
+  --amber:#d97706;
+  --red:#dc2626;
+  --indigo:#4f46e5;
+
+  /* Corrección técnica:
+  se igualan los soft states al sistema visual común. */
+  --softBlue: rgba(37,99,235,.12);
+  --softGreen: rgba(34,197,94,.12);
+  --softAmber: rgba(245,158,11,.14);
+  --softRed: rgba(244,63,94,.12);
+
+  --radius: 18px;
+  --shadowSm: 0 10px 18px rgba(2,6,23,.10);
+  --shadowMd: 0 14px 26px rgba(2,6,23,.12);
+
+  --fieldBg: var(--surface);
+  --fieldText: var(--text);
+  --fieldBorder: var(--line2);
+  --fieldFocus: rgba(37,99,235,.35);
+  --fieldRing: rgba(37,99,235,.14);
+  --placeholder: rgba(71,85,105,.80);
+
+  --gap: 10px;
+  --gap2: 8px;
+  --ctrlH: 40px;
+  --rCtl: 14px;
+}
+
+*{ box-sizing:border-box; }
+html, body{ height: 100%; }
+
+body{
+  margin:0;
+  color: var(--text);
+  /* Corrección técnica:
+  se replica el fondo visual del shell para mantener el mismo clima entre pantallas. */
+  background:
+    radial-gradient(1200px 700px at 18% 0%, rgba(37,99,235,.14), transparent 60%),
+    radial-gradient(900px 600px at 90% 10%, rgba(79,70,229,.12), transparent 55%),
+    linear-gradient(180deg, #ffffff 0%, var(--bg) 55%, #ffffff 100%);
+}
+
+.wrap{
+  padding: 12px;
+  max-width: 1300px;
+  margin: 0 auto;
+}
+
+.card{
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px;
+  box-shadow: var(--shadowSm);
+}
+
+.card-head{
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.msg{
+  margin-top: 6px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: var(--rCtl);
+  border: 1px solid var(--line);
+  background: var(--surface2);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+}
+.msg[data-type="ok"]{
+  background: linear-gradient(180deg, rgba(34,197,94,.12), rgba(255,255,255,.90));
+  border-color: rgba(22,163,74,.20);
+  color:#065f46;
+}
+.msg[data-type="err"]{
+  background: linear-gradient(180deg, rgba(244,63,94,.12), rgba(255,255,255,.90));
+  border-color: rgba(220,38,38,.22);
+  color:#7f1d1d;
+}
+.msg[data-type="info"]{
+  background: linear-gradient(180deg, rgba(37,99,235,.12), rgba(255,255,255,.90));
+  border-color: rgba(37,99,235,.20);
+  color:#1e3a8a;
+}
+.msg[data-type="warn"]{
+  background: linear-gradient(180deg, rgba(245,158,11,.14), rgba(255,255,255,.90));
+  border-color: rgba(217,119,6,.22);
+  color:#7c2d12;
+}
+
+.grid{
+  margin-top: 10px;
+  display:grid;
+  grid-template-columns: 1fr;
+  gap: var(--gap);
+  align-items:start;
+}
+
+.h3{ font-size: 15px; font-weight: 950; margin: 0; color: var(--text); }
+.hr{ height:1px; background: rgba(2,6,23,.08); margin: 10px 0; }
+
+label{
+  display:block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 6px;
+  font-weight: 900;
+}
+
+input, select, textarea{
+  width: 100%;
+  border-radius: var(--rCtl);
+  border: 1px solid var(--fieldBorder);
+  background: var(--fieldBg);
+  color: var(--fieldText);
+  padding: 0 12px;
+  outline:none;
+  font-size: 13px;
+  font-weight: 900;
+  box-shadow: 0 1px 0 rgba(2,6,23,.03);
+}
+input, select, button{ min-height: var(--ctrlH); }
+
+select{
+  padding-right: 34px;
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, rgba(71,85,105,.85) 50%),
+    linear-gradient(135deg, rgba(71,85,105,.85) 50%, transparent 50%),
+    linear-gradient(to right, transparent, transparent);
+  background-position:
+    calc(100% - 18px) 50%,
+    calc(100% - 12px) 50%,
+    0 0;
+  background-size: 6px 6px, 6px 6px, 100% 100%;
+  background-repeat: no-repeat;
+}
+
+textarea{
+  padding: 10px 12px;
+  min-height: 96px;
+  resize: vertical;
+}
+
+input::placeholder, textarea::placeholder{ color: var(--placeholder); }
+input:focus, select:focus, textarea:focus{
+  border-color: var(--fieldFocus);
+  box-shadow: 0 0 0 4px var(--fieldRing);
+}
+
+button{
+  border-radius: var(--rCtl);
+  border: 1px solid rgba(2,6,23,.16);
+  background: var(--surface);
+  color: var(--text);
+  padding: 0 12px;
+  outline: none;
+  box-shadow: 0 2px 6px rgba(2,6,23,.05);
+}
+.btn{
+  cursor:pointer;
+  transition: transform .06s ease, box-shadow .15s ease, background .15s ease, border-color .15s ease, filter .15s ease;
+  font-weight: 950;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+.btn:active{ transform: translateY(1px); }
+
+.btn.primary{
+  color:#fff;
+  border-color: transparent;
+  /* Corrección técnica:
+  se usa el mismo primario con gradiente del resto de pantallas. */
+  background: linear-gradient(180deg, var(--blue), var(--indigo));
+  box-shadow: var(--shadowSm);
+}
+.btn.primary:hover{
+  background: linear-gradient(180deg, #2f6df2, #564eea);
+}
+
+.btn.soft{
+  background: linear-gradient(180deg, rgba(34,197,94,.12), rgba(255,255,255,.85));
+  border-color: rgba(22,163,74,.22);
+  color: #065f46;
+}
+.btn.soft:hover{ filter: brightness(1.02); border-color: rgba(22,163,74,.30); }
+
+.btn.ghost{
+  background: rgba(37,99,235,.08);
+  border-color: rgba(37,99,235,.20);
+  color: #1d4ed8;
+}
+.btn.ghost:hover{ background: rgba(37,99,235,.12); border-color: rgba(37,99,235,.28); }
+
+.btn.danger{
+  background: rgba(220,38,38,.10);
+  border-color: rgba(220,38,38,.22);
+  color: #b91c1c;
+}
+.btn.danger:hover{ background: rgba(220,38,38,.14); border-color: rgba(220,38,38,.30); }
+
+/* ✅ NUEVO: botón warn + badge */
+.btn.warn{
+  background: rgba(217,119,6,.10);
+  border-color: rgba(217,119,6,.22);
+  color: #7c2d12;
+}
+.btn.warn:hover{
+  background: rgba(217,119,6,.14);
+  border-color: rgba(217,119,6,.30);
+}
+.badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width: 22px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(220,38,38,.12);
+  border: 1px solid rgba(220,38,38,.22);
+  color: #991b1b;
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.form .row{ margin-bottom: var(--gap2); }
+.form .row.two{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--gap2);
+  align-items:end;
+}
+.cell{ width: 100%; }
+
+.actions{
+  display:flex;
+  gap: var(--gap2);
+  flex-wrap:wrap;
+  align-items:center;
+}
+
+.hint{
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 850;
+}
+
+/* Tabla */
+.table-host{
+  /* FIX: asegurar que el host siempre sea “bloque” y ocupe el ancho disponible
+     (incluso si por error se aplica a un elemento inline o dentro de un contenedor flex). */
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+
+  overflow:auto;
+  border-radius: var(--rCtl);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadowSm);
+}
+.table-host table{
+  width:100%;
+  border-collapse: separate;
+  border-spacing: 0 10px;
+  min-width: 920px;
+  padding: 10px;
+}
+.table-host thead th{
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  font-size: 12px;
+  font-weight: 950;
+  color: var(--muted);
+  text-align:left;
+  padding: 10px 12px;
+  border: 0;
+  background: linear-gradient(180deg, rgba(37,99,235,.10), rgba(255,255,255,1));
+}
+.table-host tbody tr{
+  background: #fff;
+  box-shadow: var(--shadowSm);
+}
+.table-host tbody td{
+  padding: 10px 12px;
+  border: 0;
+  font-size: 12px;
+  font-weight: 850;
+  color: var(--text);
+  vertical-align: top;
+}
+.table-host tbody tr td:first-child{
+  border-top-left-radius: 12px;
+  border-bottom-left-radius: 12px;
+  font-weight: 950;
+}
+.table-host tbody tr td:last-child{
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
+.table-host tbody tr:hover td{ background: rgba(37,99,235,.06); }
+.table-host tr[data-sel="1"] td{
+  background: rgba(22,163,74,.08);
+  outline: 2px solid rgba(22,163,74,.20);
+  outline-offset: -2px;
+}
+
+/* textarea pegado */
+.pastebox{
+  resize: vertical;
+  min-height: 120px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  line-height: 1.25;
+}
+
+/* Modal */
+.modal{
+  position: fixed;
+  inset: 0;
+  background: rgba(2,6,23,.55);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+  z-index: 9999;
+
+  /* FIX: a 100% de zoom algunos viewports “recortan” el modal centrado.
+     Permitimos scroll del overlay y anclamos arriba para que siempre se vea completo. */
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.modal[hidden]{ display: none !important; }
+.modal:not([hidden]){
+  display: flex;
+  align-items: flex-start;
+}
+
+.modal-card{
+  width: min(1400px, 98vw);
+  max-height: calc(100vh - 28px);
+  overflow: auto;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px;
+  box-shadow: var(--shadowMd);
+
+  /* FIX: el contenido del modal debe expandir al ancho disponible (evita “bloques angostos” + espacio vacío) */
+  display: flex;
+  flex-direction: column;
+}
+.modal-head{
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+/* FIX: en modales, forzar que hijos directos ocupen el ancho completo */
+.modal-card > *{ width: 100%; }
+
+/* Preview table (solo en modal) */
+.bulk-table{
+  width:100%;
+  border-collapse: collapse;
+  min-width: 1100px;
+}
+
+/* FIX: en modales NO forzar min-width (a 100% obliga a bajar zoom o usar scroll horizontal)
+   + permitir ajuste de columnas para que “quepa” todo en pantalla. */
+.modal-card .table-host{ flex: 1 1 auto; min-width: 0; }
+.modal-card .table-host table{
+  min-width: 0;
+  table-layout: fixed;
+  padding: 8px;
+}
+.modal-card .bulk-table{
+  min-width: 0;
+  table-layout: fixed;
+}
+.modal-card .table-host th,
+.modal-card .table-host td{
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.bulk-table th,
+.bulk-table td{
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+}
+.bulk-table th{
+  font-size: 12px;
+  text-align:left;
+  background: var(--surface2);
+  color: var(--text);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+/* Modal errores */
+.err-meta{
+  display:flex;
+  gap: 12px;
+  align-items:center;
+  flex-wrap: wrap;
+}
+
+.muted{ color: var(--muted); }
+.okTag{
+  display:inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(34,197,94,.12);
+  border: 1px solid rgba(22,163,74,.20);
+  font-size: 12px;
+  font-weight: 900;
+  color: #065f46;
+}
+.badTag{
+  display:inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(244,63,94,.12);
+  border: 1px solid rgba(220,38,38,.22);
+  font-size: 12px;
+  font-weight: 900;
+  color: #7f1d1d;
+}
+
+/* Responsive */
+@media (max-width: 520px){
+  .form .row.two{ grid-template-columns: 1fr; }
+  .actions{ align-items: stretch; }
+  .actions .btn{ width: 100%; }
+}
+
+/* =========================
+   Barra compacta (1 línea)
+========================= */
+.sr{
+  position:absolute;
+  width:1px;height:1px;
+  padding:0;margin:-1px;
+  overflow:hidden;clip:rect(0,0,0,0);
+  white-space:nowrap;border:0;
+}
+
+.filterbar{
+  display:flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+.filtergrow{
+  flex: 1 1 auto;
+  min-width: 220px;
+}
+.filteritem{
+  flex: 0 0 auto;
+  min-width: 160px;
+}
+.filterwide{ min-width: 240px; }
+
+@media (max-width: 980px){
+  .filterbar{ flex-wrap: wrap; }
+  .filteritem{ min-width: 160px; }
+  .filterwide{ min-width: 220px; }
+}
+
+/* =========================
+   Cabeceras clicables (sort)
+========================= */
+.table-host table thead th{ user-select: none; }
+
+.th-btn{
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: transparent;
+  border: 0;
+  padding: 8px 6px;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.th-btn:hover{
+  background: rgba(2,6,23,.04);
+  border-radius: 10px;
+}
+.sort-ind{
+  font-size: 12px;
+  opacity: .75;
+}

@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://firestore.googleapis.com https://www.googleapis.com;">
+
+    <title>Certificado de Titulación</title>
+    <link rel="stylesheet" href="./certititu.styles.css" />
+</head>
+<body>
+    <header class="topbar">
+        <div class="topbar_brand">
+            <div class="logo">doc</div>
+            <div>
+                <div class="topbar_title">Titulación</div>
+                <div class="topbar_subtitle">Generador de Certificados</div>
+            </div>
+        </div>
+        <div class="topbar_right">
+            <button id="ct-btn-volver" class="btn btn--small btn--ghost">⬅ Volver</button>
+            <div id="ct-status" class="status-pill">Inicializando...</div>
+        </div>
+    </header>
+
+    <main class="wrap">
+        
+        <section class="toolbar card">
+            <div class="toolbar_inputs">
+                <div class="field">
+                    <label for="ct-periodo">Periodo</label>
+                    <select id="ct-periodo">
+                        <option value="">Cargando...</option>
+                    </select>
+                </div>
+                <div class="field search-field">
+                    <label for="ct-search">Estudiante</label>
+                    <input id="ct-search" type="search" autocomplete="off" placeholder="Buscar por cédula o nombre..." disabled />
+                    <div class="suggest" id="ct-suggest" hidden>
+                        <ul id="ct-suggest-list"></ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="toolbar_actions">
+                <button id="ct-btn-refrescar" class="btn btn--secondary">Refrescar Datos</button>
+                <button id="ct-btn-pdf" class="btn btn--primary" disabled>
+                    <span class="icon">⬇</span> Descargar PDF
+                </button>
+            </div>
+        </section>
+
+        <div id="ct-selected" class="selection-info"></div>
+
+        <section class="preview-area">
+            <div class="paper-sheet">
+                <div class="paper-watermark"></div>
+                <div id="ct-doc" class="doc-content">
+                    </div>
+            </div>
+            <div class="preview-help">Vista previa aproximada. El PDF final incluirá el fondo oficial.</div>
+        </section>
+
+    </main>
+
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
+    <script src="./certititu.firebase-init.js"></script>
+
+    <script src="./certititu.template.js"></script>
+    <script src="./certititu.pdf.js"></script>
+
+    <script src="./certititu.data-remote.js"></script>
+    <script src="./certititu.app.js"></script>
+
+</body>
+</html>

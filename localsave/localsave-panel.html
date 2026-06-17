@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LocalSave Console</title>
+  <link rel="stylesheet" href="./localsave-panel.css" />
+</head>
+<body>
+  <div class="ls-app">
+    <header class="ls-topbar">
+      <div class="ls-topbar__brand">
+        <div class="ls-logo">LS</div>
+        <div>
+          <h1 class="ls-title">LocalSave Console</h1>
+          <p class="ls-subtitle">Colecciones, documentos y campos</p>
+        </div>
+      </div>
+
+      <div class="ls-topbar__actions">
+        <button type="button" class="ls-btn ls-btn--ghost" id="btnRefresh">
+          Actualizar
+        </button>
+        <button type="button" class="ls-btn ls-btn--ghost" id="btnSyncNow">
+          Sincronizar
+        </button>
+        <button type="button" class="ls-btn ls-btn--primary" id="btnClearQueue">
+          Limpiar cola
+        </button>
+      </div>
+    </header>
+
+    <section class="ls-summary">
+      <article class="ls-kpi">
+        <span class="ls-kpi__label">Colecciones</span>
+        <strong class="ls-kpi__value" id="kpiCollections">0</strong>
+      </article>
+
+      <article class="ls-kpi">
+        <span class="ls-kpi__label">Documentos</span>
+        <strong class="ls-kpi__value" id="kpiDocuments">0</strong>
+      </article>
+
+      <article class="ls-kpi">
+        <span class="ls-kpi__label">Pendientes</span>
+        <strong class="ls-kpi__value" id="kpiPending">0</strong>
+      </article>
+
+      <article class="ls-kpi">
+        <span class="ls-kpi__label">Última sync</span>
+        <strong class="ls-kpi__value ls-kpi__value--small" id="kpiLastSync">Nunca</strong>
+      </article>
+    </section>
+
+    <section class="ls-statusbar">
+      <div class="ls-statusbar__item">
+        <span class="ls-status-pill" id="pillSource">Fuente: sin datos</span>
+      </div>
+      <div class="ls-statusbar__item">
+        <span class="ls-status-pill" id="pillFs">Filesystem: —</span>
+      </div>
+      <div class="ls-statusbar__item">
+        <span class="ls-status-pill" id="pillReady">Ready: —</span>
+      </div>
+      <div class="ls-statusbar__item">
+        <span class="ls-status-pill" id="pillSnapshot">Snapshot: —</span>
+      </div>
+    </section>
+
+    <main class="ls-main">
+      <aside class="ls-panel ls-panel--collections">
+        <div class="ls-panel__header">
+          <div>
+            <h2 class="ls-panel__title">Colecciones</h2>
+            <p class="ls-panel__desc">Scopes detectados en archivos y/o localStorage</p>
+          </div>
+        </div>
+
+        <div class="ls-toolbar">
+          <input
+            type="text"
+            class="ls-input"
+            id="inputCollectionSearch"
+            placeholder="Buscar colección"
+            autocomplete="off"
+          />
+        </div>
+
+        <div class="ls-list-wrap">
+          <ul class="ls-list" id="collectionsList"></ul>
+          <div class="ls-empty" id="collectionsEmpty" hidden>No hay colecciones disponibles.</div>
+        </div>
+      </aside>
+
+      <section class="ls-panel ls-panel--documents">
+        <div class="ls-panel__header">
+          <div>
+            <h2 class="ls-panel__title">Documentos</h2>
+            <p class="ls-panel__desc">
+              Colección seleccionada:
+              <strong id="selectedCollectionLabel">—</strong>
+            </p>
+          </div>
+        </div>
+
+        <div class="ls-toolbar">
+          <input
+            type="text"
+            class="ls-input"
+            id="inputDocumentSearch"
+            placeholder="Buscar documento"
+            autocomplete="off"
+          />
+        </div>
+
+        <div class="ls-list-wrap">
+          <ul class="ls-list" id="documentsList"></ul>
+          <div class="ls-empty" id="documentsEmpty" hidden>No hay documentos en esta colección.</div>
+        </div>
+      </section>
+
+      <section class="ls-panel ls-panel--fields">
+        <div class="ls-panel__header">
+          <div>
+            <h2 class="ls-panel__title">Campos</h2>
+            <p class="ls-panel__desc">
+              Documento seleccionado:
+              <strong id="selectedDocumentLabel">—</strong>
+            </p>
+          </div>
+        </div>
+
+        <div class="ls-doc-head">
+          <div class="ls-doc-head__item">
+            <span class="ls-doc-head__label">Colección</span>
+            <strong class="ls-doc-head__value" id="docCollectionName">—</strong>
+          </div>
+
+          <div class="ls-doc-head__item">
+            <span class="ls-doc-head__label">Documento</span>
+            <strong class="ls-doc-head__value" id="docIdValue">—</strong>
+          </div>
+
+          <div class="ls-doc-head__item">
+            <span class="ls-doc-head__label">Estado</span>
+            <strong class="ls-doc-head__value" id="docStatusValue">—</strong>
+          </div>
+
+          <div class="ls-doc-head__item">
+            <span class="ls-doc-head__label">Fuente</span>
+            <strong class="ls-doc-head__value" id="docSourceValue">—</strong>
+          </div>
+        </div>
+
+        <div class="ls-fields-box">
+          <table class="ls-table">
+            <thead>
+              <tr>
+                <th>Campo</th>
+                <th>Valor</th>
+                <th>Tipo</th>
+              </tr>
+            </thead>
+            <tbody id="fieldsTableBody"></tbody>
+          </table>
+          <div class="ls-empty ls-empty--boxed" id="fieldsEmpty" hidden>
+            Selecciona un documento para ver sus campos.
+          </div>
+        </div>
+
+        <div class="ls-bottom-grid">
+          <div class="ls-json-box">
+            <div class="ls-json-box__header">
+              <h3>Vista JSON</h3>
+            </div>
+            <pre class="ls-json" id="jsonPreview">{}</pre>
+          </div>
+
+          <div class="ls-json-box">
+            <div class="ls-json-box__header">
+              <h3>Pendientes del documento</h3>
+            </div>
+            <pre class="ls-json" id="queuePreview">[]</pre>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="ls-footer">
+      <div class="ls-footer__left">
+        <span class="ls-status-dot" id="footerDot"></span>
+        <span id="footerStatusText">Inicializando panel…</span>
+      </div>
+
+      <div class="ls-footer__right" id="footerPathText">
+        Esperando datos…
+      </div>
+    </footer>
+  </div>
+
+  <script src="./localsave.config.js"></script>
+  <script src="./localsave.fs.js"></script>
+  <script src="./localsave.firebase-map.js"></script>
+  <script src="./localsave.snapshot.js"></script>
+  <script src="./localsave.queue.js"></script>
+  <script src="./localsave.status.js"></script>
+  <script src="./localsave.store.js"></script>
+  <script src="./localsave.sync.js"></script>
+  <script src="./localsave.scheduler.js"></script>
+  <script src="./localsave.index.js"></script>
+  <script src="./localsave-panel.js"></script>
+</body>
+</html>

@@ -1,0 +1,119 @@
+<!--
+=========================================================
+Nombre completo: index.html
+Ruta o ubicación: /incorporaciones/index.html
+
+Función o funciones:
+1. Servir como entrada principal del módulo Incorporaciones.
+2. Evitar la pantalla blanca al abrir Incorporaciones desde el menú principal.
+3. Cargar un menú superior inteligente para navegar entre Distribución, Guiones,
+   Faltantes, Certificados y Sedes.
+4. Mostrar las pantallas internas dentro de un iframe central.
+5. No mostrar panel general interno, porque la pantalla inicial será Distribución.
+6. Incluir un botón a la derecha para volver al panel principal de desarrollo.
+
+Con qué se une:
+- /incorporaciones/menu/inc-menu.routes.js
+- /incorporaciones/menu/inc-menu.memory.js
+- /incorporaciones/menu/inc-menu.app.js
+- /incorporaciones/menu/inc-menu.styles.css
+- /incorporaciones/distribucion/distribucion.index.html
+- /incorporaciones/guiones/guiones.index.html
+- /incorporaciones/falt/falt.html
+- /incorporaciones/certificados/certi.index.html
+- /incorporaciones/sedes/admin.html
+- /incorporaciones/sedes/estudiante.html
+- /incorporaciones/sedes/estadisticas/index.html
+- /incorporaciones/sedes/mensaje/mjs-index.html
+- /index.html
+=========================================================
+-->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Incorporaciones | ITSQMET</title>
+
+  <link rel="stylesheet" href="./menu/inc-menu.styles.css" />
+</head>
+
+<body class="inc-shell-body">
+  <div class="inc-shell" id="incShell">
+    <header class="inc-topbar">
+      <div class="inc-brand" aria-label="Módulo Incorporaciones">
+        <span class="inc-brand-mark">I</span>
+        <span class="inc-brand-text">Incorporaciones</span>
+      </div>
+
+      <nav class="inc-nav" id="incNav" aria-label="Menú superior de incorporaciones">
+        <!-- El menú se construye desde inc-menu.routes.js -->
+      </nav>
+
+      <div class="inc-actions">
+        <a
+          class="inc-mini-btn inc-home-btn"
+          href="../index.html"
+          target="_top"
+          title="Volver al panel principal de desarrollo"
+        >
+          Panel principal
+        </a>
+
+        <button
+          type="button"
+          class="inc-mini-btn"
+          id="incReloadBtn"
+          title="Recargar pantalla actual"
+        >
+          Recargar
+        </button>
+      </div>
+    </header>
+
+    <section class="inc-statusbar" id="incStatusbar">
+      <span id="incCurrentLabel">Cargando...</span>
+      <span id="incCurrentPath"></span>
+    </section>
+
+    <main class="inc-main">
+      <div class="inc-loader" id="incLoader" aria-live="polite">
+        <div class="inc-loader-card">
+          <div class="inc-spinner"></div>
+          <p id="incLoaderText">Cargando pantalla...</p>
+        </div>
+      </div>
+
+      <div class="inc-error is-hidden" id="incErrorBox" aria-live="assertive">
+        <div class="inc-error-card">
+          <strong>No se pudo cargar esta pantalla.</strong>
+          <p id="incErrorMessage">Se produjo un error inesperado.</p>
+          <pre id="incErrorDetail"></pre>
+
+          <div class="inc-error-actions">
+            <button type="button" id="incRetryBtn">Intentar nuevamente</button>
+            <button type="button" id="incGoDefaultBtn">Ir a Distribución</button>
+          </div>
+        </div>
+      </div>
+
+      <iframe
+        id="incModuleFrame"
+        class="inc-frame"
+        title="Pantalla interna de Incorporaciones"
+      ></iframe>
+    </main>
+  </div>
+
+  <noscript>
+    <div class="inc-noscript">
+      Para usar el módulo de Incorporaciones debes activar JavaScript.
+    </div>
+  </noscript>
+
+  <script src="./menu/inc-menu.routes.js"></script>
+  <script src="./menu/inc-menu.memory.js"></script>
+  <script src="./menu/inc-menu.app.js"></script>
+</body>
+</html>

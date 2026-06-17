@@ -1,0 +1,64 @@
+<!--
+ARCHIVO: pdf.template.html
+RUTA: src/pdf/pdf.template.html
+FUNCIÓN (FUERA DEL CÓDIGO):
+- Plantilla HTML para renderizar el PDF.
+- Incluye portada, índice, secciones y estilos inline.
+-->
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Reporte PDF - {{ROOT_NAME}}</title>
+  <style>{{INLINE_CSS}}</style>
+</head>
+<body>
+  <div class="cover">
+    <div class="cover-badge">REPORTE</div>
+    <div class="cover-title">{{ROOT_NAME}}</div>
+    <div class="cover-sub">Raíz: {{ROOT_PATH}}</div>
+    <div class="cover-sub">Generado: {{WHEN}}</div>
+  </div>
+
+  <div class="pagebreak"></div>
+
+  <section id="toc">
+    <h1>Índice</h1>
+    <div class="muted small">
+      Índice con enlaces internos (navegable en PDF según visor).
+    </div>
+    {{TOC}}
+  </section>
+
+  <div class="pagebreak"></div>
+
+  <section id="sec-resumen">
+    <h1>Resumen general</h1>
+    {{RESUMEN}}
+  </section>
+
+  <div class="pagebreak"></div>
+
+  <section id="sec-estructura">
+    <h1>Estructura (archivos incluidos)</h1>
+    {{ESTRUCTURA}}
+  </section>
+
+  <div class="pagebreak"></div>
+
+  <section id="sec-omitidos">
+    <h1>Omitidos</h1>
+    {{OMITIDOS}}
+  </section>
+
+  <div class="pagebreak"></div>
+
+  <section id="sec-codigos">
+    <h1>Códigos (por archivo)</h1>
+    <div class="muted small">
+      Cada archivo incluye ruta, función estimada y el código completo.
+    </div>
+    {{CODES}}
+  </section>
+</body>
+</html>

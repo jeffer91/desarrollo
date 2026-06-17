@@ -1,0 +1,80 @@
+<!-- =========================================================
+Nombre completo: certi.html
+Ruta o ubicación: /incorporaciones/certificados/certi.html
+Función o funciones:
+- Servir como entrada alternativa segura del módulo Certi.
+- Redirigir automáticamente hacia certi.index.html.
+- Evitar pantalla en blanco cuando algún menú, botón o ruta antigua abra certi.html.
+- Mantener compatibilidad con doble clic, Live Server y navegación local.
+Con qué se une:
+- certi.index.html
+========================================================= -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Redirigiendo a Certi...</title>
+
+  <meta http-equiv="refresh" content="0; url=./certi.index.html" />
+
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f4f7fb;
+      color: #172033;
+    }
+
+    .certi-redirect-box {
+      width: min(520px, calc(100% - 32px));
+      padding: 28px;
+      border-radius: 18px;
+      background: #ffffff;
+      border: 1px solid #d9e2ef;
+      box-shadow: 0 16px 40px rgba(16, 24, 40, 0.08);
+      text-align: center;
+    }
+
+    .certi-redirect-box h1 {
+      margin: 0 0 10px;
+      color: #0d47a1;
+      font-size: 28px;
+    }
+
+    .certi-redirect-box p {
+      margin: 0 0 18px;
+      color: #667085;
+      line-height: 1.45;
+    }
+
+    .certi-redirect-box a {
+      display: inline-block;
+      padding: 11px 18px;
+      border-radius: 12px;
+      background: #0d47a1;
+      color: #ffffff;
+      font-weight: 700;
+      text-decoration: none;
+    }
+  </style>
+
+  <script>
+    (function () {
+      "use strict";
+
+      window.location.replace("./certi.index.html");
+    })();
+  </script>
+</head>
+<body>
+  <main class="certi-redirect-box">
+    <h1>Certi</h1>
+    <p>Abriendo la pantalla de certificados...</p>
+    <a href="./certi.index.html">Entrar manualmente</a>
+  </main>
+</body>
+</html>
