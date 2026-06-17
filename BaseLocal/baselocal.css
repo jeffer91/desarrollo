@@ -1,0 +1,361 @@
+/* =========================================================
+Archivo: baselocal.css
+Ubicación: BaseLocal/baselocal.css
+
+Función:
+- Diseño compacto del visor BaseLocal.
+- Tablas ligeras.
+- Estados visuales para diagnóstico, errores y Firebase.
+========================================================= */
+
+:root {
+  --bl-bg: #f4f6f8;
+  --bl-card: #ffffff;
+  --bl-text: #172033;
+  --bl-muted: #64748b;
+  --bl-line: #dbe2ea;
+  --bl-primary: #1d4ed8;
+  --bl-primary-dark: #173ea8;
+  --bl-ok: #15803d;
+  --bl-warn: #b45309;
+  --bl-error: #b91c1c;
+  --bl-soft-blue: #eff6ff;
+  --bl-soft-green: #ecfdf5;
+  --bl-soft-warn: #fff7ed;
+  --bl-soft-red: #fef2f2;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bl-bg);
+  color: var(--bl-text);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 13px;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  border: 1px solid var(--bl-primary);
+  background: var(--bl-primary);
+  color: #ffffff;
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+button:hover {
+  background: var(--bl-primary-dark);
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+input,
+select {
+  border: 1px solid var(--bl-line);
+  background: #ffffff;
+  color: var(--bl-text);
+  border-radius: 8px;
+  padding: 8px 10px;
+  min-height: 36px;
+}
+
+textarea {
+  width: 100%;
+  min-height: 420px;
+  border: 1px solid var(--bl-line);
+  border-radius: 10px;
+  padding: 12px;
+  resize: vertical;
+  background: #0f172a;
+  color: #e5e7eb;
+  font-family: Consolas, Monaco, monospace;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.bl-app {
+  width: min(1440px, calc(100% - 24px));
+  margin: 12px auto;
+}
+
+.bl-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  background: var(--bl-card);
+  border: 1px solid var(--bl-line);
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 10px;
+}
+
+.bl-header h1 {
+  margin: 0 0 4px;
+  font-size: 22px;
+}
+
+.bl-header p {
+  margin: 0;
+  color: var(--bl-muted);
+}
+
+.bl-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  align-content: flex-start;
+}
+
+.bl-status {
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  border: 1px solid var(--bl-line);
+  background: var(--bl-card);
+  white-space: pre-wrap;
+}
+
+.bl-status-info {
+  background: var(--bl-soft-blue);
+  border-color: #bfdbfe;
+}
+
+.bl-status-ok {
+  background: var(--bl-soft-green);
+  border-color: #bbf7d0;
+  color: var(--bl-ok);
+}
+
+.bl-status-warn {
+  background: var(--bl-soft-warn);
+  border-color: #fed7aa;
+  color: var(--bl-warn);
+}
+
+.bl-status-error {
+  background: var(--bl-soft-red);
+  border-color: #fecaca;
+  color: var(--bl-error);
+}
+
+.bl-grid-kpis {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(120px, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.bl-kpi {
+  background: var(--bl-card);
+  border: 1px solid var(--bl-line);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.bl-kpi span {
+  display: block;
+  color: var(--bl-muted);
+  margin-bottom: 6px;
+}
+
+.bl-kpi strong {
+  display: block;
+  font-size: 22px;
+}
+
+.bl-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: end;
+  background: var(--bl-card);
+  border: 1px solid var(--bl-line);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+
+.bl-tools label {
+  display: grid;
+  gap: 4px;
+  color: var(--bl-muted);
+  min-width: 220px;
+}
+
+.bl-tools input {
+  min-width: 260px;
+}
+
+.bl-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.bl-tabs button {
+  background: #ffffff;
+  color: var(--bl-text);
+  border-color: var(--bl-line);
+}
+
+.bl-tabs button.is-active {
+  background: var(--bl-primary);
+  color: #ffffff;
+  border-color: var(--bl-primary);
+}
+
+.bl-main {
+  background: var(--bl-card);
+  border: 1px solid var(--bl-line);
+  border-radius: 14px;
+  padding: 14px;
+  min-height: 420px;
+}
+
+.bl-panel {
+  display: none;
+}
+
+.bl-panel.is-active {
+  display: block;
+}
+
+.bl-panel h2 {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+
+.bl-help {
+  margin: 0 0 10px;
+  color: var(--bl-muted);
+}
+
+.bl-table-wrap {
+  overflow: auto;
+  border: 1px solid var(--bl-line);
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.bl-table {
+  width: 100%;
+  min-width: 860px;
+  border-collapse: collapse;
+}
+
+.bl-table th,
+.bl-table td {
+  border-bottom: 1px solid var(--bl-line);
+  padding: 8px;
+  vertical-align: top;
+  text-align: left;
+}
+
+.bl-table th {
+  background: #f8fafc;
+  font-size: 12px;
+  color: #334155;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.bl-table tr:hover td {
+  background: #f8fafc;
+}
+
+.bl-badge {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid var(--bl-line);
+  background: #f8fafc;
+}
+
+.bl-badge-ok {
+  background: var(--bl-soft-green);
+  color: var(--bl-ok);
+  border-color: #bbf7d0;
+}
+
+.bl-badge-warn {
+  background: var(--bl-soft-warn);
+  color: var(--bl-warn);
+  border-color: #fed7aa;
+}
+
+.bl-badge-error {
+  background: var(--bl-soft-red);
+  color: var(--bl-error);
+  border-color: #fecaca;
+}
+
+.bl-diagnostics {
+  display: grid;
+  gap: 10px;
+}
+
+.bl-diag-block {
+  border: 1px solid var(--bl-line);
+  border-radius: 10px;
+  padding: 12px;
+  background: #ffffff;
+}
+
+.bl-diag-block h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+
+.bl-diag-block ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.bl-empty {
+  color: var(--bl-muted);
+  padding: 14px;
+}
+
+.bl-small {
+  color: var(--bl-muted);
+  font-size: 12px;
+}
+
+@media (max-width: 900px) {
+  .bl-header {
+    display: block;
+  }
+
+  .bl-header-actions {
+    justify-content: flex-start;
+    margin-top: 12px;
+  }
+
+  .bl-grid-kpis {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .bl-tools label,
+  .bl-tools input {
+    min-width: 100%;
+  }
+}
