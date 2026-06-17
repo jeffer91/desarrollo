@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Base Local | Requisitos</title>
+
+  <link rel="stylesheet" href="baselocal.css" />
+</head>
+
+<body>
+  <div class="bl-app">
+    <header class="bl-header">
+      <div>
+        <h1>Base Local</h1>
+        <p>
+          Visor central de la base cargada desde Excel, divisiones desde Stats y sincronización con Firebase.
+        </p>
+      </div>
+
+      <div class="bl-header-actions">
+        <button id="bl-btn-refresh" type="button">Actualizar vista</button>
+        <button id="bl-btn-diagnostics" type="button">Diagnóstico</button>
+        <button id="bl-btn-pull" type="button">Jalar desde Firebase</button>
+        <button id="bl-btn-push" type="button">Enviar a Firebase</button>
+        <button id="bl-btn-compare" type="button">Comparar</button>
+        <button id="bl-btn-export" type="button">Exportar JSON</button>
+      </div>
+    </header>
+
+    <section id="bl-status" class="bl-status bl-status-info">
+      Cargando módulo BaseLocal...
+    </section>
+
+    <section class="bl-grid-kpis">
+      <article class="bl-kpi">
+        <span>Períodos</span>
+        <strong id="bl-kpi-periodos">0</strong>
+      </article>
+
+      <article class="bl-kpi">
+        <span>Estudiantes</span>
+        <strong id="bl-kpi-estudiantes">0</strong>
+      </article>
+
+      <article class="bl-kpi">
+        <span>Divisiones</span>
+        <strong id="bl-kpi-divisiones">0</strong>
+      </article>
+
+      <article class="bl-kpi">
+        <span>Carreras</span>
+        <strong id="bl-kpi-carreras">0</strong>
+      </article>
+
+      <article class="bl-kpi">
+        <span>Estado</span>
+        <strong id="bl-kpi-estado">—</strong>
+      </article>
+    </section>
+
+    <section class="bl-tools">
+      <label>
+        Período:
+        <select id="bl-filter-period">
+          <option value="">Todos los períodos</option>
+        </select>
+      </label>
+
+      <label>
+        Buscar:
+        <input id="bl-filter-search" type="search" placeholder="Cédula, nombre, carrera..." />
+      </label>
+
+      <button id="bl-btn-copy-refs" type="button">Copiar referencias para otras apps</button>
+    </section>
+
+    <nav class="bl-tabs" aria-label="Secciones Base Local">
+      <button class="is-active" data-tab="periodos" type="button">Períodos</button>
+      <button data-tab="divisiones" type="button">Divisiones</button>
+      <button data-tab="estudiantes" type="button">Estudiantes</button>
+      <button data-tab="diagnostico" type="button">Diagnóstico</button>
+      <button data-tab="manual" type="button">Manual para otras apps</button>
+    </nav>
+
+    <main class="bl-main">
+      <section id="bl-tab-periodos" class="bl-panel is-active">
+        <h2>Períodos cargados</h2>
+        <div id="bl-periodos-table" class="bl-table-wrap"></div>
+      </section>
+
+      <section id="bl-tab-divisiones" class="bl-panel">
+        <h2>Divisiones detectadas</h2>
+        <div id="bl-divisiones-table" class="bl-table-wrap"></div>
+      </section>
+
+      <section id="bl-tab-estudiantes" class="bl-panel">
+        <h2>Estudiantes</h2>
+        <p class="bl-help">
+          Se muestran máximo 300 registros en pantalla para mantener la vista rápida.
+        </p>
+        <div id="bl-estudiantes-table" class="bl-table-wrap"></div>
+      </section>
+
+      <section id="bl-tab-diagnostico" class="bl-panel">
+        <h2>Diagnóstico de base local</h2>
+        <div id="bl-diagnostics-box" class="bl-diagnostics"></div>
+      </section>
+
+      <section id="bl-tab-manual" class="bl-panel">
+        <h2>Manual para futuras apps</h2>
+        <p class="bl-help">
+          Copia estas referencias cuando otra app necesite leer la misma base local.
+        </p>
+        <textarea id="bl-manual-text" readonly></textarea>
+      </section>
+    </main>
+  </div>
+
+  <!-- ======================================================
+       Infraestructura existente del módulo Excel
+       ====================================================== -->
+  <script src="../Gestion/Excel/excel-constants.js"></script>
+  <script src="../Gestion/Excel/excel-state.js"></script>
+  <script src="../Gestion/Excel/excel-local/excel-local.config.js"></script>
+  <script src="../Gestion/Excel/excel-local/excel-local.storage.js"></script>
+  <script src="../Gestion/Excel/excel-local/excel-local.bridge.js"></script>
+  <script src="../Gestion/Excel/excel-local.repo.js"></script>
+
+  <script>
+    (function () {
+      "use strict";
+
+      function adoptParentFirebaseIfPossible() {
+        try {
+          if (!window.firebase && window.parent && window.parent !== window && window.parent.firebase) {
+            window.firebase = window.parent.firebase;
+          }
+
+          if (!window.db && window.parent && window.parent !== window && window.parent.db) {
+            window.db = window.parent.db;
+          }
+        } catch (error) {
+          console.warn("[BaseLocal] No se pudo adoptar Firebase desde ventana padre:", error);
+        }
+      }
+
+      try {
+        adoptParentFirebaseIfPossible();
+
+        if (window.ExcelLocalBridge && typeof window.ExcelLocalBridge.ensureReady === "function") {
+          window.ExcelLocalBridge.ensureReady();
+        }
+
+        if (!window.db && window.ExcelLocalBridge && typeof window.ExcelLocalBridge.getDb === "function") {
+          window.db = window.ExcelLocalBridge.getDb();
+        }
+      } catch (error) {
+        console.error("[BaseLocal] Error inicializando capa local:", error);
+      }
+    })();
+  </script>
+
+  <!-- ======================================================
+       Sincronización existente con Firebase, si está disponible
+       ====================================================== -->
+  <script src="../Gestion/Excel/excel-remote.repo.js"></script>
+  <script src="../Gestion/Excel/excel-sync.service.js"></script>
+  <script src="../Gestion/Excel/excel-sync.bridge.js"></script>
+
+  <script>
+    (function () {
+      "use strict";
+
+      try {
+        if (
+          !window.ExcelSyncBridge &&
+          window.ExcelLocalBridge &&
+          typeof window.ExcelLocalBridge.getSyncShim === "function"
+        ) {
+          window.ExcelSyncBridge = window.ExcelLocalBridge.getSyncShim();
+        }
+      } catch (error) {
+        console.error("[BaseLocal] No se pudo resolver ExcelSyncBridge:", error);
+      }
+    })();
+  </script>
+
+  <!-- ======================================================
+       Reglas y divisiones existentes desde Stats
+       ====================================================== -->
+  <script src="../Stats/stats-utils.js"></script>
+  <script src="../Stats/stats-period-rules.js"></script>
+  <script src="../Stats/stats-period-divisions.js"></script>
+
+  <!-- ======================================================
+       Módulo nuevo BaseLocal
+       ====================================================== -->
+  <script src="baselocal.core.js"></script>
+  <script src="baselocal.firebase.js"></script>
+  <script src="baselocal.manual.js"></script>
+  <script src="baselocal.app.js"></script>
+</body>
+</html>
