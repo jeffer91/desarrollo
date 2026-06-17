@@ -1,0 +1,211 @@
+<!--
+=========================================================
+Nombre completo: coordi.html
+Ruta o ubicación: /Coordi/coordi.html
+Función o funciones:
+1. Mostrar la pantalla para enviar estudiantes pendientes a responsables de área.
+2. Filtrar primero por período, luego por división y luego por requisito.
+3. Generar mensajes de WhatsApp, correo y Telegram.
+4. Enviar a coordinadores por Telegram solo estudiantes con pendiente Académico.
+5. Generar correo general si no se selecciona requisito.
+Con qué se une:
+- coordi.css
+- coordi-data.js
+- coordi-logic.js
+- coordi-mensajes.js
+- coordi-resumen-general.js
+- coordi.js
+- ../Gestion/Excel/excel-local/excel-local.config.js
+- ../Gestion/Excel/excel-local/excel-local.storage.js
+- ../Gestion/Excel/excel-local/excel-local.bridge.js
+- ../Gestion/Excel/excel-local.repo.js
+=========================================================
+-->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Coordi | Responsables de requisitos</title>
+  <link rel="stylesheet" href="coordi.css" />
+</head>
+<body>
+  <main class="coordi-app">
+    <header class="coordi-header">
+      <div>
+        <p class="coordi-eyebrow">Requisitos de titulación</p>
+        <h1>Mensajes a responsables y coordinadores</h1>
+        <p class="coordi-subtitle">
+          Filtra por período y división. Si eliges un requisito, se genera el mensaje del área.
+          Si no eliges requisito, se genera el correo general de cumplimiento.
+        </p>
+      </div>
+
+      <div class="coordi-header-actions">
+        <a class="coordi-btn coordi-btn-light" href="../Maqueta/maq-index.html">Inicio</a>
+        <button id="coordi-btn-refresh" class="coordi-btn coordi-btn-primary" type="button">
+          Recargar datos
+        </button>
+      </div>
+    </header>
+
+    <section class="coordi-panel">
+      <div class="coordi-filters">
+        <div class="coordi-field">
+          <label for="coordi-period">Período</label>
+          <select id="coordi-period">
+            <option value="">Cargando períodos...</option>
+          </select>
+        </div>
+
+        <div class="coordi-field">
+          <label for="coordi-division">División</label>
+          <select id="coordi-division" disabled>
+            <option value="">Primero selecciona un período</option>
+          </select>
+        </div>
+
+        <div class="coordi-field">
+          <label for="coordi-requirement">Requisito</label>
+          <select id="coordi-requirement" disabled>
+            <option value="">Primero selecciona un período</option>
+          </select>
+        </div>
+
+        <div class="coordi-field">
+          <label for="coordi-search">Buscar</label>
+          <input id="coordi-search" type="search" placeholder="Cédula, nombre o carrera" disabled />
+        </div>
+      </div>
+
+      <div id="coordi-status" class="coordi-status">
+        Inicializando módulo...
+      </div>
+    </section>
+
+    <section class="coordi-kpis">
+      <article class="coordi-kpi">
+        <span>Total pendientes / evaluados</span>
+        <strong id="coordi-kpi-total">0</strong>
+      </article>
+
+      <article class="coordi-kpi">
+        <span>Responsable</span>
+        <strong id="coordi-kpi-responsible">—</strong>
+      </article>
+
+      <article class="coordi-kpi">
+        <span>Coordinadores</span>
+        <strong id="coordi-kpi-coordinators">0</strong>
+      </article>
+
+      <article class="coordi-kpi">
+        <span>Sin Telegram</span>
+        <strong id="coordi-kpi-sintelegram">0</strong>
+      </article>
+    </section>
+
+    <section class="coordi-grid">
+      <article class="coordi-card" id="coordi-responsible-card">
+        <div class="coordi-card-head">
+          <div>
+            <p class="coordi-eyebrow">Responsable de área</p>
+            <h2 id="coordi-responsible-title">Selecciona un período</h2>
+          </div>
+          <span id="coordi-responsible-badge" class="coordi-badge">—</span>
+        </div>
+
+        <div id="coordi-responsible-info" class="coordi-muted">
+          Aquí se generará el mensaje para WhatsApp y correo.
+        </div>
+
+        <div class="coordi-message-block">
+          <label for="coordi-whatsapp-message">Mensaje WhatsApp</label>
+          <textarea id="coordi-whatsapp-message" readonly placeholder="Selecciona período, división y requisito."></textarea>
+          <div class="coordi-actions">
+            <button class="coordi-btn coordi-btn-light" type="button" data-coordi-action="copy_area_whatsapp">
+              Copiar WhatsApp
+            </button>
+            <button class="coordi-btn coordi-btn-primary" type="button" data-coordi-action="open_area_whatsapp">
+              Abrir WhatsApp
+            </button>
+          </div>
+        </div>
+
+        <div class="coordi-message-block">
+          <label for="coordi-email-message">Correo para copiar</label>
+          <textarea id="coordi-email-message" readonly placeholder="Aquí aparecerá el correo completo."></textarea>
+          <div class="coordi-actions">
+            <button class="coordi-btn coordi-btn-light" type="button" data-coordi-action="copy_area_email">
+              Copiar correo
+            </button>
+            <button class="coordi-btn coordi-btn-primary" type="button" data-coordi-action="open_area_email">
+              Abrir Outlook
+            </button>
+          </div>
+        </div>
+      </article>
+
+      <article class="coordi-card" id="coordi-coordinators-card">
+        <div class="coordi-card-head">
+          <div>
+            <p class="coordi-eyebrow">Coordinadores</p>
+            <h2>Telegram por carrera</h2>
+          </div>
+          <span class="coordi-badge">Solo académico</span>
+        </div>
+
+        <div id="coordi-coordinators-note" class="coordi-muted">
+          Esta sección se activa únicamente cuando el requisito seleccionado es Académico.
+        </div>
+
+        <div id="coordi-coordinators-list" class="coordi-coordinators-list"></div>
+      </article>
+    </section>
+
+    <section class="coordi-card">
+      <div class="coordi-card-head">
+        <div>
+          <p class="coordi-eyebrow">Detalle</p>
+          <h2>Estudiantes filtrados</h2>
+        </div>
+        <button class="coordi-btn coordi-btn-light" type="button" data-coordi-action="copy_table">
+          Copiar listado
+        </button>
+      </div>
+
+      <div class="coordi-table-wrap">
+        <table class="coordi-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Cédula</th>
+              <th>Estudiante</th>
+              <th>Carrera</th>
+              <th>Período</th>
+              <th>División</th>
+              <th>Requisito</th>
+            </tr>
+          </thead>
+          <tbody id="coordi-table-body">
+            <tr>
+              <td colspan="7" class="coordi-empty">Selecciona un período para iniciar.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="../Gestion/Excel/excel-local/excel-local.config.js"></script>
+  <script src="../Gestion/Excel/excel-local/excel-local.storage.js"></script>
+  <script src="../Gestion/Excel/excel-local/excel-local.bridge.js"></script>
+  <script src="../Gestion/Excel/excel-local.repo.js"></script>
+
+  <script src="coordi-data.js"></script>
+  <script src="coordi-logic.js"></script>
+  <script src="coordi-mensajes.js"></script>
+  <script src="coordi-resumen-general.js"></script>
+  <script src="coordi.js"></script>
+</body>
+</html>
