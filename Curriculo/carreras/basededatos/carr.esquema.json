@@ -1,12 +1,29 @@
 {
   "coleccion": "carreras",
-  "descripcion": "Esquema base para la pantalla de alta basica de carreras. Esta vista solo registra nombre, tipo y estado.",
+  "version": 2,
+  "descripcion": "Esquema funcional para carreras. Registra datos base, campos normalizados, arreglos por nivel y metadatos de guardado local/sincronizacion.",
+  "claveDocumento": {
+    "campo": "id",
+    "generacion": "nombre sin tildes, minusculas y separado por guion bajo",
+    "ejemplo": "administracion_de_empresas"
+  },
   "campos": {
+    "id": {
+      "tipo": "string",
+      "requerido": true,
+      "descripcion": "Identificador unico del documento."
+    },
     "nombre": {
       "tipo": "string",
       "requerido": true,
       "minimoCaracteres": 2,
-      "maximoCaracteres": 120
+      "maximoCaracteres": 120,
+      "descripcion": "Nombre visible de la carrera."
+    },
+    "nombreNormalizado": {
+      "tipo": "string",
+      "requerido": true,
+      "descripcion": "Nombre sin tildes y en minusculas para busqueda."
     },
     "tipo": {
       "tipo": "string",
@@ -26,15 +43,76 @@
         "inactiva"
       ]
     },
+    "nucleos": {
+      "tipo": "array",
+      "requerido": true,
+      "longitud": 4,
+      "valorPorDefecto": ["", "", "", ""]
+    },
+    "materiasNivel1": {
+      "tipo": "array",
+      "requerido": true,
+      "valorPorDefecto": []
+    },
+    "materiasNivel2": {
+      "tipo": "array",
+      "requerido": true,
+      "valorPorDefecto": []
+    },
+    "materiasNivel3": {
+      "tipo": "array",
+      "requerido": true,
+      "valorPorDefecto": []
+    },
+    "materiasNivel4": {
+      "tipo": "array",
+      "requerido": true,
+      "valorPorDefecto": []
+    },
+    "materiasTransversal1": {
+      "tipo": "array",
+      "requerido": true,
+      "valorPorDefecto": []
+    },
+    "materiasTransversal2": {
+      "tipo": "array",
+      "requerido": true,
+      "valorPorDefecto": []
+    },
+    "materiasTransversal3": {
+      "tipo": "array",
+      "requerido": true,
+      "valorPorDefecto": []
+    },
+    "materiasTransversal4": {
+      "tipo": "array",
+      "requerido": true,
+      "valorPorDefecto": []
+    },
     "createdAt": {
       "tipo": "timestamp",
-      "requerido": true,
-      "modo": "serverTimestamp"
+      "requerido": false,
+      "modo": "serverTimestamp cuando se sube a Firebase"
     },
     "updatedAt": {
       "tipo": "timestamp",
+      "requerido": false,
+      "modo": "serverTimestamp cuando se sube a Firebase"
+    },
+    "createdAtLocal": {
+      "tipo": "string",
       "requerido": true,
-      "modo": "serverTimestamp"
+      "formato": "ISO-8601"
+    },
+    "updatedAtLocal": {
+      "tipo": "string",
+      "requerido": true,
+      "formato": "ISO-8601"
+    },
+    "origen": {
+      "tipo": "string",
+      "requerido": false,
+      "descripcion": "Indica si el registro fue generado desde local o Firebase."
     }
   }
 }
