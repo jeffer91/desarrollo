@@ -5,16 +5,70 @@
   - Centralizar llamadas del frontend hacia Netlify Functions.
   - Enviar acciones de estudiante, coordinador, administrador y Telegram sin repetir código.
   - Normalizar respuestas correctas y errores para las pantallas públicas y la pantalla local.
+  - Permitir configurar URL base de funciones cuando la pantalla se abre desde Electron o archivo local.
 */
 
-const BASE_FUNCTIONS_PATH = "/.netlify/functions";
+const DEFAULT_FUNCTIONS_PATH = "/.netlify/functions";
+const FUNCTIONS_BASE_KEY = "ta.titulo.articulo.functionsBase";
 
-const ENDPOINTS = Object.freeze({
-  estudiante: `${BASE_FUNCTIONS_PATH}/ta-titulo-articulo-api-estudiante`,
-  coordinador: `${BASE_FUNCTIONS_PATH}/ta-titulo-articulo-api-coordinador`,
-  admin: `${BASE_FUNCTIONS_PATH}/ta-titulo-articulo-api-admin`,
-  telegram: `${BASE_FUNCTIONS_PATH}/ta-titulo-articulo-api-telegram`
+const FUNCTION_NAMES = Object.freeze({
+  estudiante: "ta-titulo-articulo-api-estudiante",
+  coordinador: "ta-titulo-articulo-api-coordinador",
+  admin: "ta-titulo-articulo-api-admin",
+  telegram: "ta-titulo-articulo-api-telegram"
 });
+
+function clean(value) {
+  return String(value ?? "").replace(/\/+$/g, "").trim();
+}
+
+function obtenerBaseFunciones() {
+  const globalBase = clean(globalThis.TA_TITULO_ARTICULO_FUNCTIONS_BASE);
+  if (globalBase) return globalBase;
+
+  try {
+    const savedBase = clean(globalThis.localStorage?.getItem(FUNCTIONS_BASE_KEY));
+    if (savedBase) return savedBase;
+  } catch (error) {
+    console.warn("[Títulos API] No se pudo leer localStorage.", error);
+  }
+
+  const protocol = globalThis.location?.protocol || "";
+  if (protocol === "file:") return "";
+
+  return DEFAULT_FUNCTIONS_PATH;
+}
+
+export function configurarBaseFunciones(baseUrl) {
+  const base = clean(baseUrl);
+  if (!base) return "";
+
+  try {
+    globalThis.localStorage?.setItem(FUNCTIONS_BASE_KEY, base);
+  } catch (error) {
+    console.warn("[Títulos API] No se pudo guardar la URL base.", error);
+  }
+
+  globalThis.TA_TITULO_ARTICULO_FUNCTIONS_BASE = base;
+  return base;
+}
+
+export function obtenerEstadoApiTitulos() {
+  const base = obtenerBaseFunciones();
+  return {
+    configurado: Boolean(base),
+    base,
+    modoLocal: (globalThis.location?.protocol || "") === "file:"
+  };
+}
+
+function endpoint(nombre) {
+  const base = obtenerBaseFunciones();
+  if (!base) {
+    throw new Error("Configure la URL base de Netlify Functions para usar este módulo desde Electron o archivo local.");
+  }
+  return `${base}/${FUNCTION_NAMES[nombre]}`;
+}
 
 async function leerRespuestaJson(response) {
   const text = await response.text();
@@ -31,14 +85,14 @@ async function leerRespuestaJson(response) {
   }
 }
 
-async function llamarFuncion(endpoint, action, payload = {}, options = {}) {
+async function llamarFuncion(nombreFuncion, action, payload = {}, options = {}) {
   const headers = { "Content-Type": "application/json" };
 
   if (options.adminToken) {
     headers["x-ta-admin-token"] = options.adminToken;
   }
 
-  const response = await fetch(endpoint, {
+  const response = await fetch(endpoint(nombreFuncion), {
     method: "POST",
     headers,
     body: JSON.stringify({ action, payload })
@@ -56,52 +110,52 @@ async function llamarFuncion(endpoint, action, payload = {}, options = {}) {
 export const TaTituloArticuloApi = Object.freeze({
   estudiante: {
     buscarPorCedula(cedula) {
-      return llamarFuncion(ENDPOINTS.estudiante, "buscarPorCedula", { cedula });
+      return llamarFuncion("estudiante", "buscarPorCedula", { cedula });
     },
     consultarEstado(cedula) {
-      return llamarFuncion(ENDPOINTS.estudiante, "consultarEstado", { cedula });
+      return llamarFuncion("estudiante", "consultarEstado", { cedula });
     },
     guardarTelegram(cedula, telegramUser) {
-      return llamarFuncion(ENDPOINTS.estudiante, "guardarTelegram", { cedula, telegramUser });
+      return llamarFuncion("estudiante", "guardarTelegram", { cedula, telegramUser });
     },
     enviarPropuestas(datosEnvio) {
-      return llamarFuncion(ENDPOINTS.estudiante, "enviarPropuestas", datosEnvio);
+      return llamarFuncion("estudiante", "enviarPropuestas", datosEnvio);
     }
   },
 
   coordinador: {
     listarCoordinadores() {
-      return llamarFuncion(ENDPOINTS.coordinador, "listarCoordinadores");
+      return llamarFuncion("coordinador", "listarCoordinadores");
     },
     cargarEstudiantes(coordinadorId) {
-      return llamarFuncion(ENDPOINTS.coordinador, "cargarEstudiantes", { coordinadorId });
+      return llamarFuncion("coordinador", "cargarEstudiantes", { coordinadorId });
     },
     iniciarRevision(envioId, coordinadorId) {
-      return llamarFuncion(ENDPOINTS.coordinador, "iniciarRevision", { envioId, coordinadorId });
+      return llamarFuncion("coordinador", "iniciarRevision", { envioId, coordinadorId });
     },
     guardarRevision(revision) {
-      return llamarFuncion(ENDPOINTS.coordinador, "guardarRevision", revision);
+      return llamarFuncion("coordinador", "guardarRevision", revision);
     }
   },
 
   admin: {
     listarResumen(adminToken) {
-      return llamarFuncion(ENDPOINTS.admin, "listarResumen", {}, { adminToken });
+      return llamarFuncion("admin", "listarResumen", {}, { adminToken });
     },
     activarPeriodo(periodoId, adminToken) {
-      return llamarFuncion(ENDPOINTS.admin, "activarPeriodo", { periodoId }, { adminToken });
+      return llamarFuncion("admin", "activarPeriodo", { periodoId }, { adminToken });
     },
     guardarCoordinador(nombre, adminToken) {
-      return llamarFuncion(ENDPOINTS.admin, "guardarCoordinador", { nombre }, { adminToken });
+      return llamarFuncion("admin", "guardarCoordinador", { nombre }, { adminToken });
     },
     asignarCoordinadorCarrera(datos, adminToken) {
-      return llamarFuncion(ENDPOINTS.admin, "asignarCoordinadorCarrera", datos, { adminToken });
+      return llamarFuncion("admin", "asignarCoordinadorCarrera", datos, { adminToken });
     }
   },
 
   telegram: {
     enviarMensaje(chatId, mensaje, adminToken) {
-      return llamarFuncion(ENDPOINTS.telegram, "enviarMensaje", { chatId, mensaje }, { adminToken });
+      return llamarFuncion("telegram", "enviarMensaje", { chatId, mensaje }, { adminToken });
     }
   }
 });
