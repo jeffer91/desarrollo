@@ -4,16 +4,18 @@ Ruta o ubicación: /Requisitos/BaseLocal/baselocal.app.js
 Función o funciones:
 - Renderizar la pantalla BL.
 - Mostrar períodos, estudiantes, historial y diagnóstico local.
-- Ejecutar la bajada manual desde Firebase hacia la base local.
+- Ejecutar sincronización Base Local ↔ Firebase una vez al día.
+- Permitir sincronización manual y bajada manual desde Firebase.
 Con qué se conecta:
 - baselocal.core.js
 - baselocal.firebase.js
+- baselocal.connector.js
 - baselocal.manual.js
 ========================================================= */
 (function(window,document){
   "use strict";
 
-  var state = {tab:"periodos", periodId:"", search:"", loading:false};
+  var state = {tab:"periodos", periodId:"", search:"", loading:false, dailyStarted:false};
 
   function el(id){
     return document.getElementById(id);
@@ -39,13 +41,21 @@ Con qué se conecta:
     }
   }
 
-  function setBusy(isBusy, message){
+  function setBusy(isBusy, message, mode){
     state.loading = !!isBusy;
-    var btn = el("bl-btn-pull-firebase");
-    if(btn){
-      btn.disabled = !!isBusy;
-      btn.textContent = isBusy ? "Bajando..." : "Bajar desde Firebase";
+    var pullBtn = el("bl-btn-pull-firebase");
+    var syncBtn = el("bl-btn-sync-now");
+
+    if(pullBtn){
+      pullBtn.disabled = !!isBusy;
+      pullBtn.textContent = isBusy && mode === "pull" ? "Bajando..." : "Solo bajar Firebase";
     }
+
+    if(syncBtn){
+      syncBtn.disabled = !!isBusy;
+      syncBtn.textContent = isBusy && mode === "sync" ? "Sincronizando..." : "Sincronizar ahora";
+    }
+
     if(message){
       status(message, "bl-status-info");
     }
@@ -53,7 +63,7 @@ Con qué se conecta:
 
   function table(headers, rows){
     if(!rows || !rows.length){
-      return '<p class="bl-help">Sin datos todavía. Primero analiza un Excel en Requisito o baja los datos desde Firebase.</p>';
+      return '<p class="bl-help">Sin datos todavía. Primero analiza un Excel en Requisito, baja datos desde Firebase o sincroniza BL.</p>';
     }
 
     var head = '<table><thead><tr>' + headers.map(function(header){
@@ -71,6 +81,7 @@ Con qué se conecta:
   }
 
   function renderPeriods(view){
+    if(!el("bl-periodos-table")) return;
     el("bl-periodos-table").innerHTML = table([
       {label:"Período", key:"label"},
       {label:"ID", key:"id"},
@@ -79,6 +90,7 @@ Con qué se conecta:
   }
 
   function renderStudents(view){
+    if(!el("bl-estudiantes-table")) return;
     var rows = view.students.slice(0, 300);
     el("bl-estudiantes-table").innerHTML = table([
       {label:"Cédula", key:"cedula"},
@@ -89,6 +101,7 @@ Con qué se conecta:
   }
 
   function renderHistory(view){
+    if(!el("bl-history-table")) return;
     el("bl-history-table").innerHTML = table([
       {label:"Fecha", key:"createdAt"},
       {label:"Acción", value:function(row){return row.action || "análisis";}},
@@ -99,14 +112,25 @@ Con qué se conecta:
   }
 
   function renderDiagnostics(view){
+    var box = el("bl-diagnostics-box");
+    if(!box) return;
+
     var diagnostics = view.diagnostics || {};
     var firebaseStatus = window.BaseLocalFirebase && typeof window.BaseLocalFirebase.getLastStatus === "function"
       ? window.BaseLocalFirebase.getLastStatus()
       : {ok:false, mode:"sin_firebase"};
+    var syncStatus = window.BaseLocalFirebase && typeof window.BaseLocalFirebase.getSyncStatus === "function"
+      ? window.BaseLocalFirebase.getSyncStatus()
+      : {ok:false, mode:"sin_sync"};
+    var bridgeCounts = window.BaseLocalBridge && typeof window.BaseLocalBridge.counts === "function"
+      ? window.BaseLocalBridge.counts()
+      : null;
 
-    el("bl-diagnostics-box").textContent = JSON.stringify({
+    box.textContent = JSON.stringify({
       local:diagnostics,
-      firebase:firebaseStatus
+      firebase:firebaseStatus,
+      sync:syncStatus,
+      bridge:bridgeCounts
     }, null, 2);
   }
 
@@ -125,9 +149,16 @@ Con qué se conecta:
 
   function render(){
     try{
+      if(window.RequisitosBL && typeof window.RequisitosBL.mirrorSnapshotToCollections === "function"){
+        window.RequisitosBL.mirrorSnapshotToCollections();
+      }
+
       var view = window.BaseLocalAPI.buildView(state.periodId, state.search);
       var firebaseStatus = window.BaseLocalFirebase && typeof window.BaseLocalFirebase.getLastStatus === "function"
         ? window.BaseLocalFirebase.getLastStatus()
+        : null;
+      var syncStatus = window.BaseLocalFirebase && typeof window.BaseLocalFirebase.getSyncStatus === "function"
+        ? window.BaseLocalFirebase.getSyncStatus()
         : null;
 
       renderSelectors(view);
@@ -135,7 +166,7 @@ Con qué se conecta:
       el("bl-kpi-estudiantes").textContent = view.students.length;
       el("bl-kpi-historial").textContent = view.history.length;
       el("bl-kpi-carreras").textContent = view.careersCount;
-      el("bl-kpi-estado").textContent = firebaseStatus && firebaseStatus.ok ? "Firebase" : "Local";
+      el("bl-kpi-estado").textContent = syncStatus && syncStatus.ok ? "Sincronizada" : (firebaseStatus && firebaseStatus.ok ? "Firebase" : "Local");
 
       renderPeriods(view);
       renderStudents(view);
@@ -213,7 +244,7 @@ Con qué se conecta:
         throw new Error("BaseLocalFirebase no está disponible.");
       }
 
-      setBusy(true, "Bajando datos desde Firebase hacia la base local...");
+      setBusy(true, "Bajando datos desde Firebase hacia la base local...", "pull");
       var result = await window.BaseLocalFirebase.pull();
 
       state.periodId = "";
@@ -233,6 +264,84 @@ Con qué se conecta:
     }finally{
       setBusy(false);
     }
+  }
+
+  async function syncNow(mode){
+    if(state.loading){
+      return;
+    }
+
+    try{
+      if(!window.BaseLocalFirebase || typeof window.BaseLocalFirebase.sync !== "function"){
+        throw new Error("BaseLocalFirebase.sync no está disponible.");
+      }
+
+      setBusy(true, "Sincronizando Base Local con Firebase...", "sync");
+      var result = await window.BaseLocalFirebase.sync({mode:mode || "manual"});
+      render();
+
+      if(result && result.ok){
+        status(result.message || "Sincronización finalizada correctamente.", "bl-status-ok");
+      }else{
+        status((result && result.message) || "No se pudo sincronizar. Base Local sigue funcionando.", "bl-status-warn");
+      }
+    }catch(error){
+      console.error("[BaseLocal Sync]", error);
+      status(error.message || String(error), "bl-status-warn");
+    }finally{
+      setBusy(false);
+    }
+  }
+
+  function runDailySync(){
+    if(state.dailyStarted){
+      return;
+    }
+
+    state.dailyStarted = true;
+
+    setTimeout(async function(){
+      try{
+        if(!window.BaseLocalFirebase || typeof window.BaseLocalFirebase.runDailyIfNeeded !== "function"){
+          return;
+        }
+        setBusy(true, "Revisando sincronización diaria BL ↔ Firebase...", "sync");
+        var result = await window.BaseLocalFirebase.runDailyIfNeeded();
+        render();
+        if(result && result.skipped){
+          status(result.message || "La sincronización diaria ya estaba hecha.", "bl-status-ok");
+        }else if(result && result.ok){
+          status(result.message || "Sincronización diaria completada.", "bl-status-ok");
+        }else if(result && result.message){
+          status(result.message, "bl-status-warn");
+        }
+      }catch(error){
+        console.warn("[BaseLocal Daily Sync]", error);
+        status("Base Local queda activa. Sincronización diaria pendiente: " + (error.message || error), "bl-status-warn");
+      }finally{
+        setBusy(false);
+      }
+    }, 900);
+  }
+
+  function bindCrossWindowEvents(){
+    window.addEventListener("storage", function(event){
+      if(event.key === "REQ_BL_SIGNAL_V1"){
+        render();
+      }
+    });
+
+    window.addEventListener("message", function(event){
+      var data = event.data || {};
+      var type = String(data.type || "");
+      if(type.indexOf("requisitos:bl:") === 0){
+        render();
+      }
+    });
+
+    ["requisitos:bl:changed", "requisitos:bl:snapshot-changed", "requisitos:bl:sync-complete", "baselocal:sync-complete", "baselocal:firebase-pull-finished"].forEach(function(name){
+      window.addEventListener(name, render);
+    });
   }
 
   function boot(){
@@ -266,6 +375,11 @@ Con qué se conecta:
     if(el("bl-btn-pull-firebase")){
       el("bl-btn-pull-firebase").addEventListener("click", pullFromFirebase);
     }
+    if(el("bl-btn-sync-now")){
+      el("bl-btn-sync-now").addEventListener("click", function(){
+        syncNow("manual");
+      });
+    }
     if(el("bl-btn-export")){
       el("bl-btn-export").addEventListener("click", exportJson);
     }
@@ -273,7 +387,17 @@ Con qué se conecta:
       el("bl-btn-copy-refs").addEventListener("click", copyRefs);
     }
 
+    bindCrossWindowEvents();
     render();
+
+    try{
+      window.dispatchEvent(new CustomEvent("bl:ready", {detail:{module:"BaseLocal", ready:true, at:new Date().toISOString()}}));
+      if(window.parent && window.parent !== window){
+        window.parent.postMessage({type:"requisitos:bl:ready", payload:{module:"BaseLocal", ready:true, at:new Date().toISOString()}}, "*");
+      }
+    }catch(error){}
+
+    runDailySync();
   }
 
   if(document.readyState === "loading"){
