@@ -29,19 +29,16 @@ Función o funciones:
 
     var html = (Array.isArray(items) ? items : []).map(function mapItem(item) {
       var isActive = String(item.id || "") === String(activeId || "");
-      var disabled = item && item.disabled === true;
+      var cls = isActive ? "nav-btn nav-btn-active" : "nav-btn";
 
       return [
-        '<button class="navbtn" type="button" data-id="',
-        escapeHtml(item.id || ""),
-        '" data-active="',
-        isActive ? "true" : "false",
-        '"',
-        disabled ? ' disabled aria-disabled="true"' : "",
-        ' title="',
-        escapeHtml(item.hint || item.title || ""),
-        '">',
-        escapeHtml(item.title || ""),
+        "<button",
+        " type=\"button\"",
+        " class=\"" + cls + "\"",
+        " data-menu-id=\"" + escapeHtml(item.id) + "\"",
+        " title=\"" + escapeHtml(item.hint || item.title) + "\"",
+        ">",
+        escapeHtml(item.title),
         "</button>"
       ].join("");
     }).join("");
