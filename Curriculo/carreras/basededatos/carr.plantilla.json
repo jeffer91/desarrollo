@@ -1,7 +1,21 @@
 {
+  "id": "",
   "nombre": "",
+  "nombreNormalizado": "",
   "tipo": "",
   "estado": "activa",
+  "nucleos": ["", "", "", ""],
+  "materiasNivel1": [],
+  "materiasNivel2": [],
+  "materiasNivel3": [],
+  "materiasNivel4": [],
+  "materiasTransversal1": [],
+  "materiasTransversal2": [],
+  "materiasTransversal3": [],
+  "materiasTransversal4": [],
   "createdAt": null,
-  "updatedAt": null
+  "updatedAt": null,
+  "createdAtLocal": "",
+  "updatedAtLocal": "",
+  "origen": "local"
 }
