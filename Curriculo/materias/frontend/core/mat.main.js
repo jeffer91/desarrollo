@@ -1,767 +1,315 @@
 /*
 Nombre del archivo: mat.main.js
-Ubicación: C:\Users\ITSQMET\Desktop\desarrollo\Curriculo\materias\frontend\core\mat.main.js
+Ubicación: /Curriculo/materias/frontend/core/mat.main.js
 Función:
-- Orquesta el módulo completo
-- Carga carreras desde Firebase
-- Analiza texto para importación masiva
-- Delega al parser inteligente de carga masiva
-- Aplica importaciones al editor principal
-- Valida y guarda en Firestore
-- Carga un resumen compacto de la carrera al seleccionarla
+- Orquestar el módulo Materias
+- Cargar carreras desde local/Firebase
+- Mantener memoria de carrera y tipo de carga
+- Aplicar importaciones al editor principal
+- Guardar primero local y dejar pendiente sincronización
 */
 (function (window, document) {
-"use strict";
+  "use strict";
 
-window.MAT = window.MAT || {};
-var MAT = window.MAT;
+  window.MAT = window.MAT || {};
+  var MAT = window.MAT;
 
-function safeClone(value) {
-    try {
-        return JSON.parse(JSON.stringify(value || null));
-    } catch (error) {
-        return value || null;
+  function clone(value) {
+    try { return JSON.parse(JSON.stringify(value == null ? null : value)); }
+    catch (error) { return value; }
+  }
+
+  function clean(value) {
+    return String(value == null ? "" : value).trim();
+  }
+
+  function countPreview(preview) {
+    if (MAT.tabla && MAT.tabla.acciones && typeof MAT.tabla.acciones.countItems === "function") {
+      return MAT.tabla.acciones.countItems(preview);
     }
-}
+    return Number(preview && preview.totalLines) || 0;
+  }
 
-function toArray(value) {
-    return Array.isArray(value) ? value.slice() : [];
-}
-
-function getExpectedEjes(careerType) {
-    if (MAT.carreras && typeof MAT.carreras.getEjesEsperados === "function") {
-        return MAT.carreras.getEjesEsperados(careerType || "");
+  function validationFor(preview) {
+    if (MAT.validar && MAT.validar.general && typeof MAT.validar.general.preview === "function") {
+      return MAT.validar.general.preview(preview, MAT.state.data.selectedCareerType);
     }
-    return 4;
-}
+    return { ok: true, errors: [], warnings: [], stats: {} };
+  }
 
-MAT.main = {
+  MAT.main = {
     init: function () {
-        this.bindEvents();
-        this.renderSelectors();
-        this.setCareerTypeDisplay("");
-        this.resetProcessedArea("Aquí podrás editar los datos después de importarlos o cargarlos desde Firebase.");
-
-        if (typeof MAT.ui.clearCareerQuickSummary === "function") {
-            MAT.ui.clearCareerQuickSummary("Selecciona una carrera para ver qué está cargado.");
-        }
-
-        this.boot();
+      this.bindEvents();
+      this.renderSelectors();
+      this.setCareerTypeDisplay("");
+      this.resetProcessedArea("Aquí podrás editar los datos después de importarlos o cargarlos desde la base.");
+      if (MAT.ui && typeof MAT.ui.clearCareerQuickSummary === "function") {
+        MAT.ui.clearCareerQuickSummary("Selecciona una carrera para ver qué está cargado.");
+      }
+      this.boot();
     },
 
     bindEvents: function () {
-        var refreshButton = MAT.ui.getEl("refreshButton");
-        var saveButton = MAT.ui.getEl("saveButton");
-        var careerSelect = MAT.selectores &&
-            MAT.selectores.carreras &&
-            MAT.selectores.carreras.getEl
-            ? MAT.selectores.carreras.getEl()
-            : null;
-        var loadTypeSelect = MAT.selectores &&
-            MAT.selectores.tipoCarga &&
-            MAT.selectores.tipoCarga.getEl
-            ? MAT.selectores.tipoCarga.getEl()
-            : null;
-        var self = this;
+      var self = this;
+      var refreshButton = MAT.ui.getEl("refreshButton");
+      var saveButton = MAT.ui.getEl("saveButton");
+      var openMassiveButton = MAT.ui.getEl("openMassiveButton");
+      var careerSelect = MAT.selectores.carreras.getEl();
+      var loadTypeSelect = MAT.selectores.tipoCarga.getEl();
 
-        if (refreshButton && !refreshButton.__matBoundMain) {
-            refreshButton.addEventListener("click", function () {
-                self.loadCareers();
-            });
-            refreshButton.__matBoundMain = true;
-        }
+      if (refreshButton && !refreshButton.__matBoundMain) {
+        refreshButton.addEventListener("click", function () { self.loadCareers(true); });
+        refreshButton.__matBoundMain = true;
+      }
 
-        if (careerSelect && !careerSelect.__matBoundMain) {
-            careerSelect.addEventListener("change", function (event) {
-                self.onCareerChange(event.target.value);
-            });
-            careerSelect.__matBoundMain = true;
-        }
+      if (careerSelect && !careerSelect.__matBoundMain) {
+        careerSelect.addEventListener("change", function (event) { self.onCareerChange(event.target.value); });
+        careerSelect.__matBoundMain = true;
+      }
 
-        if (loadTypeSelect && !loadTypeSelect.__matBoundMain) {
-            loadTypeSelect.addEventListener("change", function (event) {
-                self.onLoadTypeChange(event.target.value);
-            });
-            loadTypeSelect.__matBoundMain = true;
-        }
+      if (loadTypeSelect && !loadTypeSelect.__matBoundMain) {
+        loadTypeSelect.addEventListener("change", function (event) { self.onLoadTypeChange(event.target.value); });
+        loadTypeSelect.__matBoundMain = true;
+      }
 
-        if (saveButton && !saveButton.__matBoundMain) {
-            saveButton.addEventListener("click", function () {
-                self.handleSave();
-            });
-            saveButton.__matBoundMain = true;
-        }
+      if (saveButton && !saveButton.__matBoundMain) {
+        saveButton.addEventListener("click", function () { self.handleSave(); });
+        saveButton.__matBoundMain = true;
+      }
+
+      if (openMassiveButton && !openMassiveButton.__matBoundMain) {
+        openMassiveButton.addEventListener("click", function () { self.openMassive(); });
+        openMassiveButton.__matBoundMain = true;
+      }
     },
 
     renderSelectors: function () {
-        if (
-            MAT.selectores &&
-            MAT.selectores.tipoCarga &&
-            typeof MAT.selectores.tipoCarga.render === "function"
-        ) {
-            MAT.selectores.tipoCarga.render();
-        }
-
-        if (
-            MAT.selectores &&
-            MAT.selectores.carreras &&
-            typeof MAT.selectores.carreras.render === "function"
-        ) {
-            MAT.selectores.carreras.render([]);
-        }
+      MAT.selectores.tipoCarga.render();
+      MAT.selectores.carreras.render([]);
     },
 
     boot: function () {
-        var db = MAT.firebase.init();
-
-        if (!db) {
-            MAT.ui.setStatus(
-                "Falta configurar Firebase en mat.config.js. El módulo está armado, pero aún no puede leer carreras.",
-                "warn"
-            );
-            return;
-        }
-
-        MAT.ui.clearSummary("Aún no has guardado cambios.");
-        this.loadCareers();
+      var db = MAT.firebase.init();
+      MAT.ui.clearSummary("Aún no has guardado cambios.");
+      if (!db) {
+        MAT.ui.setStatus("Firebase no está disponible. Se intentará usar la base local si existe.", "warn");
+      }
+      this.loadCareers(false);
     },
 
-    loadCareers: async function () {
-        var list = [];
+    loadCareers: async function (manual) {
+      var list = [];
+      var rememberedCareerId = MAT.state.data.selectedCareerId;
+      var rememberedLoadType = MAT.state.data.selectedLoadType;
 
-        try {
-            MAT.ui.setStatus("Cargando carreras desde Firebase...", "");
-            list = await MAT.carreras.listar();
-            MAT.state.setCareers(list);
-            MAT.state.setReady(true);
+      try {
+        MAT.ui.setStatus("Cargando carreras desde local/Firebase...", "");
+        list = await MAT.carreras.listar();
+        MAT.state.setCareers(list);
+        MAT.state.setReady(true);
+        MAT.selectores.carreras.render(list);
+        MAT.selectores.tipoCarga.render();
 
-            if (
-                MAT.selectores &&
-                MAT.selectores.carreras &&
-                typeof MAT.selectores.carreras.render === "function"
-            ) {
-                MAT.selectores.carreras.render(list);
-            }
-
-            if (!list.length) {
-                this.setCareerTypeDisplay("");
-                this.resetProcessedArea("No se encontraron carreras.");
-                MAT.ui.clearCareerQuickSummary("No hay carreras disponibles.");
-                MAT.ui.setStatus("No se encontraron carreras en la colección.", "warn");
-                return;
-            }
-
-            MAT.ui.setStatus("Carreras cargadas correctamente: " + list.length, "ok");
-        } catch (error) {
-            console.error(error);
-            this.setCareerTypeDisplay("");
-            MAT.ui.clearCareerQuickSummary("No se pudo cargar el resumen.");
-            MAT.ui.setStatus("Ocurrió un error al leer carreras.", "error");
+        if (rememberedCareerId && MAT.state.getCareerById(rememberedCareerId)) {
+          MAT.selectores.carreras.setValue(rememberedCareerId);
+          this.onCareerChange(rememberedCareerId, true);
         }
+
+        if (rememberedLoadType) {
+          MAT.selectores.tipoCarga.setValue(rememberedLoadType);
+          this.onLoadTypeChange(rememberedLoadType, true);
+        }
+
+        if (!list.length) {
+          this.setCareerTypeDisplay("");
+          this.resetProcessedArea("No se encontraron carreras.");
+          MAT.ui.clearCareerQuickSummary("No hay carreras disponibles.");
+          MAT.ui.setStatus("No se encontraron carreras en local/Firebase.", "warn");
+          return;
+        }
+
+        MAT.ui.setStatus("Carreras cargadas correctamente: " + list.length, manual ? "ok" : "");
+        await MAT.ui.refreshSyncStatus();
+      } catch (error) {
+        console.error(error);
+        this.setCareerTypeDisplay("");
+        MAT.ui.clearCareerQuickSummary("No se pudo cargar el resumen.");
+        MAT.ui.setStatus("Ocurrió un error al leer carreras.", "error");
+      }
     },
 
-    onCareerChange: function (careerId) {
-        var career = MAT.carreras.buscarLocal(careerId);
-        var selectedId = String(careerId || "");
+    onCareerChange: function (careerId, silent) {
+      var career = MAT.carreras.buscarLocal(careerId);
+      var selectedId = clean(careerId);
 
-        if (!career) {
-            MAT.state.clearCareer();
-            this.setCareerTypeDisplay("");
-            this.resetProcessedArea("Selecciona una carrera para continuar.");
-            MAT.ui.clearCareerQuickSummary("Selecciona una carrera para ver qué está cargado.");
-            MAT.ui.setStatus("Selecciona una carrera para continuar.", "");
-            return;
-        }
+      if (!career) {
+        MAT.state.clearCareer();
+        this.setCareerTypeDisplay("");
+        this.resetProcessedArea("Selecciona una carrera para continuar.");
+        MAT.ui.clearCareerQuickSummary("Selecciona una carrera para ver qué está cargado.");
+        if (!silent) MAT.ui.setStatus("Selecciona una carrera para continuar.", "");
+        return;
+      }
 
-        MAT.state.setCareer(career);
-        this.setCareerTypeDisplay(career.tipo || "");
-        this.resetProcessedArea("La carrera cambió. Abre la carga masiva o espera la carga automática desde Firebase.");
-        this.updateEditorHint();
-
-        MAT.ui.setStatus(
-            "Carrera seleccionada: " + career.nombre + (career.tipo ? " | " + career.tipo : ""),
-            "ok"
-        );
-
-        this.loadCareerQuickSummary(selectedId, career);
+      MAT.state.setCareer(career);
+      this.setCareerTypeDisplay(career.tipo || "");
+      this.resetProcessedArea("La carrera cambió. Selecciona un tipo de carga o abre carga masiva.");
+      this.updateEditorHint();
+      if (!silent) MAT.ui.setStatus("Carrera seleccionada: " + career.nombre, "ok");
+      this.loadCareerQuickSummary(selectedId, career);
     },
 
     loadCareerQuickSummary: async function (careerId, fallbackCareer) {
-        var requestedId = String(careerId || "");
-        var fullCareer = null;
+      var requestedId = clean(careerId);
+      var fullCareer = null;
 
-        if (!requestedId) {
-            MAT.ui.clearCareerQuickSummary("Selecciona una carrera para ver qué está cargado.");
-            return;
+      if (!requestedId) return;
+      if (MAT.ui.carreraSummary && typeof MAT.ui.carreraSummary.renderLoading === "function") {
+        MAT.ui.carreraSummary.renderLoading();
+      }
+
+      try {
+        fullCareer = await MAT.carreras.leerUna(requestedId);
+        if (!this.isSelectedCareer(requestedId)) return;
+        if (!fullCareer || typeof fullCareer !== "object") fullCareer = fallbackCareer || {};
+        if (MAT.ui.carreraSummary && typeof MAT.ui.carreraSummary.render === "function") {
+          MAT.ui.carreraSummary.render(fullCareer);
         }
-
-        if (
-            MAT.ui.carreraSummary &&
-            typeof MAT.ui.carreraSummary.renderLoading === "function"
-        ) {
-            MAT.ui.carreraSummary.renderLoading();
-        } else {
-            MAT.ui.clearCareerQuickSummary("Revisando carga...");
+      } catch (error) {
+        console.error(error);
+        if (!this.isSelectedCareer(requestedId)) return;
+        if (MAT.ui.carreraSummary && typeof MAT.ui.carreraSummary.renderError === "function") {
+          MAT.ui.carreraSummary.renderError();
         }
-
-        try {
-            if (MAT.carreras && typeof MAT.carreras.leerUna === "function") {
-                fullCareer = await MAT.carreras.leerUna(requestedId);
-            }
-
-            if (!this.isSelectedCareer(requestedId)) {
-                return;
-            }
-
-            if (!fullCareer || typeof fullCareer !== "object") {
-                fullCareer = fallbackCareer || {};
-            }
-
-            if (
-                MAT.ui.carreraSummary &&
-                typeof MAT.ui.carreraSummary.render === "function"
-            ) {
-                MAT.ui.carreraSummary.render(fullCareer);
-            } else {
-                MAT.ui.clearCareerQuickSummary("Resumen disponible.");
-            }
-        } catch (error) {
-            console.error(error);
-
-            if (!this.isSelectedCareer(requestedId)) {
-                return;
-            }
-
-            if (
-                MAT.ui.carreraSummary &&
-                typeof MAT.ui.carreraSummary.renderError === "function"
-            ) {
-                MAT.ui.carreraSummary.renderError();
-            } else {
-                MAT.ui.clearCareerQuickSummary("No se pudo leer el resumen.");
-            }
-        }
+      }
     },
 
     isSelectedCareer: function (careerId) {
-        var currentId = MAT.state && MAT.state.data ? MAT.state.data.selectedCareerId : "";
-        return String(currentId || "") === String(careerId || "");
+      return clean(MAT.state.data.selectedCareerId) === clean(careerId);
     },
 
-    onLoadTypeChange: function (value) {
-        MAT.state.setLoadType(value);
-        this.resetProcessedArea("El tipo de carga cambió. Abre la carga masiva o espera la carga automática desde Firebase.");
-        this.updateEditorHint();
+    onLoadTypeChange: function (value, silent) {
+      MAT.state.setLoadType(value);
+      this.resetProcessedArea("El tipo de carga cambió. Se puede cargar desde base o usar carga masiva.");
+      this.updateEditorHint();
+      if (!silent && value) MAT.ui.setStatus("Tipo de carga seleccionado.", "ok");
     },
 
     updateEditorHint: function () {
-        var type = MAT.state.data.selectedLoadType;
-        var text = "Primero elige una carrera y luego el tipo de carga. Después usa el botón Abrir carga masiva.";
-
-        if (type === "materias-carrera") {
-            text = "Usa el botón Abrir carga masiva. Puedes pegar bloques con Nivel 1, 1 Nivel, tablas copiadas desde PDF o Word y el sistema intentará limpiar encabezados y numeración.";
-        } else if (type === "transversales") {
-            text = "Usa el botón Abrir carga masiva. Puedes pegar materias con nivel o sin nivel.";
-        } else if (type === "nucleos") {
-            text = "Usa el botón Abrir carga masiva. Deben ser 4 núcleos.";
-        } else if (type === "ejes") {
-            text = "Usa el botón Abrir carga masiva. Si la carrera es universitaria se esperan 6. Si es superior o técnica, 4.";
-        }
-
-        MAT.ui.setEditorHint(text);
+      var type = MAT.state.data.selectedLoadType;
+      var text = "Primero elige una carrera y luego el tipo de carga. Después usa Abrir carga masiva.";
+      if (type === "materias-carrera") text = "Carga materias por niveles. Puedes pegar texto desde Word, PDF o Excel.";
+      else if (type === "transversales") text = "Carga materias transversales por niveles o sin nivel.";
+      else if (type === "nucleos") text = "Deben ser 4 núcleos.";
+      else if (type === "ejes") text = "Universitaria espera 6 ejes; superior o técnica espera 4.";
+      MAT.ui.setEditorHint(text);
     },
 
     setCareerTypeDisplay: function (value) {
-        var input = MAT.ui.getEl("careerTypeDisplay");
-        var text = String(value || "").trim();
-
-        if (!input) {
-            return;
-        }
-
-        input.value = text || "Sin seleccionar";
+      var input = MAT.ui.getEl("careerTypeDisplay");
+      if (input) input.value = clean(value) || "Sin seleccionar";
     },
 
     resetProcessedArea: function (editorMessage) {
-        MAT.state.clearPreview();
-        MAT.state.setDirty(false);
-        MAT.ui.clearPreview();
-        MAT.ui.setSaveEnabled(false);
-
-        if (
-            MAT.editor &&
-            MAT.editor.base &&
-            typeof MAT.editor.base.renderEmpty === "function"
-        ) {
-            MAT.editor.base.renderEmpty(
-                editorMessage || "Aquí podrás editar los datos después de importarlos."
-            );
-        }
-
-        if (
-            MAT.tabla &&
-            MAT.tabla.render &&
-            typeof MAT.tabla.render.empty === "function"
-        ) {
-            MAT.tabla.render.empty(
-                editorMessage || "Aún no hay datos para mostrar."
-            );
-        }
-
-        if (
-            MAT.masiva &&
-            MAT.masiva.modal &&
-            typeof MAT.masiva.modal.resetTemp === "function"
-        ) {
-            MAT.masiva.modal.resetTemp();
-        }
+      MAT.state.clearPreview();
+      MAT.state.setDirty(false);
+      MAT.ui.clearPreview();
+      MAT.ui.setSaveEnabled(false);
+      MAT.editor.base.renderEmpty(editorMessage || "Aquí podrás editar los datos después de importarlos.");
+      if (MAT.tabla && MAT.tabla.render && typeof MAT.tabla.render.empty === "function") {
+        MAT.tabla.render.empty(editorMessage || "Aún no hay datos para mostrar.");
+      }
+      if (MAT.masiva && MAT.masiva.modal && typeof MAT.masiva.modal.resetTemp === "function") {
+        MAT.masiva.modal.resetTemp();
+      }
     },
 
     applyImportedPreview: function (analysis) {
-        var validation;
-
-        if (!analysis || typeof analysis !== "object") {
-            MAT.ui.setStatus("No hay una importación válida para aplicar.", "warn");
-            return null;
-        }
-
-        validation = MAT.validar.general.preview(
-            analysis,
-            MAT.state.data.selectedCareerType
-        );
-
-        MAT.state.setPreview(analysis);
-        MAT.state.setDirty(true);
-
-        if (
-            MAT.editor &&
-            MAT.editor.base &&
-            typeof MAT.editor.base.renderFromPreview === "function"
-        ) {
-            MAT.editor.base.renderFromPreview(
-                analysis,
-                MAT.state.data.selectedCareerType
-            );
-        }
-
-        if (
-            MAT.tabla &&
-            MAT.tabla.render &&
-            typeof MAT.tabla.render.fromPreview === "function"
-        ) {
-            MAT.tabla.render.fromPreview(
-                analysis,
-                MAT.state.data.selectedCareerType,
-                {
-                    source: "importado",
-                    title: "Datos del bloque actual"
-                }
-            );
-        }
-
-        MAT.ui.setSaveEnabled(!!validation.ok);
-
-        if (
-            MAT.ui.resumen &&
-            typeof MAT.ui.resumen.renderValidation === "function"
-        ) {
-            MAT.ui.resumen.renderValidation(validation);
-        }
-
-        if (!validation.ok) {
-            MAT.ui.setStatus(
-                validation.errors[0] || "La estructura no es válida.",
-                "error"
-            );
-            return {
-                preview: analysis,
-                validation: validation
-            };
-        }
-
-        if (validation.warnings.length) {
-            MAT.ui.setStatus(
-                "Importación aplicada con advertencias. Revisa el resumen.",
-                "warn"
-            );
-            return {
-                preview: analysis,
-                validation: validation
-            };
-        }
-
-        MAT.ui.setStatus(
-            "Importación aplicada correctamente. Ahora puedes revisar y guardar.",
-            "ok"
-        );
-
-        return {
-            preview: analysis,
-            validation: validation
-        };
-    },
-
-    processMassiveText: function () {
-        if (
-            MAT.masiva &&
-            MAT.masiva.procesar &&
-            typeof MAT.masiva.procesar.run === "function"
-        ) {
-            return MAT.masiva.procesar.run();
-        }
+      var validation;
+      if (!analysis || typeof analysis !== "object") {
+        MAT.ui.setStatus("No hay una importación válida para aplicar.", "warn");
         return null;
+      }
+
+      validation = validationFor(analysis);
+      MAT.state.setPreview(clone(analysis));
+      MAT.state.setDirty(true);
+      MAT.ui.renderPreview(analysis);
+      MAT.editor.base.renderFromPreview(analysis, MAT.state.data.selectedCareerType);
+      MAT.tabla.render.fromPreview(analysis, MAT.state.data.selectedCareerType, { source: "importado", title: "Datos del bloque actual" });
+      MAT.ui.setSaveEnabled(!!validation.ok);
+      if (MAT.ui.resumen && typeof MAT.ui.resumen.renderValidation === "function") MAT.ui.resumen.renderValidation(validation);
+
+      if (!validation.ok) MAT.ui.setStatus(validation.errors[0] || "La estructura no es válida.", "error");
+      else if (validation.warnings.length) MAT.ui.setStatus("Importación aplicada con advertencias. Revisa el resumen.", "warn");
+      else MAT.ui.setStatus("Importación aplicada correctamente. Ahora puedes revisar y guardar.", "ok");
+
+      return { preview: analysis, validation: validation };
     },
 
-    clearMassiveText: function () {
-        if (
-            MAT.masiva &&
-            MAT.masiva.procesar &&
-            typeof MAT.masiva.procesar.clear === "function"
-        ) {
-            MAT.masiva.procesar.clear();
-        }
+    openMassive: function () {
+      if (!MAT.state.data.selectedCareerId || !MAT.state.data.selectedLoadType) {
+        MAT.ui.setStatus("Primero selecciona carrera y tipo de carga.", "warn");
+        return;
+      }
+      if (MAT.ui.modal && typeof MAT.ui.modal.open === "function") {
+        MAT.ui.modal.open();
+        MAT.ui.modal.focusInput();
+      }
     },
 
     handleSave: async function () {
-        var editedPreview;
-        var validation;
-        var result;
+      var preview = MAT.state.data.preview;
+      var validation;
+      var result;
 
-        if (!MAT.state.data.preview) {
-            MAT.ui.setStatus(
-                "Primero importa, edita o carga un bloque antes de guardar.",
-                "warn"
-            );
-            return null;
+      try {
+        if (!MAT.state.data.selectedCareerId) {
+          MAT.ui.setStatus("Primero selecciona una carrera.", "warn");
+          return null;
+        }
+        if (!MAT.state.data.selectedLoadType) {
+          MAT.ui.setStatus("Primero selecciona qué vas a subir.", "warn");
+          return null;
+        }
+        if (!preview && MAT.editor.base && typeof MAT.editor.base.collectPreview === "function") {
+          preview = MAT.editor.base.collectPreview(MAT.state.data.preview || { kind: MAT.state.data.selectedLoadType, summary: {} });
+          MAT.state.setPreview(preview);
+        }
+        if (!preview) {
+          MAT.ui.setStatus("No hay datos para guardar.", "warn");
+          return null;
         }
 
-        editedPreview = MAT.editor.base.collectPreview(MAT.state.data.preview);
-
-        validation = MAT.validar.general.beforeSave({
-            careerId: MAT.state.data.selectedCareerId,
-            loadType: MAT.state.data.selectedLoadType,
-            preview: editedPreview,
-            careerType: MAT.state.data.selectedCareerType
-        });
-
-        if (
-            MAT.ui.resumen &&
-            typeof MAT.ui.resumen.renderValidation === "function"
-        ) {
-            MAT.ui.resumen.renderValidation(validation);
-        }
-
+        validation = validationFor(preview);
         if (!validation.ok) {
-            MAT.ui.setStatus(
-                validation.errors[0] || "Hay errores que bloquean el guardado.",
-                "error"
-            );
-            return null;
+          MAT.ui.resumen.renderValidation(validation);
+          MAT.ui.setStatus(validation.errors[0] || "No se puede guardar.", "error");
+          return null;
         }
 
-        try {
-            MAT.ui.setStatus("Guardando cambios en Firebase...", "");
-
-            result = await MAT.carga.guardar({
-                careerId: MAT.state.data.selectedCareerId,
-                preview: editedPreview
-            });
-
-            MAT.state.setPreview(editedPreview);
-            MAT.state.setDirty(false);
-            this.updateLocalCareer(result.updated);
-
-            if (
-                MAT.ui.resumen &&
-                typeof MAT.ui.resumen.renderSaveResult === "function"
-            ) {
-                MAT.ui.resumen.renderSaveResult(result);
-            }
-
-            if (
-                MAT.tabla &&
-                MAT.tabla.render &&
-                typeof MAT.tabla.render.fromPreview === "function"
-            ) {
-                MAT.tabla.render.fromPreview(
-                    editedPreview,
-                    MAT.state.data.selectedCareerType,
-                    {
-                        source: "guardado",
-                        title: "Datos del bloque actual"
-                    }
-                );
-            }
-
-            this.loadCareerQuickSummary(MAT.state.data.selectedCareerId);
-
-            if (result.warnings && result.warnings.length) {
-                MAT.ui.setStatus(
-                    "Cambios guardados con advertencias. Revisa el resumen.",
-                    "warn"
-                );
-                return result;
-            }
-
-            MAT.ui.setStatus("Cambios guardados correctamente.", "ok");
-            return result;
-        } catch (error) {
-            console.error(error);
-            MAT.ui.setStatus("Ocurrió un error al guardar en Firebase.", "error");
-            return null;
-        }
-    },
-
-    updateLocalCareer: function (updatedDoc) {
-        var list = MAT.state.data.careers || [];
-        var id = String((updatedDoc && updatedDoc.id) || "");
-        var i;
-
-        if (!id) {
-            return;
-        }
-
-        for (i = 0; i < list.length; i += 1) {
-            if (String(list[i].id || "") === id) {
-                list[i].nombre = String(updatedDoc.nombre || list[i].nombre || "");
-                list[i].tipo = String(updatedDoc.tipo || list[i].tipo || "");
-                list[i].estado = String(updatedDoc.estado || list[i].estado || "");
-                break;
-            }
-        }
-    },
-
-    analyzeRawText: function (raw, loadType, careerType) {
-        var parser = MAT.masiva && MAT.masiva.parser ? MAT.masiva.parser : null;
-        var options;
-        var lines;
-        var response;
-
-        options = {
-            loadType: String(loadType || ""),
-            careerType: String(careerType || ""),
-            careerName: String(
-                MAT.state && MAT.state.data ? MAT.state.data.selectedCareerName : ""
-            ),
-            expected: loadType === "nucleos"
-                ? 4
-                : (loadType === "ejes" ? getExpectedEjes(careerType) : 0)
-        };
-
-        if (parser && typeof parser.analyze === "function") {
-            return parser.analyze(raw, options);
-        }
-
-        lines = this.cleanLines(raw);
-
-        response = {
-            kind: String(loadType || ""),
-            totalLines: lines.length,
-            rawLines: lines.slice(),
-            summary: {},
-            careerType: String(careerType || ""),
-            meta: {
-                parser: "fallback-main-parser",
-                accepted: lines.slice(),
-                discarded: [],
-                warnings: []
-            }
-        };
-
-        if (loadType === "materias-carrera") {
-            response.summary = this.detectByLevels(lines);
-        } else if (loadType === "transversales") {
-            response.summary = this.detectTransversales(lines);
-        } else if (loadType === "nucleos") {
-            response.summary = this.detectFlatList(lines, 4);
-        } else if (loadType === "ejes") {
-            response.summary = this.detectEjes(lines, careerType);
-        } else {
-            response.summary = { items: lines.slice() };
-        }
-
-        return response;
-    },
-
-    cleanLines: function (raw) {
-        var parser = MAT.masiva && MAT.masiva.parser ? MAT.masiva.parser : null;
-
-        if (parser && typeof parser.cleanLines === "function") {
-            return parser.cleanLines(raw);
-        }
-
-        return String(raw || "")
-            .split(/\r?\n/)
-            .map(function (line) {
-                return String(line || "").replace(/\t/g, " ").trim();
-            })
-            .filter(function (line) {
-                return !!line;
-            });
-    },
-
-    stripListPrefix: function (text) {
-        var parser = MAT.masiva && MAT.masiva.parser ? MAT.masiva.parser : null;
-
-        if (parser && typeof parser.stripListPrefix === "function") {
-            return parser.stripListPrefix(text);
-        }
-
-        return String(text || "")
-            .replace(/^\d+\s*[\.\-\)]\s*/, "")
-            .replace(/^[\-\*\•]\s*/, "")
-            .trim();
-    },
-
-    extractLevelLine: function (text) {
-        var parser = MAT.masiva && MAT.masiva.parser ? MAT.masiva.parser : null;
-
-        if (parser && typeof parser.extractLevelLine === "function") {
-            return parser.extractLevelLine(text);
-        }
-
-        return {
-            level: "",
-            text: this.stripListPrefix(text)
-        };
-    },
-
-    detectByLevels: function (lines) {
-        var parser = MAT.masiva && MAT.masiva.parser ? MAT.masiva.parser : null;
-        var result;
-        var currentLevel = "";
-        var levels = {
-            nivel1: [],
-            nivel2: [],
-            nivel3: [],
-            nivel4: [],
-            sinNivel: []
-        };
-        var i;
-        var info;
-
-        if (parser && typeof parser.parseMateriasCarrera === "function") {
-            result = parser.parseMateriasCarrera(lines, {
-                loadType: "materias-carrera",
-                careerType: String(MAT.state.data.selectedCareerType || ""),
-                careerName: String(MAT.state.data.selectedCareerName || "")
-            });
-
-            return safeClone(result.summary || levels);
-        }
-
-        for (i = 0; i < lines.length; i += 1) {
-            info = this.extractLevelLine(lines[i]);
-
-            if (info.level) {
-                currentLevel = "nivel" + info.level;
-                if (info.text) {
-                    levels[currentLevel].push(info.text);
-                }
-                continue;
-            }
-
-            if (currentLevel && levels[currentLevel]) {
-                levels[currentLevel].push(info.text);
-            } else {
-                levels.sinNivel.push(info.text);
-            }
-        }
-
-        return levels;
-    },
-
-    detectTransversales: function (lines) {
-        var parser = MAT.masiva && MAT.masiva.parser ? MAT.masiva.parser : null;
-        var result;
-        var levels = {
-            nivel1: [],
-            nivel2: [],
-            nivel3: [],
-            nivel4: [],
-            sinNivel: []
-        };
-        var i;
-        var info;
-
-        if (parser && typeof parser.parseTransversales === "function") {
-            result = parser.parseTransversales(lines, {
-                loadType: "transversales",
-                careerType: String(MAT.state.data.selectedCareerType || ""),
-                careerName: String(MAT.state.data.selectedCareerName || "")
-            });
-
-            return safeClone(result.summary || levels);
-        }
-
-        for (i = 0; i < lines.length; i += 1) {
-            info = this.extractLevelLine(lines[i]);
-
-            if (info.level) {
-                if (info.text) {
-                    levels["nivel" + info.level].push(info.text);
-                }
-                continue;
-            }
-
-            levels.sinNivel.push(info.text);
-        }
-
-        return levels;
-    },
-
-    detectFlatList: function (lines, expected) {
-        var parser = MAT.masiva && MAT.masiva.parser ? MAT.masiva.parser : null;
-        var result;
-
-        if (parser && typeof parser.parseFlatList === "function") {
-            result = parser.parseFlatList(lines, "flat", expected, {
-                careerType: String(MAT.state.data.selectedCareerType || ""),
-                careerName: String(MAT.state.data.selectedCareerName || "")
-            });
-
-            return {
-                expected: Number(expected || 0),
-                total: result && result.summary ? Number(result.summary.total || 0) : 0,
-                items: result && result.summary ? toArray(result.summary.items) : []
-            };
-        }
-
-        return {
-            expected: Number(expected || 0),
-            total: lines.length,
-            items: lines.map(this.stripListPrefix.bind(this))
-        };
-    },
-
-    detectEjes: function (lines, careerType) {
-        var expected = getExpectedEjes(careerType);
-        var parser = MAT.masiva && MAT.masiva.parser ? MAT.masiva.parser : null;
-        var result;
-
-        if (parser && typeof parser.parseFlatList === "function") {
-            result = parser.parseFlatList(lines, "ejes", expected, {
-                careerType: String(careerType || ""),
-                careerName: String(MAT.state.data.selectedCareerName || "")
-            });
-
-            return {
-                expected: expected,
-                total: result && result.summary ? Number(result.summary.total || 0) : 0,
-                items: result && result.summary ? toArray(result.summary.items) : []
-            };
-        }
-
-        return {
-            expected: expected,
-            total: lines.length,
-            items: lines.map(this.stripListPrefix.bind(this))
-        };
+        MAT.ui.setSaveEnabled(false);
+        MAT.ui.setStatus("Guardando en base local/Firebase...", "");
+        result = await MAT.carga.guardarDesdePreview({ careerId: MAT.state.data.selectedCareerId, preview: preview });
+        MAT.state.setPreview(result && result.preview ? result.preview : preview);
+        MAT.state.setSaved();
+        MAT.ui.resumen.renderSaveResult(result);
+        MAT.ui.setStatus(result.mensaje || "Cambios guardados correctamente.", "ok");
+        await this.loadCareerQuickSummary(MAT.state.data.selectedCareerId, MAT.state.getCareerById(MAT.state.data.selectedCareerId));
+        await MAT.ui.refreshSyncStatus();
+        return result;
+      } catch (error) {
+        console.error(error);
+        MAT.ui.setSaveEnabled(true);
+        MAT.ui.setStatus(error.message || "No se pudo guardar.", "error");
+        return null;
+      }
     }
-};
+  };
 
-document.addEventListener("DOMContentLoaded", function () {
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", function () { MAT.main.init(); });
+  } else {
     MAT.main.init();
-});
-
+  }
 })(window, document);
