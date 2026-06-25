@@ -5,10 +5,12 @@ Ruta o ubicación: /Requisitos/BaseLocal/baselocal.html
 Función o funciones:
 - Mostrar la base local generada desde Excel.
 - Ver períodos, estudiantes, historial y diagnóstico.
+- Permitir bajar información desde Firebase hacia la base local.
 - No mostrar título propio porque Maqueta controla el menú superior.
 Con qué se conecta:
 - baselocal.css
 - baselocal.core.js
+- baselocal.firebase.js
 - baselocal.app.js
 ========================================================= -->
 <html lang="es">
@@ -32,6 +34,7 @@ Con qué se conecta:
       <label>Período<select id="bl-filter-period"><option value="">Todos los períodos</option></select></label>
       <label>Buscar<input id="bl-filter-search" type="search" placeholder="Cédula, nombre, carrera..." /></label>
       <button id="bl-btn-refresh" type="button">Actualizar vista</button>
+      <button id="bl-btn-pull-firebase" type="button">Bajar desde Firebase</button>
       <button id="bl-btn-export" type="button">Exportar JSON</button>
       <button id="bl-btn-copy-refs" type="button">Copiar referencias</button>
     </section>
@@ -50,6 +53,9 @@ Con qué se conecta:
       <section id="bl-tab-manual" class="bl-panel"><textarea id="bl-manual-text" readonly></textarea></section>
     </main>
   </div>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <script src="../../incorporaciones/sedes/js/firebase-config.js"></script>
   <script src="../Gestion/Excel/excel-local/excel-local.config.js"></script>
   <script src="../Gestion/Excel/excel-local/excel-local.storage.js"></script>
   <script src="../Gestion/Excel/excel-local/excel-local.bridge.js"></script>
