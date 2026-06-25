@@ -1,25 +1,29 @@
 /*
 Nombre del archivo: carr.main.js
-Ubicación: carreras/frontend/carr.main.js
+Ubicación: /Curriculo/carreras/frontend/carr.main.js
 Función:
-- Controlar el formulario principal
-- Guardar una carrera nueva
+- Controlar el formulario principal de carreras
+- Guardar primero en la base local central
 - Cargar la tabla editable
 - Filtrar la tabla con el buscador
 - Guardar cambios de la tabla con el botón flotante
+- Mantener actualizado el estado de sincronización
 */
 
 import { carrGuardarCarrera } from "../backend/carr.guardar.js";
 import {
   carrUiBloquearGuardado,
   carrUiBloquearGuardadoFlotante,
+  carrUiLimpiarFormulario,
   carrUiRecogerFormulario,
   carrUiResetMensajeBase,
   carrUiSetEstado,
-  carrUiActualizarBotonFlotante
+  carrUiActualizarBotonFlotante,
+  carrUiRefrescarEstadoSync
 } from "./carr.ui.js";
 
 let carrTablaApi = null;
+let carrSyncTimer = null;
 
 function carrMostrarTablaTemporal(mensaje, resumen = "Tabla no disponible", esError = false) {
   const wrap = document.getElementById("carrTablaWrap");
@@ -91,6 +95,7 @@ async function carrRefrescarTabla() {
   try {
     const resultado = await carrTablaApi.cargar();
     carrUiActualizarBotonFlotante(carrTablaApi.getPendientes());
+    await carrUiRefrescarEstadoSync();
 
     return resultado;
   } catch (error) {
@@ -115,8 +120,6 @@ async function carrRefrescarTabla() {
 async function carrSubmitFormulario(event) {
   event.preventDefault();
 
-  const form = document.getElementById("carrForm");
-
   try {
     carrUiBloquearGuardado(true);
     carrUiSetEstado("Validando y guardando la carrera...");
@@ -133,15 +136,13 @@ async function carrSubmitFormulario(event) {
     }
 
     carrUiSetEstado(
-      `Carrera guardada correctamente con id: ${resultado.id}`,
+      resultado.mensaje || `Carrera guardada correctamente con id: ${resultado.id}`,
       "ok"
     );
 
-    if (form) {
-      form.reset();
-    }
-
+    carrUiLimpiarFormulario();
     await carrRefrescarTabla();
+    await carrUiRefrescarEstadoSync();
   } catch (error) {
     console.error("[carr] Error inesperado al guardar:", error);
 
@@ -180,20 +181,15 @@ async function carrGuardarCambiosTabla() {
         "error"
       );
 
-      if (resultado.parcial) {
-        carrUiSetEstado(
-          `${resultado.totalGuardados || 0} cambio(s) sí se guardaron, pero el proceso se detuvo por un error.`,
-          "error"
-        );
-      }
-
       return;
     }
 
     carrUiSetEstado(
-      `${resultado.total || 0} cambio(s) guardado(s) correctamente.`,
+      resultado.mensaje || `${resultado.total || 0} cambio(s) guardado(s) correctamente.`,
       "ok"
     );
+
+    await carrUiRefrescarEstadoSync();
   } catch (error) {
     console.error("[carr] Error inesperado al guardar cambios de tabla:", error);
 
@@ -216,25 +212,28 @@ function carrRegistrarEventos() {
   const btnGuardarCambios = document.getElementById("carrBtnGuardarCambios");
   const inputBuscar = document.getElementById("carrTablaBuscar");
   const btnLimpiarBusqueda = document.getElementById("carrBtnLimpiarBusqueda");
+  const btnLimpiar = document.getElementById("carrBtnLimpiar");
 
-  if (!form) {
-    console.warn("[carr] No se encontró el formulario principal.");
-    return;
+  if (form) {
+    form.addEventListener("submit", carrSubmitFormulario);
   }
 
-  form.addEventListener("submit", carrSubmitFormulario);
-
-  form.addEventListener("reset", () => {
-    setTimeout(() => {
-      carrUiSetEstado("Formulario limpio. Puede registrar una nueva carrera.");
-    }, 0);
-  });
+  if (btnLimpiar) {
+    btnLimpiar.addEventListener("click", () => {
+      window.setTimeout(carrUiResetMensajeBase, 0);
+    });
+  }
 
   if (btnRecargarTabla) {
     btnRecargarTabla.addEventListener("click", async () => {
-      carrUiSetEstado("Actualizando la tabla de carreras...");
-      await carrRefrescarTabla();
-      carrUiSetEstado("Tabla actualizada.");
+      carrUiSetEstado("Recargando tabla de carreras...");
+      const resultado = await carrRefrescarTabla();
+      carrUiSetEstado(
+        resultado.ok
+          ? `Tabla recargada. Total: ${resultado.total || 0}`
+          : resultado.mensaje || "No se pudo recargar la tabla.",
+        resultado.ok ? "ok" : "error"
+      );
     });
   }
 
@@ -244,17 +243,17 @@ function carrRegistrarEventos() {
 
   if (inputBuscar) {
     inputBuscar.addEventListener("input", () => {
-      if (!carrTablaApi || typeof carrTablaApi.setBuscar !== "function") {
-        return;
+      if (carrTablaApi && typeof carrTablaApi.setBuscar === "function") {
+        carrTablaApi.setBuscar(inputBuscar.value);
       }
-
-      carrTablaApi.setBuscar(inputBuscar.value);
     });
   }
 
-  if (btnLimpiarBusqueda && inputBuscar) {
+  if (btnLimpiarBusqueda) {
     btnLimpiarBusqueda.addEventListener("click", () => {
-      inputBuscar.value = "";
+      if (inputBuscar) {
+        inputBuscar.value = "";
+      }
 
       if (carrTablaApi && typeof carrTablaApi.setBuscar === "function") {
         carrTablaApi.setBuscar("");
@@ -263,13 +262,20 @@ function carrRegistrarEventos() {
   }
 }
 
-async function carrIniciar() {
+function carrIniciarRefrescoSync() {
+  if (carrSyncTimer) {
+    window.clearInterval(carrSyncTimer);
+  }
+
+  carrUiRefrescarEstadoSync();
+  carrSyncTimer = window.setInterval(carrUiRefrescarEstadoSync, 5000);
+}
+
+async function carrInit() {
   carrRegistrarEventos();
   carrUiResetMensajeBase();
-  carrUiActualizarBotonFlotante(0);
+  carrIniciarRefrescoSync();
   await carrRefrescarTabla();
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-  carrIniciar();
-});
+document.addEventListener("DOMContentLoaded", carrInit);
