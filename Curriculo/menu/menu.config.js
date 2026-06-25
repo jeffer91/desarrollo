@@ -32,19 +32,19 @@ Función o funciones:
     {
       id: "fichas",
       title: "Fichas",
-      hint: "Gestión de fichas por asignatura",
+      hint: "Gestión de fichas curriculares",
       routeFromMenu: "../fichas/fch.index.html"
     },
     {
       id: "actas",
       title: "Actas",
-      hint: "Gestión de actas por asignatura",
+      hint: "Gestión de actas curriculares",
       routeFromMenu: "../actas/act.index.html"
     },
     {
       id: "control",
       title: "Control",
-      hint: "Control global de PEA, fichas y actas",
+      hint: "Control general de PEA, fichas y actas",
       routeFromMenu: "../control/ctl.index.html"
     }
   ];
