@@ -15,21 +15,15 @@ Función:
 
   function loadCurrentIfPossible() {
     if (!MAT.state || !MAT.state.data || !MAT.state.data.selectedCareerId || !MAT.state.data.selectedLoadType) {
-      if (MAT.tabla && MAT.tabla.render && typeof MAT.tabla.render.noSelection === "function") {
-        MAT.tabla.render.noSelection();
-      }
+      if (MAT.tabla && MAT.tabla.render && typeof MAT.tabla.render.noSelection === "function") MAT.tabla.render.noSelection();
       return;
     }
 
     if (MAT.editor && MAT.editor.cargarDesdeDb && typeof MAT.editor.cargarDesdeDb.fromCurrentSelection === "function") {
       MAT.editor.cargarDesdeDb.fromCurrentSelection().catch(function (error) {
         console.error(error);
-        if (MAT.ui && typeof MAT.ui.setStatus === "function") {
-          MAT.ui.setStatus("No se pudo cargar el bloque actual desde local/Firebase.", "error");
-        }
-        if (MAT.tabla && MAT.tabla.render && typeof MAT.tabla.render.empty === "function") {
-          MAT.tabla.render.empty("No se pudo cargar el bloque actual.");
-        }
+        if (MAT.ui && typeof MAT.ui.setStatus === "function") MAT.ui.setStatus("No se pudo cargar el bloque actual desde local/Firebase.", "error");
+        if (MAT.tabla && MAT.tabla.render && typeof MAT.tabla.render.empty === "function") MAT.tabla.render.empty("No se pudo cargar el bloque actual.");
       });
     }
   }
@@ -77,6 +71,7 @@ Función:
     if (MAT.tabla && MAT.tabla.render && typeof MAT.tabla.render.noSelection === "function") MAT.tabla.render.noSelection();
     if (MAT.tabla && MAT.tabla.edicion && typeof MAT.tabla.edicion.bind === "function") MAT.tabla.edicion.bind();
     patchMainMethods();
+    window.setTimeout(loadCurrentIfPossible, 250);
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
