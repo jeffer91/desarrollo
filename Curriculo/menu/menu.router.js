@@ -1,17 +1,24 @@
 /* =========================================================
 Nombre completo: menu.router.js
-Ruta o ubicación: /menu/menu.router.js
+Ruta o ubicación: /Curriculo/menu/menu.router.js
 Función o funciones:
 - Manejar la navegación por hash del menú Currículo
-- Permitir leer, cambiar y normalizar la opción activa
-- Mantener la URL sincronizada con el módulo seleccionado
-- Recordar la última opción activa dentro de la sesión
+- Normalizar ids de módulos
+- Recordar la última pantalla en localStorage
+- Mantener la URL sincronizada sin recargar la app completa
 ========================================================= */
 (function attachCurriculoMenuRouter(window) {
   "use strict";
 
   var onChangeHandler = null;
-  var STORAGE_KEY = "curriculo_menu_last_id";
+
+  function getConfig() {
+    return window.CurriculoMenuConfig || {};
+  }
+
+  function getStorageKey() {
+    return String(getConfig().storageKey || "curriculo_menu_last_id");
+  }
 
   function normalizeId(value) {
     return String(value == null ? "" : value)
@@ -20,7 +27,10 @@ Función o funciones:
       .replace(/^#/, "")
       .replace(/^\/+/, "")
       .replace(/^modulo\//i, "")
-      .replace(/\s+/g, "-");
+      .replace(/^curriculo\//i, "")
+      .replace(/[^a-z0-9_-]+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-+|-+$/g, "");
   }
 
   function buildHash(id) {
@@ -39,36 +49,60 @@ Función o funciones:
   }
 
   function saveLastId(id) {
+    var normalized = normalizeId(id);
+    if (!normalized) return;
+
     try {
-      window.sessionStorage.setItem(STORAGE_KEY, normalizeId(id));
+      window.localStorage.setItem(getStorageKey(), normalized);
     } catch (error) {
-      return;
+      try {
+        window.sessionStorage.setItem(getStorageKey(), normalized);
+      } catch (fallbackError) {
+        return;
+      }
     }
   }
 
   function getLastId() {
+    var value = "";
+
     try {
-      return normalizeId(window.sessionStorage.getItem(STORAGE_KEY));
+      value = normalizeId(window.localStorage.getItem(getStorageKey()));
     } catch (error) {
+      value = "";
+    }
+
+    if (value) return value;
+
+    try {
+      return normalizeId(window.sessionStorage.getItem(getStorageKey()));
+    } catch (fallbackError) {
       return "";
     }
   }
 
   function emitChange() {
-    if (typeof onChangeHandler !== "function") {
-      return;
+    var id = getCurrentId();
+
+    if (id) {
+      saveLastId(id);
     }
 
-    var id = getCurrentId();
-    saveLastId(id);
-    onChangeHandler(id);
+    if (typeof onChangeHandler === "function") {
+      onChangeHandler(id);
+    }
   }
 
   function go(id, options) {
-    var nextHash = buildHash(id);
+    var normalized = normalizeId(id);
+    var nextHash;
     var currentHash = String(window.location.hash || "");
+    var url;
 
-    saveLastId(id);
+    if (!normalized) return;
+
+    nextHash = buildHash(normalized);
+    saveLastId(normalized);
 
     if (currentHash === nextHash) {
       emitChange();
@@ -76,7 +110,7 @@ Función o funciones:
     }
 
     if (options && options.replace) {
-      var url = window.location.pathname + window.location.search + nextHash;
+      url = window.location.pathname + window.location.search + nextHash;
       window.history.replaceState(null, "", url);
       emitChange();
       return;
@@ -96,6 +130,7 @@ Función o funciones:
     getCurrentId: getCurrentId,
     normalizeId: normalizeId,
     buildHash: buildHash,
-    getLastId: getLastId
+    getLastId: getLastId,
+    saveLastId: saveLastId
   };
 })(window);
