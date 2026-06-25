@@ -1,11 +1,13 @@
 /*
 Nombre del archivo: carr.validar.js
-Ubicación: carreras/backend/carr.validar.js
+Ubicación: /Curriculo/carreras/backend/carr.validar.js
 Función:
 - Validar la estructura mínima de una carrera
 - Normalizar nombre, tipo y estado
 - Devolver errores y un objeto listo para guardar
 */
+
+import { carrLimpiarTextoBase } from "./carr.normalizar.js";
 
 const CARR_TIPOS_PERMITIDOS = [
   "Tecnologia Superior",
@@ -19,9 +21,7 @@ const CARR_ESTADOS_PERMITIDOS = [
 ];
 
 function carrLimpiarTexto(valor) {
-  return String(valor ?? "")
-    .trim()
-    .replace(/\s+/g, " ");
+  return carrLimpiarTextoBase(valor);
 }
 
 function carrNormalizarEstado(valor) {
@@ -29,11 +29,25 @@ function carrNormalizarEstado(valor) {
   return CARR_ESTADOS_PERMITIDOS.includes(limpio) ? limpio : "activa";
 }
 
+function carrValidarTipo(valor) {
+  const limpio = carrLimpiarTexto(valor);
+
+  if (CARR_TIPOS_PERMITIDOS.includes(limpio)) {
+    return limpio;
+  }
+
+  const sinTildes = limpio
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  return CARR_TIPOS_PERMITIDOS.includes(sinTildes) ? sinTildes : limpio;
+}
+
 function carrValidarCarrera(data) {
   const errores = [];
 
   const nombre = carrLimpiarTexto(data?.nombre);
-  const tipo = carrLimpiarTexto(data?.tipo);
+  const tipo = carrValidarTipo(data?.tipo);
   const estado = carrNormalizarEstado(data?.estado);
 
   if (!nombre) {
@@ -72,5 +86,6 @@ export {
   CARR_ESTADOS_PERMITIDOS,
   carrLimpiarTexto,
   carrNormalizarEstado,
+  carrValidarTipo,
   carrValidarCarrera
 };
