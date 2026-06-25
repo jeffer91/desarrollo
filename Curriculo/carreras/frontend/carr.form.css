@@ -1,16 +1,13 @@
 /*
 Nombre del archivo: carr.form.css
-Ubicación: carreras/frontend/carr.form.css
+Ubicación: /Curriculo/carreras/frontend/carr.form.css
 Función:
 - Ajustes finos del formulario en tema claro
 - Hacer la interfaz más compacta
-- Mejorar campos, tarjetas y acciones
-- Evitar mezclar estilos de tabla
+- Mejorar campos, tarjetas, acciones y mensajes
 */
 
-.carr-form {
-  gap: 16px;
-}
+.carr-form { gap: 16px; }
 
 .carr-card {
   position: relative;
@@ -28,7 +25,7 @@ Función:
 
 .carr-card-title {
   font-size: 17px;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 0.01em;
 }
 
@@ -58,9 +55,7 @@ Función:
   padding-top: 2px;
 }
 
-.carr-btn {
-  min-width: 132px;
-}
+.carr-btn { min-width: 132px; }
 
 .carr-status {
   font-size: 13px;
@@ -76,18 +71,16 @@ Función:
   background: linear-gradient(90deg, rgba(59, 130, 246, 0.16), rgba(59, 130, 246, 0));
 }
 
-.carr-list-head {
-  margin-bottom: 0;
-}
+.carr-list-head { margin-bottom: 0; }
 
-.carr-list-tools .carr-btn {
-  min-width: auto;
+.carr-list-tools .carr-btn { min-width: auto; }
+
+.carr-sync-status:empty::before {
+  content: "Preparando guardado local...";
 }
 
 @media (max-width: 900px) {
-  .carr-btn {
-    width: 100%;
-  }
+  .carr-btn { width: 100%; }
 
   .carr-actions {
     flex-direction: column;
