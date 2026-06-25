@@ -3,8 +3,7 @@ Nombre completo: maq-modulos-registry.js
 Ruta o ubicación: /Requisitos/Maqueta/maq-modulos-registry.js
 Función o funciones:
 - Definir rutas internas reales del menú de Requisitos.
-- Activar Requisito, BL, tabla, Ficha, Stats, Coordi, Repor y Defensas.
-- Dejar módulos no recuperados como pendientes para evitar pantalla rota.
+- Activar todos los módulos recuperados de Requisitos hasta Infor.
 - Mantener Títulos solo como enlace preparado, sin modificar sus archivos.
 Con qué se conecta:
 - maq-config-service.js
@@ -25,7 +24,7 @@ Con qué se conecta:
     titulos_estudiante:{id:"titulos_estudiante",nombre:"Estudiantes",ruta:base+"/titulos/public/ta-titulo-articulo-estudiante.html",estado:"pendiente",bloque:"Títulos no tocado"},
     titulos_admin:{id:"titulos_admin",nombre:"Administrador",ruta:base+"/titulos/electron/admin/ta-titulo-articulo-administrador.html",estado:"pendiente",bloque:"Títulos no tocado"},
     titulos_coordinador:{id:"titulos_coordinador",nombre:"Coordinador",ruta:base+"/titulos/public/ta-titulo-articulo-coordinador.html",estado:"pendiente",bloque:"Títulos no tocado"},
-    titulacion:{id:"titulacion",nombre:"Infor",ruta:base+"/Titulacion/frontend/titulacion.html",estado:"pendiente",bloque:"Bloque 11"}
+    titulacion:{id:"titulacion",nombre:"Infor",ruta:base+"/Titulacion/frontend/titulacion.html",estado:"activo"}
   };
   function buscarPorId(id){return modules[String(id||"").trim()]||null;}
   function listar(){return Object.keys(modules).map(function(k){return modules[k];});}
