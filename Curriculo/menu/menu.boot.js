@@ -36,112 +36,154 @@ Función o funciones:
     }) || null;
   }
 
-  function setFrameSrc(frame, item) {
-    if (!frame || !item || !item.routeFromMenu) {
+  function getDefaultItem() {
+    var cfg = getConfig();
+    return getItemById(cfg.defaultItemId) || getItems()[0] || null;
+  }
+
+  function getFrame() {
+    return byId("menuFrame");
+  }
+
+  function getRouter() {
+    return window.CurriculoMenuRouter;
+  }
+
+  function getRender() {
+    return window.CurriculoMenuRender;
+  }
+
+  function loadItem(item) {
+    var frame = getFrame();
+    var Render = getRender();
+
+    if (!frame || !item) {
       return;
     }
 
-    frame.src = String(item.routeFromMenu);
+    frame.src = item.routeFromMenu;
+
+    if (Render && typeof Render.setHint === "function") {
+      Render.setHint(item.hint || "Cargando módulo...");
+    }
+  }
+
+  function render(activeId) {
+    var Render = getRender();
+    if (!Render || typeof Render.renderNav !== "function") {
+      return;
+    }
+
+    Render.renderNav(getItems(), activeId);
+  }
+
+  function selectItem(id, options) {
+    var Router = getRouter();
+    var item = getItemById(id) || getDefaultItem();
+
+    if (!item) {
+      return;
+    }
+
+    render(item.id);
+    loadItem(item);
+
+    if (!options || options.syncHash !== false) {
+      if (Router && typeof Router.go === "function") {
+        Router.go(item.id, { replace: Boolean(options && options.replace) });
+      }
+    }
+  }
+
+  function refreshCurrent() {
+    var frame = getFrame();
+    var Render = getRender();
+
+    if (frame && frame.src) {
+      frame.src = frame.src;
+    }
+
+    if (Render && typeof Render.setHint === "function") {
+      Render.setHint("Vista actual refrescada.");
+    }
+  }
+
+  function bindNavClicks() {
+    var nav = byId("menuNav");
+    if (!nav) return;
+
+    nav.addEventListener("click", function onNavClick(event) {
+      var button = event.target.closest("button[data-menu-id]");
+      if (!button) return;
+
+      var id = button.getAttribute("data-menu-id");
+      selectItem(id);
+    });
+  }
+
+  function bindRefresh() {
+    var btn = byId("menuRefresh");
+    if (!btn) return;
+
+    btn.addEventListener("click", refreshCurrent);
+  }
+
+  function bindBrand() {
+    var btn = byId("menuBrandBtn");
+    if (!btn) return;
+
+    btn.addEventListener("click", function onBrandClick() {
+      var item = getDefaultItem();
+      if (item) {
+        selectItem(item.id);
+      }
+    });
+  }
+
+  function bindRouter() {
+    var Router = getRouter();
+    if (!Router || typeof Router.init !== "function") {
+      return;
+    }
+
+    Router.init(function onRouteChange(id) {
+      selectItem(id, { syncHash: false });
+    });
+  }
+
+  function loadInitial() {
+    var Router = getRouter();
+    var cfg = getConfig();
+    var id = "";
+
+    if (Router && typeof Router.getCurrentId === "function") {
+      id = Router.getCurrentId();
+    }
+
+    if (!id && Router && typeof Router.getLastId === "function") {
+      id = Router.getLastId();
+    }
+
+    if (!id) {
+      id = cfg.defaultItemId;
+    }
+
+    selectItem(id, { replace: true });
   }
 
   function start() {
-    var Router = window.CurriculoMenuRouter;
-    var Render = window.CurriculoMenuRender;
-    var cfg = getConfig();
+    bindNavClicks();
+    bindRefresh();
+    bindBrand();
+    bindRouter();
+    loadInitial();
 
-    if (!Router || !Render) {
-      throw new Error("No se encontraron los módulos del menú Currículo.");
-    }
+    var frame = getFrame();
+    var Render = getRender();
 
-    var frame = byId("menuFrame");
-    var brandBtn = byId("menuBrandBtn");
-    var refreshBtn = byId("menuRefresh");
-    var nav = byId("menuNav");
-    var currentItemId = "";
-
-    function syncView(nextId) {
-      var wantedId = Router.normalizeId(nextId || cfg.defaultItemId || "");
-      var item = getItemById(wantedId) || getItemById(cfg.defaultItemId);
-
-      if (!item) {
-        Render.renderNav(getItems(), "");
-        Render.setHint("No hay módulos configurados.");
-        if (frame) {
-          frame.removeAttribute("src");
-        }
-        return;
-      }
-
-      currentItemId = item.id;
-      Render.renderNav(getItems(), currentItemId);
-      Render.setHint("Cargando: " + item.title + "...");
-      setFrameSrc(frame, item);
-    }
-
-    Router.init(function onRouteChange(routeId) {
-      var nextId = routeId || cfg.defaultItemId || "";
-      if (!nextId) return;
-      syncView(nextId);
-    });
-
-    if (!Router.getCurrentId() && cfg.defaultItemId) {
-      Router.go(cfg.defaultItemId);
-    }
-
-    if (nav) {
-      nav.addEventListener("click", function onNavClick(event) {
-        var button = event.target && event.target.closest
-          ? event.target.closest("button[data-id]")
-          : null;
-
-        if (!button || button.disabled) {
-          return;
-        }
-
-        var id = button.getAttribute("data-id") || "";
-        if (!id) {
-          return;
-        }
-
-        Router.go(id);
-      });
-    }
-
-    if (refreshBtn) {
-      refreshBtn.addEventListener("click", function onRefreshClick() {
-        if (!frame) return;
-
-        try {
-          if (frame.contentWindow && frame.contentWindow.location) {
-            frame.contentWindow.location.reload();
-            Render.setHint("Vista actual refrescada.");
-            return;
-          }
-        } catch (error) {
-          /* fallback */
-        }
-
-        if (currentItemId) {
-          syncView(currentItemId);
-          Render.setHint("Vista actual refrescada.");
-        }
-      });
-    }
-
-    if (brandBtn) {
-      brandBtn.addEventListener("click", function onBrandClick() {
-        if (cfg.defaultItemId) {
-          Router.go(cfg.defaultItemId);
-        }
-      });
-    }
-
-    if (frame) {
+    if (frame && Render && typeof Render.setHint === "function") {
       frame.addEventListener("load", function onFrameLoad() {
-        var item = getItemById(currentItemId);
-        Render.setHint(
-          item ? "Listo. Módulo activo: " + item.title : "Listo."
-        );
+        Render.setHint("Vista cargada correctamente.");
       });
 
       frame.addEventListener("error", function onFrameError() {
