@@ -1,60 +1,50 @@
 # =========================================================
 # Nombre completo: .gitignore
-# Ruta o ubicación: /desarrollo/.gitignore
-# Función o funciones:
-# - Evitar subir dependencias, builds y archivos temporales
-# - Mantener limpio el repositorio en GitHub
-# - Excluir datos locales que no deben versionarse
+# Ruta o ubicación: /.gitignore
+# Función:
+# - Evitar subir dependencias, compilados y archivos sensibles.
+# - NO bloquear carpetas de código fuente del proyecto.
 # =========================================================
 
-# Node
+# =========================================================
+# Dependencias
+# =========================================================
 node_modules/
+**/node_modules/
+
+# =========================================================
+# Logs y temporales
+# =========================================================
+logs/
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-
-# Build
-dist/
-build/
-out/
-release/
-
-# Electron / empaquetado
-*.blockmap
-*.exe
-*.dmg
-*.AppImage
-*.zip
-
-# Logs y temporales
-logs/
-*.log
+pnpm-debug.log*
 tmp/
 temp/
+.cache/
 
-# Sistema
+# =========================================================
+# Archivos del sistema
+# =========================================================
 .DS_Store
 Thumbs.db
 
-# Editores
+# =========================================================
+# Visual Studio Code
+# Se permite subir la configuración base del proyecto.
+# =========================================================
 .vscode/*
 !.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
 
-# Exportaciones locales
-txt_convertidos/
-
-# Datos locales
-localsave/data/*.json
-node_modules/
-**/node_modules/
-dist/
-build/.env
-.env.*
-
-node_modules/
-**/node_modules/
-dist/
-build/.env
+# =========================================================
+# Variables de entorno y credenciales
+# =========================================================
+.env
 .env.*
 **/.env
 **/.env.*
@@ -65,3 +55,34 @@ serviceAccount*.json
 *firebase-adminsdk*.json
 *credentials*.json
 *secret*.json
+
+# =========================================================
+# Compilados / instaladores / empaquetados
+# Estos archivos se generan de nuevo y no son código fuente.
+# =========================================================
+dist/
+build/
+out/
+release/
+*.blockmap
+*.exe
+*.dmg
+*.AppImage
+*.zip
+*.7z
+*.rar
+
+# =========================================================
+# Exportaciones o datos locales generados por la app
+# =========================================================
+txt_convertidos/
+localsave/data/*.json
+localsave/backups/
+localsave/temp/
+
+# =========================================================
+# IMPORTANTE:
+# No se ignoran carpetas de código como:
+# app/, electron/, eventos/, Requisitos/, Documentos/, Docentes/,
+# incorporaciones/, Curriculo/, localsave/.
+# =========================================================
