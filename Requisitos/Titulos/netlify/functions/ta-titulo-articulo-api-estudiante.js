@@ -7,6 +7,7 @@
   - Validar período activo normalizado, sin bloquear por campos CUMPLE / NO CUMPLE.
   - Guardar solo telegramUser solicitado al estudiante.
   - Validar coherencia de las 3 propuestas antes de guardar.
+  - Reutilizar envíos existentes aunque el período esté escrito como Primer semestre de 2026, 2026-1 o 2026 I.
 */
 
 import {
@@ -26,6 +27,7 @@ import {
   ok,
   onlyDigits,
   parseBody,
+  periodoEquivalente,
   serverError,
   validarMetodoPost
 } from "./ta-titulo-articulo-api-security.js";
@@ -135,6 +137,28 @@ async function obtenerEstudiantePeriodo(db, cedula) {
   return { estudiante, periodoActivo };
 }
 
+async function buscarEnvioEstudiante(db, periodoActivo, cedula) {
+  const envioId = createEnvioId(periodoActivo.id, cedula);
+  const directoRef = db.collection(COLLECTIONS.envios).doc(envioId);
+  const directoSnap = await directoRef.get();
+
+  if (directoSnap.exists) {
+    return { ref: directoRef, id: directoSnap.id, data: directoSnap.data() || {}, exists: true };
+  }
+
+  const snap = await db.collection(COLLECTIONS.envios).where("cedula", "==", cedula).get();
+  const encontrado = snap.docs.find((doc) => {
+    const data = doc.data() || {};
+    return periodoEquivalente(data.periodoId || data.periodoLabel, periodoActivo.id);
+  });
+
+  if (encontrado) {
+    return { ref: encontrado.ref, id: encontrado.id, data: encontrado.data() || {}, exists: true };
+  }
+
+  return { ref: directoRef, id: envioId, data: null, exists: false };
+}
+
 async function buscarPorCedula(db, payload) {
   const cedula = onlyDigits(payload.cedula);
   if (!cedula) return badRequest("Ingrese una cédula válida.");
@@ -142,10 +166,8 @@ async function buscarPorCedula(db, payload) {
   const { estudiante, periodoActivo, error } = await obtenerEstudiantePeriodo(db, cedula);
   if (error) return error;
 
-  const envioId = createEnvioId(periodoActivo.id, cedula);
-  const envioSnap = await db.collection(COLLECTIONS.envios).doc(envioId).get();
-
-  return ok({ estudiante: estudiantePublico(estudiante, periodoActivo.label), periodoActivo, envio: envioSnap.exists ? envioSnap.data() : null });
+  const envio = await buscarEnvioEstudiante(db, periodoActivo, cedula);
+  return ok({ estudiante: estudiantePublico(estudiante, periodoActivo.label), periodoActivo, envio: envio.exists ? envio.data : null });
 }
 
 async function guardarTelegram(db, payload) {
@@ -158,11 +180,11 @@ async function guardarTelegram(db, payload) {
   const { estudiante, periodoActivo, error } = await obtenerEstudiantePeriodo(db, cedula);
   if (error) return error;
 
-  const envioId = createEnvioId(periodoActivo.id, cedula);
+  const envio = await buscarEnvioEstudiante(db, periodoActivo, cedula);
   const fecha = nowIso();
 
   await db.collection(COLLECTIONS.estudiantes).doc(estudiante.id).set({ telegramUser, updatedAt: fecha }, { merge: true });
-  await db.collection(COLLECTIONS.envios).doc(envioId).set({ periodoId: periodoActivo.id, cedula, telegramUser, actualizadoEn: fecha }, { merge: true });
+  await envio.ref.set({ envioId: envio.id, periodoId: periodoActivo.id, periodoLabel: periodoActivo.label, cedula, telegramUser, actualizadoEn: fecha }, { merge: true });
 
   return ok({ mensaje: "Usuario de Telegram guardado correctamente." });
 }
@@ -174,10 +196,8 @@ async function consultarEstado(db, payload) {
   const periodoActivo = await getPeriodoActivo(db);
   if (!periodoActivo) return badRequest("No existe un período activo configurado.");
 
-  const envioId = createEnvioId(periodoActivo.id, cedula);
-  const envioSnap = await db.collection(COLLECTIONS.envios).doc(envioId).get();
-
-  return ok({ envio: envioSnap.exists ? envioSnap.data() : null, periodoActivo });
+  const envio = await buscarEnvioEstudiante(db, periodoActivo, cedula);
+  return ok({ envio: envio.exists ? envio.data : null, periodoActivo });
 }
 
 async function enviarPropuestas(db, payload) {
@@ -194,10 +214,8 @@ async function enviarPropuestas(db, payload) {
   const errorPropuestas = validarPropuestas(payload.propuestas, payload.tituloPreferidoNumero, carrera);
   if (errorPropuestas) return badRequest(errorPropuestas);
 
-  const envioId = createEnvioId(periodoActivo.id, cedula);
-  const envioRef = db.collection(COLLECTIONS.envios).doc(envioId);
-  const envioSnap = await envioRef.get();
-  const envioActual = envioSnap.exists ? envioSnap.data() : null;
+  const envio = await buscarEnvioEstudiante(db, periodoActivo, cedula);
+  const envioActual = envio.exists ? envio.data : null;
 
   if (envioActual && [ESTADOS.enviado, ESTADOS.enRevision, ESTADOS.aprobado, ESTADOS.aprobadoConCorrecciones].includes(envioActual.estado)) {
     return badRequest("El envío ya fue registrado y no puede editarse en este estado.");
@@ -208,7 +226,7 @@ async function enviarPropuestas(db, payload) {
   const fecha = nowIso();
 
   const data = {
-    envioId,
+    envioId: envio.id,
     periodoId: periodoActivo.id,
     periodoLabel: periodoActivo.label,
     cedula,
@@ -228,8 +246,8 @@ async function enviarPropuestas(db, payload) {
   };
 
   await db.collection(COLLECTIONS.estudiantes).doc(estudiante.id).set({ telegramUser, updatedAt: fecha }, { merge: true });
-  await envioRef.set(data, { merge: true });
-  await db.collection(COLLECTIONS.historial).add({ tipo: "ENVIO_ESTUDIANTE", envioId, cedula, periodoId: periodoActivo.id, intento, estado: ESTADOS.enviado, propuestas, creadoEn: fecha });
+  await envio.ref.set(data, { merge: true });
+  await db.collection(COLLECTIONS.historial).add({ tipo: "ENVIO_ESTUDIANTE", envioId: envio.id, cedula, periodoId: periodoActivo.id, periodoLabel: periodoActivo.label, intento, estado: ESTADOS.enviado, propuestas, creadoEn: fecha });
 
   return ok({ envio: data, mensaje: "Propuestas enviadas correctamente." });
 }
