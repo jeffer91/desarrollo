@@ -3,18 +3,21 @@
 Nombre completo: maq-index.html
 Ruta o ubicación: /Requisitos/Maqueta/maq-index.html
 Función o funciones:
-- Servir como entrada interna del módulo Requisitos.
-- Mostrar el menú superior fijo del bloque Requisitos.
-- Cargar por defecto el HTML de Excel/Requisito.
-- Mantener los módulos en iframes para no recargar desde cero al cambiar de pantalla.
+- Ser la entrada interna del módulo Requisitos.
+- Mostrar menú superior fijo, claro y rápido.
+- Abrir Excel/Requisito por defecto.
+- Mantener pantallas en memoria mediante iframes para no recargar desde cero.
+- Volver a Desarrollo sin usar la palabra Regresar.
 Con qué se conecta:
-- /Requisitos/Maqueta/maq-ui.css
-- /Requisitos/Maqueta/maq-utils.js
-- /Requisitos/Maqueta/maq-modulos-registry.js
-- /Requisitos/Maqueta/maq-config-service.js
-- /Requisitos/Maqueta/maq-core.js
-- /Requisitos/Maqueta/maq-menu.js
+- maq-ui.css
+- maq-utils.js
+- maq-modulos-registry.js
+- maq-config-service.js
+- maq-core.js
+- maq-menu.js
+- maq-health.js
 ========================================================= -->
+<!doctype html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
@@ -32,6 +35,7 @@ Con qué se conecta:
       <nav id="maq-main-menu" class="maq-menu" aria-label="Menú superior de Requisitos"></nav>
       <div class="maq-actions">
         <span id="maq-current-module-label" class="maq-current">Requisito</span>
+        <button id="maq-btn-prev" class="maq-btn maq-btn-light" type="button" title="Pantalla anterior">Anterior</button>
         <button id="maq-btn-refresh" class="maq-btn maq-btn-primary" type="button" title="Refrescar pantalla activa">Refrescar</button>
         <a id="maq-btn-desarrollo" class="maq-btn maq-btn-light" href="../../index.html" title="Desarrollo">Desarrollo</a>
       </div>
@@ -39,11 +43,16 @@ Con qué se conecta:
     <main class="maq-main">
       <section id="maq-main-frame-host" class="maq-frame-host" aria-label="Pantallas de Requisitos"></section>
     </main>
+    <footer class="maq-statusbar">
+      <span id="maq-status-text">Listo</span>
+      <span id="maq-memory-text">Memoria activa</span>
+    </footer>
   </div>
   <script src="maq-utils.js"></script>
   <script src="maq-modulos-registry.js"></script>
   <script src="maq-config-service.js"></script>
   <script src="maq-core.js"></script>
   <script src="maq-menu.js"></script>
+  <script src="maq-health.js"></script>
 </body>
 </html>
