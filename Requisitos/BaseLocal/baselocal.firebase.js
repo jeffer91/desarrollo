@@ -182,6 +182,8 @@ Con qué se conecta:
   async function readCollections(db, names){
     var all = [];
     var details = [];
+    var firstError = null;
+    var successfulReads = 0;
 
     for(var i = 0; i < names.length; i += 1){
       var name = names[i];
@@ -189,11 +191,27 @@ Con qué se conecta:
         continue;
       }
 
-      var rows = await readCollection(db, name);
-      if(rows.length){
-        all = all.concat(rows);
+      try{
+        var rows = await readCollection(db, name);
+        successfulReads += 1;
+        if(rows.length){
+          all = all.concat(rows);
+        }
+        details.push({collection:name, rows:rows.length});
+      }catch(error){
+        if(!firstError){
+          firstError = error;
+        }
+        details.push({
+          collection:name,
+          rows:0,
+          error:error && error.message ? error.message : String(error)
+        });
       }
-      details.push({collection:name, rows:rows.length});
+    }
+
+    if(!successfulReads && firstError){
+      throw firstError;
     }
 
     return {rows:all, details:details};
