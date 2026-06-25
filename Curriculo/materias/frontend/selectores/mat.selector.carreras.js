@@ -1,11 +1,11 @@
 /*
 Nombre del archivo: mat.selector.carreras.js
-Ubicación: C:\Users\ITSQMET\Desktop\eventos\materias\frontend\selectores\mat.selector.carreras.js
+Ubicación: /Curriculo/materias/frontend/selectores/mat.selector.carreras.js
 Función:
-- Maneja el selector de carreras en un módulo separado
-- Renderiza opciones
-- Lee y establece el valor actual
-- Muestra solo el nombre de la carrera en el selector
+- Manejar selector de carreras
+- Renderizar opciones ordenadas
+- Mantener selección recordada
+- Mostrar estado y tipo en texto auxiliar
 */
 
 (function (window, document) {
@@ -16,6 +16,19 @@ Función:
 
   MAT.selectores = MAT.selectores || {};
 
+  function esc(value) {
+    return String(value == null ? "" : value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function clean(value) {
+    return String(value == null ? "" : value).trim();
+  }
+
   MAT.selectores.carreras = {
     getEl: function () {
       var selector = MAT.config && MAT.config.selectors && MAT.config.selectors.careerSelect;
@@ -24,66 +37,54 @@ Función:
 
     render: function (list) {
       var el = this.getEl();
-      var items = Array.isArray(list) ? list : [];
+      var items = Array.isArray(list) ? list.slice() : [];
+      var selected = MAT.state && MAT.state.data ? clean(MAT.state.data.selectedCareerId) : "";
       var html = '<option value="">Selecciona una carrera</option>';
-      var i;
-      var item;
-      var label;
 
-      if (!el) {
-        return;
-      }
+      if (!el) return;
 
-      for (i = 0; i < items.length; i += 1) {
-        item = items[i] || {};
-        label = String(item.nombre || "").trim();
+      items.sort(function (a, b) {
+        return clean(a && a.nombre).localeCompare(clean(b && b.nombre), "es", {
+          numeric: true,
+          sensitivity: "base"
+        });
+      });
 
-        html += '<option value="' + this.escape(item.id) + '">';
-        html += this.escape(label);
-        html += "</option>";
-      }
+      items.forEach(function (item) {
+        var id = clean(item && item.id);
+        var label = clean(item && item.nombre) || id;
+        var tipo = clean(item && item.tipo);
+        var estado = clean(item && item.estado) || "activa";
+        if (!id) return;
+        html += '<option value="' + esc(id) + '" data-tipo="' + esc(tipo) + '" data-estado="' + esc(estado) + '"';
+        if (id === selected) html += " selected";
+        html += ">" + esc(label) + "</option>";
+      });
 
       el.innerHTML = html;
     },
 
     setValue: function (value) {
       var el = this.getEl();
-
-      if (!el) return;
-
-      el.value = String(value || "");
+      if (el) el.value = clean(value);
     },
 
     getValue: function () {
       var el = this.getEl();
-
-      if (!el) return "";
-
-      return String(el.value || "");
+      return el ? clean(el.value) : "";
     },
 
     getSelectedText: function () {
       var el = this.getEl();
-
-      if (!el || !el.options || el.selectedIndex < 0) {
-        return "";
-      }
-
-      return String(el.options[el.selectedIndex].text || "");
+      if (!el || !el.options || el.selectedIndex < 0) return "";
+      return clean(el.options[el.selectedIndex].text);
     },
 
     syncFromState: function () {
-      this.render(MAT.state.data.careers || []);
-      this.setValue(MAT.state.data.selectedCareerId || "");
+      this.render((MAT.state && MAT.state.data && MAT.state.data.careers) || []);
+      this.setValue((MAT.state && MAT.state.data && MAT.state.data.selectedCareerId) || "");
     },
 
-    escape: function (value) {
-      return String(value || "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#39;");
-    }
+    escape: esc
   };
 })(window, document);
