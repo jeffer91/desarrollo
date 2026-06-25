@@ -1,0 +1,205 @@
+/*
+  Nombre completo: ta-titulo-articulo-layout.css
+  Ruta o ubicación: /Requisitos/Titulos/src/styles/ta-titulo-articulo-layout.css
+  Función o funciones:
+  - Definir la estructura visual general de las tres pantallas.
+  - Crear layout compacto para estudiante, coordinador y administrador.
+  - Organizar encabezado, grillas, secciones y contenedores principales.
+  Se conecta con:
+  - Requisitos/Titulos/src/styles/ta-titulo-articulo-base.css
+  - Requisitos/Titulos/src/styles/ta-titulo-articulo-components.css
+  - Requisitos/Titulos/public/ta-titulo-articulo-estudiante.html
+  - Requisitos/Titulos/public/ta-titulo-articulo-coordinador.html
+  - Requisitos/Titulos/electron/admin/ta-titulo-articulo-administrador.html
+*/
+
+.ta-shell {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+  display: grid;
+  gap: 16px;
+}
+
+.ta-shell--wide {
+  width: min(1480px, 100%);
+}
+
+.ta-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid rgba(201, 168, 102, 0.28);
+  border-radius: var(--ta-radius-xl);
+  background: rgba(7, 21, 39, 0.76);
+  color: var(--ta-color-blanco);
+  box-shadow: var(--ta-shadow-soft);
+  backdrop-filter: blur(12px);
+}
+
+.ta-header--admin {
+  background: linear-gradient(135deg, rgba(7, 21, 39, 0.92), rgba(16, 42, 70, 0.92));
+}
+
+.ta-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.ta-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.ta-brand__mark {
+  width: 74px;
+  min-width: 74px;
+  height: 74px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--ta-color-blanco);
+  border-radius: 18px;
+  color: var(--ta-color-dorado);
+  font-weight: 900;
+  font-size: 0.76rem;
+  letter-spacing: 0.06em;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.ta-brand__eyebrow {
+  margin: 0 0 3px;
+  color: var(--ta-color-dorado-2);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.ta-brand__title {
+  margin: 0;
+  font-size: clamp(1.25rem, 2vw, 1.8rem);
+  line-height: 1.08;
+  font-weight: 850;
+  color: var(--ta-color-blanco);
+}
+
+.ta-brand__subtitle {
+  margin: 4px 0 0;
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 0.9rem;
+}
+
+.ta-section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.ta-section-heading h2 {
+  margin: 0;
+  color: var(--ta-color-azul-marino);
+  font-size: 1.04rem;
+  line-height: 1.18;
+}
+
+.ta-section-heading p {
+  margin: 4px 0 0;
+  color: var(--ta-color-texto-suave);
+  font-size: 0.88rem;
+  line-height: 1.35;
+}
+
+.ta-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.ta-grid--2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.ta-admin-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+  gap: 16px;
+}
+
+.ta-admin-grid--main {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.ta-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.ta-proposal-list {
+  display: grid;
+  gap: 14px;
+}
+
+.ta-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.ta-actions--end {
+  justify-content: flex-end;
+}
+
+@media (max-width: 920px) {
+  .ta-body--public,
+  .ta-body--admin {
+    padding: 14px;
+  }
+
+  .ta-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .ta-header__actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .ta-brand__mark {
+    width: 60px;
+    min-width: 60px;
+    height: 60px;
+    border-radius: 14px;
+    font-size: 0.66rem;
+  }
+
+  .ta-grid--2,
+  .ta-admin-grid,
+  .ta-admin-grid--main {
+    grid-template-columns: 1fr;
+  }
+
+  .ta-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .ta-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ta-section-heading {
+    flex-direction: column;
+  }
+}
