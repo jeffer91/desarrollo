@@ -5,6 +5,7 @@
   - Atender acciones administrativas desde Electron/local.
   - Activar período, crear coordinadores, asignar carreras y generar resumen general.
   - Validar períodos normalizados desde configuración administrativa.
+  - Conectar envíos y estudiantes por equivalencia de período, no solo por texto exacto.
 */
 
 import {
@@ -20,6 +21,7 @@ import {
   nowIso,
   ok,
   parseBody,
+  periodoEquivalente,
   requireAdminToken,
   serverError,
   unauthorized,
@@ -70,8 +72,8 @@ function estudianteResumen(est, enviosPorCedula) {
     nombres: cleanString(est.Nombres || est.nombres),
     carrera: cleanString(est.NombreCarrera || est.nombreCarrera || est.carrera),
     codigoCarrera: cleanString(est.CodigoCarrera || est.codigoCarrera),
-    periodoId: cleanString(est.periodoId || est.ultimoPeriodoId),
-    periodoNormalizado: normalizarPeriodoId(est.periodoId || est.ultimoPeriodoId),
+    periodoId: cleanString(est.periodoId || est.ultimoPeriodoId || est.UltimoPeriodoId),
+    periodoNormalizado: normalizarPeriodoId(est.periodoId || est.ultimoPeriodoId || est.UltimoPeriodoId),
     telegramUser: cleanString(est.telegramUser || est.telegramUsuario),
     envioId: envio?.envioId || envio?.id || "",
     estado: envio?.estado || "SIN_ENVIO",
@@ -84,10 +86,17 @@ function estudianteResumen(est, enviosPorCedula) {
 async function listarResumen(db) {
   const periodoActivo = await getPeriodoActivo(db);
   const periodosSnap = await db.collection(COLLECTIONS.periodos).get();
-  const periodos = periodosSnap.docs.map((doc) => ({ id: doc.id, ...doc.data(), idNormalizado: normalizarPeriodoId(doc.id) })).sort((a, b) => cleanString(a.label || a.id).localeCompare(cleanString(b.label || b.id)));
+  const periodos = periodosSnap.docs
+    .map((doc) => {
+      const data = doc.data() || {};
+      return { ...data, id: doc.id, idNormalizado: normalizarPeriodoId([doc.id, data.id, data.periodoId, data.label, data.nombre].join(" ")) };
+    })
+    .sort((a, b) => cleanString(a.label || a.nombre || a.id).localeCompare(cleanString(b.label || b.nombre || b.id)));
 
   const coordinadoresSnap = await db.collection(COLLECTIONS.coordinadores).get();
-  const coordinadores = coordinadoresSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() })).sort((a, b) => cleanString(a.nombre).localeCompare(cleanString(b.nombre)));
+  const coordinadores = coordinadoresSnap.docs
+    .map((doc) => ({ ...(doc.data() || {}), id: doc.id }))
+    .sort((a, b) => cleanString(a.nombre).localeCompare(cleanString(b.nombre)));
 
   let estudiantes = [];
   let envios = [];
@@ -95,11 +104,13 @@ async function listarResumen(db) {
   if (periodoActivo?.id) {
     const estudiantesSnap = await db.collection(COLLECTIONS.estudiantes).get();
     estudiantes = estudiantesSnap.docs
-      .map((doc) => ({ id: doc.id, ...doc.data() }))
+      .map((doc) => ({ ...(doc.data() || {}), id: doc.id }))
       .filter((estudiante) => estudiantePertenecePeriodo(estudiante, periodoActivo.id));
 
-    const enviosSnap = await db.collection(COLLECTIONS.envios).where("periodoId", "==", periodoActivo.id).get();
-    envios = enviosSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    const enviosSnap = await db.collection(COLLECTIONS.envios).get();
+    envios = enviosSnap.docs
+      .map((doc) => ({ ...(doc.data() || {}), id: doc.id }))
+      .filter((envio) => periodoEquivalente(envio.periodoId || envio.periodoLabel, periodoActivo.id));
   }
 
   const enviosPorCedula = new Map(envios.map((envio) => [cleanString(envio.cedula), envio]));
@@ -132,7 +143,7 @@ async function activarPeriodo(db, payload) {
 
   await db.collection(COLLECTIONS.config).doc(DOCUMENTS.appConfig).set({
     periodoActivoId: periodoId,
-    periodoActivoIdNormalizado: normalizarPeriodoId(periodoId),
+    periodoActivoIdNormalizado: normalizarPeriodoId([periodoId, periodo.label, periodo.nombre, periodo.periodoId].join(" ")),
     periodoActivoLabel: cleanString(periodo.label || periodo.nombre || periodoId),
     actualizadoEn: nowIso()
   }, { merge: true });
