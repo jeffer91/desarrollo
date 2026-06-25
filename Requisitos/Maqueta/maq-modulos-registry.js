@@ -3,7 +3,7 @@ Nombre completo: maq-modulos-registry.js
 Ruta o ubicación: /Requisitos/Maqueta/maq-modulos-registry.js
 Función o funciones:
 - Definir rutas internas reales del menú de Requisitos.
-- Activar Requisito y BL.
+- Activar Requisito, BL y tabla.
 - Dejar módulos no recuperados como pendientes para evitar pantalla rota.
 - Mantener Títulos solo como enlace preparado, sin modificar sus archivos.
 Con qué se conecta:
@@ -16,7 +16,7 @@ Con qué se conecta:
   var modules={
     carga_excel:{id:"carga_excel",nombre:"Requisito",ruta:base+"/Gestion/Excel/excel.html",estado:"activo"},
     baselocal:{id:"baselocal",nombre:"Bl",ruta:base+"/BaseLocal/baselocal.html",estado:"activo"},
-    tabla_principal:{id:"tabla_principal",nombre:"tabla",ruta:base+"/Gestion/Tabla/tabla.html",estado:"pendiente",bloque:"Bloque 5"},
+    tabla_principal:{id:"tabla_principal",nombre:"tabla",ruta:base+"/Gestion/Tabla/tabla.html",estado:"activo"},
     ficha_estudiante:{id:"ficha_estudiante",nombre:"Ficha",ruta:base+"/Ficha/ficha.html",estado:"pendiente",bloque:"Bloque 6"},
     stat_main:{id:"stat_main",nombre:"Stats",ruta:base+"/Stats/stats.html",estado:"pendiente",bloque:"Bloque 7"},
     coordi:{id:"coordi",nombre:"Coordi",ruta:base+"/Coordi/coordi.html",estado:"pendiente",bloque:"Bloque 8"},
