@@ -3,7 +3,8 @@ Nombre completo: maq-config-service.js
 Ruta o ubicación: /Requisitos/Maqueta/maq-config-service.js
 Función o funciones:
 - Construir el menú superior de Requisitos en el orden definido por Jeff.
-- Crear grupo Títulos con submenús sin tocar sus archivos.
+- Crear grupo Titulos con submenús funcionales: Estudiante, Administrador y Coordinador.
+- Mantener Requisito como pantalla inicial.
 Con qué se conecta:
 - maq-menu.js
 - maq-modulos-registry.js
@@ -19,8 +20,8 @@ Con qué se conecta:
     {tipo:"modulo",moduloId:"coordi",etiqueta:"Coordi"},
     {tipo:"modulo",moduloId:"modulo_reporte",etiqueta:"Repor"},
     {tipo:"modulo",moduloId:"defart",etiqueta:"Defensas"},
-    {tipo:"grupo",id:"titulos",etiqueta:"titulos",hijos:[
-      {tipo:"modulo",moduloId:"titulos_estudiante",etiqueta:"Estudiantes"},
+    {tipo:"grupo",id:"titulos",etiqueta:"Titulos",hijos:[
+      {tipo:"modulo",moduloId:"titulos_estudiante",etiqueta:"Estudiante"},
       {tipo:"modulo",moduloId:"titulos_admin",etiqueta:"Administrador"},
       {tipo:"modulo",moduloId:"titulos_coordinador",etiqueta:"Coordinador"}
     ]},
