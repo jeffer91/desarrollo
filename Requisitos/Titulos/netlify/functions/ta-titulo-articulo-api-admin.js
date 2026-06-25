@@ -6,11 +6,13 @@
   - Activar período, crear coordinadores, asignar carreras y generar resumen general.
   - Validar períodos normalizados desde configuración administrativa.
   - Conectar envíos y estudiantes por equivalencia de período, no solo por texto exacto.
+  - Mostrar por defecto Primer semestre de 2026 cuando aún no existe colección de períodos.
 */
 
 import {
   COLLECTIONS,
   DOCUMENTS,
+  DEFAULT_PERIODO_ACTIVO,
   badRequest,
   cleanString,
   estudiantePertenecePeriodo,
@@ -83,15 +85,30 @@ function estudianteResumen(est, enviosPorCedula) {
   };
 }
 
+function normalizarPeriodoDoc(doc) {
+  const data = doc.data() || {};
+  return {
+    ...data,
+    id: doc.id,
+    idNormalizado: normalizarPeriodoId([doc.id, data.id, data.periodoId, data.label, data.nombre].join(" ")),
+    label: cleanString(data.label || data.nombre || data.periodoLabel || doc.id)
+  };
+}
+
+function asegurarPeriodoDefault(periodos) {
+  const existe = periodos.some((periodo) => periodoEquivalente(periodo.id, DEFAULT_PERIODO_ACTIVO.id) || periodoEquivalente(periodo.label, DEFAULT_PERIODO_ACTIVO.label));
+  if (existe) return periodos;
+  return [{ ...DEFAULT_PERIODO_ACTIVO }, ...periodos];
+}
+
 async function listarResumen(db) {
   const periodoActivo = await getPeriodoActivo(db);
   const periodosSnap = await db.collection(COLLECTIONS.periodos).get();
-  const periodos = periodosSnap.docs
-    .map((doc) => {
-      const data = doc.data() || {};
-      return { ...data, id: doc.id, idNormalizado: normalizarPeriodoId([doc.id, data.id, data.periodoId, data.label, data.nombre].join(" ")) };
-    })
-    .sort((a, b) => cleanString(a.label || a.nombre || a.id).localeCompare(cleanString(b.label || b.nombre || b.id)));
+  const periodos = asegurarPeriodoDefault(
+    periodosSnap.docs
+      .map(normalizarPeriodoDoc)
+      .sort((a, b) => cleanString(a.label || a.nombre || a.id).localeCompare(cleanString(b.label || b.nombre || b.id)))
+  );
 
   const coordinadoresSnap = await db.collection(COLLECTIONS.coordinadores).get();
   const coordinadores = coordinadoresSnap.docs
@@ -144,7 +161,7 @@ async function activarPeriodo(db, payload) {
   await db.collection(COLLECTIONS.config).doc(DOCUMENTS.appConfig).set({
     periodoActivoId: periodoId,
     periodoActivoIdNormalizado: normalizarPeriodoId([periodoId, periodo.label, periodo.nombre, periodo.periodoId].join(" ")),
-    periodoActivoLabel: cleanString(periodo.label || periodo.nombre || periodoId),
+    periodoActivoLabel: cleanString(periodo.label || periodo.nombre || DEFAULT_PERIODO_ACTIVO.label),
     actualizadoEn: nowIso()
   }, { merge: true });
 
