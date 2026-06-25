@@ -1,11 +1,11 @@
 /*
 Nombre del archivo: carr.actualizar.js
-Ubicación: carreras/backend/carr.actualizar.js
+Ubicación: /Curriculo/carreras/backend/carr.actualizar.js
 Función:
 - Validar datos antes de actualizar
-- Confirmar que el documento exista
+- Confirmar que el documento exista en local o Firebase
 - Actualizar nombre, tipo y estado
-- Refrescar updatedAt
+- Guardar primero local y dejar pendiente sincronización cuando exista base local
 */
 
 import {
@@ -15,8 +15,36 @@ import {
   updateDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-import { carrDb } from "./carr.firebase.js";
+import {
+  CARR_COLLECTION,
+  carrDb,
+  carrGuardarLocal,
+  carrLeerLocal,
+  carrLocalDisponible
+} from "./carr.firebase.js";
+import { carrPrepararRegistroCarrera } from "./carr.normalizar.js";
 import { carrValidarCarrera } from "./carr.validar.js";
+
+async function carrLeerRemota(carrId) {
+  const referencia = doc(carrDb, CARR_COLLECTION, carrId);
+  const existente = await getDoc(referencia);
+  return existente.exists() ? existente.data() : null;
+}
+
+async function carrActualizarRemotoDirecto(carrId, valor) {
+  const referencia = doc(carrDb, CARR_COLLECTION, carrId);
+
+  await updateDoc(referencia, {
+    nombre: valor.nombre,
+    tipo: valor.tipo,
+    estado: valor.estado,
+    nombreNormalizado: valor.nombre
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase(),
+    updatedAt: serverTimestamp()
+  });
+}
 
 async function carrActualizarCarrera(id, data) {
   try {
@@ -38,34 +66,53 @@ async function carrActualizarCarrera(id, data) {
       };
     }
 
-    const referencia = doc(carrDb, "carreras", carrId);
-    const existente = await getDoc(referencia);
+    const valor = validacion.valor;
+    const existenteLocal = await carrLeerLocal(carrId);
+    let existenteRemoto = null;
 
-    if (!existente.exists()) {
+    if (!existenteLocal) {
+      try {
+        existenteRemoto = await carrLeerRemota(carrId);
+      } catch (firebaseError) {
+        existenteRemoto = null;
+      }
+    }
+
+    if (!existenteLocal && !existenteRemoto) {
       return {
         ok: false,
         mensaje: `No existe una carrera con el id: ${carrId}`
       };
     }
 
-    const valor = validacion.valor;
-
-    await updateDoc(referencia, {
-      nombre: valor.nombre,
-      tipo: valor.tipo,
-      estado: valor.estado,
-      updatedAt: serverTimestamp()
+    const record = carrPrepararRegistroCarrera(valor, {
+      ...(existenteRemoto || {}),
+      ...(existenteLocal || {}),
+      id: carrId
     });
+
+    if (carrLocalDisponible()) {
+      await carrGuardarLocal(carrId, record);
+
+      return {
+        ok: true,
+        local: true,
+        pendienteSync: true,
+        mensaje: "Carrera actualizada localmente. Quedó pendiente para sincronizar con Firebase.",
+        id: carrId,
+        data: record
+      };
+    }
+
+    await carrActualizarRemotoDirecto(carrId, valor);
 
     return {
       ok: true,
-      mensaje: "Carrera actualizada correctamente.",
+      local: false,
+      pendienteSync: false,
+      mensaje: "Carrera actualizada correctamente en Firebase.",
       id: carrId,
-      data: {
-        id: carrId,
-        ...existente.data(),
-        ...valor
-      }
+      data: record
     };
   } catch (error) {
     console.error("[carr] Error en carrActualizarCarrera:", error);
