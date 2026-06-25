@@ -1,10 +1,10 @@
 /*
 Nombre del archivo: mat.carreras.tipo.js
-Ubicación: C:\Users\ITSQMET\Desktop\eventos\materias\backend\carreras\mat.carreras.tipo.js
+Ubicación: /Curriculo/materias/backend/carreras/mat.carreras.tipo.js
 Función:
-- Normaliza el tipo de carrera
-- Detecta la categoría principal
-- Devuelve cuántos ejes se esperan
+- Normalizar el tipo de carrera
+- Detectar la categoría principal
+- Devolver cuántos ejes se esperan
 */
 
 (function (window) {
@@ -16,16 +16,12 @@ Función:
   MAT.carreras = MAT.carreras || {};
 
   MAT.carreras.normalizarTipo = function (value) {
-    var text = String(value || "").toLowerCase().trim();
-
-    text = text
-      .replace(/á/g, "a")
-      .replace(/é/g, "e")
-      .replace(/í/g, "i")
-      .replace(/ó/g, "o")
-      .replace(/ú/g, "u");
-
-    return text;
+    return String(value == null ? "" : value)
+      .toLowerCase()
+      .trim()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\s+/g, " ");
   };
 
   MAT.carreras.detectarClaveTipo = function (value) {
@@ -50,17 +46,9 @@ Función:
     var key = MAT.carreras.detectarClaveTipo(value);
     var limits = (MAT.config && MAT.config.limits && MAT.config.limits.ejes) || {};
 
-    if (key === "universitaria") {
-      return Number(limits.universitaria || 6);
-    }
-
-    if (key === "tecnica") {
-      return Number(limits.tecnica || 4);
-    }
-
-    if (key === "superior") {
-      return Number(limits.superior || 4);
-    }
+    if (key === "universitaria") return Number(limits.universitaria || 6);
+    if (key === "tecnica") return Number(limits.tecnica || 4);
+    if (key === "superior") return Number(limits.superior || 4);
 
     return 4;
   };
