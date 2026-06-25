@@ -207,20 +207,23 @@ export async function getPeriodoActivo(db) {
   };
 }
 
+function withFirestoreDocId(doc) {
+  return { ...(doc.data() || {}), id: doc.id };
+}
+
 export async function buscarEstudiantePorCedula(db, cedula) {
   const cedulaLimpia = onlyDigits(cedula);
   if (!cedulaLimpia) return null;
 
   const directo = await db.collection(COLLECTIONS.estudiantes).doc(cedulaLimpia).get();
-  if (directo.exists) return { id: directo.id, ...directo.data() };
+  if (directo.exists) return withFirestoreDocId(directo);
 
   const campos = ["numeroIdentificacion", "cedula"];
 
   for (const campo of campos) {
     const snap = await db.collection(COLLECTIONS.estudiantes).where(campo, "==", cedulaLimpia).limit(1).get();
     if (!snap.empty) {
-      const doc = snap.docs[0];
-      return { id: doc.id, ...doc.data() };
+      return withFirestoreDocId(snap.docs[0]);
     }
   }
 
