@@ -1,11 +1,12 @@
 <!--
 Nombre del archivo: carr.index.html
-Ubicación: carreras/frontend/carr.index.html
+Ubicación: /Curriculo/carreras/frontend/carr.index.html
 Función:
 - Mostrar la interfaz principal para crear carreras
-- Registrar solo datos básicos de la carrera
+- Registrar datos básicos de la carrera
 - Mostrar una tabla editable con búsqueda y orden
-- Incluir un botón flotante para guardar cambios de tabla
+- Cargar base local y sincronización de Currículo
+- Incluir botón flotante para guardar cambios de tabla
 -->
 
 <!DOCTYPE html>
@@ -13,7 +14,7 @@ Función:
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Formulario de Carreras</title>
+  <title>Currículo · Carreras</title>
 
   <link rel="stylesheet" href="./carr.layout.css">
   <link rel="stylesheet" href="./carr.form.css">
@@ -27,7 +28,10 @@ Función:
           <p class="carr-eyebrow">UTET · Carreras</p>
           <h1 class="carr-title">Crear y editar carreras</h1>
           <p class="carr-subtitle">
-            Esta pantalla registra solo la carrera. La tabla inferior permite buscar, ordenar y editar nombre, tipo y estado.
+            Esta pantalla registra la carrera, guarda primero en local y deja los cambios pendientes para sincronizar con Firebase.
+          </p>
+          <p data-curriculo-sync-status class="carr-sync-status" aria-live="polite">
+            Preparando guardado local...
           </p>
         </div>
       </header>
@@ -38,7 +42,7 @@ Función:
             <div>
               <h2 class="carr-card-title">Datos generales</h2>
               <p class="carr-card-text">
-                Ingrese solo la información base necesaria para crear el registro de la carrera.
+                Ingrese la información base necesaria para crear el registro de la carrera.
               </p>
             </div>
           </div>
@@ -50,7 +54,7 @@ Función:
                 id="carrNombre"
                 name="nombre"
                 type="text"
-                placeholder="Ejemplo: Administración"
+                placeholder="Ejemplo: Administración de Empresas"
                 required
               >
             </div>
@@ -144,6 +148,12 @@ Función:
     <span id="carrCambiosBadge" class="carr-fab-badge">0</span>
   </button>
 
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+  <script src="../../shared/local/curriculo.local-db.js"></script>
+  <script src="../../shared/local/curriculo.sync-queue.js"></script>
+  <script src="../../shared/local/curriculo.sync-engine.js"></script>
+  <script src="../../shared/local/curriculo.sync-status.js"></script>
   <script type="module" src="./carr.main.js"></script>
 </body>
 </html>
