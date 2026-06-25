@@ -19,7 +19,7 @@ const FUNCTION_NAMES = Object.freeze({
 });
 
 function clean(value) {
-  return String(value ?? "").replace(/\/+$/g, "").trim();
+  return String(value ?? "").trim().replace(/\/+$/g, "");
 }
 
 function obtenerBaseFunciones() {
