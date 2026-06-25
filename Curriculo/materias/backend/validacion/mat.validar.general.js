@@ -1,10 +1,10 @@
 /*
 Nombre del archivo: mat.validar.general.js
-Ubicación: C:\Users\ITSQMET\Desktop\eventos\materias\backend\validacion\mat.validar.general.js
+Ubicación: /Curriculo/materias/backend/validacion/mat.validar.general.js
 Función:
-- Valida datos antes de guardar
-- Separa errores bloqueantes de advertencias
-- Resume cantidades por tipo de carga
+- Validar datos antes de guardar
+- Separar errores bloqueantes de advertencias
+- Resumir cantidades por tipo de carga
 */
 
 (function (window) {
@@ -20,35 +20,43 @@ Función:
     return Array.isArray(value) ? value : [];
   }
 
+  function cleanArray(value) {
+    return safeArray(value)
+      .map(function (item) { return String(item || "").trim(); })
+      .filter(function (item) { return !!item; });
+  }
+
   function countLevels(summary) {
     summary = summary || {};
 
     return {
-      nivel1: safeArray(summary.nivel1).length,
-      nivel2: safeArray(summary.nivel2).length,
-      nivel3: safeArray(summary.nivel3).length,
-      nivel4: safeArray(summary.nivel4).length,
-      sinNivel: safeArray(summary.sinNivel).length
+      nivel1: cleanArray(summary.nivel1).length,
+      nivel2: cleanArray(summary.nivel2).length,
+      nivel3: cleanArray(summary.nivel3).length,
+      nivel4: cleanArray(summary.nivel4).length,
+      sinNivel: cleanArray(summary.sinNivel).length
     };
   }
 
   function sumLevelCount(counts) {
-    return (
-      Number(counts.nivel1 || 0) +
+    return Number(counts.nivel1 || 0) +
       Number(counts.nivel2 || 0) +
       Number(counts.nivel3 || 0) +
       Number(counts.nivel4 || 0) +
-      Number(counts.sinNivel || 0)
-    );
+      Number(counts.sinNivel || 0);
   }
 
-  MAT.validar.general.preview = function (preview, careerType) {
-    var result = {
+  function baseResult() {
+    return {
       ok: true,
       errors: [],
       warnings: [],
       stats: {}
     };
+  }
+
+  MAT.validar.general.preview = function (preview, careerType) {
+    var result = baseResult();
     var kind = String((preview && preview.kind) || "").trim();
     var summary = (preview && preview.summary) || {};
     var counts;
@@ -67,10 +75,7 @@ Función:
       total = sumLevelCount(counts);
       limits = (MAT.config && MAT.config.limits && MAT.config.limits.materiasCarrera) || {};
 
-      result.stats = {
-        total: total,
-        counts: counts
-      };
+      result.stats = { total: total, counts: counts };
 
       if (total <= 0) {
         result.ok = false;
@@ -89,7 +94,7 @@ Función:
       });
 
       if (Number(counts.sinNivel || 0) > 0) {
-        result.warnings.push("Aún hay materias sin nivel definido. Se reubicarán automáticamente al guardar.");
+        result.warnings.push("Hay materias sin nivel definido. Se reubicarán automáticamente al guardar.");
       }
 
       return result;
@@ -100,10 +105,7 @@ Función:
       total = sumLevelCount(counts);
       limits = (MAT.config && MAT.config.limits && MAT.config.limits.transversales) || {};
 
-      result.stats = {
-        total: total,
-        counts: counts
-      };
+      result.stats = { total: total, counts: counts };
 
       if (total <= 0) {
         result.ok = false;
@@ -123,18 +125,10 @@ Función:
     }
 
     if (kind === "nucleos") {
-      total = safeArray(summary.items).length;
-      expected = Number(
-        (MAT.config &&
-          MAT.config.limits &&
-          MAT.config.limits.nucleos &&
-          MAT.config.limits.nucleos.exactTotal) || 4
-      );
+      total = cleanArray(summary.items).length;
+      expected = Number((MAT.config && MAT.config.limits && MAT.config.limits.nucleos && MAT.config.limits.nucleos.exactTotal) || 4);
 
-      result.stats = {
-        total: total,
-        esperado: expected
-      };
+      result.stats = { total: total, esperado: expected };
 
       if (total <= 0) {
         result.ok = false;
@@ -150,15 +144,12 @@ Función:
     }
 
     if (kind === "ejes") {
-      total = safeArray(summary.items).length;
+      total = cleanArray(summary.items).length;
       expected = (MAT.carreras && typeof MAT.carreras.getEjesEsperados === "function")
         ? MAT.carreras.getEjesEsperados(careerType)
         : 4;
 
-      result.stats = {
-        total: total,
-        esperado: expected
-      };
+      result.stats = { total: total, esperado: expected };
 
       if (total <= 0) {
         result.ok = false;
@@ -180,12 +171,7 @@ Función:
 
   MAT.validar.general.beforeSave = function (params) {
     var input = (params && typeof params === "object") ? params : {};
-    var result = {
-      ok: true,
-      errors: [],
-      warnings: [],
-      stats: {}
-    };
+    var result = baseResult();
     var previewCheck;
 
     if (!String(input.careerId || "").trim()) {
