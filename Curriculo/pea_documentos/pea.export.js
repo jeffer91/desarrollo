@@ -1,215 +1,118 @@
+/*
+Nombre del archivo: pea.export.js
+Ubicación: /Curriculo/pea_documentos/pea.export.js
+Función:
+- Exportar una versión PEA a PDF
+- Reconstruir los 3 Excel desde la versión cargada
+- Exportar comparación a PDF
+*/
 (function (window) {
   "use strict";
 
   window.PEA = window.PEA || {};
   var PEA = window.PEA;
 
-  function ensureLibraries() {
-    if (!window.XLSX) {
-      throw new Error("No se encontró la librería XLSX.");
-    }
-
-    if (!window.jspdf || !window.jspdf.jsPDF) {
-      throw new Error("No se encontró la librería jsPDF.");
-    }
-  }
-
-  function safeSheets(section) {
-    return (section && Array.isArray(section.sheets)) ? section.sheets : [];
-  }
-
-  function createPlaceholderSheet(title) {
-    return {
-      name: "Hoja1",
-      rows: [[title], ["Sin información disponible para esta sección."]],
-      rowCount: 2
-    };
-  }
-
-  function addTextBlock(doc, ctx, text, gap) {
-    var lines = doc.splitTextToSize(String(text || ""), 180);
-
-    lines.forEach(function (line) {
-      if (ctx.y > 280) {
-        doc.addPage();
-        ctx.y = 18;
-      }
-      doc.text(line, 15, ctx.y);
-      ctx.y += 6;
-    });
-
-    ctx.y += Number(gap || 2);
-  }
+  function ensureXlsx() { if (!window.XLSX) throw new Error("No se encontró la librería XLSX."); }
+  function ensurePdf() { if (!window.jspdf || !window.jspdf.jsPDF) throw new Error("No se encontró la librería jsPDF."); }
+  function sheets(section) { return section && Array.isArray(section.sheets) ? section.sheets : []; }
+  function safeFile(value) { return String(value || "Archivo").replace(/[^\w\-]+/g, "_").replace(/_+/g, "_").slice(0, 80); }
 
   function formatDate(value) {
     if (!value) return "Sin fecha";
-    try {
-      return new Date(value).toLocaleString("es-EC");
-    } catch (error) {
-      return String(value);
-    }
+    try { return new Date(value).toLocaleString("es-EC"); }
+    catch (error) { return String(value); }
   }
 
-  function addSectionToPdf(doc, ctx, title, section) {
-    addTextBlock(doc, ctx, title, 1);
+  function addText(doc, ctx, text, gap) {
+    var lines = doc.splitTextToSize(String(text || ""), 180);
+    lines.forEach(function (line) {
+      if (ctx.y > 280) { doc.addPage(); ctx.y = 18; }
+      doc.text(line, 15, ctx.y); ctx.y += 6;
+    });
+    ctx.y += Number(gap || 2);
+  }
 
-    var sheets = safeSheets(section);
-    if (!sheets.length) {
-      addTextBlock(doc, ctx, "Sin información registrada.", 4);
-      return;
-    }
-
-    sheets.forEach(function (sheet) {
-      addTextBlock(doc, ctx, "Hoja: " + sheet.name + " | Filas: " + Number(sheet.rowCount || 0), 1);
-
-      (sheet.rows || []).forEach(function (row) {
-        var line = (Array.isArray(row) ? row : []).map(function (cell) {
-          return String(cell == null ? "" : cell).replace(/\s+/g, " ").trim();
-        }).join(" | ");
-
-        addTextBlock(doc, ctx, line || " ", 0);
-      });
-
+  function addSection(doc, ctx, title, section) {
+    var list = sheets(section);
+    doc.setFont("helvetica", "bold"); addText(doc, ctx, title, 1); doc.setFont("helvetica", "normal");
+    if (!list.length) { addText(doc, ctx, "Sin información registrada.", 4); return; }
+    list.forEach(function (sheet) {
+      addText(doc, ctx, "Hoja: " + (sheet.name || "Hoja") + " | Filas: " + Number(sheet.rowCount || 0), 1);
+      (sheet.rows || []).forEach(function (row) { addText(doc, ctx, (Array.isArray(row) ? row : []).map(function (cell) { return String(cell == null ? "" : cell).replace(/\s+/g, " ").trim(); }).join(" | ") || " ", 0); });
       ctx.y += 4;
     });
   }
 
-  function sectionToWorkbook(section, emptyTitle) {
-    var workbook = XLSX.utils.book_new();
-    var sheets = safeSheets(section);
+  function placeholder(title) { return { name: "Hoja1", rows: [[title], ["Sin información disponible."]], rowCount: 2 }; }
 
-    if (!sheets.length) {
-      sheets = [createPlaceholderSheet(emptyTitle)];
-    }
-
-    sheets.forEach(function (sheet) {
-      var rows = Array.isArray(sheet.rows) ? sheet.rows : [["Sin datos"]];
-      var ws = XLSX.utils.aoa_to_sheet(rows);
-
-      XLSX.utils.book_append_sheet(
-        workbook,
-        ws,
-        String(sheet.name || "Hoja1").slice(0, 31) || "Hoja1"
-      );
+  function sectionToWorkbook(section, title) {
+    ensureXlsx();
+    var wb = XLSX.utils.book_new();
+    var list = sheets(section);
+    if (!list.length) list = [placeholder(title)];
+    list.forEach(function (sheet) {
+      var ws = XLSX.utils.aoa_to_sheet(Array.isArray(sheet.rows) ? sheet.rows : [["Sin datos"]]);
+      XLSX.utils.book_append_sheet(wb, ws, String(sheet.name || "Hoja1").slice(0, 31) || "Hoja1");
     });
-
-    return workbook;
+    return wb;
   }
 
   PEA.export = {
     downloadPdfVersion: function (versionData) {
-      ensureLibraries();
-
-      if (!versionData || !versionData.data || !versionData.meta) {
-        throw new Error("No hay una versión cargada para exportar.");
-      }
-
+      ensurePdf();
+      if (!versionData || !versionData.data || !versionData.meta) throw new Error("No hay una versión cargada para exportar.");
       var jsPDF = window.jspdf.jsPDF;
       var doc = new jsPDF();
       var ctx = { y: 18 };
       var meta = versionData.meta;
       var content = versionData.data.contenido || {};
-
-      doc.setFont("helvetica", "bold");
-      addTextBlock(doc, ctx, "PEA - Documento de versión", 2);
-      doc.setFont("helvetica", "normal");
-
-      addTextBlock(doc, ctx, "Materia: " + (meta.materiaNombre || ""), 1);
-      addTextBlock(doc, ctx, "Código: " + (meta.materiaCodigo || "Sin código"), 1);
-      addTextBlock(doc, ctx, "Versión: " + (meta.versionId || ""), 1);
-      addTextBlock(doc, ctx, "Origen: " + (meta.origenTipo || ""), 1);
-      addTextBlock(doc, ctx, "Fecha: " + formatDate(meta.createdAtClient), 1);
-      addTextBlock(doc, ctx, "Nota: " + (meta.versionNota || "Sin nota"), 4);
-
-      doc.setFont("helvetica", "bold");
-      addSectionToPdf(doc, ctx, "BASE", content.base);
-      addSectionToPdf(doc, ctx, "UNIDADES", content.unidades);
-      addSectionToPdf(doc, ctx, "ACTIVIDADES", content.actividades);
-      doc.setFont("helvetica", "normal");
-
-      var fileName = [
-        "PEA",
-        (meta.materiaNombre || "Materia").replace(/[^\w\-]+/g, "_"),
-        (meta.versionId || "version")
-      ].join("_") + ".pdf";
-
-      doc.save(fileName);
+      doc.setFont("helvetica", "bold"); addText(doc, ctx, "PEA - Documento de versión", 2); doc.setFont("helvetica", "normal");
+      addText(doc, ctx, "Materia: " + (meta.materiaNombre || ""), 1);
+      addText(doc, ctx, "Código: " + (meta.materiaCodigo || "Sin código"), 1);
+      addText(doc, ctx, "Versión: " + (meta.versionId || ""), 1);
+      addText(doc, ctx, "Origen: " + (meta.origenTipo || ""), 1);
+      addText(doc, ctx, "Fecha: " + formatDate(meta.createdAtClient), 1);
+      addText(doc, ctx, "Nota: " + (meta.versionNota || "Sin nota"), 4);
+      addSection(doc, ctx, "BASE", content.base);
+      addSection(doc, ctx, "UNIDADES", content.unidades);
+      addSection(doc, ctx, "ACTIVIDADES", content.actividades);
+      doc.save(["PEA", safeFile(meta.materiaNombre || "Materia"), safeFile(meta.versionId || "version")].join("_") + ".pdf");
     },
 
     downloadPdfComparison: function (comparison) {
-      ensureLibraries();
-
-      if (!comparison) {
-        throw new Error("No hay una comparación disponible.");
-      }
-
+      ensurePdf();
+      if (!comparison) throw new Error("No hay una comparación disponible.");
       var jsPDF = window.jspdf.jsPDF;
       var doc = new jsPDF();
       var ctx = { y: 18 };
-
-      doc.setFont("helvetica", "bold");
-      addTextBlock(doc, ctx, "PEA - Comparación de versiones", 2);
-      doc.setFont("helvetica", "normal");
-
-      addTextBlock(doc, ctx, "Materia: " + (comparison.materiaNombre || ""), 1);
-      addTextBlock(doc, ctx, "Versión A: " + (comparison.versionA.versionId || ""), 1);
-      addTextBlock(doc, ctx, "Versión B: " + (comparison.versionB.versionId || ""), 1);
-      addTextBlock(doc, ctx, "Total de cambios: " + Number(comparison.totalCambios || 0), 4);
-
+      doc.setFont("helvetica", "bold"); addText(doc, ctx, "PEA - Comparación de versiones", 2); doc.setFont("helvetica", "normal");
+      addText(doc, ctx, "Materia: " + (comparison.materiaNombre || ""), 1);
+      addText(doc, ctx, "Versión A: " + ((comparison.versionA && comparison.versionA.versionId) || ""), 1);
+      addText(doc, ctx, "Versión B: " + ((comparison.versionB && comparison.versionB.versionId) || ""), 1);
+      addText(doc, ctx, "Total de cambios: " + Number(comparison.totalCambios || 0), 4);
       (comparison.sections || []).forEach(function (section) {
-        doc.setFont("helvetica", "bold");
-        addTextBlock(doc, ctx, "SECCIÓN: " + section.sectionName, 1);
-        doc.setFont("helvetica", "normal");
-
-        addTextBlock(doc, ctx, "Agregadas: " + section.added.length, 0);
-        addTextBlock(doc, ctx, "Eliminadas: " + section.removed.length, 0);
-        addTextBlock(doc, ctx, "Modificadas: " + section.changed.length, 2);
-
-        section.added.forEach(function (item) {
-          addTextBlock(doc, ctx, "+ " + item.sheet + " | " + item.rowsAfter + " filas", 0);
-        });
-
-        section.removed.forEach(function (item) {
-          addTextBlock(doc, ctx, "- " + item.sheet + " | " + item.rowsBefore + " filas", 0);
-        });
-
-        section.changed.forEach(function (item) {
-          addTextBlock(doc, ctx, "* " + item.sheet + " | antes: " + item.rowsBefore + " | después: " + item.rowsAfter, 0);
-        });
-
+        doc.setFont("helvetica", "bold"); addText(doc, ctx, "SECCIÓN: " + section.sectionName, 1); doc.setFont("helvetica", "normal");
+        addText(doc, ctx, "Agregadas: " + (section.added || []).length, 0);
+        addText(doc, ctx, "Eliminadas: " + (section.removed || []).length, 0);
+        addText(doc, ctx, "Modificadas: " + (section.changed || []).length, 2);
+        (section.added || []).forEach(function (item) { addText(doc, ctx, "+ " + item.sheet + " | " + item.rowsAfter + " filas", 0); });
+        (section.removed || []).forEach(function (item) { addText(doc, ctx, "- " + item.sheet + " | " + item.rowsBefore + " filas", 0); });
+        (section.changed || []).forEach(function (item) { addText(doc, ctx, "* " + item.sheet + " | antes: " + item.rowsBefore + " | después: " + item.rowsAfter, 0); });
         ctx.y += 4;
       });
-
-      var fileName = [
-        "PEA_Comparacion",
-        (comparison.materiaNombre || "Materia").replace(/[^\w\-]+/g, "_"),
-        (comparison.versionA.versionId || "A"),
-        "vs",
-        (comparison.versionB.versionId || "B")
-      ].join("_") + ".pdf";
-
-      doc.save(fileName);
+      doc.save(["PEA_Comparacion", safeFile(comparison.materiaNombre || "Materia"), safeFile((comparison.versionA && comparison.versionA.versionId) || "A"), "vs", safeFile((comparison.versionB && comparison.versionB.versionId) || "B")].join("_") + ".pdf");
     },
 
     downloadThreeExcels: function (versionData) {
-      ensureLibraries();
-
-      if (!versionData || !versionData.data || !versionData.meta) {
-        throw new Error("No hay una versión cargada para reconstruir Excel.");
-      }
-
+      ensureXlsx();
+      if (!versionData || !versionData.data || !versionData.meta) throw new Error("No hay una versión cargada para reconstruir Excel.");
       var meta = versionData.meta;
       var content = versionData.data.contenido || {};
-      var materiaSafe = (meta.materiaNombre || "Materia").replace(/[^\w\-]+/g, "_");
-      var versionSafe = meta.versionId || "v";
-
-      var wbBase = sectionToWorkbook(content.base, "PEA Base");
-      var wbUnidades = sectionToWorkbook(content.unidades, "PEA Unidades");
-      var wbActividades = sectionToWorkbook(content.actividades, "PEA Actividades");
-
-      XLSX.writeFile(wbBase, "PEA Base - " + materiaSafe + " - " + versionSafe + ".xlsx");
-      XLSX.writeFile(wbUnidades, "PEA Unidades - " + materiaSafe + " - " + versionSafe + ".xlsx");
-      XLSX.writeFile(wbActividades, "PEA Actividades - " + materiaSafe + " - " + versionSafe + ".xlsx");
+      var materia = safeFile(meta.materiaNombre || "Materia");
+      var version = safeFile(meta.versionId || "v");
+      XLSX.writeFile(sectionToWorkbook(content.base, "PEA Base"), "PEA Base - " + materia + " - " + version + ".xlsx");
+      XLSX.writeFile(sectionToWorkbook(content.unidades, "PEA Unidades"), "PEA Unidades - " + materia + " - " + version + ".xlsx");
+      XLSX.writeFile(sectionToWorkbook(content.actividades, "PEA Actividades"), "PEA Actividades - " + materia + " - " + version + ".xlsx");
     }
   };
 })(window);
