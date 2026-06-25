@@ -7,6 +7,7 @@
   - Validar entradas básicas, limpiar textos y devolver respuestas JSON uniformes.
   - Proteger acciones administrativas mediante token interno cuando corresponda.
   - Normalizar estudiantes, períodos e identificadores institucionales.
+  - Conectar por defecto con Primer semestre de 2026 si aún no existe período activo configurado.
 */
 
 import { initializeApp, cert, getApps } from "firebase-admin/app";
@@ -23,6 +24,12 @@ export const COLLECTIONS = Object.freeze({
 });
 
 export const DOCUMENTS = Object.freeze({ appConfig: "app" });
+
+export const DEFAULT_PERIODO_ACTIVO = Object.freeze({
+  id: "PRIMER_SEMESTRE_2026",
+  idNormalizado: "2026_1",
+  label: "Primer semestre de 2026"
+});
 
 export const ESTADOS = Object.freeze({
   borrador: "BORRADOR",
@@ -62,12 +69,61 @@ export function normalizeText(value) {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
+function textoPeriodo(value) {
+  return normalizeText(value).toUpperCase().replace(/[^A-Z0-9]+/g, " ").trim();
+}
+
+function compactPeriodo(value) {
+  return textoPeriodo(value).replace(/\s+/g, "");
+}
+
+function detectarPeriodoCanonico(value) {
+  const texto = textoPeriodo(value);
+  const compact = compactPeriodo(value);
+  const yearMatch = texto.match(/\b(20\d{2})\b/);
+  if (!yearMatch) return "";
+
+  const year = yearMatch[1];
+  const esPrimero =
+    texto.includes("PRIMER") ||
+    texto.includes("PRIMERO") ||
+    texto.includes("1ER") ||
+    texto.includes("SEMESTRE 1") ||
+    texto.includes("1 SEMESTRE") ||
+    texto.includes("SEMESTRE I") ||
+    texto.includes("I SEMESTRE") ||
+    compact === year ||
+    compact === `${year}1` ||
+    compact === `${year}I` ||
+    compact === `1${year}` ||
+    compact === `I${year}`;
+
+  const esSegundo =
+    texto.includes("SEGUNDO") ||
+    texto.includes("2DO") ||
+    texto.includes("SEMESTRE 2") ||
+    texto.includes("2 SEMESTRE") ||
+    texto.includes("SEMESTRE II") ||
+    texto.includes("II SEMESTRE") ||
+    compact === `${year}2` ||
+    compact === `${year}II` ||
+    compact === `2${year}` ||
+    compact === `II${year}`;
+
+  if (esSegundo) return `${year}_2`;
+  if (esPrimero) return `${year}_1`;
+  return "";
+}
+
 export function normalizarPeriodoId(value) {
-  return cleanString(value)
-    .replace(/\s+/g, "")
-    .replace(/_+/g, "_")
-    .replace(/-/g, "-")
-    .toUpperCase();
+  const canonico = detectarPeriodoCanonico(value);
+  if (canonico) return canonico;
+
+  return normalizeText(value)
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .replace(/_+/g, "_");
 }
 
 export function periodoEquivalente(a, b) {
@@ -182,29 +238,54 @@ export function getAdminDb() {
   return getFirestore();
 }
 
+function periodoDesdeDoc(doc) {
+  const data = doc.exists ? (doc.data() || {}) : {};
+  const id = doc.id;
+  const texto = [id, data.id, data.periodoId, data.label, data.nombre, data.periodoLabel].map(cleanString).join(" ");
+  return {
+    ...data,
+    id,
+    idNormalizado: normalizarPeriodoId(texto || id),
+    label: cleanString(data.label || data.nombre || data.periodoLabel || id)
+  };
+}
+
+async function buscarPeriodoPorCanonico(db, canonico) {
+  const snap = await db.collection(COLLECTIONS.periodos).get();
+  const encontrado = snap.docs
+    .map(periodoDesdeDoc)
+    .find((periodo) => normalizarPeriodoId([periodo.id, periodo.label, periodo.nombre, periodo.periodoId].join(" ")) === canonico);
+
+  return encontrado || null;
+}
+
 export async function getPeriodoActivo(db) {
   const snap = await db.collection(COLLECTIONS.config).doc(DOCUMENTS.appConfig).get();
   const config = snap.exists ? snap.data() : {};
   const periodoActivoId = cleanString(config.periodoActivoId || config.periodoActivo || config.activePeriodId);
 
-  if (!periodoActivoId) return null;
+  if (periodoActivoId) {
+    const candidatos = [periodoActivoId, normalizarPeriodoId(periodoActivoId)].filter(Boolean);
 
-  const candidatos = [periodoActivoId, normalizarPeriodoId(periodoActivoId)].filter(Boolean);
-  let periodoSnap = null;
+    for (const candidato of candidatos) {
+      const periodoSnap = await db.collection(COLLECTIONS.periodos).doc(candidato).get();
+      if (periodoSnap.exists) return periodoDesdeDoc(periodoSnap);
+    }
 
-  for (const candidato of candidatos) {
-    periodoSnap = await db.collection(COLLECTIONS.periodos).doc(candidato).get();
-    if (periodoSnap.exists) break;
+    const periodoPorAlias = await buscarPeriodoPorCanonico(db, normalizarPeriodoId(periodoActivoId));
+    if (periodoPorAlias) return periodoPorAlias;
+
+    return {
+      id: periodoActivoId,
+      idNormalizado: normalizarPeriodoId(periodoActivoId),
+      label: cleanString(config.periodoActivoLabel || periodoActivoId)
+    };
   }
 
-  const periodo = periodoSnap && periodoSnap.exists ? periodoSnap.data() : { id: periodoActivoId, label: periodoActivoId };
-  const id = cleanString(periodo.id || periodo.periodoId || periodoActivoId);
+  const fallback = await buscarPeriodoPorCanonico(db, DEFAULT_PERIODO_ACTIVO.idNormalizado);
+  if (fallback) return fallback;
 
-  return {
-    id,
-    idNormalizado: normalizarPeriodoId(id),
-    label: cleanString(periodo.label || periodo.nombre || periodo.periodoLabel || id)
-  };
+  return { ...DEFAULT_PERIODO_ACTIVO };
 }
 
 function withFirestoreDocId(doc) {
