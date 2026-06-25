@@ -1,0 +1,42 @@
+{
+  "taTituloArticuloMetadata": {
+    "nombreCompleto": "package.json",
+    "rutaOUbicacion": "/Requisitos/Titulos/package.json",
+    "funcionOFunciones": [
+      "Configurar el proyecto base ta-titulo-articulo.",
+      "Definir comandos para desarrollo, compilación web, vista previa y Electron.",
+      "Declarar dependencias necesarias para Vite, Firebase, Netlify Functions y Electron."
+    ],
+    "seConectaCon": [
+      "vite.config.js",
+      "netlify.toml",
+      "public/ta-titulo-articulo-estudiante.html",
+      "public/ta-titulo-articulo-coordinador.html",
+      "electron/admin/ta-titulo-articulo-administrador.html"
+    ]
+  },
+  "name": "ta-titulo-articulo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sistema institucional para carga, revisión y validación de títulos de artículos académicos.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "electron": "electron electron/ta-titulo-articulo-main.js",
+    "start": "npm run dev"
+  },
+  "dependencies": {
+    "@netlify/functions": "^2.8.2",
+    "firebase": "^10.14.1",
+    "firebase-admin": "^12.6.0"
+  },
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "vite": "^5.4.11"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
