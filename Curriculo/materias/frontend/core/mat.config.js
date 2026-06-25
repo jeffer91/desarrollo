@@ -1,14 +1,13 @@
 /*
 Nombre del archivo: mat.config.js
-Ubicación: C:\Users\ITSQMET\Desktop\eventos\materias\frontend\core\mat.config.js
+Ubicación: /Curriculo/materias/frontend/core/mat.config.js
 Función:
-- Configuración global del módulo materias
+- Configuración global del módulo Materias
 - Selectores del DOM
 - Tipos de carga
 - Límites de negocio
-- Configuración de Firebase
-- Selectores del modal de carga masiva
-- Selector del resumen compacto por carrera
+- Firebase
+- Estado de base local y sincronización
 */
 
 (function (window) {
@@ -19,10 +18,13 @@ Función:
 
   MAT.config = {
     appName: "materias",
+    moduleName: "Currículo · Materias",
     collectionName: "carreras",
+    localStorageKey: "curriculo_materias_state_v1",
 
     selectors: {
       status: "#mat-status",
+      syncStatus: "#mat-sync-status",
       careerSelect: "#mat-career-select",
       careerTypeDisplay: "#mat-career-type-display",
       careerQuickSummary: "#mat-career-quick-summary",
@@ -52,24 +54,10 @@ Función:
     ],
 
     limits: {
-      materiasCarrera: {
-        minPerLevel: 4,
-        maxPerLevel: 6,
-        levels: 4
-      },
-      transversales: {
-        minTotal: 1,
-        maxTotal: 3,
-        levels: 4
-      },
-      nucleos: {
-        exactTotal: 4
-      },
-      ejes: {
-        universitaria: 6,
-        superior: 4,
-        tecnica: 4
-      }
+      materiasCarrera: { minPerLevel: 4, maxPerLevel: 6, levels: 4 },
+      transversales: { minTotal: 1, maxTotal: 3, levels: 4 },
+      nucleos: { exactTotal: 4 },
+      ejes: { universitaria: 6, superior: 4, tecnica: 4 }
     },
 
     firebaseConfig: {
@@ -96,10 +84,7 @@ Función:
   };
 
   MAT.config.getFirebaseConfig = function () {
-    if (
-      window.__MAT_FIREBASE_CONFIG__ &&
-      typeof window.__MAT_FIREBASE_CONFIG__ === "object"
-    ) {
+    if (window.__MAT_FIREBASE_CONFIG__ && typeof window.__MAT_FIREBASE_CONFIG__ === "object") {
       return window.__MAT_FIREBASE_CONFIG__;
     }
 
