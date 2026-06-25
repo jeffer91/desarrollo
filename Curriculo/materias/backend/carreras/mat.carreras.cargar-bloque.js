@@ -1,10 +1,10 @@
 /*
 Nombre del archivo: mat.carreras.cargar-bloque.js
-Ubicación: C:\Users\ITSQMET\Desktop\eventos\materias\backend\carreras\mat.carreras.cargar-bloque.js
+Ubicación: /Curriculo/materias/backend/carreras/mat.carreras.cargar-bloque.js
 Función:
-- Lee una carrera completa desde Firestore
-- Extrae un solo bloque según el tipo de carga
-- Lo convierte en una vista previa compatible con el editor
+- Leer una carrera completa desde local/Firebase
+- Extraer un bloque según el tipo de carga
+- Convertirlo en vista previa compatible con el editor
 */
 
 (function (window) {
@@ -15,15 +15,15 @@ Función:
 
   MAT.carreras = MAT.carreras || {};
 
+  function cleanText(value) {
+    return String(value == null ? "" : value).trim();
+  }
+
   function toArray(value) {
     return Array.isArray(value)
       ? value
-          .map(function (item) {
-            return String(item || "").trim();
-          })
-          .filter(function (item) {
-            return !!item;
-          })
+          .map(cleanText)
+          .filter(function (item) { return !!item; })
       : [];
   }
 
@@ -62,22 +62,19 @@ Función:
       kind: kind,
       totalLines: countGrouped(summary),
       rawLines: [],
-      source: "firestore",
+      source: doc && doc.updatedAtLocal ? "local" : "firebase",
       summary: summary
     };
   }
 
   function buildFlatPreview(kind, doc) {
-    var items = [];
-    var expected = 0;
+    var items;
+    var expected;
 
     if (kind === "nucleos") {
       items = toArray(doc.nucleos);
       expected = Number(
-        (MAT.config &&
-          MAT.config.limits &&
-          MAT.config.limits.nucleos &&
-          MAT.config.limits.nucleos.exactTotal) || 4
+        (MAT.config && MAT.config.limits && MAT.config.limits.nucleos && MAT.config.limits.nucleos.exactTotal) || 4
       );
     } else {
       items = toArray(doc.ejes);
@@ -90,7 +87,7 @@ Función:
       kind: kind,
       totalLines: items.length,
       rawLines: [],
-      source: "firestore",
+      source: doc && doc.updatedAtLocal ? "local" : "firebase",
       summary: {
         expected: expected,
         total: items.length,
@@ -103,7 +100,7 @@ Función:
     var safeDoc = (MAT.carreras && typeof MAT.carreras.ensureShape === "function")
       ? MAT.carreras.ensureShape(doc || {})
       : (doc || {});
-    var kind = String(loadType || "").trim();
+    var kind = cleanText(loadType);
 
     if (!kind) {
       throw new Error("MAT: Debes indicar el tipo de carga para construir el bloque.");
@@ -124,8 +121,8 @@ Función:
     var currentDoc;
     var preview;
 
-    careerId = String(careerId || "").trim();
-    loadType = String(loadType || "").trim();
+    careerId = cleanText(careerId);
+    loadType = cleanText(loadType);
 
     if (!careerId) {
       throw new Error("MAT: Debes indicar la carrera para cargar el bloque.");
