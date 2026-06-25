@@ -3,8 +3,8 @@ Nombre completo: maq-modulos-registry.js
 Ruta o ubicación: /Requisitos/Maqueta/maq-modulos-registry.js
 Función o funciones:
 - Definir rutas internas reales del menú de Requisitos.
-- Activar todos los módulos recuperados de Requisitos hasta Infor.
-- Mantener Títulos solo como enlace preparado, sin modificar sus archivos.
+- Activar todos los módulos recuperados de Requisitos.
+- Integrar el módulo Títulos desde la carpeta /Requisitos/Titulos.
 Con qué se conecta:
 - maq-config-service.js
 - maq-core.js
@@ -21,9 +21,9 @@ Con qué se conecta:
     coordi:{id:"coordi",nombre:"Coordi",ruta:base+"/Coordi/coordi.html",estado:"activo"},
     modulo_reporte:{id:"modulo_reporte",nombre:"Repor",ruta:base+"/Reportes/repo.html",estado:"activo"},
     defart:{id:"defart",nombre:"Defensas",ruta:base+"/defart/defart.html",estado:"activo"},
-    titulos_estudiante:{id:"titulos_estudiante",nombre:"Estudiantes",ruta:base+"/titulos/public/ta-titulo-articulo-estudiante.html",estado:"pendiente",bloque:"Títulos no tocado"},
-    titulos_admin:{id:"titulos_admin",nombre:"Administrador",ruta:base+"/titulos/electron/admin/ta-titulo-articulo-administrador.html",estado:"pendiente",bloque:"Títulos no tocado"},
-    titulos_coordinador:{id:"titulos_coordinador",nombre:"Coordinador",ruta:base+"/titulos/public/ta-titulo-articulo-coordinador.html",estado:"pendiente",bloque:"Títulos no tocado"},
+    titulos_estudiante:{id:"titulos_estudiante",nombre:"Títulos - Estudiante",ruta:base+"/Titulos/public/ta-titulo-articulo-estudiante.html",estado:"activo"},
+    titulos_admin:{id:"titulos_admin",nombre:"Títulos - Administrador",ruta:base+"/Titulos/electron/admin/ta-titulo-articulo-administrador.html",estado:"activo"},
+    titulos_coordinador:{id:"titulos_coordinador",nombre:"Títulos - Coordinador",ruta:base+"/Titulos/public/ta-titulo-articulo-coordinador.html",estado:"activo"},
     titulacion:{id:"titulacion",nombre:"Infor",ruta:base+"/Titulacion/frontend/titulacion.html",estado:"activo"}
   };
   function buscarPorId(id){return modules[String(id||"").trim()]||null;}
