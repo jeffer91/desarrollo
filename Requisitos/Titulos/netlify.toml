@@ -22,23 +22,22 @@
 
 [[redirects]]
   from = "/"
-  to = "/ta-titulo-articulo-estudiante.html"
+  to = "/public/ta-titulo-articulo-estudiante.html"
   status = 200
 
 [[redirects]]
   from = "/estudiante"
-  to = "/ta-titulo-articulo-estudiante.html"
+  to = "/public/ta-titulo-articulo-estudiante.html"
   status = 200
 
 [[redirects]]
   from = "/coordinador"
-  to = "/ta-titulo-articulo-coordinador.html"
+  to = "/public/ta-titulo-articulo-coordinador.html"
   status = 200
 
 [[headers]]
   for = "/*"
   [headers.values]
-    X-Frame-Options = "DENY"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"
