@@ -1,10 +1,10 @@
 /*
 Nombre del archivo: mat.tabla.js
-Ubicación: C:\Users\ITSQMET\Desktop\eventos\materias\frontend\tabla\mat.tabla.js
+Ubicación: /Curriculo/materias/frontend/tabla/mat.tabla.js
 Función:
-- Crea el contenedor visual de la tabla
-- Agrega toolbar para acciones rápidas
-- Expone accesos base al cuerpo del bloque visual
+- Crear contenedor visual de tabla/resumen del bloque actual
+- Agregar toolbar para recargar, tomar editor y limpiar bloque
+- Exponer accesos base al cuerpo del bloque visual
 */
 
 (function (window, document) {
@@ -28,13 +28,8 @@ Función:
     var section;
     var html = "";
 
-    if (existing) {
-      return existing;
-    }
-
-    if (!app) {
-      return null;
-    }
+    if (existing) return existing;
+    if (!app) return null;
 
     section = document.createElement("section");
     section.className = "mat-card";
@@ -47,7 +42,7 @@ Función:
     html += '      <div id="' + MAT.tabla.ids.meta + '" style="margin-top:4px;color:#64748b;font-size:12px;">Selecciona una carrera y un tipo de carga.</div>';
     html += "    </div>";
     html += '    <div style="display:flex;flex-wrap:wrap;gap:8px;">';
-    html += '      <button type="button" class="mat-btn" data-mat-table-toolbar="reload-db">Recargar desde Firebase</button>';
+    html += '      <button type="button" class="mat-btn" data-mat-table-toolbar="reload-db">Recargar desde base</button>';
     html += '      <button type="button" class="mat-btn" data-mat-table-toolbar="take-editor">Tomar del editor</button>';
     html += '      <button type="button" class="mat-btn" data-mat-table-toolbar="clear-block">Limpiar bloque</button>';
     html += "    </div>";
@@ -59,7 +54,6 @@ Función:
 
     section.innerHTML = html;
     app.appendChild(section);
-
     return section;
   };
 
@@ -70,21 +64,15 @@ Función:
 
   MAT.tabla.setTitle = function (text) {
     var el;
-
     MAT.tabla.ensure();
     el = document.getElementById(MAT.tabla.ids.title);
-
-    if (!el) return;
-    el.textContent = String(text || "Datos actuales");
+    if (el) el.textContent = String(text || "Datos actuales");
   };
 
   MAT.tabla.setMeta = function (text) {
     var el;
-
     MAT.tabla.ensure();
     el = document.getElementById(MAT.tabla.ids.meta);
-
-    if (!el) return;
-    el.textContent = String(text || "");
+    if (el) el.textContent = String(text || "");
   };
 })(window, document);
