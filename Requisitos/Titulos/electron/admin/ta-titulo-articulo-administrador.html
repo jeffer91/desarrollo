@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Administrador | Títulos de Artículos Académicos</title>
+  <link rel="stylesheet" href="../../src/styles/ta-titulo-articulo-base.css" />
+  <link rel="stylesheet" href="../../src/styles/ta-titulo-articulo-layout.css" />
+  <link rel="stylesheet" href="../../src/styles/ta-titulo-articulo-components.css" />
+</head>
+<body class="ta-body ta-body--admin">
+  <main class="ta-shell ta-shell--wide" id="ta-admin-app" data-ta-screen="administrador">
+    <header class="ta-header ta-header--admin">
+      <div class="ta-brand">
+        <div class="ta-brand__mark" aria-hidden="true">ITSQMET</div>
+        <div><p class="ta-brand__eyebrow">Panel local</p><h1 class="ta-brand__title">Administración de títulos académicos</h1><p class="ta-brand__subtitle">Control de períodos, coordinadores, carreras y estudiantes</p></div>
+      </div>
+      <div class="ta-header__actions"><span class="ta-badge ta-badge--private">Local</span><button class="ta-button ta-button--secondary" type="button" id="ta-admin-actualizar-btn">Actualizar</button></div>
+    </header>
+
+    <section class="ta-admin-grid">
+      <article class="ta-card ta-card--compact" id="ta-admin-periodo-card">
+        <div class="ta-section-heading"><div><h2>Período activo</h2><p>Seleccione el período habilitado para carga de títulos.</p></div></div>
+        <label class="ta-field" for="ta-admin-periodo-select"><span>Período</span><select id="ta-admin-periodo-select"><option value="">Cargando períodos...</option></select></label>
+        <div class="ta-actions ta-actions--end"><button class="ta-button ta-button--primary" type="button" id="ta-admin-activar-periodo-btn">Activar período</button></div>
+        <p class="ta-message" id="ta-admin-periodo-mensaje" hidden></p>
+      </article>
+      <article class="ta-card ta-card--compact" id="ta-admin-alertas-card"><div class="ta-section-heading"><div><h2>Alertas</h2><p>Carreras sin coordinador o estudiantes pendientes de asignación.</p></div><span class="ta-badge ta-badge--warning" id="ta-admin-alertas-total">0</span></div><div class="ta-empty-state" id="ta-admin-alertas-lista">Sin alertas registradas.</div></article>
+    </section>
+
+    <section class="ta-summary-grid" id="ta-admin-estadisticas">
+      <article class="ta-stat-card"><span>Total estudiantes</span><strong id="ta-admin-stat-total">0</strong></article>
+      <article class="ta-stat-card"><span>Enviados</span><strong id="ta-admin-stat-enviados">0</strong></article>
+      <article class="ta-stat-card"><span>Aprobados</span><strong id="ta-admin-stat-aprobados">0</strong></article>
+      <article class="ta-stat-card"><span>Devueltos</span><strong id="ta-admin-stat-devueltos">0</strong></article>
+      <article class="ta-stat-card"><span>Sin coordinador</span><strong id="ta-admin-stat-sin-coord">0</strong></article>
+    </section>
+
+    <section class="ta-admin-grid ta-admin-grid--main">
+      <article class="ta-card" id="ta-admin-coordinadores-card">
+        <div class="ta-section-heading"><div><h2>Coordinadores</h2><p>Crear coordinadores y asignar carreras.</p></div></div>
+        <form class="ta-form ta-form--inline" id="ta-admin-coordinador-form"><label class="ta-field ta-field--grow" for="ta-admin-coordinador-nombre"><span>Nombre del coordinador</span><input id="ta-admin-coordinador-nombre" type="text" placeholder="Ejemplo: Juan Pérez" /></label><button class="ta-button ta-button--primary" type="submit">Guardar</button></form>
+        <div class="ta-table-wrap ta-table-wrap--short"><table class="ta-table" id="ta-admin-coordinadores-tabla"><thead><tr><th>Coordinador</th><th>Carreras</th><th>Estudiantes</th><th>Estado</th></tr></thead><tbody id="ta-admin-coordinadores-body"><tr><td colspan="4" class="ta-table-empty">Sin coordinadores cargados.</td></tr></tbody></table></div>
+      </article>
+      <article class="ta-card" id="ta-admin-carreras-card"><div class="ta-section-heading"><div><h2>Carreras</h2><p>Asignación compacta de coordinadores por carrera.</p></div></div><div class="ta-table-wrap ta-table-wrap--short"><table class="ta-table" id="ta-admin-carreras-tabla"><thead><tr><th>Carrera</th><th>Coordinador</th><th>Estudiantes</th></tr></thead><tbody id="ta-admin-carreras-body"><tr><td colspan="3" class="ta-table-empty">Active un período para cargar carreras.</td></tr></tbody></table></div></article>
+    </section>
+
+    <section class="ta-card" id="ta-admin-estudiantes-card"><div class="ta-section-heading"><div><h2>Tabla general de estudiantes</h2><p>Visibilidad total del proceso de revisión.</p></div><label class="ta-search" for="ta-admin-buscar-estudiante"><span>Buscar</span><input id="ta-admin-buscar-estudiante" type="search" placeholder="Nombre, cédula, carrera, coordinador o estado" /></label></div><div class="ta-table-wrap"><table class="ta-table" id="ta-admin-estudiantes-tabla"><thead><tr><th>Estudiante</th><th>Cédula</th><th>Carrera</th><th>Período</th><th>Coordinador</th><th>Estado</th><th>Fecha envío</th></tr></thead><tbody id="ta-admin-estudiantes-body"><tr><td colspan="7" class="ta-table-empty">Sin datos cargados.</td></tr></tbody></table></div></section>
+  </main>
+  <script type="module" src="../../src/admin/ta-titulo-articulo-admin.app.js"></script>
+</body>
+</html>
