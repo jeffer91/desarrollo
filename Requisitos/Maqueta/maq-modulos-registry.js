@@ -3,7 +3,7 @@ Nombre completo: maq-modulos-registry.js
 Ruta o ubicación: /Requisitos/Maqueta/maq-modulos-registry.js
 Función o funciones:
 - Definir rutas internas reales del menú de Requisitos.
-- Activar Requisito, BL, tabla y Ficha.
+- Activar Requisito, BL, tabla, Ficha y Stats.
 - Dejar módulos no recuperados como pendientes para evitar pantalla rota.
 - Mantener Títulos solo como enlace preparado, sin modificar sus archivos.
 Con qué se conecta:
@@ -18,7 +18,7 @@ Con qué se conecta:
     baselocal:{id:"baselocal",nombre:"Bl",ruta:base+"/BaseLocal/baselocal.html",estado:"activo"},
     tabla_principal:{id:"tabla_principal",nombre:"tabla",ruta:base+"/Gestion/Tabla/tabla.html",estado:"activo"},
     ficha_estudiante:{id:"ficha_estudiante",nombre:"Ficha",ruta:base+"/Ficha/ficha.html",estado:"activo"},
-    stat_main:{id:"stat_main",nombre:"Stats",ruta:base+"/Stats/stats.html",estado:"pendiente",bloque:"Bloque 7"},
+    stat_main:{id:"stat_main",nombre:"Stats",ruta:base+"/Stats/stats.html",estado:"activo"},
     coordi:{id:"coordi",nombre:"Coordi",ruta:base+"/Coordi/coordi.html",estado:"pendiente",bloque:"Bloque 8"},
     modulo_reporte:{id:"modulo_reporte",nombre:"Repor",ruta:base+"/Reportes/repo.html",estado:"pendiente",bloque:"Bloque 9"},
     defart:{id:"defart",nombre:"Defensas",ruta:base+"/defart/defart.html",estado:"pendiente",bloque:"Bloque 10"},
