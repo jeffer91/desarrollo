@@ -1,10 +1,10 @@
 /*
 Nombre del archivo: mat.snapshot.js
-Ubicación: C:\Users\ITSQMET\Desktop\eventos\materias\backend\carga\mat.snapshot.js
+Ubicación: /Curriculo/materias/backend/carga/mat.snapshot.js
 Función:
-- Crea snapshots limpios de una carrera
-- Extrae solo los campos importantes
-- Facilita comparaciones antes y después
+- Crear snapshots limpios de una carrera
+- Extraer solo los campos importantes
+- Facilitar comparaciones antes y después
 */
 
 (function (window) {
@@ -17,6 +17,10 @@ Función:
 
   function copyArray(value) {
     return Array.isArray(value) ? value.slice() : [];
+  }
+
+  function count(list) {
+    return Array.isArray(list) ? list.filter(function (item) { return String(item || "").trim(); }).length : 0;
   }
 
   MAT.snapshot.create = function (careerDoc) {
@@ -36,8 +40,28 @@ Función:
       materiasTransversal3: copyArray(doc.materiasTransversal3),
       materiasTransversal4: copyArray(doc.materiasTransversal4),
       nucleos: copyArray(doc.nucleos),
-      ejes: copyArray(doc.ejes)
+      ejes: copyArray(doc.ejes),
+      createdAtLocal: String(doc.createdAtLocal || ""),
+      updatedAtLocal: String(doc.updatedAtLocal || "")
     };
+  };
+
+  MAT.snapshot.countForLoadType = function (careerDoc, loadType) {
+    var snap = MAT.snapshot.create(careerDoc || {});
+    var type = String(loadType || "").trim();
+
+    if (type === "materias-carrera") {
+      return count(snap.materiasNivel1) + count(snap.materiasNivel2) + count(snap.materiasNivel3) + count(snap.materiasNivel4);
+    }
+
+    if (type === "transversales") {
+      return count(snap.materiasTransversal1) + count(snap.materiasTransversal2) + count(snap.materiasTransversal3) + count(snap.materiasTransversal4);
+    }
+
+    if (type === "nucleos") return count(snap.nucleos);
+    if (type === "ejes") return count(snap.ejes);
+
+    return 0;
   };
 
   MAT.snapshot.onlyForLoadType = function (careerDoc, loadType) {
@@ -63,15 +87,11 @@ Función:
     }
 
     if (type === "nucleos") {
-      return {
-        nucleos: snap.nucleos
-      };
+      return { nucleos: snap.nucleos };
     }
 
     if (type === "ejes") {
-      return {
-        ejes: snap.ejes
-      };
+      return { ejes: snap.ejes };
     }
 
     return snap;
