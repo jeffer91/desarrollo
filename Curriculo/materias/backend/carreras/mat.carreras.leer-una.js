@@ -1,10 +1,10 @@
 /*
 Nombre del archivo: mat.carreras.leer-una.js
-Ubicación: C:\Users\ITSQMET\Desktop\eventos\materias\backend\carreras\mat.carreras.leer-una.js
+Ubicación: /Curriculo/materias/backend/carreras/mat.carreras.leer-una.js
 Función:
-- Lee una carrera específica desde Firestore
-- Asegura una estructura consistente
-- Normaliza los arreglos base del documento
+- Leer una carrera específica desde base local o Firebase
+- Asegurar una estructura consistente
+- Normalizar arreglos base del documento
 */
 
 (function (window) {
@@ -15,16 +15,39 @@ Función:
 
   MAT.carreras = MAT.carreras || {};
 
+  function cleanText(value) {
+    return String(value == null ? "" : value).trim().replace(/\s+/g, " ");
+  }
+
   function toCleanArray(value) {
     if (!Array.isArray(value)) return [];
 
     return value
-      .map(function (item) {
-        return String(item || "").trim();
-      })
+      .map(cleanText)
       .filter(function (item) {
         return !!item;
       });
+  }
+
+  function normalizeLevelArrays(out) {
+    var i;
+
+    for (i = 1; i <= 4; i += 1) {
+      out["materiasNivel" + i] = toCleanArray(out["materiasNivel" + i]);
+      out["materiasTransversal" + i] = toCleanArray(out["materiasTransversal" + i]);
+    }
+
+    return out;
+  }
+
+  function normalizeNucleos(value) {
+    var items = Array.isArray(value) ? value.slice(0, 4).map(cleanText) : [];
+
+    while (items.length < 4) {
+      items.push("");
+    }
+
+    return items;
   }
 
   MAT.carreras.ensureShape = function (data) {
@@ -38,50 +61,67 @@ Función:
       }
     }
 
-    out.nombre = String(out.nombre || "");
-    out.tipo = String(out.tipo || "");
-    out.estado = String(out.estado || "");
+    out.id = cleanText(out.id);
+    out.nombre = cleanText(out.nombre);
+    out.nombreNormalizado = cleanText(out.nombreNormalizado || out.nombre.toLowerCase());
+    out.tipo = cleanText(out.tipo);
+    out.estado = cleanText(out.estado || "activa").toLowerCase();
 
-    out.materiasNivel1 = toCleanArray(out.materiasNivel1);
-    out.materiasNivel2 = toCleanArray(out.materiasNivel2);
-    out.materiasNivel3 = toCleanArray(out.materiasNivel3);
-    out.materiasNivel4 = toCleanArray(out.materiasNivel4);
+    normalizeLevelArrays(out);
 
-    out.materiasTransversal1 = toCleanArray(out.materiasTransversal1);
-    out.materiasTransversal2 = toCleanArray(out.materiasTransversal2);
-    out.materiasTransversal3 = toCleanArray(out.materiasTransversal3);
-    out.materiasTransversal4 = toCleanArray(out.materiasTransversal4);
-
-    out.nucleos = toCleanArray(out.nucleos);
+    out.nucleos = normalizeNucleos(out.nucleos);
     out.ejes = toCleanArray(out.ejes);
+
+    out.createdAt = out.createdAt || null;
+    out.updatedAt = out.updatedAt || null;
+    out.createdAtLocal = cleanText(out.createdAtLocal);
+    out.updatedAtLocal = cleanText(out.updatedAtLocal);
 
     return out;
   };
 
-  MAT.carreras.leerUna = async function (careerId) {
-    var ref = MAT.refs.carreras();
-    var doc;
+  async function leerRemota(careerId) {
+    var docRef = MAT.refs.carreraDoc(careerId);
+    var docSnap;
     var data;
 
-    careerId = String(careerId || "").trim();
-
-    if (!careerId) {
-      throw new Error("MAT: Debes indicar el id de la carrera.");
-    }
-
-    if (!ref) {
-      throw new Error("MAT: No hay referencia a la colección carreras.");
-    }
-
-    doc = await ref.doc(careerId).get();
-
-    if (!doc.exists) {
+    if (!docRef) {
       return null;
     }
 
-    data = MAT.carreras.ensureShape(doc.data() || {});
-    data.id = String(doc.id || "");
+    docSnap = await docRef.get();
+
+    if (!docSnap.exists) {
+      return null;
+    }
+
+    data = MAT.carreras.ensureShape(docSnap.data() || {});
+    data.id = String(docSnap.id || "");
+
+    if (MAT.firebase && typeof MAT.firebase.guardarLocalCarrera === "function") {
+      await MAT.firebase.guardarLocalCarrera(data.id, data, { markDirty: false });
+    }
 
     return data;
+  }
+
+  MAT.carreras.leerUna = async function (careerId) {
+    var id = cleanText(careerId);
+    var local;
+
+    if (!id) {
+      throw new Error("MAT: Debes indicar el id de la carrera.");
+    }
+
+    if (MAT.firebase && typeof MAT.firebase.leerLocalCarrera === "function") {
+      local = await MAT.firebase.leerLocalCarrera(id);
+
+      if (local) {
+        local.id = local.id || id;
+        return MAT.carreras.ensureShape(local);
+      }
+    }
+
+    return await leerRemota(id);
   };
 })(window);
