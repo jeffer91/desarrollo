@@ -4,17 +4,19 @@
   Función o funciones:
   - Controlar la pantalla local/Electron del administrador.
   - Solicitar y guardar token administrativo en localStorage.
+  - Solicitar URL base de Netlify Functions cuando se abre desde Electron o archivo local.
   - Cargar resumen general de períodos, coordinadores, carreras y estudiantes.
-  - Activar período vigente para la carga de títulos.
-  - Crear coordinadores.
-  - Asignar coordinadores por carrera.
-  - Filtrar la tabla general de estudiantes.
+  - Activar período vigente, crear coordinadores, asignar carreras y filtrar estudiantes.
   Se conecta con:
   - Requisitos/Titulos/electron/admin/ta-titulo-articulo-administrador.html
   - Requisitos/Titulos/src/services/ta-titulo-articulo-api-client.service.js
 */
 
-import { TaTituloArticuloApi } from "../services/ta-titulo-articulo-api-client.service.js";
+import {
+  TaTituloArticuloApi,
+  configurarBaseFunciones,
+  obtenerEstadoApiTitulos
+} from "../services/ta-titulo-articulo-api-client.service.js";
 
 const TOKEN_KEY = "ta.titulo.articulo.adminToken";
 
@@ -43,32 +45,34 @@ function message(id, text, type = "") {
   el.hidden = !text;
 }
 
+function ensureFunctionsBase() {
+  const estado = obtenerEstadoApiTitulos();
+  if (estado.configurado) return true;
+
+  const base = prompt("Ingrese la URL base de Netlify Functions. Ejemplo: https://mi-sitio.netlify.app/.netlify/functions");
+  const finalBase = configurarBaseFunciones(base);
+  return Boolean(finalBase);
+}
+
 function ensureToken() {
   if (state.adminToken) return state.adminToken;
 
   const token = prompt("Ingrese el token administrativo de Títulos:");
   state.adminToken = clean(token);
 
-  if (state.adminToken) {
-    localStorage.setItem(TOKEN_KEY, state.adminToken);
-  }
-
+  if (state.adminToken) localStorage.setItem(TOKEN_KEY, state.adminToken);
   return state.adminToken;
 }
 
 function setBusy(isBusy, text = "") {
   state.cargando = Boolean(isBusy);
-  [
-    "ta-admin-actualizar-btn",
-    "ta-admin-activar-periodo-btn"
-  ].forEach((id) => {
+  ["ta-admin-actualizar-btn", "ta-admin-activar-periodo-btn"].forEach((id) => {
     const btn = $(id);
     if (btn) btn.disabled = state.cargando;
   });
 
   const formButton = document.querySelector("#ta-admin-coordinador-form button");
   if (formButton) formButton.disabled = state.cargando;
-
   if (text) message("ta-admin-periodo-mensaje", text, "warning");
 }
 
@@ -117,7 +121,6 @@ function renderPeriodo() {
   if (!select) return;
 
   select.replaceChildren();
-
   const empty = document.createElement("option");
   empty.value = "";
   empty.textContent = resumen.periodos.length ? "Seleccione período" : "No hay períodos cargados";
@@ -130,9 +133,7 @@ function renderPeriodo() {
     select.appendChild(option);
   });
 
-  if (resumen.periodoActivo?.id) {
-    select.value = clean(resumen.periodoActivo.id);
-  }
+  if (resumen.periodoActivo?.id) select.value = clean(resumen.periodoActivo.id);
 }
 
 function renderStats() {
@@ -153,10 +154,9 @@ function renderAlertas() {
   const box = $("ta-admin-alertas-lista");
 
   setText("ta-admin-alertas-total", carrerasSinCoordinador.length);
-
   if (!box) return;
-  box.replaceChildren();
 
+  box.replaceChildren();
   if (!carrerasSinCoordinador.length) {
     box.className = "ta-empty-state";
     box.textContent = "Sin alertas registradas.";
@@ -186,7 +186,6 @@ function renderCoordinadores() {
   if (!body) return;
 
   body.replaceChildren();
-
   if (!resumen.coordinadores.length) {
     body.appendChild(emptyRow(4, "Sin coordinadores cargados."));
     return;
@@ -242,7 +241,6 @@ function renderCarreras() {
   if (!body) return;
 
   body.replaceChildren();
-
   if (!resumen.carreras.length) {
     body.appendChild(emptyRow(3, "Active un período para cargar carreras."));
     return;
@@ -265,7 +263,6 @@ function estudiantesFiltrados() {
   const resumen = getResumen();
   const filtro = normalizar(state.filtro);
   const estudiantes = resumen.estudiantes || [];
-
   if (!filtro) return estudiantes;
 
   return estudiantes.filter((item) => {
@@ -317,6 +314,11 @@ function renderAll() {
 }
 
 async function cargarResumen() {
+  if (!ensureFunctionsBase()) {
+    message("ta-admin-periodo-mensaje", "Debe configurar la URL base de Netlify Functions.", "error");
+    return;
+  }
+
   const token = ensureToken();
   if (!token) {
     message("ta-admin-periodo-mensaje", "Debe ingresar el token administrativo.", "error");
