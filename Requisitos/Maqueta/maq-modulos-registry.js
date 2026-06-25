@@ -3,7 +3,7 @@ Nombre completo: maq-modulos-registry.js
 Ruta o ubicación: /Requisitos/Maqueta/maq-modulos-registry.js
 Función o funciones:
 - Definir rutas internas reales del menú de Requisitos.
-- Activar Requisito, BL, tabla, Ficha, Stats y Coordi.
+- Activar Requisito, BL, tabla, Ficha, Stats, Coordi y Repor.
 - Dejar módulos no recuperados como pendientes para evitar pantalla rota.
 - Mantener Títulos solo como enlace preparado, sin modificar sus archivos.
 Con qué se conecta:
@@ -20,7 +20,7 @@ Con qué se conecta:
     ficha_estudiante:{id:"ficha_estudiante",nombre:"Ficha",ruta:base+"/Ficha/ficha.html",estado:"activo"},
     stat_main:{id:"stat_main",nombre:"Stats",ruta:base+"/Stats/stats.html",estado:"activo"},
     coordi:{id:"coordi",nombre:"Coordi",ruta:base+"/Coordi/coordi.html",estado:"activo"},
-    modulo_reporte:{id:"modulo_reporte",nombre:"Repor",ruta:base+"/Reportes/repo.html",estado:"pendiente",bloque:"Bloque 9"},
+    modulo_reporte:{id:"modulo_reporte",nombre:"Repor",ruta:base+"/Reportes/repo.html",estado:"activo"},
     defart:{id:"defart",nombre:"Defensas",ruta:base+"/defart/defart.html",estado:"pendiente",bloque:"Bloque 10"},
     titulos_estudiante:{id:"titulos_estudiante",nombre:"Estudiantes",ruta:base+"/titulos/public/ta-titulo-articulo-estudiante.html",estado:"pendiente",bloque:"Títulos no tocado"},
     titulos_admin:{id:"titulos_admin",nombre:"Administrador",ruta:base+"/titulos/electron/admin/ta-titulo-articulo-administrador.html",estado:"pendiente",bloque:"Títulos no tocado"},
