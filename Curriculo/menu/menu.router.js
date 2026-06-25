@@ -31,69 +31,63 @@ Función o funciones:
     var hash = String(window.location.hash || "");
     var match = hash.match(/^#\/modulo\/(.+)$/i);
 
-    if (!match || !match[1]) {
-      return "";
+    if (match && match[1]) {
+      return normalizeId(match[1]);
     }
 
-    return normalizeId(match[1]);
+    return "";
   }
 
   function saveLastId(id) {
     try {
       window.sessionStorage.setItem(STORAGE_KEY, normalizeId(id));
     } catch (error) {
-      /* no-op */
+      return;
     }
   }
 
   function getLastId() {
     try {
-      return normalizeId(window.sessionStorage.getItem(STORAGE_KEY) || "");
+      return normalizeId(window.sessionStorage.getItem(STORAGE_KEY));
     } catch (error) {
       return "";
     }
   }
 
-  function notify() {
-    var currentId = getCurrentId();
-    if (currentId) {
-      saveLastId(currentId);
-    }
-
-    if (typeof onChangeHandler === "function") {
-      onChangeHandler(currentId);
-    }
-  }
-
-  function go(id) {
-    var nextId = normalizeId(id);
-    if (!nextId) {
+  function emitChange() {
+    if (typeof onChangeHandler !== "function") {
       return;
     }
 
-    var nextHash = buildHash(nextId);
+    var id = getCurrentId();
+    saveLastId(id);
+    onChangeHandler(id);
+  }
 
-    if (window.location.hash === nextHash) {
-      notify();
+  function go(id, options) {
+    var nextHash = buildHash(id);
+    var currentHash = String(window.location.hash || "");
+
+    saveLastId(id);
+
+    if (currentHash === nextHash) {
+      emitChange();
+      return;
+    }
+
+    if (options && options.replace) {
+      var url = window.location.pathname + window.location.search + nextHash;
+      window.history.replaceState(null, "", url);
+      emitChange();
       return;
     }
 
     window.location.hash = nextHash;
   }
 
-  function init(handler) {
-    onChangeHandler = typeof handler === "function" ? handler : null;
-    window.addEventListener("hashchange", notify);
-
-    if (!getCurrentId()) {
-      var remembered = getLastId();
-      if (remembered) {
-        go(remembered);
-        return;
-      }
-    }
-
-    notify();
+  function init(callback) {
+    onChangeHandler = callback;
+    window.addEventListener("hashchange", emitChange);
   }
 
   window.CurriculoMenuRouter = {
