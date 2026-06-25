@@ -47,7 +47,8 @@
       "filter": [
         "main.js",
         "preload.js",
-        "updater.js"
+        "updater.js",
+        "eventos-background-manager.js"
       ]
     }
   ],
