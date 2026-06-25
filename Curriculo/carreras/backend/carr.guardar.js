@@ -1,11 +1,12 @@
 /*
 Nombre del archivo: carr.guardar.js
-Ubicación: carreras/backend/carr.guardar.js
+Ubicación: /Curriculo/carreras/backend/carr.guardar.js
 Función:
 - Validar datos antes de guardar
 - Crear el id del documento
-- Verificar si la carrera ya existe
-- Guardar solo nombre, tipo y estado en Firestore
+- Verificar duplicados en local y Firebase
+- Guardar primero en la base local central si está disponible
+- Usar Firebase como respaldo cuando no existe base local
 */
 
 import {
@@ -15,9 +16,37 @@ import {
   setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-import { carrDb } from "./carr.firebase.js";
-import { carrCrearIdCarrera } from "./carr.normalizar.js";
+import {
+  CARR_COLLECTION,
+  carrDb,
+  carrGuardarLocal,
+  carrLeerLocal,
+  carrLocalDisponible
+} from "./carr.firebase.js";
+import {
+  carrCrearIdCarrera,
+  carrPrepararRegistroCarrera
+} from "./carr.normalizar.js";
 import { carrValidarCarrera } from "./carr.validar.js";
+
+function carrPayloadFirebase(record) {
+  return {
+    ...record,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  };
+}
+
+async function carrExisteEnFirebase(carrId) {
+  const referencia = doc(carrDb, CARR_COLLECTION, carrId);
+  const existente = await getDoc(referencia);
+  return existente.exists();
+}
+
+async function carrGuardarRemotoDirecto(carrId, record) {
+  const referencia = doc(carrDb, CARR_COLLECTION, carrId);
+  await setDoc(referencia, carrPayloadFirebase(record), { merge: true });
+}
 
 async function carrGuardarCarrera(data) {
   try {
@@ -40,34 +69,49 @@ async function carrGuardarCarrera(data) {
       };
     }
 
-    const referencia = doc(carrDb, "carreras", carrId);
-    const existente = await getDoc(referencia);
+    const existenteLocal = await carrLeerLocal(carrId);
 
-    if (existente.exists()) {
+    if (existenteLocal) {
+      return {
+        ok: false,
+        mensaje: `La carrera ya existe localmente con el id: ${carrId}`
+      };
+    }
+
+    if (!carrLocalDisponible() && await carrExisteEnFirebase(carrId)) {
       return {
         ok: false,
         mensaje: `La carrera ya existe con el id: ${carrId}`
       };
     }
 
-    const payload = {
-      nombre: valor.nombre,
-      tipo: valor.tipo,
-      estado: valor.estado,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    };
+    const record = carrPrepararRegistroCarrera(valor, {
+      id: carrId,
+      origen: carrLocalDisponible() ? "local" : "firebase"
+    });
 
-    await setDoc(referencia, payload);
+    if (carrLocalDisponible()) {
+      await carrGuardarLocal(carrId, record);
+
+      return {
+        ok: true,
+        local: true,
+        pendienteSync: true,
+        mensaje: "Carrera guardada localmente. Quedó pendiente para sincronizar con Firebase.",
+        id: carrId,
+        data: record
+      };
+    }
+
+    await carrGuardarRemotoDirecto(carrId, record);
 
     return {
       ok: true,
-      mensaje: "Carrera creada correctamente.",
+      local: false,
+      pendienteSync: false,
+      mensaje: "Carrera creada correctamente en Firebase.",
       id: carrId,
-      data: {
-        id: carrId,
-        ...payload
-      }
+      data: record
     };
   } catch (error) {
     console.error("[carr] Error en carrGuardarCarrera:", error);
