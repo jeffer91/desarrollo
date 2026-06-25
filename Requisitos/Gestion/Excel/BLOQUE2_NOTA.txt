@@ -1,3 +1,0 @@
-Bloque 2 agregado: motor principal de Excel.
-Archivos incluidos: constantes, estado, lector, lógica, resumen, UI, bus, monitor y periodos.
-No toca titulos.
