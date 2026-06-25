@@ -1,10 +1,11 @@
 /*
 Nombre del archivo: mat.actualizar.js
-Ubicación: C:\Users\ITSQMET\Desktop\eventos\materias\backend\carga\mat.actualizar.js
+Ubicación: /Curriculo/materias/backend/carga/mat.actualizar.js
 Función:
-- Actualiza una carrera en Firestore
-- Usa merge para no borrar otros campos
-- Devuelve el documento ya actualizado
+- Actualizar una carrera con los bloques de materias
+- Guardar primero en base local central cuando exista
+- Mantener merge para no borrar otros campos
+- Devolver el documento actualizado
 */
 
 (function (window) {
@@ -14,6 +15,20 @@ Función:
   var MAT = window.MAT;
 
   MAT.carga = MAT.carga || {};
+
+  function cloneObject(value) {
+    var source = (value && typeof value === "object") ? value : {};
+    var out = {};
+    var key;
+
+    for (key in source) {
+      if (Object.prototype.hasOwnProperty.call(source, key)) {
+        out[key] = source[key];
+      }
+    }
+
+    return out;
+  }
 
   function getServerTimestamp() {
     if (
@@ -28,37 +43,52 @@ Función:
     return new Date();
   }
 
-  MAT.carga.actualizar = async function (careerId, patch, options) {
-    var ref = MAT.refs.carreras();
-    var payload = {};
-    var key;
+  async function actualizarFirebaseDirecto(careerId, payload) {
+    var docRef = MAT.refs.carreraDoc(careerId);
 
-    careerId = String(careerId || "").trim();
-    patch = (patch && typeof patch === "object") ? patch : {};
-    options = (options && typeof options === "object") ? options : {};
-
-    if (!careerId) {
-      throw new Error("MAT: Debes indicar el id de la carrera.");
-    }
-
-    if (!ref) {
-      throw new Error("MAT: No hay referencia a la colección carreras.");
-    }
-
-    for (key in patch) {
-      if (Object.prototype.hasOwnProperty.call(patch, key)) {
-        payload[key] = patch[key];
-      }
+    if (!docRef) {
+      throw new Error("MAT: No hay referencia a la carrera seleccionada.");
     }
 
     payload.updatedAt = getServerTimestamp();
+    await docRef.set(payload, { merge: true });
+    return await MAT.carreras.leerUna(careerId);
+  }
 
-    if (options.audit && typeof options.audit === "object") {
-      payload.ultimaCarga = options.audit;
+  MAT.carga.actualizar = async function (careerId, patch, options) {
+    var id = String(careerId || "").trim();
+    var payload = cloneObject(patch);
+    var opts = (options && typeof options === "object") ? options : {};
+    var currentDoc;
+    var updatedDoc;
+
+    if (!id) {
+      throw new Error("MAT: Debes indicar el id de la carrera.");
     }
 
-    await ref.doc(careerId).set(payload, { merge: true });
+    if (opts.audit && typeof opts.audit === "object") {
+      payload.ultimaCarga = opts.audit;
+    }
 
-    return await MAT.carreras.leerUna(careerId);
+    payload.updatedAtLocal = payload.updatedAtLocal || new Date().toISOString();
+
+    if (MAT.firebase && typeof MAT.firebase.localDisponible === "function" && MAT.firebase.localDisponible()) {
+      currentDoc = await MAT.carreras.leerUna(id);
+
+      if (!currentDoc) {
+        throw new Error("MAT: No existe la carrera seleccionada.");
+      }
+
+      updatedDoc = MAT.carreras.ensureShape({
+        ...currentDoc,
+        ...payload,
+        id: id
+      });
+
+      await MAT.firebase.guardarLocalCarrera(id, updatedDoc);
+      return updatedDoc;
+    }
+
+    return await actualizarFirebaseDirecto(id, payload);
   };
 })(window);
