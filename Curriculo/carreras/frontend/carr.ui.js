@@ -1,12 +1,13 @@
 /*
 Nombre del archivo: carr.ui.js
-Ubicación: carreras/frontend/carr.ui.js
+Ubicación: /Curriculo/carreras/frontend/carr.ui.js
 Función:
 - Centralizar utilidades visuales del formulario
 - Leer datos base desde el DOM
 - Mostrar mensajes de estado
-- Bloquear y desbloquear el botón superior
-- Gestionar el botón flotante de cambios
+- Bloquear y desbloquear botones
+- Gestionar botón flotante de cambios
+- Refrescar estado de sincronización local
 */
 
 function carrUiLimpiarTexto(valor) {
@@ -20,7 +21,7 @@ function carrUiSetEstado(mensaje, tipo = "normal") {
   if (!estado) return;
 
   estado.textContent = String(mensaje || "");
-  estado.classList.remove("carr-status-ok", "carr-status-error");
+  estado.classList.remove("carr-status-ok", "carr-status-error", "carr-status-warn");
 
   if (tipo === "ok") {
     estado.classList.add("carr-status-ok");
@@ -28,6 +29,10 @@ function carrUiSetEstado(mensaje, tipo = "normal") {
 
   if (tipo === "error") {
     estado.classList.add("carr-status-error");
+  }
+
+  if (tipo === "warn") {
+    estado.classList.add("carr-status-warn");
   }
 }
 
@@ -51,6 +56,7 @@ function carrUiLimpiarFormulario() {
   const form = document.getElementById("carrForm");
   if (!form) return;
   form.reset();
+  document.getElementById("carrNombre")?.focus();
 }
 
 function carrUiResetMensajeBase() {
@@ -70,6 +76,7 @@ function carrUiActualizarBotonFlotante(totalPendientes = 0) {
 
   if (total > 0) {
     boton.classList.add("is-visible");
+    boton.disabled = false;
     texto.textContent = total === 1
       ? "Guardar 1 cambio"
       : `Guardar ${total} cambios`;
@@ -101,6 +108,31 @@ function carrUiBloquearGuardadoFlotante(bloqueado = true, totalPendientes = null
   }
 }
 
+async function carrUiRefrescarEstadoSync() {
+  if (
+    window.CurriculoSyncStatus &&
+    typeof window.CurriculoSyncStatus.refresh === "function"
+  ) {
+    return await window.CurriculoSyncStatus.refresh();
+  }
+
+  return null;
+}
+
+async function carrUiSyncManual() {
+  if (
+    window.CurriculoSync &&
+    typeof window.CurriculoSync.syncNow === "function"
+  ) {
+    return await window.CurriculoSync.syncNow({ force: true });
+  }
+
+  return {
+    ok: false,
+    mensaje: "La sincronización manual no está disponible en esta vista."
+  };
+}
+
 export {
   carrUiLimpiarTexto,
   carrUiSetEstado,
@@ -109,5 +141,7 @@ export {
   carrUiLimpiarFormulario,
   carrUiResetMensajeBase,
   carrUiActualizarBotonFlotante,
-  carrUiBloquearGuardadoFlotante
+  carrUiBloquearGuardadoFlotante,
+  carrUiRefrescarEstadoSync,
+  carrUiSyncManual
 };
