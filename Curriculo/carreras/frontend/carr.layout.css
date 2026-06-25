@@ -1,16 +1,14 @@
 /*
 Nombre del archivo: carr.layout.css
-Ubicación: carreras/frontend/carr.layout.css
+Ubicación: /Curriculo/carreras/frontend/carr.layout.css
 Función:
-- Definir el diseño visual general de la app en tema claro
-- Estilizar el formulario y sus bloques
-- Mostrar estados visuales de éxito y error
-- Incluir la barra de búsqueda y el botón flotante
+- Definir el diseño visual general de Carreras en tema claro
+- Estilizar formulario, mensajes, búsqueda y botón flotante
+- Mostrar estado de guardado local y sincronización
 */
 
 :root {
   --carr-bg: #f4f7fb;
-  --carr-bg-soft: #eef4ff;
   --carr-panel: #ffffff;
   --carr-card: #ffffff;
   --carr-soft: #d5deea;
@@ -25,6 +23,9 @@ Función:
   --carr-success-bg: rgba(16, 185, 129, 0.10);
   --carr-success-border: rgba(16, 185, 129, 0.28);
   --carr-success-text: #065f46;
+  --carr-warn-bg: rgba(245, 158, 11, 0.12);
+  --carr-warn-border: rgba(245, 158, 11, 0.30);
+  --carr-warn-text: #92400e;
   --carr-error-bg: rgba(239, 68, 68, 0.08);
   --carr-error-border: rgba(239, 68, 68, 0.22);
   --carr-error-text: #991b1b;
@@ -34,9 +35,7 @@ Función:
   --carr-font: "Segoe UI", Arial, sans-serif;
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 html,
 body {
@@ -47,25 +46,15 @@ body {
   font-family: var(--carr-font);
 }
 
-body {
-  min-height: 100vh;
-}
+body { min-height: 100vh; }
 
 input,
 select,
 textarea,
-button {
-  font: inherit;
-}
+button { font: inherit; }
 
-textarea {
-  resize: vertical;
-  min-height: 100px;
-}
-
-button {
-  -webkit-tap-highlight-color: transparent;
-}
+button { -webkit-tap-highlight-color: transparent; cursor: pointer; }
+textarea { resize: vertical; min-height: 100px; }
 
 .carr-app {
   width: 100%;
@@ -85,15 +74,13 @@ button {
   padding: 18px;
 }
 
-.carr-header {
-  margin-bottom: 16px;
-}
+.carr-header { margin-bottom: 16px; }
 
 .carr-eyebrow {
   margin: 0 0 6px;
   color: var(--carr-muted);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -112,10 +99,27 @@ button {
   line-height: 1.45;
 }
 
-.carr-form {
-  display: grid;
-  gap: 14px;
+.carr-sync-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  margin: 10px 0 0;
+  padding: 6px 10px;
+  border: 1px solid var(--carr-border);
+  border-radius: 999px;
+  background: #f8fafc;
+  color: var(--carr-muted);
+  font-size: 12px;
+  font-weight: 800;
 }
+
+.carr-sync-status[data-curriculo-sync-pending="0"] {
+  background: var(--carr-success-bg);
+  border-color: var(--carr-success-border);
+  color: var(--carr-success-text);
+}
+
+.carr-form { display: grid; gap: 14px; }
 
 .carr-card {
   background: var(--carr-card);
@@ -146,28 +150,17 @@ button {
   line-height: 1.45;
 }
 
-.carr-grid {
-  display: grid;
-  gap: 12px;
-}
+.carr-grid { display: grid; gap: 12px; }
+.carr-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.carr-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 
-.carr-grid-2 {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
+.carr-field { display: grid; gap: 6px; }
 
-.carr-grid-3 {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.carr-field {
-  display: grid;
-  gap: 6px;
-}
-
-.carr-field label {
+.carr-field label,
+.carr-search-label {
   color: var(--carr-text);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .carr-field input,
@@ -195,9 +188,7 @@ button {
 
 .carr-field input::placeholder,
 .carr-field textarea::placeholder,
-.carr-search-input::placeholder {
-  color: #94a3b8;
-}
+.carr-search-input::placeholder { color: #94a3b8; }
 
 .carr-actions {
   display: flex;
@@ -210,20 +201,13 @@ button {
   border-radius: 10px;
   padding: 10px 14px;
   cursor: pointer;
-  font-weight: 700;
+  font-weight: 800;
   font-size: 13px;
   transition: transform 0.15s ease, opacity 0.15s ease, background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
-.carr-btn:hover {
-  transform: translateY(-1px);
-}
-
-.carr-btn:disabled {
-  opacity: 0.7;
-  cursor: wait;
-  transform: none;
-}
+.carr-btn:hover { transform: translateY(-1px); }
+.carr-btn:disabled { opacity: 0.7; cursor: wait; transform: none; }
 
 .carr-btn-primary {
   background: var(--carr-primary);
@@ -272,9 +256,13 @@ button {
   color: var(--carr-error-text);
 }
 
-.carr-list-card {
-  margin-top: 16px;
+.carr-status.carr-status-warn {
+  background: var(--carr-warn-bg);
+  border-color: var(--carr-warn-border);
+  color: var(--carr-warn-text);
 }
+
+.carr-list-card { margin-top: 16px; }
 
 .carr-list-tools {
   display: flex;
@@ -286,7 +274,7 @@ button {
 .carr-list-count {
   color: var(--carr-muted);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .carr-search-row {
@@ -302,12 +290,6 @@ button {
   flex: 1 1 320px;
   display: grid;
   gap: 4px;
-}
-
-.carr-search-label {
-  color: var(--carr-text);
-  font-size: 12px;
-  font-weight: 600;
 }
 
 .carr-search-help {
@@ -330,7 +312,7 @@ button {
   color: #ffffff;
   box-shadow: 0 14px 28px rgba(37, 99, 235, 0.28);
   cursor: pointer;
-  font-weight: 700;
+  font-weight: 800;
   font-size: 13px;
   z-index: 30;
   opacity: 0;
@@ -339,9 +321,7 @@ button {
   transition: opacity 0.2s ease, transform 0.2s ease, background 0.2s ease;
 }
 
-.carr-fab:hover {
-  background: var(--carr-primary-hover);
-}
+.carr-fab:hover { background: var(--carr-primary-hover); }
 
 .carr-fab.is-visible {
   opacity: 1;
@@ -349,19 +329,9 @@ button {
   transform: translateY(0);
 }
 
-.carr-fab.is-busy {
-  opacity: 1;
-  pointer-events: auto;
-  cursor: wait;
-}
-
-.carr-fab:disabled {
-  opacity: 1;
-}
-
-.carr-fab-text {
-  white-space: nowrap;
-}
+.carr-fab.is-busy { opacity: 1; pointer-events: auto; cursor: wait; }
+.carr-fab:disabled { opacity: 1; }
+.carr-fab-text { white-space: nowrap; }
 
 .carr-fab-badge {
   min-width: 22px;
@@ -373,14 +343,12 @@ button {
   align-items: center;
   justify-content: center;
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 900;
 }
 
 @media (max-width: 900px) {
   .carr-grid-2,
-  .carr-grid-3 {
-    grid-template-columns: 1fr;
-  }
+  .carr-grid-3 { grid-template-columns: 1fr; }
 
   .carr-app {
     padding: 12px;
@@ -392,9 +360,7 @@ button {
     border-radius: 16px;
   }
 
-  .carr-title {
-    font-size: 21px;
-  }
+  .carr-title { font-size: 21px; }
 
   .carr-card-head,
   .carr-list-head,
