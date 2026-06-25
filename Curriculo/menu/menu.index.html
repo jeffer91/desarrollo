@@ -1,12 +1,11 @@
 <!-- =========================================================
 Nombre completo: menu.index.html
-Ruta o ubicación: /menu/menu.index.html
+Ruta o ubicación: /Curriculo/menu/menu.index.html
 Función o funciones:
 - Mostrar la pantalla principal del menú del módulo Currículo
-- Renderizar marca, navegación superior y frame principal
-- Permitir navegar entre Carreras, Materias, PEA, Fichas, Actas y Control
-- Incluir botón para refrescar la vista actual
-- Mantener un iframe principal para cargar los módulos
+- Renderizar marca, navegación superior, estado local y frame principal
+- Permitir navegar entre Inicio, Carreras, Materias, PEA, Fichas, Actas y Control
+- Incluir botones para refrescar y abrir la vista actual
 ========================================================= -->
 <!doctype html>
 <html lang="es">
@@ -46,17 +45,30 @@ Función o funciones:
 
       <div class="topbar-right">
         <button
+          id="menuOpenCurrent"
+          class="btn btn-ghost"
+          type="button"
+          title="Abrir vista actual en pestaña nueva"
+          aria-label="Abrir vista actual en pestaña nueva"
+        >
+          Abrir
+        </button>
+
+        <button
           id="menuRefresh"
           class="btn btn-primary"
           type="button"
           title="Refrescar vista actual"
           aria-label="Refrescar vista actual"
         >
-          ⟳ Refrescar
+          Refrescar
         </button>
 
-        <div id="menuHint" class="hint" aria-live="polite">
-          Listo.
+        <div class="status-stack">
+          <div id="menuHint" class="hint" aria-live="polite">Listo.</div>
+          <div data-curriculo-sync-status class="sync-hint" aria-live="polite">
+            Preparando guardado local...
+          </div>
         </div>
       </div>
     </header>
@@ -74,6 +86,9 @@ Función o funciones:
     </main>
   </div>
 
+  <script src="../shared/local/curriculo.local-db.js"></script>
+  <script src="../shared/local/curriculo.sync-queue.js"></script>
+  <script src="../shared/local/curriculo.sync-status.js"></script>
   <script src="./menu.config.js"></script>
   <script src="./menu.router.js"></script>
   <script src="./menu.render.js"></script>
