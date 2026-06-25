@@ -10,16 +10,19 @@ Función o funciones:
 4. Permitir notificaciones de escritorio.
 5. Permitir funciones básicas de shell, scan, PDF y updates.
 6. Evitar exponer ipcRenderer completo.
+7. Mantener compatibilidad con el panel visual de actualizaciones.
 
 Con qué se comunica:
 - /desarrollo/electron/main.js
+- /desarrollo/electron/updater.js
 - /desarrollo/electron/eventos-background-manager.js
 - /desarrollo/index.html
+- /desarrollo/app/app.updates.js
 - /desarrollo/eventos/background.html
 - /desarrollo/eventos/renderer.html
 
 Qué aporta:
-Permite que la app grande y el módulo Eventos consulten/controlen el motor de segundo plano.
+Permite que la app grande y los módulos usen funciones de Electron sin exponer ipcRenderer completo.
 =========================================================
 */
 
@@ -37,6 +40,7 @@ function safeOn(channel, callback) {
   }
 
   const allowed = [
+    "updates:status",
     "update:state",
     "agendaJeff:updateStatus",
     "eventos-background:status",
@@ -78,6 +82,15 @@ function send(channel, payload) {
   return {
     ok: true,
     message: "Mensaje enviado."
+  };
+}
+
+async function getUpdatesStateWrapped() {
+  const state = await invoke("updates:state");
+
+  return {
+    ok: true,
+    state: state || {}
   };
 }
 
@@ -136,8 +149,11 @@ const api = {
     state: function state() {
       return invoke("updates:state");
     },
-    check: function check() {
-      return invoke("updates:check");
+    getState: function getState() {
+      return getUpdatesStateWrapped();
+    },
+    check: function check(payload) {
+      return invoke("updates:check", payload || { manual: true });
     },
     download: function download() {
       return invoke("updates:download");
@@ -146,7 +162,10 @@ const api = {
       return invoke("updates:install");
     },
     onState: function onState(callback) {
-      return safeOn("update:state", callback);
+      return safeOn("updates:status", callback);
+    },
+    onStatus: function onStatus(callback) {
+      return safeOn("updates:status", callback);
     }
   },
 
@@ -229,7 +248,7 @@ contextBridge.exposeInMainWorld("agendaJeff", {
     return api.eventosBackground.stop();
   },
   onUpdateStatus: function onUpdateStatus(callback) {
-    return safeOn("agendaJeff:updateStatus", callback);
+    return safeOn("updates:status", callback);
   }
 });
 
