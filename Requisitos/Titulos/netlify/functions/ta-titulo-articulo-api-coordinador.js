@@ -5,6 +5,7 @@
   - Atender acciones públicas del coordinador desde Netlify.
   - Listar coordinadores activos, cargar envíos asignados y guardar revisiones.
   - Unir envío + datos mínimos del estudiante para no duplicar datos en el envío.
+  - Conectar envíos por equivalencia de período para Primer semestre de 2026.
 */
 
 import {
@@ -20,6 +21,7 @@ import {
   nowIso,
   ok,
   parseBody,
+  periodoEquivalente,
   serverError,
   validarMetodoPost
 } from "./ta-titulo-articulo-api-security.js";
@@ -63,9 +65,9 @@ async function obtenerCoordinador(db, coordinadorId) {
   if (!id) return null;
   const snap = await db.collection(COLLECTIONS.coordinadores).doc(id).get();
   if (!snap.exists) return null;
-  const data = snap.data();
+  const data = snap.data() || {};
   if (data.activo === false) return null;
-  return { id: snap.id, ...data };
+  return { ...data, id: snap.id };
 }
 
 async function listarCoordinadores(db) {
@@ -84,8 +86,9 @@ async function cargarEstudiantes(db, payload) {
   const carrerasAsignadas = Array.isArray(coordinador.carrerasAsignadas) ? coordinador.carrerasAsignadas : [];
   const codigos = carrerasAsignadas.map((c) => cleanString(c.codigoCarrera)).filter(Boolean);
 
-  const snap = await db.collection(COLLECTIONS.envios).where("periodoId", "==", periodoActivo.id).get();
-  const envios = await Promise.all(snap.docs.map((doc) => limpiarEnvio(db, doc.id, doc.data())));
+  const snap = await db.collection(COLLECTIONS.envios).get();
+  const docsPeriodo = snap.docs.filter((doc) => periodoEquivalente(doc.data()?.periodoId || doc.data()?.periodoLabel, periodoActivo.id));
+  const envios = await Promise.all(docsPeriodo.map((doc) => limpiarEnvio(db, doc.id, doc.data())));
   const estudiantes = envios.filter((envio) => codigos.includes(envio.codigoCarrera));
 
   return ok({ coordinador: limpiarCoordinador(coordinador.id, coordinador), periodoActivo, estudiantes });
