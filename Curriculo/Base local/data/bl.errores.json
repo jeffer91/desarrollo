@@ -1,0 +1,7 @@
+{
+  "version": "1.0.0",
+  "moduloPadre": "Curriculo",
+  "nombre": "Base local - errores",
+  "descripcion": "Errores detectados durante carga, validacion, comparacion o sincronizacion de Curriculo.",
+  "errores": []
+}
