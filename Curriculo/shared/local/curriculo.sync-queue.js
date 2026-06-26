@@ -1,4 +1,4 @@
-/* Curriculo sync queue: API simple para la cola local */
+/* Curriculo sync queue: API simple para la cola local + puente opcional con Base local BL */
 (function (window) {
   "use strict";
 
@@ -9,8 +9,60 @@
     return window.CurriculoLocal;
   }
 
+  function normalizeModuleName(value) {
+    return String(value || "general")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "_")
+      .replace(/-/g, "_");
+  }
+
+  function getBaseLocalModule(collection) {
+    var BL = window.CurriculoBL;
+    var moduleName = normalizeModuleName(collection);
+
+    if (!BL || !BL.modulos) return null;
+    return BL.modulos[moduleName] || null;
+  }
+
+  async function mirrorToBaseLocal(collection, id, data, options) {
+    var BL = window.CurriculoBL;
+    var moduleConnector = getBaseLocalModule(collection);
+    var payload;
+
+    if (!BL || !BL.storage || !BL.schema) return null;
+
+    payload = Object.assign({}, data || {}, {
+      idLocal: (data && data.idLocal) || "queue-" + String(collection || "general") + "-" + String(id || "sin-id"),
+      nombre: (data && (data.nombre || data.name || data.titulo)) || String(id || "registro-sin-nombre"),
+      modulo: normalizeModuleName(collection),
+      ruta: (options && options.ruta) || "Curriculo/" + normalizeModuleName(collection),
+      estado: (BL.config && BL.config.estadosRegistro && BL.config.estadosRegistro.PENDIENTE) || "pendiente",
+      origen: "curriculo-sync-queue"
+    });
+
+    try {
+      if (moduleConnector && typeof moduleConnector.save === "function") {
+        return await moduleConnector.save(payload);
+      }
+
+      return await BL.storage.appendToArray("registros", "registros", BL.schema.normalizeRecord(payload));
+    } catch (error) {
+      if (BL.logger && typeof BL.logger.warn === "function") {
+        BL.logger.warn("No se pudo reflejar cambio en Base local BL.", {
+          collection: collection,
+          id: id,
+          error: error.message
+        });
+      }
+      return null;
+    }
+  }
+
   async function add(collection, id, data, options) {
-    return await requireLocal().put(collection, id, data, options || {});
+    var result = await requireLocal().put(collection, id, data, options || {});
+    await mirrorToBaseLocal(collection, id, data, options || {});
+    return result;
   }
 
   async function remove(collection, id, options) {
@@ -60,6 +112,7 @@
     hasPending: hasPending,
     markSynced: markSynced,
     status: status,
-    syncNow: syncNow
+    syncNow: syncNow,
+    mirrorToBaseLocal: mirrorToBaseLocal
   };
 })(window);
