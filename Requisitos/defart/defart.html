@@ -8,6 +8,7 @@ Función o funciones:
 - Filtrar por período, carrera, estado, sede y búsqueda.
 - Guardar notas en BaseLocal; BL sincroniza Firebase.
 - Descargar Excel visible de notas.
+- Limpiar filtros y agilizar carga masiva de notas.
 Con qué se conecta:
 - defart.css
 - defart.core.js
@@ -55,6 +56,7 @@ Con qué se conecta:
         <input id="def-filter-search" type="search" placeholder="Cédula, nombre o carrera..." />
       </label>
       <div class="def-toolbar-actions">
+        <button id="def-btn-clear" type="button">Limpiar filtros</button>
         <button id="def-btn-refresh" type="button">Actualizar</button>
         <button id="def-btn-save" type="button">Guardar todo</button>
         <button id="def-btn-export" type="button">Descargar Excel</button>
@@ -83,7 +85,7 @@ Con qué se conecta:
       <div class="def-table-head">
         <div>
           <h2>Control de notas</h2>
-          <p>La N-ART se habilita con requisitos cumplidos. La N-DEF se habilita con N-ART igual o mayor a 7.</p>
+          <p>Enter avanza a la siguiente nota. N-ART se habilita con requisitos cumplidos. N-DEF se habilita con N-ART igual o mayor a 7.</p>
         </div>
         <span id="def-save-state">Listo</span>
       </div>
