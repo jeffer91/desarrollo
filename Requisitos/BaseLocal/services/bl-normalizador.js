@@ -100,7 +100,7 @@ Con qué se conecta:
     out.cedula = cedula || numero || docId;
     out.numeroIdentificacion = numero || cedula || docId;
     out.periodoId = normalizedPeriod.id || periodoId;
-    out.ultimoPeriodoId = text(getCampo(out, "ultimoPeriodoId", out.ultimoPeriodoId || normalizedPeriod.id || periodoId)) || normalizedPeriod.id || periodoId;
+    out.ultimoPeriodoId = normalizedPeriod.id || periodoId;
     out.periodoLabel = normalizedPeriod.label || periodoLabel || out.periodoId;
     out.nombres = nombres;
     out.nombrecarrera = carrera;
@@ -129,16 +129,5 @@ Con qué se conecta:
     return map;
   }
 
-  window.BLNormalizador = {
-    text:text,
-    now:now,
-    clone:clone,
-    normalizeText:normalizeText,
-    periodKey:periodKey,
-    normalizePeriod:normalizePeriod,
-    normalizeDivisiones:normalizeDivisiones,
-    normalizeStudent:normalizeStudent,
-    normalizeStudents:normalizeStudents,
-    indexByCedula:indexByCedula
-  };
+  window.BLNormalizador = {text:text,now:now,clone:clone,normalizeText:normalizeText,periodKey:periodKey,normalizePeriod:normalizePeriod,normalizeDivisiones:normalizeDivisiones,normalizeStudent:normalizeStudent,normalizeStudents:normalizeStudents,indexByCedula:indexByCedula};
 })(window);
