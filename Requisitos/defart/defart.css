@@ -3,9 +3,10 @@ Nombre completo: defart.css
 Ruta o ubicación: /Requisitos/defart/defart.css
 Función o funciones:
 - Dar diseño claro, compacto y potente a Defensas.
-- Mostrar filtros inteligentes, KPIs, tabla fija, colores por estado y barra de progreso.
+- Mostrar filtros inteligentes, KPIs, tabla, colores por estado y barra de progreso.
 - Resaltar cambios pendientes sin bloquear navegación.
 - Mostrar Guardar todo como botón flotante.
+- Mantener solo los filtros fijos y eliminar el doble scroll vertical.
 Con qué se conecta:
 - defart.html
 ========================================================= */
@@ -33,7 +34,7 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-appl
 .def-status{border:1px solid var(--line);border-radius:14px;padding:10px 12px;background:var(--primary-soft);color:#1e40af;font-weight:850;margin-bottom:12px}
 .def-status.ok{background:var(--ok-soft);color:#166534}
 .def-status.warn{background:var(--warn-soft);color:#9a3412}
-.def-toolbar{display:grid;grid-template-columns:1fr 1.35fr 1fr .9fr 1.6fr auto;gap:10px;align-items:end;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:12px;box-shadow:var(--shadow);margin-bottom:10px}
+.def-toolbar{position:sticky;top:0;z-index:80;display:grid;grid-template-columns:1fr 1.35fr 1fr .9fr 1.6fr auto;gap:10px;align-items:end;background:rgba(255,255,255,.96);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:18px;padding:12px;box-shadow:var(--shadow);margin-bottom:10px}
 .def-toolbar label{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:950;color:#334155}
 .def-toolbar-actions{display:flex;align-items:end;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 select,input{min-height:38px;border:1px solid var(--line);border-radius:12px;padding:8px 10px;background:#fff;color:var(--text);font:inherit;outline:none}
@@ -58,10 +59,10 @@ button:disabled{opacity:.6;cursor:not-allowed;transform:none;background:#f8fafc;
 .def-table-head h2{margin:0 0 4px;font-size:19px}
 .def-table-head p{margin:0;color:var(--muted);font-size:12px;font-weight:800}
 #def-save-state{display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);background:#f8fafc;border-radius:999px;padding:6px 10px;font-size:12px;font-weight:950;color:#334155;white-space:nowrap}
-.def-table-wrap{overflow:auto;max-height:68vh;border:1px solid var(--line-strong);border-radius:14px;background:#fff}
+.def-table-wrap{overflow-x:auto;overflow-y:visible;max-height:none;border:1px solid var(--line-strong);border-radius:14px;background:#fff}
 .def-table{width:100%;border-collapse:separate;border-spacing:0;font-size:12px;min-width:980px}
 .def-table th,.def-table td{border-bottom:1px solid var(--line);padding:8px 9px;text-align:left;vertical-align:middle}
-.def-table th{position:sticky;top:0;background:#f8fafc;color:#334155;z-index:2;font-size:11px;text-transform:uppercase;letter-spacing:.02em;cursor:pointer;user-select:none;border-bottom:1px solid var(--line-strong)}
+.def-table th{position:static;background:#f8fafc;color:#334155;z-index:1;font-size:11px;text-transform:uppercase;letter-spacing:.02em;cursor:pointer;user-select:none;border-bottom:1px solid var(--line-strong)}
 .def-table th:hover{background:#eef6ff;color:#1d4ed8}
 .def-table tbody tr:hover td{background:#f8fafc}
 .def-table tbody tr.estado-completo td{background:linear-gradient(0deg,rgba(236,253,245,.55),rgba(236,253,245,.55))}
