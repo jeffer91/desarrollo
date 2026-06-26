@@ -25,7 +25,7 @@
   "main": "electron/ta-titulo-articulo-main.js",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "dev:netlify": "npx netlify-cli dev --host 127.0.0.1 --port 8888",
+    "dev:netlify": "npx netlify-cli@latest dev --host 127.0.0.1 --port 8888",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
     "electron": "electron electron/ta-titulo-articulo-main.js",
