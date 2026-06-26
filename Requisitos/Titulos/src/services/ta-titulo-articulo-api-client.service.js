@@ -1,125 +1,147 @@
 /*
   Nombre completo: ta-titulo-articulo-api-client.service.js
-  Ruta o ubicación: /Requisitos/Titulos/src/services/ta-titulo-articulo-api-client.service.js
+  Ruta o ubicación: /src/services/ta-titulo-articulo-api-client.service.js
   Función o funciones:
-  - Centralizar las llamadas del frontend del módulo Títulos.
-  - Trabajar directamente con Firebase/Firestore.
-  - Eliminar la dependencia obligatoria de Netlify Functions para estudiante, coordinador y administrador.
-  - Mantener la base institucional en solo lectura y escribir únicamente datos propios de títulos.
+  - Centralizar llamadas del frontend hacia Netlify Functions.
+  - Enviar acciones de estudiante, coordinador, administrador y Telegram sin repetir código.
+  - Normalizar respuestas correctas y errores para las pantallas públicas y la pantalla local.
+  - Permitir que Electron/local use una URL base real de Netlify Functions.
 */
 
-import { TaTituloArticuloFirebaseDirect } from "./ta-titulo-articulo-firebase-direct.service.js";
+const BASE_FUNCTIONS_PATH = "/.netlify/functions";
+const BASE_FUNCTIONS_URL_KEY = "ta.titulo.articulo.baseFunctionsUrl";
 
-function normalizarError(error, fallback) {
-  return new Error(error?.message || fallback);
+function clean(value) {
+  return String(value ?? "").replace(/\s+/g, " ").trim();
 }
 
-async function ejecutarDirecto(fn, fallback) {
+function normalizarBaseFunctionsUrl(value) {
+  const url = clean(value).replace(/\/+$/, "");
+  if (!url) return "";
+
+  if (url.endsWith("/.netlify/functions")) return url;
+
+  if (url.includes("/.netlify/functions/")) {
+    return url.split("/.netlify/functions/")[0] + "/.netlify/functions";
+  }
+
+  return url + "/.netlify/functions";
+}
+
+function estaEnElectronLocal() {
+  return typeof window !== "undefined" && window.location?.protocol === "file:";
+}
+
+function obtenerBaseFunctionsPath() {
+  if (!estaEnElectronLocal()) return BASE_FUNCTIONS_PATH;
+
+  const guardada = normalizarBaseFunctionsUrl(localStorage.getItem(BASE_FUNCTIONS_URL_KEY));
+  if (guardada) return guardada;
+
+  const ingresada = normalizarBaseFunctionsUrl(
+    prompt(
+      "Ingrese la URL base de Netlify Functions.\n\nEjemplo local:\nhttp://127.0.0.1:8888/.netlify/functions\n\nEjemplo publicado:\nhttps://tu-sitio.netlify.app/.netlify/functions"
+    ) || ""
+  );
+
+  if (ingresada) {
+    localStorage.setItem(BASE_FUNCTIONS_URL_KEY, ingresada);
+    return ingresada;
+  }
+
+  throw new Error("No se configuró la URL base de Netlify Functions para el panel local.");
+}
+
+function crearEndpoint(nombre) {
+  return `${obtenerBaseFunctionsPath()}/ta-titulo-articulo-api-${nombre}`;
+}
+
+async function leerRespuestaJson(response) {
+  const text = await response.text();
+  if (!text) return {};
+
   try {
-    return await fn();
+    return JSON.parse(text);
   } catch (error) {
-    console.error("[Títulos Firebase]", error);
-    throw normalizarError(error, fallback);
+    return {
+      ok: false,
+      error: "La respuesta del servidor no tiene formato JSON válido.",
+      detalle: error && error.message ? error.message : String(error)
+    };
   }
 }
 
-export function configurarBaseFunciones() {
-  return "firebase-direct";
-}
+async function llamarFuncion(nombreEndpoint, action, payload = {}, options = {}) {
+  const headers = { "Content-Type": "application/json" };
 
-export function obtenerEstadoApiTitulos() {
-  return {
-    configurado: TaTituloArticuloFirebaseDirect.disponible(),
-    base: "firebase-direct",
-    modoLocal: true
-  };
+  if (options.adminToken) {
+    headers["x-ta-admin-token"] = options.adminToken;
+  }
+
+  const response = await fetch(crearEndpoint(nombreEndpoint), {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ action, payload })
+  });
+
+  const data = await leerRespuestaJson(response);
+
+  if (!response.ok || data.ok === false) {
+    throw new Error(data.error || `Error HTTP ${response.status}`);
+  }
+
+  return data;
 }
 
 export const TaTituloArticuloApi = Object.freeze({
   estudiante: {
     buscarPorCedula(cedula) {
-      return ejecutarDirecto(
-        () => TaTituloArticuloFirebaseDirect.estudiante.buscarPorCedula(cedula),
-        "No se pudo consultar la cédula en Firebase."
-      );
+      return llamarFuncion("estudiante", "buscarPorCedula", { cedula });
     },
     consultarEstado(cedula) {
-      return ejecutarDirecto(
-        () => TaTituloArticuloFirebaseDirect.estudiante.consultarEstado(cedula),
-        "No se pudo consultar el estado en Firebase."
-      );
+      return llamarFuncion("estudiante", "consultarEstado", { cedula });
     },
     guardarTelegram(cedula, telegramUser) {
-      return ejecutarDirecto(
-        () => TaTituloArticuloFirebaseDirect.estudiante.guardarTelegram(cedula, telegramUser),
-        "No se pudo guardar el usuario de Telegram."
-      );
+      return llamarFuncion("estudiante", "guardarTelegram", { cedula, telegramUser });
     },
     enviarPropuestas(datosEnvio) {
-      return ejecutarDirecto(
-        () => TaTituloArticuloFirebaseDirect.estudiante.enviarPropuestas(datosEnvio),
-        "No se pudieron enviar las propuestas."
-      );
+      return llamarFuncion("estudiante", "enviarPropuestas", datosEnvio);
     }
   },
 
   coordinador: {
     listarCoordinadores() {
-      return ejecutarDirecto(
-        () => TaTituloArticuloFirebaseDirect.coordinador.listarCoordinadores(),
-        "No se pudieron cargar los coordinadores desde Firebase."
-      );
+      return llamarFuncion("coordinador", "listarCoordinadores");
     },
     cargarEstudiantes(coordinadorId) {
-      return ejecutarDirecto(
-        () => TaTituloArticuloFirebaseDirect.coordinador.cargarEstudiantes(coordinadorId),
-        "No se pudieron cargar los estudiantes desde Firebase."
-      );
+      return llamarFuncion("coordinador", "cargarEstudiantes", { coordinadorId });
     },
     iniciarRevision(envioId, coordinadorId) {
-      return ejecutarDirecto(
-        () => TaTituloArticuloFirebaseDirect.coordinador.iniciarRevision(envioId, coordinadorId),
-        "No se pudo iniciar la revisión."
-      );
+      return llamarFuncion("coordinador", "iniciarRevision", { envioId, coordinadorId });
     },
     guardarRevision(revision) {
-      return ejecutarDirecto(
-        () => TaTituloArticuloFirebaseDirect.coordinador.guardarRevision(revision),
-        "No se pudo guardar la revisión."
-      );
+      return llamarFuncion("coordinador", "guardarRevision", revision);
     }
   },
 
   admin: {
-    listarResumen() {
-      return ejecutarDirecto(
-        () => TaTituloArticuloFirebaseDirect.admin.listarResumen(),
-        "No se pudo cargar el resumen administrativo desde Firebase."
-      );
+    listarResumen(adminToken) {
+      return llamarFuncion("admin", "listarResumen", {}, { adminToken });
     },
-    activarPeriodo(periodoId) {
-      return ejecutarDirecto(
-        () => TaTituloArticuloFirebaseDirect.admin.activarPeriodo(periodoId),
-        "No se pudo activar el período."
-      );
+    activarPeriodo(periodoId, adminToken) {
+      return llamarFuncion("admin", "activarPeriodo", { periodoId }, { adminToken });
     },
-    guardarCoordinador(nombre) {
-      return ejecutarDirecto(
-        () => TaTituloArticuloFirebaseDirect.admin.guardarCoordinador(nombre),
-        "No se pudo guardar el coordinador."
-      );
+    guardarCoordinador(nombre, adminToken) {
+      return llamarFuncion("admin", "guardarCoordinador", { nombre }, { adminToken });
     },
-    asignarCoordinadorCarrera(datos) {
-      return ejecutarDirecto(
-        () => TaTituloArticuloFirebaseDirect.admin.asignarCoordinadorCarrera(datos),
-        "No se pudo asignar la carrera."
-      );
+    asignarCoordinadorCarrera(datos, adminToken) {
+      return llamarFuncion("admin", "asignarCoordinadorCarrera", datos, { adminToken });
     }
   },
 
   telegram: {
-    enviarMensaje() {
-      return Promise.resolve({ ok: true, mensaje: "Telegram queda pendiente fuera del modo Firebase directo." });
+    enviarMensaje(chatId, mensaje, adminToken) {
+      return llamarFuncion("telegram", "enviarMensaje", { chatId, mensaje }, { adminToken });
     }
   }
 });
