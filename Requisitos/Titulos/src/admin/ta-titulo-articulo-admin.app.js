@@ -3,26 +3,18 @@
   Ruta o ubicación: /Requisitos/Titulos/src/admin/ta-titulo-articulo-admin.app.js
   Función o funciones:
   - Controlar la pantalla local/Electron del administrador.
-  - Solicitar y guardar token administrativo en localStorage.
-  - Solicitar URL base de Netlify Functions cuando se abre desde Electron o archivo local.
-  - Cargar resumen general de períodos, coordinadores, carreras y estudiantes.
-  - Activar período vigente, crear coordinadores, asignar carreras y filtrar estudiantes.
+  - Cargar desde Firebase períodos, coordinadores, carreras y estudiantes.
+  - Trabajar sin token administrativo y sin Netlify Functions.
+  - Escribir únicamente la configuración operativa del módulo Títulos y sus revisiones.
   Se conecta con:
   - Requisitos/Titulos/electron/admin/ta-titulo-articulo-administrador.html
   - Requisitos/Titulos/src/services/ta-titulo-articulo-api-client.service.js
 */
 
-import {
-  TaTituloArticuloApi,
-  configurarBaseFunciones,
-  obtenerEstadoApiTitulos
-} from "../services/ta-titulo-articulo-api-client.service.js";
-
-const TOKEN_KEY = "ta.titulo.articulo.adminToken";
+import { TaTituloArticuloApi } from "../services/ta-titulo-articulo-api-client.service.js";
 
 let state = {
   resumen: null,
-  adminToken: localStorage.getItem(TOKEN_KEY) || "",
   filtro: "",
   cargando: false
 };
@@ -43,25 +35,6 @@ function message(id, text, type = "") {
   el.classList.remove("ta-message--error", "ta-message--ok", "ta-message--warning");
   if (type) el.classList.add(`ta-message--${type}`);
   el.hidden = !text;
-}
-
-function ensureFunctionsBase() {
-  const estado = obtenerEstadoApiTitulos();
-  if (estado.configurado) return true;
-
-  const base = prompt("Ingrese la URL base de Netlify Functions. Ejemplo: https://mi-sitio.netlify.app/.netlify/functions");
-  const finalBase = configurarBaseFunciones(base);
-  return Boolean(finalBase);
-}
-
-function ensureToken() {
-  if (state.adminToken) return state.adminToken;
-
-  const token = prompt("Ingrese el token administrativo de Títulos:");
-  state.adminToken = clean(token);
-
-  if (state.adminToken) localStorage.setItem(TOKEN_KEY, state.adminToken);
-  return state.adminToken;
 }
 
 function setBusy(isBusy, text = "") {
@@ -314,28 +287,13 @@ function renderAll() {
 }
 
 async function cargarResumen() {
-  if (!ensureFunctionsBase()) {
-    message("ta-admin-periodo-mensaje", "Debe configurar la URL base de Netlify Functions.", "error");
-    return;
-  }
-
-  const token = ensureToken();
-  if (!token) {
-    message("ta-admin-periodo-mensaje", "Debe ingresar el token administrativo.", "error");
-    return;
-  }
-
-  setBusy(true, "Cargando resumen administrativo...");
+  setBusy(true, "Cargando resumen desde Firebase...");
   try {
-    state.resumen = await TaTituloArticuloApi.admin.listarResumen(token);
+    state.resumen = await TaTituloArticuloApi.admin.listarResumen();
     renderAll();
-    message("ta-admin-periodo-mensaje", "Panel actualizado correctamente.", "ok");
+    message("ta-admin-periodo-mensaje", "Panel actualizado correctamente desde Firebase.", "ok");
   } catch (error) {
-    console.error("[Títulos admin]", error);
-    if ((error.message || "").toLowerCase().includes("token")) {
-      localStorage.removeItem(TOKEN_KEY);
-      state.adminToken = "";
-    }
+    console.error("[Títulos admin Firebase]", error);
     message("ta-admin-periodo-mensaje", error.message || "No se pudo cargar el panel administrativo.", "error");
   } finally {
     setBusy(false);
@@ -344,7 +302,6 @@ async function cargarResumen() {
 
 async function activarPeriodo() {
   const periodoId = clean($("ta-admin-periodo-select")?.value);
-  const token = ensureToken();
 
   if (!periodoId) {
     message("ta-admin-periodo-mensaje", "Seleccione un período válido.", "error");
@@ -353,7 +310,7 @@ async function activarPeriodo() {
 
   setBusy(true, "Activando período...");
   try {
-    const data = await TaTituloArticuloApi.admin.activarPeriodo(periodoId, token);
+    const data = await TaTituloArticuloApi.admin.activarPeriodo(periodoId);
     await cargarResumen();
     message("ta-admin-periodo-mensaje", data.mensaje || "Período activado correctamente.", "ok");
   } catch (error) {
@@ -368,7 +325,6 @@ async function guardarCoordinador(event) {
   event.preventDefault();
   const input = $("ta-admin-coordinador-nombre");
   const nombre = clean(input?.value);
-  const token = ensureToken();
 
   if (!nombre) {
     message("ta-admin-periodo-mensaje", "Ingrese el nombre del coordinador.", "error");
@@ -377,7 +333,7 @@ async function guardarCoordinador(event) {
 
   setBusy(true, "Guardando coordinador...");
   try {
-    const data = await TaTituloArticuloApi.admin.guardarCoordinador(nombre, token);
+    const data = await TaTituloArticuloApi.admin.guardarCoordinador(nombre);
     if (input) input.value = "";
     await cargarResumen();
     message("ta-admin-periodo-mensaje", data.mensaje || "Coordinador guardado correctamente.", "ok");
@@ -390,8 +346,6 @@ async function guardarCoordinador(event) {
 }
 
 async function asignarCarrera(carrera, coordinadorId) {
-  const token = ensureToken();
-
   if (!coordinadorId) {
     message("ta-admin-periodo-mensaje", "Seleccione un coordinador para asignar la carrera.", "error");
     return;
@@ -403,7 +357,7 @@ async function asignarCarrera(carrera, coordinadorId) {
       coordinadorId,
       codigoCarrera: clean(carrera.codigoCarrera),
       nombreCarrera: clean(carrera.nombreCarrera)
-    }, token);
+    });
     await cargarResumen();
     message("ta-admin-periodo-mensaje", data.mensaje || "Carrera asignada correctamente.", "ok");
   } catch (error) {
