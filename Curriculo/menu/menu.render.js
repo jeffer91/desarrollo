@@ -93,7 +93,7 @@ Función o funciones:
       ".hero{background:#fff;border:1px solid #dbe4f0;border-radius:22px;padding:24px;box-shadow:0 16px 34px rgba(15,23,42,.08);}",
       ".eyebrow{margin:0 0 8px;color:#2563eb;font-size:12px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;}",
       "h1{margin:0;font-size:30px;line-height:1.1;}",
-      ".lead{margin:10px 0 0;color:#64748b;max-width:760px;line-height:1.5;font-size:15px;}",
+      ".lead{margin:10px 0 0;color:#64748b;max-width:800px;line-height:1.5;font-size:15px;}",
       ".grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:18px;}",
       ".card{background:#fff;border:1px solid #dbe4f0;border-radius:18px;padding:18px;box-shadow:0 10px 24px rgba(15,23,42,.06);}",
       ".icon{width:40px;height:40px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:#2563eb;color:#fff;font-weight:900;margin-bottom:12px;}",
@@ -108,7 +108,7 @@ Función o funciones:
       "<section class=\"hero\">",
       "<p class=\"eyebrow\">" + escapeHtml(cfg.appTitle || "Currículo") + "</p>",
       "<h1>Menú principal de Currículo</h1>",
-      "<p class=\"lead\">Seleccione un módulo en la barra superior para trabajar con carreras, materias, PEA, fichas, actas o control general. La última pantalla queda recordada para volver más rápido.</p>",
+      "<p class=\"lead\">Seleccione un módulo en la barra superior. Base local funciona como centro de control para guardar, revisar cambios, ver errores, respaldar y preparar la sincronización de Currículo.</p>",
       "</section>",
       "<section class=\"grid\" aria-label=\"Módulos disponibles\">",
       items.map(function (item) {
@@ -121,7 +121,7 @@ Función o funciones:
         ].join("");
       }).join(""),
       "</section>",
-      "<div class=\"note\">Trabaja por bloques: primero base local, luego menú, carreras, materias, PEA, fichas, actas y control.</div>",
+      "<div class=\"note\">La Base local se carga una vez al día al abrir Currículo. Los estados técnicos se registran en consola para no saturar la pantalla.</div>",
       "</main>",
       "</body>",
       "</html>"
