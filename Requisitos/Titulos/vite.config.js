@@ -6,7 +6,7 @@
   - Mantener fuera del build público la pantalla privada/local del administrador.
   - Preparar la salida de producción para Netlify en la carpeta dist.
   - Copiar los assets públicos del módulo, incluido el logo institucional.
-  - Evitar que Vite abra el puerto 5173 cuando se ejecuta con Netlify Dev.
+  - Mantener rutas relativas y limpias para publicación en subcarpeta o dominio Netlify.
   Se conecta con:
   - package.json
   - netlify.toml
@@ -23,6 +23,7 @@ const rootDir = fileURLToPath(new URL(".", import.meta.url));
 
 export default defineConfig({
   appType: "mpa",
+  base: "/",
   publicDir: "public",
   server: {
     host: "127.0.0.1",
@@ -39,6 +40,10 @@ export default defineConfig({
     outDir: "dist",
     emptyOutDir: true,
     sourcemap: false,
+    target: "es2020",
+    modulePreload: {
+      polyfill: true
+    },
     rollupOptions: {
       input: {
         estudiante: resolve(rootDir, "public/ta-titulo-articulo-estudiante.html"),
