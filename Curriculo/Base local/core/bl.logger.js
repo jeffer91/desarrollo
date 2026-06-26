@@ -26,7 +26,13 @@
 
   function writeLogs(logs) {
     try {
-      window.localStorage?.setItem(getStorageKey(), JSON.stringify(logs || []));
+      const payload = {
+        version: BL.config?.version || '1.0.0',
+        moduloPadre: 'Curriculo',
+        nombre: 'Base local - log de consola',
+        logs: Array.isArray(logs) ? logs : []
+      };
+      window.localStorage?.setItem(getStorageKey(), JSON.stringify(payload));
     } catch (error) {
       // El log no debe romper la app.
     }
