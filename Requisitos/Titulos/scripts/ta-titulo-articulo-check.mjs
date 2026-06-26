@@ -6,7 +6,7 @@
   - Detectar archivos faltantes antes de correr Vite, Netlify, Firebase o Electron.
   - Validar rutas HTML principales de estudiante, coordinador y administrador.
   - Detectar HTML duplicado o pantallas mezcladas.
-  - Verificar servicios centrales de runtime y origen de datos.
+  - Verificar servicios centrales de runtime, origen de datos y Firebase directo.
   - Servir como prueba final del bloque desde la terminal.
   Se conecta con:
   - Requisitos/Titulos/package.json
@@ -35,6 +35,7 @@ const requiredFiles = [
   "src/styles/ta-titulo-articulo-base.css",
   "src/styles/ta-titulo-articulo-layout.css",
   "src/styles/ta-titulo-articulo-components.css",
+  "src/firebase/ta-titulo-articulo-firebase-sdk.service.js",
   "src/firebase/ta-titulo-articulo-firebase-client.js",
   "src/firebase/ta-titulo-articulo-collections.js",
   "src/services/ta-titulo-articulo-runtime.service.js",
@@ -49,6 +50,12 @@ const requiredFiles = [
   "src/admin/ta-titulo-articulo-admin.app.js"
 ];
 
+const firebaseImportMapChecks = [
+  '<script type="importmap">',
+  '"firebase/app": "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js"',
+  '"firebase/firestore": "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js"'
+];
+
 const htmlChecks = [
   {
     file: "public/ta-titulo-articulo-estudiante.html",
@@ -58,7 +65,8 @@ const htmlChecks = [
       "../src/styles/ta-titulo-articulo-components.css",
       "./assets/logo-itsqmet.svg",
       "../src/estudiante/ta-titulo-articulo-estudiante.app.js",
-      'data-ta-screen="estudiante"'
+      'data-ta-screen="estudiante"',
+      ...firebaseImportMapChecks
     ],
     mustNotInclude: [
       "../src/coordinador/ta-titulo-articulo-coordinador.app.js",
@@ -74,7 +82,8 @@ const htmlChecks = [
       "../src/styles/ta-titulo-articulo-components.css",
       "./assets/logo-itsqmet.svg",
       "../src/coordinador/ta-titulo-articulo-coordinador.app.js",
-      'data-ta-screen="coordinador"'
+      'data-ta-screen="coordinador"',
+      ...firebaseImportMapChecks
     ],
     mustNotInclude: [
       "../src/estudiante/ta-titulo-articulo-estudiante.app.js",
@@ -91,7 +100,8 @@ const htmlChecks = [
       "../../src/styles/ta-titulo-articulo-components.css",
       "../../src/admin/ta-titulo-articulo-admin.app.js",
       'data-ta-screen="administrador"',
-      'data-ta-runtime="electron"'
+      'data-ta-runtime="electron"',
+      ...firebaseImportMapChecks
     ],
     mustNotInclude: [
       "../src/estudiante/ta-titulo-articulo-estudiante.app.js",
@@ -101,6 +111,14 @@ const htmlChecks = [
 ];
 
 const serviceChecks = [
+  {
+    file: "src/firebase/ta-titulo-articulo-firebase-sdk.service.js",
+    mustInclude: ["TA_TITULO_ARTICULO_FIREBASE_SDK_VERSION", "firebase/app", "firebase/firestore", "10.14.1"]
+  },
+  {
+    file: "src/firebase/ta-titulo-articulo-firebase-client.js",
+    mustInclude: ["import.meta.env || {}", "TA_TITULO_ARTICULO_FIREBASE_CONFIG", "firebaseDisponible", "sdkVersion"]
+  },
   {
     file: "src/services/ta-titulo-articulo-runtime.service.js",
     mustInclude: ["TaTituloArticuloRuntime", "obtenerOrigenDatos", "firebase-direct", "netlify-functions"]
@@ -151,6 +169,10 @@ for (const check of htmlChecks) {
 
   if (countOccurrences(content, "</html>") !== 1) {
     errors.push(`${check.file}: debe tener un solo cierre </html>.`);
+  }
+
+  if (countOccurrences(content, '<script type="importmap">') !== 1) {
+    errors.push(`${check.file}: debe tener un solo import map de Firebase.`);
   }
 
   for (const value of check.mustInclude) {
