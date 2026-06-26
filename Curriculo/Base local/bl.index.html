@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Base local - Curriculo</title>
+  <link rel="stylesheet" href="bl.css" />
+</head>
+<body>
+  <main class="bl-shell">
+    <section class="bl-hero">
+      <div>
+        <p class="bl-eyebrow">Curriculo</p>
+        <h1>Base local</h1>
+        <p class="bl-description">
+          Centro de control local para guardar, comparar, respaldar y sincronizar la informacion de Curriculo.
+        </p>
+      </div>
+      <div class="bl-status-card" aria-live="polite">
+        <span class="bl-status-dot" id="blStatusDot"></span>
+        <div>
+          <strong id="blStatusTitle">Preparando Base local</strong>
+          <p id="blStatusText">El estado tecnico tambien se registra en consola.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="bl-actions" aria-label="Acciones principales">
+      <button type="button" class="bl-button primary" id="blBtnSync">Sincronizar ahora</button>
+      <button type="button" class="bl-button" id="blBtnChanges">Ver cambios</button>
+      <button type="button" class="bl-button" id="blBtnErrors">Ver errores</button>
+      <button type="button" class="bl-button" id="blBtnBackup">Respaldo</button>
+      <button type="button" class="bl-button" id="blBtnDiagnostics">Diagnostico</button>
+    </section>
+
+    <section class="bl-grid" aria-label="Resumen de Base local">
+      <article class="bl-card">
+        <span>Registros</span>
+        <strong id="blTotalRegistros">0</strong>
+      </article>
+      <article class="bl-card">
+        <span>Pendientes</span>
+        <strong id="blTotalPendientes">0</strong>
+      </article>
+      <article class="bl-card">
+        <span>Sincronizados</span>
+        <strong id="blTotalSincronizados">0</strong>
+      </article>
+      <article class="bl-card">
+        <span>Conflictos</span>
+        <strong id="blTotalConflictos">0</strong>
+      </article>
+      <article class="bl-card">
+        <span>Errores</span>
+        <strong id="blTotalErrores">0</strong>
+      </article>
+      <article class="bl-card">
+        <span>Campos nuevos</span>
+        <strong id="blTotalCamposNuevos">0</strong>
+      </article>
+    </section>
+
+    <section class="bl-panel">
+      <div class="bl-panel-header">
+        <div>
+          <p class="bl-eyebrow">Detalle</p>
+          <h2 id="blPanelTitle">Resumen general</h2>
+        </div>
+        <button type="button" class="bl-button ghost" id="blBtnRefresh">Actualizar vista</button>
+      </div>
+      <pre id="blOutput" class="bl-output">Cargando informacion local...</pre>
+    </section>
+  </main>
+
+  <script src="core/bl.config.js"></script>
+  <script src="core/bl.utils.js"></script>
+  <script src="core/bl.logger.js"></script>
+  <script src="core/bl.storage.js"></script>
+  <script src="core/bl.schema.js"></script>
+  <script src="core/bl.compare.js"></script>
+  <script src="core/bl.backup.js"></script>
+  <script src="core/bl.diagnostics.js"></script>
+  <script src="core/bl.sync.firebase.js"></script>
+
+  <script src="modulos/bl.carreras.js"></script>
+  <script src="modulos/bl.materias.js"></script>
+  <script src="modulos/bl.fichas.js"></script>
+  <script src="modulos/bl.actas.js"></script>
+  <script src="modulos/bl.pea-documentos.js"></script>
+  <script src="modulos/bl.control.js"></script>
+  <script src="modulos/bl.menu.js"></script>
+
+  <script src="bl.main.js"></script>
+</body>
+</html>
