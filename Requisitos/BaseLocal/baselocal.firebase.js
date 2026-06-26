@@ -5,13 +5,13 @@ Función o funciones:
 - Sincronizar Base Local ↔ Firebase una vez al día al abrir BL.
 - Leer principalmente las colecciones reales: Estudiantes y periodos.
 - Mantener funcionando la Base Local aunque no haya internet.
-- Usar services pequeños para estudiantes, periodos y sincronización diaria.
+- Subir estudiantes con parche controlado para no sobrescribir campos sensibles.
 Con qué se conecta:
 - services/bl-periodos.service.js
 - services/bl-estudiantes.service.js
 - services/bl-sync-diario.js
+- services/bl-firestore-patch.js
 - baselocal.app.js
-- baselocal.connector.js
 - excel-local.storage.js
 - firebase-config.js
 ========================================================= */
@@ -27,11 +27,11 @@ Con qué se conecta:
   function now(){return new Date().toISOString();}
   function today(){return now().slice(0, 10);}
   function clone(value){try{return JSON.parse(JSON.stringify(value == null ? null : value));}catch(error){return value;}}
-
   function getStorage(){if(!window.ExcelLocalStorage){throw new Error("ExcelLocalStorage no está disponible.");}return window.ExcelLocalStorage;}
   function getPeriodosService(){if(!window.BLPeriodosService){throw new Error("BLPeriodosService no está disponible.");}return window.BLPeriodosService;}
   function getEstudiantesService(){if(!window.BLEstudiantesService){throw new Error("BLEstudiantesService no está disponible.");}return window.BLEstudiantesService;}
   function getDailyService(){return window.BLSyncDiario || null;}
+  function getPatchService(){return window.BLFirestorePatch || null;}
 
   function emit(kind, payload){
     var detail = Object.assign({kind:kind, at:now()}, payload || {});
@@ -50,13 +50,8 @@ Con qué se conecta:
     return status;
   }
 
-  function getLastStatus(){
-    try{var raw = window.localStorage.getItem(STATUS_KEY);return raw ? JSON.parse(raw) : {ok:false, mode:"sin_estado"};}catch(error){return {ok:false, mode:"sin_estado"};}
-  }
-
-  function getSyncStatus(){
-    try{var raw = window.localStorage.getItem(SYNC_STATUS_KEY);return raw ? JSON.parse(raw) : {ok:false, mode:"sin_estado", lastSyncDate:""};}catch(error){return {ok:false, mode:"sin_estado", lastSyncDate:""};}
-  }
+  function getLastStatus(){try{var raw = window.localStorage.getItem(STATUS_KEY);return raw ? JSON.parse(raw) : {ok:false, mode:"sin_estado"};}catch(error){return {ok:false, mode:"sin_estado"};}}
+  function getSyncStatus(){try{var raw = window.localStorage.getItem(SYNC_STATUS_KEY);return raw ? JSON.parse(raw) : {ok:false, mode:"sin_estado", lastSyncDate:""};}catch(error){return {ok:false, mode:"sin_estado", lastSyncDate:""};}}
 
   function saveSyncStatus(payload){
     var previous = getSyncStatus();
@@ -65,24 +60,17 @@ Con qué se conecta:
     return status;
   }
 
-  function getFirebaseConfigIfAvailable(){
-    try{if(typeof firebaseConfig !== "undefined" && firebaseConfig){return firebaseConfig;}}catch(error){return null;}
-    return null;
-  }
+  function getFirebaseConfigIfAvailable(){try{if(typeof firebaseConfig !== "undefined" && firebaseConfig){return firebaseConfig;}}catch(error){return null;}return null;}
 
   function ensureFirebaseInitialized(){
-    if(!window.firebase || typeof window.firebase.firestore !== "function"){
-      throw new Error("Firebase no está cargado. Revisa internet o los scripts de Firebase.");
-    }
+    if(!window.firebase || typeof window.firebase.firestore !== "function"){throw new Error("Firebase no está cargado. Revisa internet o los scripts de Firebase.");}
     try{
       if(!window.firebase.apps.length){
         var cfg = getFirebaseConfigIfAvailable();
         if(!cfg){throw new Error("No existe configuración Firebase para inicializar.");}
         window.firebase.initializeApp(cfg);
       }
-    }catch(error){
-      if(!window.firebase.apps || !window.firebase.apps.length){throw error;}
-    }
+    }catch(error){if(!window.firebase.apps || !window.firebase.apps.length){throw error;}}
   }
 
   function getDb(){
@@ -92,28 +80,16 @@ Con qué se conecta:
     return window.firebase.firestore();
   }
 
-  function parseTime(value){
-    var time = Date.parse(text(value));
-    return Number.isFinite(time) ? time : 0;
-  }
-
-  function rowUpdatedAt(row){
-    row = row || {};
-    return parseTime(row.updatedAt || row.forceUploadedAt || row.ultimaSincronizacion || row.actualizadoEn || row.createdAt || row.creadoEn || "");
-  }
-
-  function maxUpdatedIso(rows, fallback){
-    var max = 0;
-    (rows || []).forEach(function(row){max = Math.max(max, rowUpdatedAt(row));});
-    return max ? new Date(max).toISOString() : (fallback || now());
-  }
+  function parseTime(value){var time = Date.parse(text(value));return Number.isFinite(time) ? time : 0;}
+  function rowUpdatedAt(row){row = row || {};return parseTime(row.updatedAt || row.forceUploadedAt || row.ultimaSincronizacion || row.actualizadoEn || row.createdAt || row.creadoEn || "");}
+  function maxUpdatedIso(rows, fallback){var max = 0;(rows || []).forEach(function(row){max = Math.max(max, rowUpdatedAt(row));});return max ? new Date(max).toISOString() : (fallback || now());}
 
   function normalizeSnapshot(snapshot){
     var base = snapshot && typeof snapshot === "object" ? snapshot : {};
     var periods = getPeriodosService().dedupe((base.periods || []).map(function(period){return getPeriodosService().normalizePeriod(period);}));
     var students = getEstudiantesService().normalizeLocalList(base.students || []);
     var maxDataUpdatedAt = maxUpdatedIso(students.concat(periods), "");
-    var meta = Object.assign({app:"Requisitos", module:"ExcelLocal", version:"1.2.0", updatedAt:maxDataUpdatedAt || now()}, base.meta || {});
+    var meta = Object.assign({app:"Requisitos", module:"ExcelLocal", version:"1.2.1", updatedAt:maxDataUpdatedAt || now()}, base.meta || {});
     meta.totalStudents = students.length;
     meta.totalPeriods = periods.length;
     meta.updatedAt = meta.updatedAt || maxDataUpdatedAt || now();
@@ -159,7 +135,7 @@ Con qué se conecta:
     var studentRows = await getEstudiantesService().read(db);
     var remoteUpdatedAt = maxUpdatedIso(studentRows.concat(periodRows), pulledAt);
     return normalizeSnapshot({
-      meta:{app:"Requisitos", module:"ExcelLocal", version:"1.2.0", source:"firebase", pulledAt:pulledAt, updatedAt:remoteUpdatedAt},
+      meta:{app:"Requisitos", module:"ExcelLocal", version:"1.2.1", source:"firebase", pulledAt:pulledAt, updatedAt:remoteUpdatedAt},
       periods:periodRows,
       students:studentRows,
       history:[{id:"firebase_pull_" + Date.now(), action:"pullFirebase", periodoId:"TODOS", periodoLabel:"Todos los períodos", fileName:"Firebase", totalRows:studentRows.length, totalPeriods:periodRows.length, createdAt:pulledAt}],
@@ -173,6 +149,25 @@ Con qué se conecta:
     clean.updatedAt = clean.updatedAt || now();
     clean.ultimaSincronizacion = now();
     return clean;
+  }
+
+  function controlledStudentPatch(student){
+    var patchService = getPatchService();
+    if(patchService && typeof patchService.buildPatch === "function"){
+      return patchService.buildPatch(student);
+    }
+    var docId = text(student.cedula || student.numeroIdentificacion || student.docId || student._docId);
+    return {
+      cedula:text(student.cedula || docId),
+      numeroIdentificacion:text(student.numeroIdentificacion || student.cedula || docId),
+      estadoMatricula:text(student.estadoMatricula || "ACTIVO"),
+      retiradoEn:student.retiradoEn || "",
+      historialEstadoMatricula:Array.isArray(student.historialEstadoMatricula) ? clone(student.historialEstadoMatricula) : [],
+      periodoId:text(student.periodoId || ""),
+      ultimoPeriodoId:text(student.ultimoPeriodoId || student.periodoId || ""),
+      updatedAt:now(),
+      ultimaSincronizacion:now()
+    };
   }
 
   async function commitInChunks(db, writes){
@@ -197,10 +192,7 @@ Con qué se conecta:
     (clean.students || []).forEach(function(student){
       var docId = text(student.cedula || student.numeroIdentificacion || student.docId || student._docId);
       if(!docId){return;}
-      var data = cleanForFirebase(student);
-      data.cedula = text(data.cedula || docId);
-      data.numeroIdentificacion = text(data.numeroIdentificacion || data.cedula || docId);
-      writes.push({ref:db.collection("Estudiantes").doc(docId), data:data});
+      writes.push({ref:db.collection("Estudiantes").doc(docId), data:controlledStudentPatch(student)});
     });
 
     await commitInChunks(db, writes);
@@ -231,7 +223,7 @@ Con qué se conecta:
       var local = readLocalSnapshot();
       if(!snapshotHasData(local)){throw new Error("La Base Local no tiene datos para subir a Firebase.");}
       var pushed = await writeRemoteSnapshot(db, local);
-      var summary = saveStatus({ok:true, mode:"push", source:"local", pushedAt:now(), totalStudents:pushed.students.length, totalPeriods:pushed.periods.length, collections:[{collection:"periodos", rows:pushed.periods.length}, {collection:"Estudiantes", rows:pushed.students.length}], message:"Datos locales actualizados en Firebase."});
+      var summary = saveStatus({ok:true, mode:"push", source:"local", pushedAt:now(), totalStudents:pushed.students.length, totalPeriods:pushed.periods.length, collections:[{collection:"periodos", rows:pushed.periods.length}, {collection:"Estudiantes", rows:pushed.students.length}], message:"Datos locales actualizados en Firebase con parche controlado."});
       saveSyncStatus({ok:true, mode:"push", lastSyncDate:today(), lastSyncAt:now(), message:summary.message});
       emit("firebase-push-finished", summary);
       return summary;
@@ -261,23 +253,12 @@ Con qué se conecta:
       var action = "none";
       var finalSnapshot = local;
 
-      if(localHas && !remoteHas){
-        finalSnapshot = await writeRemoteSnapshot(db, local);
-        action = "restore_firebase_from_local";
-      }else if(!localHas && remoteHas){
-        finalSnapshot = writeLocalSnapshot(remote, "restoreLocalFromFirebase");
-        action = "restore_local_from_firebase";
-      }else if(localHas && remoteHas){
-        if(snapshotUpdatedAt(local) > snapshotUpdatedAt(remote)){
-          finalSnapshot = await writeRemoteSnapshot(db, local);
-          action = "local_newer_to_firebase";
-        }else{
-          finalSnapshot = writeLocalSnapshot(remote, "firebaseNewerToLocal");
-          action = "firebase_newer_to_local";
-        }
-      }else{
-        action = "empty_both";
-      }
+      if(localHas && !remoteHas){finalSnapshot = await writeRemoteSnapshot(db, local);action = "restore_firebase_from_local";}
+      else if(!localHas && remoteHas){finalSnapshot = writeLocalSnapshot(remote, "restoreLocalFromFirebase");action = "restore_local_from_firebase";}
+      else if(localHas && remoteHas){
+        if(snapshotUpdatedAt(local) > snapshotUpdatedAt(remote)){finalSnapshot = await writeRemoteSnapshot(db, local);action = "local_newer_to_firebase_patch";}
+        else{finalSnapshot = writeLocalSnapshot(remote, "firebaseNewerToLocal");action = "firebase_newer_to_local";}
+      }else{action = "empty_both";}
 
       var summary = saveStatus({ok:true, mode:"sync", syncMode:mode, action:action, source:"Estudiantes_periodos", syncedAt:now(), totalStudents:finalSnapshot && finalSnapshot.students ? finalSnapshot.students.length : 0, totalPeriods:finalSnapshot && finalSnapshot.periods ? finalSnapshot.periods.length : 0, message:"Sincronización Base Local ↔ Firebase finalizada. Acción: " + action + "."});
       saveSyncStatus({ok:true, mode:"sync", action:action, lastSyncDate:today(), lastSyncAt:now(), message:summary.message});
@@ -295,14 +276,8 @@ Con qué se conecta:
     var daily = getDailyService();
     if(daily && !daily.shouldRun(forceRun)){return daily.skipped();}
     if(daily){daily.markStarted("daily");}
-    try{
-      var result = await sync({mode:"daily"});
-      if(daily){daily.markSuccess(result);}
-      return result;
-    }catch(error){
-      if(daily){daily.markError(error);}
-      throw error;
-    }
+    try{var result = await sync({mode:"daily"});if(daily){daily.markSuccess(result);}return result;}
+    catch(error){if(daily){daily.markError(error);}throw error;}
   }
 
   window.BaseLocalFirebase = {pull:pull, push:push, sync:sync, runDailyIfNeeded:runDailyIfNeeded, getLastStatus:getLastStatus, getSyncStatus:getSyncStatus, readLocalSnapshot:readLocalSnapshot, readRemoteSnapshot:function(){return readRemoteSnapshot(getDb());}};
