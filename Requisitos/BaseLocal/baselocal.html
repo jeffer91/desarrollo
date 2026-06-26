@@ -5,7 +5,7 @@ Ruta o ubicación: /Requisitos/BaseLocal/baselocal.html
 Función o funciones:
 - Mostrar la base local generada desde carga Excel y Firebase.
 - Ver períodos, estudiantes activos, retirados, historial y diagnóstico.
-- Conectar servicios pequeños de campos, normalización, filtros, matrícula y Firebase.
+- Conectar servicios pequeños de campos, normalización, filtros, matrícula, Firebase y diagnóstico.
 - No mostrar título propio porque Maqueta controla el menú superior.
 Con qué se conecta:
 - baselocal.css
@@ -17,6 +17,7 @@ Con qué se conecta:
 - services/bl-sync-diario.js
 - services/bl-matricula.service.js
 - services/bl-firestore-patch.js
+- services/bl-healthcheck.js
 - baselocal.connector.js
 - baselocal.core.js
 - baselocal.firebase.js
@@ -104,6 +105,7 @@ Con qué se conecta:
   <script src="services/bl-sync-diario.js"></script>
   <script src="services/bl-matricula.service.js"></script>
   <script src="services/bl-firestore-patch.js"></script>
+  <script src="services/bl-healthcheck.js"></script>
   <script src="baselocal.connector.js"></script>
   <script src="baselocal.core.js"></script>
   <script src="baselocal.firebase.js"></script>
