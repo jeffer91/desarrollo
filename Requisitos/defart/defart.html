@@ -17,7 +17,7 @@ Con qué se conecta:
 - ../BaseLocal/baselocal.connector.js
 - ../Gestion/Excel/excel-local/excel-local.config.js
 - ../Gestion/Excel/excel-local/excel-local.storage.js
-- ../Gestion/Excel/excel-local/excel-local.bridge.js
+- ../Gestion/Excel/excel-local.bridge.js
 - ../Gestion/Excel/excel-local.repo.js
 ========================================================= -->
 <html lang="es">
@@ -59,7 +59,6 @@ Con qué se conecta:
       <div class="def-toolbar-actions">
         <button id="def-btn-clear" type="button">Limpiar filtros</button>
         <button id="def-btn-refresh" type="button">Actualizar</button>
-        <button id="def-btn-save" type="button">Guardar todo</button>
         <button id="def-btn-export" type="button">Descargar Excel</button>
       </div>
     </section>
@@ -102,6 +101,8 @@ Con qué se conecta:
       </details>
     </section>
   </main>
+
+  <button id="def-btn-save" class="def-floating-save" type="button">Guardar todo</button>
 
   <script src="../Gestion/Excel/excel-local/excel-local.config.js"></script>
   <script src="../Gestion/Excel/excel-local/excel-local.storage.js"></script>
