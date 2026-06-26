@@ -6,9 +6,11 @@ Función o funciones:
 - Marcar RETIRADO cuando un estudiante ya no aparece en una nueva carga del mismo período.
 - Reactivar como ACTIVO cuando vuelve a aparecer.
 - Evitar duplicados: la cédula manda y el período nuevo reemplaza al anterior.
+- Mantener divisiones existentes cuando se carga un nuevo Excel del mismo período.
 Con qué se conecta:
 - bl-campos.js
 - bl-normalizador.js
+- bl-divisiones.service.js
 - excel-local.repo.js
 - bl-firestore-patch.js
 ========================================================= */
@@ -35,6 +37,18 @@ Con qué se conecta:
     return text(row.cedula || row.Cedula || row.CEDULA || row.numeroIdentificacion || row.numeroidentificacion || row.NumeroIdentificacion || row.identificacion || row.Identificacion);
   }
 
+  function normalizeDivisiones(value){
+    if(normalizador() && typeof normalizador().normalizeDivisiones === "function"){
+      return normalizador().normalizeDivisiones(value);
+    }
+    if(window.BLDivisionesService && typeof window.BLDivisionesService.normalizeDivisiones === "function"){
+      return window.BLDivisionesService.normalizeDivisiones(value);
+    }
+    if(Array.isArray(value)){return value.map(text).filter(Boolean);}
+    var single = text(value);
+    return single ? [single] : [];
+  }
+
   function normalizeStudent(row, index, period){
     period = period || {id:"", label:""};
     var r;
@@ -55,6 +69,8 @@ Con qué se conecta:
     r.nombrecarrera = text(r.nombrecarrera || r.nombreCarrera || r.carrera || r.NombreCarrera);
     r.estadoMatricula = normalizeEstado(r.estadoMatricula || "ACTIVO");
     r.historialEstadoMatricula = Array.isArray(r.historialEstadoMatricula) ? r.historialEstadoMatricula : [];
+    r.divisiones = normalizeDivisiones(r.divisiones || r.division || r.Division || r.División);
+    if(r.divisiones.length){r.division = r.divisiones[0];}else{delete r.division;}
     r.updatedAt = now();
     r.ultimaSincronizacion = now();
     return r;
@@ -96,6 +112,12 @@ Con qué se conecta:
     return map;
   }
 
+  function preserveDivisiones(previous, incoming){
+    var prev = normalizeDivisiones(previous && (previous.divisiones || previous.division));
+    var inc = normalizeDivisiones(incoming && (incoming.divisiones || incoming.division));
+    return inc.length ? inc : prev;
+  }
+
   function reconcile(snapshot, incomingRows, period, options){
     options = options || {};
     var snap = snapshot && typeof snapshot === "object" ? snapshot : {students:[]};
@@ -113,7 +135,9 @@ Con qué se conecta:
       var previous = byCedula[cedula] || null;
       var wasRetirado = previous && normalizeEstado(previous.estadoMatricula) === "RETIRADO";
       var moved = previous && text(previous.periodoId) && text(previous.periodoId) !== text(period.id);
-      var merged = Object.assign({}, previous || {}, incoming, {cedula:cedula, numeroIdentificacion:text(incoming.numeroIdentificacion || cedula), periodoId:period.id, ultimoPeriodoId:period.id, periodoLabel:period.label, estadoMatricula:"ACTIVO", updatedAt:now(), ultimaSincronizacion:now()});
+      var divisiones = preserveDivisiones(previous, incoming);
+      var merged = Object.assign({}, previous || {}, incoming, {cedula:cedula, numeroIdentificacion:text(incoming.numeroIdentificacion || cedula), periodoId:period.id, ultimoPeriodoId:period.id, periodoLabel:period.label, estadoMatricula:"ACTIVO", divisiones:divisiones, updatedAt:now(), ultimaSincronizacion:now()});
+      if(divisiones.length){merged.division = divisiones[0];}else{delete merged.division;}
       if(!previous){stats.added += 1;}else{stats.updated += 1;}
       if(moved){stats.moved += 1;merged = addStateEvent(merged, "ACTIVO", period, "Cambio de período: se reemplazó el período anterior", {periodoAnterior:previous.periodoId || ""});}
       if(wasRetirado){stats.reactivated += 1;merged = addStateEvent(merged, "ACTIVO", period, "Volvió a aparecer en carga nueva");}
@@ -132,5 +156,5 @@ Con qué se conecta:
     return {students:Object.keys(byCedula).map(function(cedula){return byCedula[cedula];}), stats:stats, incoming:normalizedIncoming};
   }
 
-  window.BLMatriculaService = {getCedula:getCedula, normalizeEstado:normalizeEstado, normalizeStudent:normalizeStudent, markRetirado:markRetirado, markActivo:markActivo, reconcile:reconcile};
+  window.BLMatriculaService = {getCedula:getCedula, normalizeEstado:normalizeEstado, normalizeStudent:normalizeStudent, markRetirado:markRetirado, markActivo:markActivo, reconcile:reconcile, normalizeDivisiones:normalizeDivisiones};
 })(window);
