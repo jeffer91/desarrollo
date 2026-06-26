@@ -1,7 +1,7 @@
 /*
   Base local BL - Curriculo
   Archivo: bl.schema.js
-  Funcion: normalizar registros, validar campos base y detectar campos nuevos.
+  Funcion: normalizar registros, validar campos base y detectar campos nuevos sin perder informacion.
 */
 (function (window) {
   'use strict';
@@ -11,6 +11,7 @@
   const BASE_FIELDS = Object.freeze([
     'idLocal',
     'idFirebase',
+    'clave',
     'nombre',
     'modulo',
     'ruta',
@@ -18,6 +19,7 @@
     'datos',
     'creadoEn',
     'actualizadoEn',
+    'fechaActualizacion',
     'sincronizadoEn',
     'origen',
     'version'
@@ -33,9 +35,22 @@
     menu: ['titulo', 'url', 'orden', 'activo']
   });
 
+  function normalizeModuleName(moduleName) {
+    const raw = moduleName || 'general';
+    if (BL.utils?.normalizeText) return BL.utils.normalizeText(raw).replace(/-/g, '_');
+    return String(raw).trim().toLowerCase().replace(/\s+/g, '_');
+  }
+
   function knownFieldsForModule(moduleName) {
-    const modulo = BL.utils?.normalizeText ? BL.utils.normalizeText(moduleName).replace(/-/g, '_') : String(moduleName || '');
+    const modulo = normalizeModuleName(moduleName);
     return [...BASE_FIELDS, ...(MODULE_FIELDS[modulo] || [])];
+  }
+
+  function getDataObject(source) {
+    if (!source || typeof source !== 'object') return {};
+    if (source.datos && typeof source.datos === 'object') return source.datos;
+    if (source.data && typeof source.data === 'object') return source.data;
+    return source;
   }
 
   function normalizeRecord(input, options) {
@@ -45,6 +60,8 @@
     const modulo = source.modulo || opts.modulo || 'general';
     const ruta = source.ruta || opts.ruta || 'Curriculo';
     const nombre = source.nombre || opts.nombre || source.titulo || source.name || 'registro-sin-nombre';
+    const datos = getDataObject(source);
+    const estadoPendiente = BL.config?.estadosRegistro?.PENDIENTE || 'pendiente';
 
     const record = {
       idLocal: source.idLocal || BL.utils?.makeId?.(`bl-${modulo}`) || `bl-${Date.now()}`,
@@ -52,21 +69,22 @@
       nombre,
       modulo,
       ruta,
-      estado: source.estado || BL.config?.estadosRegistro?.PENDIENTE || 'pendiente',
-      datos: source.datos || source.data || source,
+      estado: source.estado || estadoPendiente,
+      datos: BL.utils?.clone ? BL.utils.clone(datos) : JSON.parse(JSON.stringify(datos || {})),
       creadoEn: source.creadoEn || now,
-      actualizadoEn: source.actualizadoEn || source.updatedAt || source.fechaActualizacion || now,
+      actualizadoEn: source.actualizadoEn || source.fechaActualizacion || source.updatedAt || now,
+      fechaActualizacion: source.fechaActualizacion || source.actualizadoEn || source.updatedAt || now,
       sincronizadoEn: source.sincronizadoEn || null,
       origen: source.origen || opts.origen || 'base-local',
       version: source.version || BL.config?.version || '1.0.0'
     };
 
-    record.clave = BL.utils?.buildRecordKey ? BL.utils.buildRecordKey(record) : `${record.modulo}:${record.ruta}:${record.nombre}`;
+    record.clave = source.clave || (BL.utils?.buildRecordKey ? BL.utils.buildRecordKey(record) : `${record.modulo}:${record.ruta}:${record.nombre}`);
     return record;
   }
 
-  function validateRecord(input) {
-    const record = normalizeRecord(input);
+  function validateRecord(input, options) {
+    const record = normalizeRecord(input, options);
     const errors = [];
 
     ['idLocal', 'nombre', 'modulo', 'ruta', 'estado', 'actualizadoEn'].forEach((field) => {
@@ -132,6 +150,7 @@
   BL.schema = {
     baseFields: BASE_FIELDS,
     moduleFields: MODULE_FIELDS,
+    normalizeModuleName,
     knownFieldsForModule,
     normalizeRecord,
     validateRecord,
