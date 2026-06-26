@@ -5,8 +5,9 @@ Función o funciones:
 - Renderizar tabla inteligente de Defensas.
 - Manejar filtros por período, carrera, estado, sede y búsqueda.
 - Editar N-ART y N-DEF directamente en tabla.
+- Mostrar cálculo N-FIN en vivo antes de guardar.
 - Guardado automático y botón Guardar todo con barra pequeña de progreso.
-- Ordenar al hacer clic en encabezados.
+- Ordenar al hacer clic en encabezados sin romper edición pendiente.
 - Descargar Excel visible.
 Con qué se conecta:
 - defart.core.js
@@ -26,7 +27,8 @@ Con qué se conecta:
     data:null,
     changes:{},
     autoTimer:null,
-    rendering:false
+    rendering:false,
+    saving:false
   };
 
   var HEADERS = [
@@ -38,22 +40,10 @@ Con qué se conecta:
     {key:"_nfin", label:"N-FIN", className:"col-nota"}
   ];
 
-  function el(id){
-    return document.getElementById(id);
-  }
-
-  function text(value){
-    return String(value == null ? "" : value).trim();
-  }
-
-  function esc(value){
-    return text(value)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/\"/g, "&quot;")
-      .replace(/'/g, "&#039;");
-  }
+  function el(id){return document.getElementById(id);}
+  function text(value){return String(value == null ? "" : value).trim();}
+  function esc(value){return text(value).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;").replace(/'/g,"&#039;");}
+  function clone(value){try{return JSON.parse(JSON.stringify(value == null ? null : value));}catch(error){return value;}}
 
   function status(message, type){
     var box = el("def-status");
@@ -88,6 +78,14 @@ Con qué se conecta:
     return value == null ? "" : String(value);
   }
 
+  function numberValue(value){
+    if(value === null || value === undefined || text(value) === ""){
+      return null;
+    }
+    var num = Number(text(value).replace(",", "."));
+    return Number.isFinite(num) ? num : null;
+  }
+
   function option(value, label, selected){
     return '<option value="' + esc(value) + '" ' + (selected ? "selected" : "") + '>' + esc(label) + '</option>';
   }
@@ -103,13 +101,11 @@ Con qué se conecta:
         return option(item.id, item.label || item.id, state.periodId === item.id);
       }).join("");
     }
-
     if(carrera){
       carrera.innerHTML = option("", "Todas", !state.career) + (data.careerList || []).map(function(item){
         return option(item, item, state.career === item);
       }).join("");
     }
-
     if(sede){
       sede.innerHTML = option("", "Todas", !state.sede) + (data.sedeList || []).map(function(item){
         return option(item, item, state.sede === item);
@@ -117,13 +113,7 @@ Con qué se conecta:
     }
   }
 
-  function kpi(id, value){
-    var box = el(id);
-    if(box){
-      box.textContent = value || 0;
-    }
-  }
-
+  function kpi(id, value){var box = el(id); if(box) box.textContent = value || 0;}
   function renderKpis(data){
     var k = data.kpis || {};
     kpi("def-kpi-total", k.total);
@@ -147,26 +137,31 @@ Con qué se conecta:
     return '<span class="def-pill ' + stateClass(row) + '">' + esc(row._estadoDefensa) + '</span>';
   }
 
+  function pendingPatch(id){
+    return state.changes[id] ? clone(state.changes[id]) : null;
+  }
+
+  function withPending(row){
+    var patch = pendingPatch(row._defId);
+    if(patch && window.DefartCore && typeof window.DefartCore.preview === "function"){
+      return window.DefartCore.preview(row, patch);
+    }
+    return row;
+  }
+
   function inputHtml(row, field){
+    var shown = withPending(row);
     var isArt = field === "nart";
-    var value = isArt ? row._nart : row._ndef;
-    var enabled = isArt ? row._canArt : row._canDef;
+    var value = isArt ? shown._nart : shown._ndef;
+    var enabled = isArt ? shown._canArt : shown._canDef;
     var title = "";
-
-    if(!enabled && isArt){
-      title = "Bloqueado por requisitos.";
-    }
-    if(!enabled && !isArt){
-      title = "Bloqueado hasta tener N-ART igual o mayor a 7.";
-    }
-
+    if(!enabled && isArt) title = "Bloqueado por requisitos.";
+    if(!enabled && !isArt) title = "Bloqueado hasta tener N-ART igual o mayor a 7.";
     return '<input class="def-note-input" type="number" min="0" max="10" step="0.01" inputmode="decimal" data-id="' + esc(row._defId) + '" data-field="' + field + '" value="' + esc(noteText(value)) + '" ' + (enabled ? "" : "disabled") + ' title="' + esc(title) + '" />';
   }
 
   function sortIcon(key){
-    if(state.sortKey !== key){
-      return "";
-    }
+    if(state.sortKey !== key) return "";
     return state.sortDir === "asc" ? " ▲" : " ▼";
   }
 
@@ -174,59 +169,41 @@ Con qué se conecta:
     if(!rows || !rows.length){
       return '<div class="def-empty">Sin estudiantes con los filtros seleccionados.</div>';
     }
-
     var head = '<table class="def-table"><thead><tr>' + HEADERS.map(function(header){
       return '<th class="' + esc(header.className || "") + '" data-sort="' + esc(header.key) + '">' + esc(header.label) + sortIcon(header.key) + '</th>';
     }).join("") + '<th data-sort="_estadoDefensa">Estado' + sortIcon("_estadoDefensa") + '</th></tr></thead><tbody>';
 
-    var body = rows.map(function(row){
-      return '<tr class="' + esc(stateClass(row)) + '" data-id="' + esc(row._defId) + '">' +
+    var body = rows.map(function(original){
+      var row = withPending(original);
+      var pending = !!state.changes[original._defId];
+      return '<tr class="' + esc(stateClass(row)) + (pending ? ' is-pending' : '') + '" data-id="' + esc(original._defId) + '">' +
         '<td class="col-cedula nowrap">' + esc(row._cedula) + '</td>' +
         '<td class="col-nombre">' + esc(row._nombre || "Sin nombre") + '</td>' +
         '<td class="col-carrera">' + esc(row._carrera) + '</td>' +
-        '<td class="col-nota">' + inputHtml(row, "nart") + '</td>' +
-        '<td class="col-nota">' + inputHtml(row, "ndef") + '</td>' +
-        '<td class="col-nota"><strong id="def-nfin-' + esc(row._defId) + '">' + esc(noteText(row._nfin)) + '</strong></td>' +
+        '<td class="col-nota">' + inputHtml(original, "nart") + '</td>' +
+        '<td class="col-nota">' + inputHtml(original, "ndef") + '</td>' +
+        '<td class="col-nota"><strong class="def-nfin-value">' + esc(noteText(row._nfin)) + '</strong></td>' +
         '<td class="col-estado">' + statePill(row) + '</td>' +
       '</tr>';
     }).join("");
-
     return head + body + '</tbody></table>';
   }
 
   function collectOptions(){
-    return {
-      periodId:state.periodId,
-      career:state.career,
-      status:state.status,
-      sede:state.sede,
-      search:state.search,
-      sortKey:state.sortKey,
-      sortDir:state.sortDir
-    };
+    return {periodId:state.periodId, career:state.career, status:state.status, sede:state.sede, search:state.search, sortKey:state.sortKey, sortDir:state.sortDir};
   }
 
   function render(){
-    if(state.rendering){
-      return;
-    }
+    if(state.rendering || state.saving) return;
     state.rendering = true;
     try{
       state.data = window.DefartCore.summary(collectOptions());
       fillFilters(state.data);
       renderKpis(state.data);
-
       var wrap = el("def-table-wrap");
-      if(wrap){
-        wrap.innerHTML = tableHtml(state.data.rows || []);
-      }
-      if(el("def-visible-count")){
-        el("def-visible-count").textContent = (state.data.rows || []).length + " visibles";
-      }
-      if(el("def-diagnostics")){
-        el("def-diagnostics").textContent = JSON.stringify(state.data.diagnostics || {}, null, 2);
-      }
-
+      if(wrap) wrap.innerHTML = tableHtml(state.data.rows || []);
+      if(el("def-visible-count")) el("def-visible-count").textContent = (state.data.rows || []).length + " visibles";
+      if(el("def-diagnostics")) el("def-diagnostics").textContent = JSON.stringify(state.data.diagnostics || {}, null, 2);
       bindTableEvents();
       updatePendingMessage();
       status("Defensas cargado correctamente desde BaseLocal.", "ok");
@@ -243,28 +220,39 @@ Con qué se conecta:
     return rows.find(function(row){return row._defId === id;}) || null;
   }
 
-  function getInputValue(id, field){
-    var input = document.querySelector('.def-note-input[data-id="' + CSS.escape(id) + '"][data-field="' + CSS.escape(field) + '"]');
-    return input ? input.value : "";
+  function findInput(id, field){
+    var found = null;
+    document.querySelectorAll(".def-note-input").forEach(function(input){
+      if(input.getAttribute("data-id") === id && input.getAttribute("data-field") === field){
+        found = input;
+      }
+    });
+    return found;
   }
 
   function setChange(id, field, value){
-    if(!state.changes[id]){
-      state.changes[id] = {id:id};
-    }
+    if(!state.changes[id]) state.changes[id] = {id:id};
     state.changes[id][field] = value;
     updatePendingMessage();
   }
 
   function updatePendingMessage(){
     var total = Object.keys(state.changes).length;
+    var btn = el("def-btn-save");
+    if(btn) btn.disabled = state.saving;
     if(total){
-      setProgress(12, total + " estudiante(s) con cambios pendientes.");
-      saveState("Cambios pendientes");
+      setProgress(state.saving ? 60 : 12, total + " estudiante(s) con cambios pendientes.");
+      saveState(state.saving ? "Guardando..." : "Cambios pendientes");
     }else{
-      setProgress(0, "Sin cambios pendientes.");
-      saveState("Listo");
+      setProgress(state.saving ? 60 : 0, state.saving ? "Guardando..." : "Sin cambios pendientes.");
+      saveState(state.saving ? "Guardando..." : "Listo");
     }
+  }
+
+  function validDecimals(value){
+    var raw = text(value).replace(",", ".");
+    if(!raw) return true;
+    return /^\d{1,2}(\.\d{0,2})?$|^10(\.0{0,2})?$|^0(\.\d{0,2})?$/.test(raw);
   }
 
   function validateInput(input){
@@ -274,31 +262,57 @@ Con qué se conecta:
       return true;
     }
     var num = Number(value.replace(",", "."));
-    var ok = Number.isFinite(num) && num >= 0 && num <= 10;
+    var ok = Number.isFinite(num) && num >= 0 && num <= 10 && validDecimals(value);
     input.classList.toggle("is-invalid", !ok);
     if(!ok){
-      status("La nota debe estar entre 0 y 10, máximo 2 decimales.", "warn");
+      status("La nota debe estar entre 0 y 10 y máximo 2 decimales.", "warn");
     }
     return ok;
   }
 
-  function onNoteInput(input){
-    if(!validateInput(input)){
-      return;
+  function rowPatchFromInputs(id){
+    var patch = {id:id};
+    var nart = findInput(id, "nart");
+    var ndef = findInput(id, "ndef");
+    if(nart) patch.nart = nart.value;
+    if(ndef) patch.ndef = ndef.value;
+    return patch;
+  }
+
+  function updateRowPreview(id){
+    var original = getRowById(id);
+    if(!original || !window.DefartCore || typeof window.DefartCore.preview !== "function") return;
+    var patch = rowPatchFromInputs(id);
+    var preview = window.DefartCore.preview(original, patch);
+    var rowEl = null;
+    document.querySelectorAll('#def-table-wrap tr[data-id]').forEach(function(tr){if(tr.getAttribute('data-id') === id) rowEl = tr;});
+    if(!rowEl) return;
+    rowEl.className = stateClass(preview) + " is-pending";
+    var nfin = rowEl.querySelector(".def-nfin-value");
+    if(nfin) nfin.textContent = noteText(preview._nfin);
+    var estado = rowEl.querySelector(".col-estado");
+    if(estado) estado.innerHTML = statePill(preview);
+    var ndefInput = findInput(id, "ndef");
+    if(ndefInput){
+      ndefInput.disabled = !preview._canDef;
+      ndefInput.title = preview._canDef ? "" : "Bloqueado hasta tener N-ART igual o mayor a 7.";
     }
+  }
+
+  function anyInvalidInputs(){
+    var invalid = false;
+    document.querySelectorAll(".def-note-input").forEach(function(input){
+      if(!validateInput(input)) invalid = true;
+    });
+    return invalid;
+  }
+
+  function onNoteInput(input){
+    if(!validateInput(input)) return;
     var id = input.getAttribute("data-id");
     var field = input.getAttribute("data-field");
     setChange(id, field, input.value);
-
-    if(field === "nart"){
-      var row = getRowById(id);
-      var nart = Number(text(input.value).replace(",", "."));
-      var ndefInput = document.querySelector('.def-note-input[data-id="' + CSS.escape(id) + '"][data-field="ndef"]');
-      if(ndefInput){
-        ndefInput.disabled = !(row && row._canArt && Number.isFinite(nart) && nart >= 7);
-      }
-    }
-
+    updateRowPreview(id);
     scheduleAutoSave();
   }
 
@@ -306,69 +320,66 @@ Con qué se conecta:
     document.querySelectorAll("#def-table-wrap th[data-sort]").forEach(function(th){
       th.addEventListener("click", function(){
         var key = th.getAttribute("data-sort");
-        if(state.sortKey === key){
-          state.sortDir = state.sortDir === "asc" ? "desc" : "asc";
-        }else{
-          state.sortKey = key;
-          state.sortDir = "asc";
-        }
+        if(state.sortKey === key) state.sortDir = state.sortDir === "asc" ? "desc" : "asc";
+        else{state.sortKey = key; state.sortDir = "asc";}
         render();
       });
     });
-
     document.querySelectorAll(".def-note-input").forEach(function(input){
       input.addEventListener("input", function(){onNoteInput(input);});
       input.addEventListener("change", function(){onNoteInput(input);});
     });
   }
 
-  function changesArray(){
-    return Object.keys(state.changes).map(function(key){return state.changes[key];});
-  }
+  function changesArray(){return Object.keys(state.changes).map(function(key){return state.changes[key];});}
 
   function scheduleAutoSave(){
-    if(state.autoTimer){
-      clearTimeout(state.autoTimer);
-    }
-    state.autoTimer = setTimeout(function(){
-      saveAll("auto");
-    }, 900);
+    if(state.autoTimer) clearTimeout(state.autoTimer);
+    state.autoTimer = setTimeout(function(){saveAll("auto");}, 1200);
   }
 
   function saveAll(mode){
+    if(state.saving) return;
+    if(state.autoTimer){clearTimeout(state.autoTimer); state.autoTimer = null;}
+    if(anyInvalidInputs()) return;
     var changes = changesArray();
-    if(!changes.length){
-      updatePendingMessage();
-      return;
-    }
+    if(!changes.length){updatePendingMessage(); return;}
 
-    try{
-      setProgress(45, "Guardando notas en BaseLocal...");
-      saveState(mode === "auto" ? "Guardado automático..." : "Guardando...");
-      var result = window.DefartCore.saveNotes(changes);
-      state.changes = {};
-      setProgress(100, result.message || "Notas guardadas.");
-      saveState("Guardado");
-      status((result.message || "Notas guardadas en BaseLocal.") + " BL sincronizará Firebase.", result.ok ? "ok" : "warn");
-      setTimeout(function(){
-        setProgress(0, "Sin cambios pendientes.");
-        saveState("Listo");
-      }, 1200);
-      render();
-    }catch(error){
-      console.error("[Defensas Guardar]", error);
-      setProgress(0, "No se pudo guardar.");
-      saveState("Error");
-      status(error.message || String(error), "warn");
-    }
+    state.saving = true;
+    setProgress(35, "Preparando guardado de notas...");
+    saveState(mode === "auto" ? "Guardado automático..." : "Guardando...");
+
+    setTimeout(function(){
+      try{
+        setProgress(70, "Guardando " + changes.length + " estudiante(s) en BaseLocal...");
+        var result = window.DefartCore.saveNotes(changes);
+        state.changes = {};
+        setProgress(100, result.message || "Notas guardadas.");
+        saveState("Guardado");
+        status((result.message || "Notas guardadas en BaseLocal.") + " BL sincronizará Firebase.", result.ok ? "ok" : "warn");
+        if(result.errors && result.errors.length){
+          status(result.message + " Errores: " + result.errors.slice(0, 2).join(" | "), "warn");
+        }
+        setTimeout(function(){
+          state.saving = false;
+          setProgress(0, "Sin cambios pendientes.");
+          saveState("Listo");
+          render();
+        }, 450);
+      }catch(error){
+        console.error("[Defensas Guardar]", error);
+        state.saving = false;
+        setProgress(0, "No se pudo guardar.");
+        saveState("Error");
+        status(error.message || String(error), "warn");
+      }
+    }, 40);
   }
 
   function exportExcel(){
     try{
-      var result = window.DefartExport.exportExcel((state.data && state.data.rows) || [], {
-        periodId:state.periodId || "TODOS",
-        periodLabel:state.periodId || "TODOS"
-      });
+      var rows = ((state.data && state.data.rows) || []).map(withPending);
+      var result = window.DefartExport.exportExcel(rows, {periodId:state.periodId || "TODOS", periodLabel:state.periodId || "TODOS"});
       status("Excel descargado: " + result.fileName, "ok");
     }catch(error){
       console.error("[Defensas Export]", error);
@@ -387,17 +398,19 @@ Con qué se conecta:
     if(el("def-btn-export")) el("def-btn-export").addEventListener("click", exportExcel);
 
     window.addEventListener("storage", function(event){
-      if(event.key === "REQ_BL_SIGNAL_V1" || event.key === "REQ_EXCEL_LOCAL_V1:snapshot"){
-        render();
+      if(event.key === "REQ_BL_SIGNAL_V1" || event.key === "REQ_EXCEL_LOCAL_V1:snapshot") render();
+    });
+    window.addEventListener("beforeunload", function(event){
+      if(Object.keys(state.changes).length){
+        event.preventDefault();
+        event.returnValue = "";
       }
     });
   }
 
   function boot(){
     try{
-      if(window.ExcelLocalBridge && typeof window.ExcelLocalBridge.ensureReady === "function"){
-        window.ExcelLocalBridge.ensureReady();
-      }
+      if(window.ExcelLocalBridge && typeof window.ExcelLocalBridge.ensureReady === "function") window.ExcelLocalBridge.ensureReady();
       bind();
       render();
     }catch(error){
@@ -406,9 +419,6 @@ Con qué se conecta:
     }
   }
 
-  if(document.readyState === "loading"){
-    document.addEventListener("DOMContentLoaded", boot);
-  }else{
-    boot();
-  }
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
 })(window, document);
