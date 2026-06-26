@@ -1,13 +1,15 @@
 /*
   Nombre completo: ta-titulo-articulo-api-client.service.js
-  Ruta o ubicación: /src/services/ta-titulo-articulo-api-client.service.js
+  Ruta o ubicación: /Requisitos/Titulos/src/services/ta-titulo-articulo-api-client.service.js
   Función o funciones:
-  - Centralizar llamadas del frontend hacia Netlify Functions.
-  - Enviar acciones de estudiante, coordinador, administrador y Telegram sin repetir código.
-  - Normalizar respuestas correctas y errores para las pantallas públicas y la pantalla local.
-  - Resolver automáticamente el endpoint correcto para Netlify, Netlify Dev, Live Server, Vite, doble click y Electron.
-  - Solicitar y recordar URL de funciones/token administrativo solo cuando el modo local lo necesita.
+  - Mantener la interfaz histórica TaTituloArticuloApi usada por estudiante, coordinador y administrador.
+  - Elegir automáticamente el origen de datos según el entorno.
+  - En modo local intentar Firebase directo.
+  - En Netlify usar Netlify Functions.
+  - Cargar Firebase directo de forma diferida para no romper doble click o Live Server al abrir la pantalla.
 */
+
+import { TaTituloArticuloRuntime } from "./ta-titulo-articulo-runtime.service.js";
 
 const BASE_FUNCTIONS_PATH = "/.netlify/functions";
 const BASE_FUNCTIONS_URL_KEY = "ta.titulo.articulo.baseFunctionsUrl";
@@ -15,6 +17,8 @@ const ADMIN_TOKEN_KEY = "ta.titulo.articulo.adminToken";
 const LOCAL_FUNCTIONS_URL_DEFAULT = "http://127.0.0.1:8888/.netlify/functions";
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "0.0.0.0", "::1"]);
 const ADMIN_ENDPOINTS = new Set(["admin", "telegram"]);
+
+let firebaseDirectPromise = null;
 
 function clean(value) {
   return String(value ?? "").replace(/\s+/g, " ").trim();
@@ -200,63 +204,140 @@ async function llamarFuncion(nombreEndpoint, action, payload = {}, options = {})
   return data;
 }
 
+async function cargarFirebaseDirect() {
+  if (!firebaseDirectPromise) {
+    firebaseDirectPromise = import("./ta-titulo-articulo-firebase-direct.service.js").then((mod) => mod.TaTituloArticuloFirebaseDirect);
+  }
+  return firebaseDirectPromise;
+}
+
+function errorFirebaseDirecto(error) {
+  const mensaje = clean(error?.message || error) || "Firebase directo no está disponible.";
+  const necesitaSdk = mensaje.includes("Failed to resolve module specifier") || mensaje.includes("firebase/firestore") || mensaje.includes("import.meta.env");
+  if (necesitaSdk) {
+    return new Error(`${mensaje} Falta el Bloque 3 para dejar el SDK de Firebase compatible con doble click y Live Server.`);
+  }
+  return new Error(mensaje);
+}
+
+async function ejecutarLocal(namespace, metodo, args) {
+  try {
+    const firebaseDirect = await cargarFirebaseDirect();
+    if (typeof firebaseDirect.disponible === "function" && !firebaseDirect.disponible()) {
+      throw new Error("Firebase directo no está configurado.");
+    }
+
+    const grupo = firebaseDirect?.[namespace];
+    const fn = grupo?.[metodo];
+    if (typeof fn !== "function") throw new Error(`No existe ${namespace}.${metodo} en Firebase directo.`);
+
+    const resultado = await fn(...args);
+    return { ...(resultado || {}), origenDatos: "firebase-direct" };
+  } catch (error) {
+    throw errorFirebaseDirecto(error);
+  }
+}
+
+async function ejecutarFunctions(namespace, metodo, args) {
+  const mapa = {
+    estudiante: {
+      buscarPorCedula: () => llamarFuncion("estudiante", "buscarPorCedula", { cedula: args[0] }),
+      consultarEstado: () => llamarFuncion("estudiante", "consultarEstado", { cedula: args[0] }),
+      guardarTelegram: () => llamarFuncion("estudiante", "guardarTelegram", { cedula: args[0], telegramUser: args[1] }),
+      enviarPropuestas: () => llamarFuncion("estudiante", "enviarPropuestas", args[0])
+    },
+    coordinador: {
+      listarCoordinadores: () => llamarFuncion("coordinador", "listarCoordinadores"),
+      cargarEstudiantes: () => llamarFuncion("coordinador", "cargarEstudiantes", { coordinadorId: args[0] }),
+      iniciarRevision: () => llamarFuncion("coordinador", "iniciarRevision", { envioId: args[0], coordinadorId: args[1] }),
+      guardarRevision: () => llamarFuncion("coordinador", "guardarRevision", args[0])
+    },
+    admin: {
+      listarResumen: () => llamarFuncion("admin", "listarResumen", {}, { adminToken: args[0] }),
+      activarPeriodo: () => llamarFuncion("admin", "activarPeriodo", { periodoId: args[0] }, { adminToken: args[1] }),
+      guardarCoordinador: () => llamarFuncion("admin", "guardarCoordinador", { nombre: args[0] }, { adminToken: args[1] }),
+      asignarCoordinadorCarrera: () => llamarFuncion("admin", "asignarCoordinadorCarrera", args[0], { adminToken: args[1] })
+    },
+    telegram: {
+      enviarMensaje: () => llamarFuncion("telegram", "enviarMensaje", { chatId: args[0], mensaje: args[1] }, { adminToken: args[2] })
+    }
+  };
+
+  const fn = mapa?.[namespace]?.[metodo];
+  if (typeof fn !== "function") throw new Error(`No existe ${namespace}.${metodo} en Netlify Functions.`);
+  const resultado = await fn();
+  return { ...(resultado || {}), origenDatos: "netlify-functions" };
+}
+
+async function ejecutar(namespace, metodo, args) {
+  const origen = TaTituloArticuloRuntime.obtenerOrigenDatos();
+  if (origen === "netlify-functions") return ejecutarFunctions(namespace, metodo, args);
+  return ejecutarLocal(namespace, metodo, args);
+}
+
 export const TaTituloArticuloApi = Object.freeze({
   estudiante: {
     buscarPorCedula(cedula) {
-      return llamarFuncion("estudiante", "buscarPorCedula", { cedula });
+      return ejecutar("estudiante", "buscarPorCedula", [cedula]);
     },
     consultarEstado(cedula) {
-      return llamarFuncion("estudiante", "consultarEstado", { cedula });
+      return ejecutar("estudiante", "consultarEstado", [cedula]);
     },
     guardarTelegram(cedula, telegramUser) {
-      return llamarFuncion("estudiante", "guardarTelegram", { cedula, telegramUser });
+      return ejecutar("estudiante", "guardarTelegram", [cedula, telegramUser]);
     },
     enviarPropuestas(datosEnvio) {
-      return llamarFuncion("estudiante", "enviarPropuestas", datosEnvio);
+      return ejecutar("estudiante", "enviarPropuestas", [datosEnvio]);
     }
   },
 
   coordinador: {
     listarCoordinadores() {
-      return llamarFuncion("coordinador", "listarCoordinadores");
+      return ejecutar("coordinador", "listarCoordinadores", []);
     },
     cargarEstudiantes(coordinadorId) {
-      return llamarFuncion("coordinador", "cargarEstudiantes", { coordinadorId });
+      return ejecutar("coordinador", "cargarEstudiantes", [coordinadorId]);
     },
     iniciarRevision(envioId, coordinadorId) {
-      return llamarFuncion("coordinador", "iniciarRevision", { envioId, coordinadorId });
+      return ejecutar("coordinador", "iniciarRevision", [envioId, coordinadorId]);
     },
     guardarRevision(revision) {
-      return llamarFuncion("coordinador", "guardarRevision", revision);
+      return ejecutar("coordinador", "guardarRevision", [revision]);
     }
   },
 
   admin: {
     listarResumen(adminToken) {
-      return llamarFuncion("admin", "listarResumen", {}, { adminToken });
+      return ejecutar("admin", "listarResumen", [adminToken]);
     },
     activarPeriodo(periodoId, adminToken) {
-      return llamarFuncion("admin", "activarPeriodo", { periodoId }, { adminToken });
+      return ejecutar("admin", "activarPeriodo", [periodoId, adminToken]);
     },
     guardarCoordinador(nombre, adminToken) {
-      return llamarFuncion("admin", "guardarCoordinador", { nombre }, { adminToken });
+      return ejecutar("admin", "guardarCoordinador", [nombre, adminToken]);
     },
     asignarCoordinadorCarrera(datos, adminToken) {
-      return llamarFuncion("admin", "asignarCoordinadorCarrera", datos, { adminToken });
+      return ejecutar("admin", "asignarCoordinadorCarrera", [datos, adminToken]);
     }
   },
 
   telegram: {
     enviarMensaje(chatId, mensaje, adminToken) {
-      return llamarFuncion("telegram", "enviarMensaje", { chatId, mensaje }, { adminToken });
+      return ejecutar("telegram", "enviarMensaje", [chatId, mensaje, adminToken]);
     }
   },
 
   diagnostico: {
-    obtenerBaseFunctionsPath,
+    obtenerOrigenDatos() {
+      return TaTituloArticuloRuntime.obtenerOrigenDatos();
+    },
+    obtenerRuntime() {
+      return TaTituloArticuloRuntime.detectarRuntime();
+    },
     limpiarConfiguracionLocal() {
       setLocalStorageValue(BASE_FUNCTIONS_URL_KEY, "");
       setLocalStorageValue(ADMIN_TOKEN_KEY, "");
+      TaTituloArticuloRuntime.limpiarConfiguracion();
     }
   }
 });
