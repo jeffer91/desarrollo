@@ -5,11 +5,14 @@ Función o funciones:
 - Descargar Excel de la tabla visible de Defensas.
 - Exportar solo columnas visibles: Cédula, Nombre, Carrera, N-ART, N-DEF, N-FIN.
 - Nombrar el archivo con período, fecha y hora.
+- Mantener exportación compatible aunque no cargue la librería XLSX.
 Con qué se conecta:
 - defart.app.js
 ========================================================= */
 (function(window){
   "use strict";
+
+  var HEADERS = ["Cédula", "Nombre", "Carrera", "N-ART", "N-DEF", "N-FIN"];
 
   function text(value){
     return String(value == null ? "" : value).trim();
@@ -59,7 +62,7 @@ Con qué se conecta:
   }
 
   function downloadBlob(name, content, type){
-    var blob = new Blob([content], {type:type || "text/plain;charset=utf-8"});
+    var blob = new Blob([content], {type:type || "application/octet-stream"});
     var link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
     link.download = name;
@@ -69,16 +72,35 @@ Con qué se conecta:
     setTimeout(function(){URL.revokeObjectURL(link.href);}, 1000);
   }
 
-  function csvFallback(rows, fileName){
+  function escapeHtml(value){
+    return text(value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  function excelHtmlFallback(rows, fileName){
     var exported = rowsToVisibleExport(rows);
-    var headers = ["Cédula", "Nombre", "Carrera", "N-ART", "N-DEF", "N-FIN"];
-    var lines = [headers.join(",")];
-    exported.forEach(function(row){
-      lines.push(headers.map(function(header){
-        return '"' + text(row[header]).replace(/"/g, '""') + '"';
-      }).join(","));
-    });
-    downloadBlob(fileName.replace(/\.xlsx$/i, ".csv"), lines.join("\n"), "text/csv;charset=utf-8");
+    var html = '<html><head><meta charset="UTF-8"><style>' +
+      'table{border-collapse:collapse;font-family:Arial,sans-serif;font-size:11pt}' +
+      'th{background:#1d4ed8;color:#ffffff;font-weight:bold;border:1px solid #94a3b8;padding:6px;text-align:left}' +
+      'td{border:1px solid #cbd5e1;padding:5px;vertical-align:top}' +
+      'td.num{text-align:center;mso-number-format:"0.00"}' +
+      '</style></head><body><table><thead><tr>' +
+      HEADERS.map(function(header){return '<th>' + escapeHtml(header) + '</th>';}).join("") +
+      '</tr></thead><tbody>' +
+      exported.map(function(row){
+        return '<tr>' + HEADERS.map(function(header){
+          var cls = header.indexOf("N-") === 0 ? ' class="num"' : '';
+          return '<td' + cls + '>' + escapeHtml(row[header]) + '</td>';
+        }).join("") + '</tr>';
+      }).join("") +
+      '</tbody></table></body></html>';
+    var xlsName = fileName.replace(/\.xlsx$/i, ".xls");
+    downloadBlob(xlsName, html, "application/vnd.ms-excel;charset=utf-8");
+    return {ok:true, fallback:"xls-html", fileName:xlsName, rows:exported.length};
   }
 
   function exportExcel(rows, context){
@@ -88,29 +110,30 @@ Con qué se conecta:
     var data = rowsToVisibleExport(rows || []);
 
     if(!window.XLSX || !window.XLSX.utils){
-      csvFallback(rows || [], fileName);
-      return {ok:true, fallback:"csv", fileName:fileName.replace(/\.xlsx$/i, ".csv"), rows:data.length};
+      return excelHtmlFallback(rows || [], fileName);
     }
 
-    var worksheet = window.XLSX.utils.json_to_sheet(data, {header:["Cédula", "Nombre", "Carrera", "N-ART", "N-DEF", "N-FIN"]});
-    worksheet["!cols"] = [
-      {wch:16},
-      {wch:34},
-      {wch:36},
-      {wch:10},
-      {wch:10},
-      {wch:10}
-    ];
+    var worksheet = window.XLSX.utils.json_to_sheet(data, {header:HEADERS});
+    worksheet["!cols"] = [{wch:16}, {wch:38}, {wch:40}, {wch:10}, {wch:10}, {wch:10}];
     worksheet["!autofilter"] = {ref:"A1:F" + Math.max(1, data.length + 1)};
 
+    var range = window.XLSX.utils.decode_range(worksheet["!ref"] || "A1:F1");
+    for(var row = 1; row <= range.e.r; row += 1){
+      [3,4,5].forEach(function(col){
+        var address = window.XLSX.utils.encode_cell({r:row, c:col});
+        if(worksheet[address] && worksheet[address].v !== ""){
+          worksheet[address].t = "n";
+          worksheet[address].z = "0.00";
+        }
+      });
+    }
+
     var workbook = window.XLSX.utils.book_new();
+    workbook.Props = {Title:"Defensas", Subject:"Notas de defensas", Author:"Requisitos", CreatedDate:new Date()};
     window.XLSX.utils.book_append_sheet(workbook, worksheet, "Defensas");
     window.XLSX.writeFile(workbook, fileName);
     return {ok:true, fileName:fileName, rows:data.length};
   }
 
-  window.DefartExport = {
-    exportExcel:exportExcel,
-    rowsToVisibleExport:rowsToVisibleExport
-  };
+  window.DefartExport = {exportExcel:exportExcel, rowsToVisibleExport:rowsToVisibleExport};
 })(window);
