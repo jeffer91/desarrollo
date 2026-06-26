@@ -2,12 +2,15 @@
 Nombre completo: baselocal.app.js
 Ruta o ubicación: /Requisitos/BaseLocal/baselocal.app.js
 Función o funciones:
-- Renderizar la pantalla BL.
+- Renderizar la pantalla Base Local.
 - Mostrar períodos, estudiantes, historial y diagnóstico local.
-- Ejecutar sincronización Base Local ↔ Firebase una vez al día sin bloquear la pantalla.
+- Aplicar filtro por estado de matrícula: ACTIVO, RETIRADO o todos.
 - Permitir sincronización manual y bajada manual desde Firebase.
 - Evitar pantalla blanca por eventos repetidos durante la sincronización.
 Con qué se conecta:
+- services/bl-campos.js
+- services/bl-normalizador.js
+- services/bl-filtros.js
 - baselocal.core.js
 - baselocal.firebase.js
 - baselocal.connector.js
@@ -20,6 +23,7 @@ Con qué se conecta:
     tab:"periodos",
     periodId:"",
     search:"",
+    statusFilter:"ACTIVO",
     loading:false,
     dailyStarted:false,
     renderPending:false,
@@ -41,6 +45,16 @@ Con qué se conecta:
       .replace(/</g,"&lt;")
       .replace(/>/g,"&gt;")
       .replace(/\"/g,"&quot;");
+  }
+
+  function getField(row, canonicalName, fallback){
+    try{
+      if(window.BLCampos && typeof window.BLCampos.getValue === "function"){
+        var value = window.BLCampos.getValue(row || {}, canonicalName, fallback || "");
+        return value == null || text(value) === "" ? (fallback || "") : value;
+      }
+    }catch(error){}
+    return fallback || "";
   }
 
   function status(message, className){
@@ -83,7 +97,7 @@ Con qué se conecta:
 
   function table(headers, rows){
     if(!rows || !rows.length){
-      return '<p class="bl-help">Sin datos todavía. Primero analiza un Excel en Requisito, baja datos desde Firebase o sincroniza BL.</p>';
+      return '<p class="bl-help">Sin datos todavía. Primero analiza un Excel en Carga, baja datos desde Firebase o sincroniza Base Local.</p>';
     }
 
     var head = '<table><thead><tr>' + headers.map(function(header){
@@ -115,10 +129,12 @@ Con qué se conecta:
     if(!target) return;
     var rows = (view.students || []).slice(0, 300);
     target.innerHTML = table([
-      {label:"Cédula", key:"cedula"},
-      {label:"Nombre", key:"nombres"},
-      {label:"Carrera", key:"nombrecarrera"},
-      {label:"Período", key:"periodoLabel"}
+      {label:"Cédula", value:function(row){return row.cedula || getField(row, "cedula", "");}},
+      {label:"Nombre", value:function(row){return row.nombres || getField(row, "nombres", row.Nombres || "");}},
+      {label:"Carrera", value:function(row){return row.nombrecarrera || getField(row, "nombreCarrera", row.NombreCarrera || "");}},
+      {label:"Sede", value:function(row){return getField(row, "sede", row.Sede || row.sede || "");}},
+      {label:"Estado", value:function(row){return row.estadoMatricula || getField(row, "estadoMatricula", "ACTIVO");}},
+      {label:"Período", value:function(row){return row.periodoLabel || row.periodoId || getField(row, "periodoId", "");}}
     ], rows);
   }
 
@@ -157,6 +173,14 @@ Con qué se conecta:
 
     box.textContent = JSON.stringify({
       local:diagnostics,
+      vista:{
+        periodoId:state.periodId,
+        estadoMatricula:state.statusFilter,
+        busqueda:state.search,
+        estudiantesVisibles:(view.students || []).length,
+        estudiantesDelPeriodo:view.totalStudentsPeriod || 0,
+        conteoEstados:view.statusCounts || {}
+      },
       firebase:firebaseStatus,
       sync:syncStatus,
       bridge:bridgeCounts,
@@ -166,23 +190,29 @@ Con qué se conecta:
 
   function renderSelectors(view){
     var selector = el("bl-filter-period");
-    if(!selector){
-      return;
+    if(selector){
+      var current = state.periodId || selector.value;
+      selector.innerHTML = '<option value="">Todos los períodos</option>' + (view.periods || []).map(function(period){
+        return '<option value="' + esc(period.id) + '">' + esc(period.label || period.id) + '</option>';
+      }).join("");
+      selector.value = current;
     }
 
-    var current = state.periodId || selector.value;
-    selector.innerHTML = '<option value="">Todos los períodos</option>' + (view.periods || []).map(function(period){
-      return '<option value="' + esc(period.id) + '">' + esc(period.label || period.id) + '</option>';
-    }).join("");
-    selector.value = current;
+    var estado = el("bl-filter-estado");
+    if(estado){
+      estado.value = state.statusFilter;
+    }
   }
 
   function emptyView(message){
     return {
       periods:[],
       students:[],
-      history:[{createdAt:new Date().toISOString(), action:"error", periodoLabel:"BL", fileName:message || "Error", totalRows:0}],
-      diagnostics:{ok:false, error:message || "BaseLocal no disponible"},
+      allStudentsForPeriod:[],
+      statusCounts:{ACTIVO:0, RETIRADO:0, TOTAL:0},
+      totalStudentsPeriod:0,
+      history:[{createdAt:new Date().toISOString(), action:"error", periodoLabel:"Base Local", fileName:message || "Error", totalRows:0}],
+      diagnostics:{ok:false, error:message || "Base Local no disponible"},
       careersCount:0,
       snapshot:null
     };
@@ -195,7 +225,7 @@ Con qué se conecta:
         throw new Error("BaseLocalAPI no está disponible. Revisa que baselocal.core.js haya cargado correctamente.");
       }
 
-      var view = window.BaseLocalAPI.buildView(state.periodId, state.search);
+      var view = window.BaseLocalAPI.buildView(state.periodId, state.search, state.statusFilter);
       var firebaseStatus = safeCall("firebaseStatus", function(){
         return window.BaseLocalFirebase && typeof window.BaseLocalFirebase.getLastStatus === "function"
           ? window.BaseLocalFirebase.getLastStatus()
@@ -206,10 +236,13 @@ Con qué se conecta:
           ? window.BaseLocalFirebase.getSyncStatus()
           : null;
       }, null);
+      var counts = view.statusCounts || {ACTIVO:0, RETIRADO:0, TOTAL:0};
 
       renderSelectors(view);
       if(el("bl-kpi-periodos")) el("bl-kpi-periodos").textContent = (view.periods || []).length;
-      if(el("bl-kpi-estudiantes")) el("bl-kpi-estudiantes").textContent = (view.students || []).length;
+      if(el("bl-kpi-estudiantes")) el("bl-kpi-estudiantes").textContent = view.totalStudentsPeriod || counts.TOTAL || 0;
+      if(el("bl-kpi-activos")) el("bl-kpi-activos").textContent = counts.ACTIVO || 0;
+      if(el("bl-kpi-retirados")) el("bl-kpi-retirados").textContent = counts.RETIRADO || 0;
       if(el("bl-kpi-historial")) el("bl-kpi-historial").textContent = (view.history || []).length;
       if(el("bl-kpi-carreras")) el("bl-kpi-carreras").textContent = view.careersCount || 0;
       if(el("bl-kpi-estado")) el("bl-kpi-estado").textContent = syncStatus && syncStatus.ok ? "Sincronizada" : (firebaseStatus && firebaseStatus.ok ? "Firebase" : "Local");
@@ -225,7 +258,7 @@ Con qué se conecta:
       }
 
       if(!state.loading){
-        status("BaseLocal cargada correctamente.", "bl-status-ok");
+        status("Base Local cargada correctamente. Vista actual: " + ((view.students || []).length) + " estudiantes.", "bl-status-ok");
       }
     }catch(error){
       console.error("[BaseLocal Render]", error);
@@ -236,7 +269,7 @@ Con qué se conecta:
       renderStudents(fallback);
       renderHistory(fallback);
       renderDiagnostics(fallback);
-      status("BL no se cayó. Error controlado: " + state.lastRenderError, "bl-status-warn");
+      status("Base Local no se cayó. Error controlado: " + state.lastRenderError, "bl-status-warn");
     }
   }
 
@@ -267,13 +300,13 @@ Con qué se conecta:
       var blob = new Blob([JSON.stringify(data, null, 2)], {type:"application/json"});
       var link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
-      link.download = "baselocal-requisitos.json";
+      link.download = "carga-base-local.json";
       link.click();
       setTimeout(function(){
         URL.revokeObjectURL(link.href);
       }, 1000);
     }catch(error){
-      status("No se pudo exportar BL: " + (error.message || error), "bl-status-warn");
+      status("No se pudo exportar Base Local: " + (error.message || error), "bl-status-warn");
     }
   }
 
@@ -317,8 +350,12 @@ Con qué se conecta:
 
       state.periodId = "";
       state.search = "";
+      state.statusFilter = "ACTIVO";
       if(el("bl-filter-search")){
         el("bl-filter-search").value = "";
+      }
+      if(el("bl-filter-estado")){
+        el("bl-filter-estado").value = "ACTIVO";
       }
 
       render();
@@ -373,7 +410,7 @@ Con qué se conecta:
         if(!window.BaseLocalFirebase || typeof window.BaseLocalFirebase.runDailyIfNeeded !== "function"){
           return;
         }
-        setBusy(true, "Revisando sincronización diaria BL ↔ Firebase...", "sync");
+        setBusy(true, "Revisando sincronización diaria Base Local ↔ Firebase...", "sync");
         var result = await window.BaseLocalFirebase.runDailyIfNeeded();
         render();
         if(result && result.skipped){
@@ -394,10 +431,10 @@ Con qué se conecta:
 
   function bindGlobalErrors(){
     window.addEventListener("error", function(event){
-      var msg = event && event.message ? event.message : "Error de pantalla BL";
+      var msg = event && event.message ? event.message : "Error de pantalla Base Local";
       console.error("[BaseLocal Global Error]", event.error || event);
       state.lastRenderError = msg;
-      status("BL protegida. Error controlado: " + msg, "bl-status-warn");
+      status("Base Local protegida. Error controlado: " + msg, "bl-status-warn");
     });
 
     window.addEventListener("unhandledrejection", function(event){
@@ -405,7 +442,7 @@ Con qué se conecta:
       var msg = reason && reason.message ? reason.message : String(reason);
       console.error("[BaseLocal Promise Error]", reason);
       state.lastRenderError = msg;
-      status("BL protegida. Error de sincronización controlado: " + msg, "bl-status-warn");
+      status("Base Local protegida. Error de sincronización controlado: " + msg, "bl-status-warn");
     });
   }
 
@@ -450,6 +487,13 @@ Con qué se conecta:
       el("bl-filter-period").addEventListener("change", function(event){
         state.periodId = event.target.value;
         scheduleRender("period-filter");
+      });
+    }
+
+    if(el("bl-filter-estado")){
+      el("bl-filter-estado").addEventListener("change", function(event){
+        state.statusFilter = event.target.value;
+        scheduleRender("estado-filter");
       });
     }
 
