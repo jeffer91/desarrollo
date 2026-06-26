@@ -70,6 +70,25 @@
   font-size: 0.76rem;
   letter-spacing: 0.06em;
   background: rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+}
+
+.ta-brand__logo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.ta-brand__fallback {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+}
+
+.ta-brand__logo + .ta-brand__fallback {
+  display: none;
 }
 
 .ta-brand__eyebrow {
