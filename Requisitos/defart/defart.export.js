@@ -2,22 +2,115 @@
 Nombre completo: defart.export.js
 Ruta o ubicación: /Requisitos/defart/defart.export.js
 Función o funciones:
-- Exportar agenda de defensas en CSV, JSON e ICS.
-- Copiar mensajes al portapapeles.
+- Descargar Excel de la tabla visible de Defensas.
+- Exportar solo columnas visibles: Cédula, Nombre, Carrera, N-ART, N-DEF, N-FIN.
+- Nombrar el archivo con período, fecha y hora.
 Con qué se conecta:
 - defart.app.js
 ========================================================= */
 (function(window){
   "use strict";
-  function text(v){return String(v==null?"":v).trim();}
-  function download(name,content,type){var blob=new Blob([content],{type:type||"text/plain;charset=utf-8"});var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(a.href);},1000);}
-  function wrap(v){return '"'+text(v).replace(/"/g,'""')+'"';}
-  function csv(rows){var headers=["cedula","nombres","carrera","fecha","hora","sede","modo","aula","tribunal1","tribunal2","programada"];var lines=[headers.join(",")];(rows||[]).forEach(function(r){lines.push([r._cedula,r._nombres,r._carrera,r._fecha,r._hora,r._sede,r._modo,r._aula,r._tribunal1,r._tribunal2,r._programada?"SI":"NO"].map(wrap).join(","));});return lines.join("\n");}
-  function exportCsv(rows){download("agenda-defensas.csv",csv(rows||[]),"text/csv;charset=utf-8");}
-  function exportJson(data){download("agenda-defensas.json",JSON.stringify(data||{},null,2),"application/json;charset=utf-8");}
-  function dateToIcs(date,time){var d=text(date).replace(/[^0-9]/g,"");if(d.length!==8)return "";var t=text(time).replace(/[^0-9]/g,"");if(t.length<4)t="0800";return d+"T"+t.slice(0,4)+"00";}
-  function ics(rows){var out=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Requisitos//Defensas//ES"];(rows||[]).filter(function(r){return r._fecha;}).forEach(function(r,i){var dt=dateToIcs(r._fecha,r._hora);if(!dt)return;out.push("BEGIN:VEVENT","UID:defensa-"+(r._cedula||i)+"@requisitos","DTSTAMP:"+new Date().toISOString().replace(/[-:]/g,"").split(".")[0]+"Z","DTSTART:"+dt,"SUMMARY:Defensa - "+(r._nombres||"Estudiante"),"LOCATION:"+[r._sede,r._aula].filter(Boolean).join(" "),"DESCRIPTION:"+["Carrera: "+r._carrera,"Tribunal: "+[r._tribunal1,r._tribunal2].filter(Boolean).join(" / ")].join("\\n"),"END:VEVENT");});out.push("END:VCALENDAR");return out.join("\r\n");}
-  function exportIcs(rows){download("agenda-defensas.ics",ics(rows||[]),"text/calendar;charset=utf-8");}
-  async function copyText(content){if(navigator.clipboard&&navigator.clipboard.writeText){await navigator.clipboard.writeText(text(content));return true;}return false;}
-  window.DefartExport={exportCsv:exportCsv,exportJson:exportJson,exportIcs:exportIcs,copyText:copyText,csv:csv,ics:ics};
+
+  function text(value){
+    return String(value == null ? "" : value).trim();
+  }
+
+  function safeFile(value){
+    return text(value || "TODOS")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-zA-Z0-9_.-]+/g, "_")
+      .replace(/_+/g, "_")
+      .replace(/^_+|_+$/g, "");
+  }
+
+  function stamp(){
+    var d = new Date();
+    var y = d.getFullYear();
+    var m = String(d.getMonth() + 1).padStart(2, "0");
+    var day = String(d.getDate()).padStart(2, "0");
+    var h = String(d.getHours()).padStart(2, "0");
+    var min = String(d.getMinutes()).padStart(2, "0");
+    return y + "-" + m + "-" + day + "_" + h + "-" + min;
+  }
+
+  function formatNote(value){
+    if(value === null || value === undefined || value === ""){
+      return "";
+    }
+    var num = Number(String(value).replace(",", "."));
+    if(!Number.isFinite(num)){
+      return "";
+    }
+    return Math.round(num * 100) / 100;
+  }
+
+  function rowsToVisibleExport(rows){
+    return (rows || []).map(function(row){
+      return {
+        "Cédula":text(row._cedula),
+        "Nombre":text(row._nombre),
+        "Carrera":text(row._carrera),
+        "N-ART":formatNote(row._nart),
+        "N-DEF":formatNote(row._ndef),
+        "N-FIN":formatNote(row._nfin)
+      };
+    });
+  }
+
+  function downloadBlob(name, content, type){
+    var blob = new Blob([content], {type:type || "text/plain;charset=utf-8"});
+    var link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = name;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(function(){URL.revokeObjectURL(link.href);}, 1000);
+  }
+
+  function csvFallback(rows, fileName){
+    var exported = rowsToVisibleExport(rows);
+    var headers = ["Cédula", "Nombre", "Carrera", "N-ART", "N-DEF", "N-FIN"];
+    var lines = [headers.join(",")];
+    exported.forEach(function(row){
+      lines.push(headers.map(function(header){
+        return '"' + text(row[header]).replace(/"/g, '""') + '"';
+      }).join(","));
+    });
+    downloadBlob(fileName.replace(/\.xlsx$/i, ".csv"), lines.join("\n"), "text/csv;charset=utf-8");
+  }
+
+  function exportExcel(rows, context){
+    context = context || {};
+    var period = safeFile(context.periodId || context.periodLabel || "TODOS");
+    var fileName = period + "_" + stamp() + ".xlsx";
+    var data = rowsToVisibleExport(rows || []);
+
+    if(!window.XLSX || !window.XLSX.utils){
+      csvFallback(rows || [], fileName);
+      return {ok:true, fallback:"csv", fileName:fileName.replace(/\.xlsx$/i, ".csv"), rows:data.length};
+    }
+
+    var worksheet = window.XLSX.utils.json_to_sheet(data, {header:["Cédula", "Nombre", "Carrera", "N-ART", "N-DEF", "N-FIN"]});
+    worksheet["!cols"] = [
+      {wch:16},
+      {wch:34},
+      {wch:36},
+      {wch:10},
+      {wch:10},
+      {wch:10}
+    ];
+    worksheet["!autofilter"] = {ref:"A1:F" + Math.max(1, data.length + 1)};
+
+    var workbook = window.XLSX.utils.book_new();
+    window.XLSX.utils.book_append_sheet(workbook, worksheet, "Defensas");
+    window.XLSX.writeFile(workbook, fileName);
+    return {ok:true, fileName:fileName, rows:data.length};
+  }
+
+  window.DefartExport = {
+    exportExcel:exportExcel,
+    rowsToVisibleExport:rowsToVisibleExport
+  };
 })(window);
