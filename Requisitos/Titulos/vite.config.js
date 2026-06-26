@@ -5,11 +5,13 @@
   - Configurar Vite para compilar las pantallas públicas de estudiante y coordinador.
   - Mantener fuera del build público la pantalla privada/local del administrador.
   - Preparar la salida de producción para Netlify en la carpeta dist.
+  - Copiar los assets públicos del módulo, incluido el logo institucional.
   Se conecta con:
   - package.json
   - netlify.toml
   - public/ta-titulo-articulo-estudiante.html
   - public/ta-titulo-articulo-coordinador.html
+  - public/assets/logo-itsqmet.svg
 */
 
 import { defineConfig } from "vite";
@@ -20,7 +22,7 @@ const rootDir = fileURLToPath(new URL(".", import.meta.url));
 
 export default defineConfig({
   appType: "mpa",
-  publicDir: false,
+  publicDir: "public",
   server: {
     host: "127.0.0.1",
     port: 5173,
