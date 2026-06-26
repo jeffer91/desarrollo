@@ -3,7 +3,7 @@ Nombre completo: menu.config.js
 Ruta o ubicación: /Curriculo/menu/menu.config.js
 Función o funciones:
 - Definir la configuración central del menú Currículo
-- Registrar Inicio, Carreras, Materias, PEA, Fichas, Actas y Control
+- Registrar Inicio, Base local, Carreras, Materias, PEA, Fichas, Actas y Control
 - Centralizar rutas, títulos, descripciones y orden del menú
 - Evitar rutas dispersas dentro del resto de archivos del menú
 ========================================================= */
@@ -20,6 +20,16 @@ Función o funciones:
       description: "Acceso rápido a los módulos principales del área Currículo.",
       routeFromMenu: "internal:home",
       type: "internal"
+    },
+    {
+      id: "base-local",
+      title: "Base local",
+      shortTitle: "Base local",
+      icon: "BL",
+      hint: "Centro de control local de Currículo",
+      description: "Guardar, comparar, diagnosticar, respaldar y sincronizar la información local de Currículo.",
+      routeFromMenu: "../Base%20local/bl.index.html",
+      type: "frame"
     },
     {
       id: "carreras",
