@@ -26,6 +26,22 @@
       <div class="ta-header__actions"><span class="ta-badge ta-badge--private">Local</span><button class="ta-button ta-button--secondary" type="button" id="ta-admin-actualizar-btn">Actualizar</button></div>
     </header>
 
+    <section class="ta-card ta-card--compact" id="ta-admin-diagnostico-card">
+      <div class="ta-section-heading">
+        <div>
+          <h2>Diagnóstico de conexión</h2>
+          <p>Este panel debe trabajar en Electron con Firebase directo antes de subir a Netlify.</p>
+        </div>
+        <span class="ta-badge ta-badge--soft" id="ta-admin-origen-datos">Verificando...</span>
+      </div>
+      <dl class="ta-data-grid">
+        <div><dt>Runtime</dt><dd id="ta-admin-runtime">---</dd></div>
+        <div><dt>Origen de datos</dt><dd id="ta-admin-origen">---</dd></div>
+        <div><dt>Proyecto Firebase</dt><dd id="ta-admin-firebase-project">---</dd></div>
+        <div><dt>SDK Firebase</dt><dd id="ta-admin-firebase-sdk">---</dd></div>
+      </dl>
+    </section>
+
     <section class="ta-admin-grid">
       <article class="ta-card ta-card--compact" id="ta-admin-periodo-card">
         <div class="ta-section-heading"><div><h2>Período activo</h2><p>Seleccione el período habilitado para carga de títulos.</p></div></div>
