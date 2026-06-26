@@ -4,8 +4,8 @@
     "rutaOUbicacion": "/Requisitos/Titulos/package.json",
     "funcionOFunciones": [
       "Configurar el proyecto base ta-titulo-articulo.",
-      "Definir comandos para desarrollo, compilación web, pruebas locales, diagnóstico y Electron.",
-      "Declarar dependencias necesarias para Vite, Firebase y Electron."
+      "Definir comandos para desarrollo, compilación web, pruebas locales, diagnóstico, Electron y Netlify.",
+      "Declarar dependencias necesarias para Vite, Firebase, Firebase Admin y Electron."
     ],
     "seConectaCon": [
       "vite.config.js",
@@ -16,6 +16,7 @@
       "electron/admin/ta-titulo-articulo-administrador.html",
       "scripts/ta-titulo-articulo-check.mjs",
       "scripts/ta-titulo-articulo-local-check.mjs",
+      "scripts/ta-titulo-articulo-netlify-check.mjs",
       "scripts/ta-titulo-articulo-build-local.mjs"
     ]
   },
@@ -31,12 +32,14 @@
     "dev:netlify": "npx netlify-cli@latest dev --host 127.0.0.1 --port 8888",
     "build": "vite build",
     "build:local": "node scripts/ta-titulo-articulo-build-local.mjs",
+    "build:netlify": "npm run check:netlify && vite build",
     "preview": "vite preview --host 127.0.0.1",
     "electron": "electron electron/ta-titulo-articulo-main.js",
     "electron:dev": "electron electron/ta-titulo-articulo-main.js --dev",
     "check": "node scripts/ta-titulo-articulo-check.mjs",
     "check:local": "node scripts/ta-titulo-articulo-local-check.mjs",
-    "check:all": "npm run check && npm run check:local",
+    "check:netlify": "node scripts/ta-titulo-articulo-netlify-check.mjs",
+    "check:all": "npm run check && npm run check:local && npm run check:netlify",
     "start": "npm run dev"
   },
   "dependencies": {
