@@ -6,7 +6,7 @@
   - Detectar archivos faltantes antes de correr Vite, Netlify, Firebase o Electron.
   - Validar rutas HTML principales de estudiante, coordinador y administrador.
   - Detectar HTML duplicado o pantallas mezcladas.
-  - Verificar servicios centrales de runtime, origen de datos, Firebase directo y Electron.
+  - Verificar servicios centrales de runtime, origen de datos, Firebase directo, Electron y pruebas locales.
   - Servir como prueba final del bloque desde la terminal.
   Se conecta con:
   - Requisitos/Titulos/package.json
@@ -27,6 +27,7 @@ const requiredFiles = [
   "package.json",
   "netlify.toml",
   "vite.config.js",
+  "README.md",
   "public/ta-titulo-articulo-estudiante.html",
   "public/ta-titulo-articulo-coordinador.html",
   "public/assets/logo-itsqmet.svg",
@@ -48,13 +49,30 @@ const requiredFiles = [
   "src/estudiante/ta-titulo-articulo-estudiante.app.js",
   "src/coordinador/ta-titulo-articulo-coordinador.app.js",
   "src/admin/ta-titulo-articulo-admin.app.js",
-  "src/admin/ta-titulo-articulo-admin-diagnostico.app.js"
+  "src/admin/ta-titulo-articulo-admin-diagnostico.app.js",
+  "scripts/ta-titulo-articulo-local-check.mjs",
+  "scripts/ta-titulo-articulo-build-local.mjs"
 ];
 
 const firebaseImportMapChecks = [
   '<script type="importmap">',
   '"firebase/app": "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js"',
   '"firebase/firestore": "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js"'
+];
+
+const packageScripts = [
+  "dev",
+  "dev:coordinador",
+  "dev:netlify",
+  "build",
+  "build:local",
+  "preview",
+  "electron",
+  "electron:dev",
+  "check",
+  "check:local",
+  "check:all",
+  "start"
 ];
 
 const htmlChecks = [
@@ -146,6 +164,18 @@ const serviceChecks = [
   {
     file: "electron/ta-titulo-articulo-main.js",
     mustInclude: ["taDataMode", "firebase-direct", "setWindowOpenHandler", "loadFile"]
+  },
+  {
+    file: "scripts/ta-titulo-articulo-local-check.mjs",
+    mustInclude: ["Live Server", "check:local", "firebase-direct", "rutas compatibles"]
+  },
+  {
+    file: "scripts/ta-titulo-articulo-build-local.mjs",
+    mustInclude: ["dist-local", "manifest.local.json", "local-firebase-direct"]
+  },
+  {
+    file: "README.md",
+    mustInclude: ["npm run check:all", "Live Server", "npm run build:local", "Netlify, último paso"]
   }
 ];
 
@@ -162,6 +192,15 @@ const errors = [];
 for (const file of requiredFiles) {
   if (!existsSync(resolve(root, file))) {
     errors.push(`Archivo faltante: ${file}`);
+  }
+}
+
+if (existsSync(resolve(root, "package.json"))) {
+  const pkg = JSON.parse(readRelative("package.json"));
+  for (const scriptName of packageScripts) {
+    if (!pkg.scripts?.[scriptName]) {
+      errors.push(`package.json: falta script "${scriptName}".`);
+    }
   }
 }
 
@@ -222,3 +261,4 @@ console.log("Títulos: revisión de estructura correcta.");
 console.log(`Archivos verificados: ${requiredFiles.length}`);
 console.log(`HTML verificados: ${htmlChecks.length}`);
 console.log(`Servicios verificados: ${serviceChecks.length}`);
+console.log(`Scripts package verificados: ${packageScripts.length}`);
