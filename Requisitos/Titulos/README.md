@@ -8,7 +8,7 @@ Ruta dentro del repositorio:
 Requisitos/Titulos
 ```
 
-## Orden correcto de prueba local
+## Orden correcto de prueba
 
 Antes de subir a Netlify, probar en este orden:
 
@@ -114,11 +114,36 @@ dist-local/electron/admin/ta-titulo-articulo-administrador.html
 
 Netlify se prueba después de que todo funcione localmente.
 
+### Prueba Netlify local
+
 ```bash
+npm run check:netlify
+npm run build:netlify
 npm run dev:netlify
 ```
 
-Variables obligatorias en Netlify:
+### Configuración en Netlify
+
+En Netlify, configurar el sitio así:
+
+```text
+Base directory: Requisitos/Titulos
+Build command: npm run build:netlify
+Publish directory: dist
+Functions directory: netlify/functions
+```
+
+Rutas públicas esperadas:
+
+```text
+/
+/estudiante
+/coordinador
+```
+
+La pantalla `/admin` no se publica como panel administrativo. El administrador real se usa por Electron.
+
+### Variables obligatorias en Netlify
 
 ```text
 FIREBASE_ADMIN_PROJECT_ID
@@ -128,7 +153,11 @@ TA_TITULO_ARTICULO_ADMIN_TOKEN
 TELEGRAM_BOT_TOKEN
 ```
 
-Variables opcionales para frontend si se quiere reemplazar la configuración pública local:
+En `FIREBASE_ADMIN_PRIVATE_KEY`, si se pega en una sola línea, conservar los saltos como `\n`.
+
+### Variables opcionales para frontend
+
+Se pueden configurar si se quiere reemplazar la configuración pública local:
 
 ```text
 VITE_FIREBASE_API_KEY
@@ -144,8 +173,10 @@ VITE_FIREBASE_APP_ID
 ```bash
 npm run check
 npm run check:local
+npm run check:netlify
 npm run check:all
 npm run build:local
+npm run build:netlify
 npm run dev
 npm run dev:coordinador
 npm run electron
