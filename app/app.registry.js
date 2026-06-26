@@ -63,7 +63,7 @@ Función o funciones:
       id: "requisitos",
       title: "Carga",
       group: "Carga",
-      description: "Entrada principal para carga, base local y gestión de requisitos.",
+      description: "Entrada principal para carga de datos, Base Local, seguimiento académico y gestión operativa.",
       path: "./Requisitos/Maqueta/maq-index.html"
     }
   ];
