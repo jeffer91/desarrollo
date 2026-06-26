@@ -65,11 +65,15 @@
   place-items: center;
   border: 2px solid var(--ta-color-blanco);
   border-radius: 18px;
-  color: var(--ta-color-dorado);
+  color: transparent;
   font-weight: 900;
-  font-size: 0.76rem;
+  font-size: 0;
   letter-spacing: 0.06em;
-  background: rgba(255, 255, 255, 0.05);
+  background-color: rgba(255, 255, 255, 0.05);
+  background-image: url("/public/assets/logo-itsqmet.png");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
   overflow: hidden;
 }
 
@@ -85,6 +89,8 @@
   width: 100%;
   height: 100%;
   place-items: center;
+  color: var(--ta-color-dorado);
+  font-size: 0.76rem;
 }
 
 .ta-brand__logo + .ta-brand__fallback {
@@ -199,7 +205,6 @@
     min-width: 60px;
     height: 60px;
     border-radius: 14px;
-    font-size: 0.66rem;
   }
 
   .ta-grid--2,
