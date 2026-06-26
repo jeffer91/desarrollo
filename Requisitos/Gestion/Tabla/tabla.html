@@ -3,9 +3,9 @@
 Nombre completo: tabla.html
 Ruta o ubicación: /Requisitos/Gestion/Tabla/tabla.html
 Función o funciones:
-- Mostrar la tabla principal de estudiantes cargados desde BaseLocal.
-- Filtrar por período, carrera, estado y búsqueda general.
-- Preparar acciones rápidas como WhatsApp, copia y exportación.
+- Mostrar la tabla principal de estudiantes cargados desde Base Local.
+- Filtrar por período, matrícula, carrera, estado académico y búsqueda general.
+- Mostrar ACTIVO por defecto y permitir ver RETIRADO cuando se seleccione.
 Con qué se conecta:
 - tabla.css
 - tabla.core.js
@@ -35,6 +35,7 @@ Con qué se conecta:
 
     <section class="tabla-tools">
       <label>Período<select id="tabla-periodo"><option value="">Todos</option></select></label>
+      <label>Matrícula<select id="tabla-matricula"><option value="ACTIVO">Activos</option><option value="RETIRADO">Retirados</option><option value="">Todos</option></select></label>
       <label>Carrera<select id="tabla-carrera"><option value="">Todas</option></select></label>
       <label>Estado<select id="tabla-estado"><option value="">Todos</option><option value="cumple">Cumple todo</option><option value="pendiente">Con pendientes</option><option value="no_cumple">No cumple</option></select></label>
       <label>Buscar<input id="tabla-search" type="search" placeholder="Cédula, nombre, carrera, correo..." /></label>
