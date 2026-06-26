@@ -1,0 +1,9 @@
+{
+  "version": "1.0.0",
+  "moduloPadre": "Curriculo",
+  "nombre": "Base local - registros",
+  "descripcion": "Registro central local de todos los datos detectados dentro de la carpeta Curriculo.",
+  "tipoBase": "JSON inicial, migrable a SQLite",
+  "ultimaActualizacion": null,
+  "registros": []
+}
