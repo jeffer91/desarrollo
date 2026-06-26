@@ -5,10 +5,11 @@
   - Centralizar llamadas del frontend hacia Netlify Functions.
   - Enviar acciones de estudiante, coordinador, administrador y Telegram sin repetir código.
   - Normalizar respuestas correctas y errores para las pantallas públicas y la pantalla local.
-  - Permitir configurar URL base de funciones cuando la pantalla se abre desde Electron o archivo local.
+  - Resolver automáticamente la URL base para Netlify, Vite local, Netlify Dev, Electron y archivo local.
 */
 
 const DEFAULT_FUNCTIONS_PATH = "/.netlify/functions";
+const LOCAL_FUNCTIONS_BASE = "http://127.0.0.1:8888/.netlify/functions";
 const FUNCTIONS_BASE_KEY = "ta.titulo.articulo.functionsBase";
 
 const FUNCTION_NAMES = Object.freeze({
@@ -22,9 +23,25 @@ function clean(value) {
   return String(value ?? "").trim().replace(/\/+$/g, "");
 }
 
+function obtenerBaseDesdeBuild() {
+  try {
+    return clean(import.meta.env?.VITE_TA_TITULO_ARTICULO_FUNCTIONS_BASE);
+  } catch (error) {
+    return "";
+  }
+}
+
+function esHostLocal(hostname) {
+  const host = clean(hostname).toLowerCase();
+  return host === "localhost" || host === "127.0.0.1" || host === "0.0.0.0";
+}
+
 function obtenerBaseFunciones() {
   const globalBase = clean(globalThis.TA_TITULO_ARTICULO_FUNCTIONS_BASE);
   if (globalBase) return globalBase;
+
+  const buildBase = obtenerBaseDesdeBuild();
+  if (buildBase) return buildBase;
 
   try {
     const savedBase = clean(globalThis.localStorage?.getItem(FUNCTIONS_BASE_KEY));
@@ -33,8 +50,13 @@ function obtenerBaseFunciones() {
     console.warn("[Títulos API] No se pudo leer localStorage.", error);
   }
 
-  const protocol = globalThis.location?.protocol || "";
-  if (protocol === "file:") return "";
+  const location = globalThis.location || {};
+  const protocol = location.protocol || "";
+  const hostname = location.hostname || "";
+  const port = location.port || "";
+
+  if (protocol === "file:") return LOCAL_FUNCTIONS_BASE;
+  if (esHostLocal(hostname) && port !== "8888") return LOCAL_FUNCTIONS_BASE;
 
   return DEFAULT_FUNCTIONS_PATH;
 }
@@ -58,16 +80,27 @@ export function obtenerEstadoApiTitulos() {
   return {
     configurado: Boolean(base),
     base,
-    modoLocal: (globalThis.location?.protocol || "") === "file:"
+    modoLocal: ["file:", "http:"].includes(globalThis.location?.protocol || "") && esHostLocal(globalThis.location?.hostname || "")
   };
 }
 
 function endpoint(nombre) {
   const base = obtenerBaseFunciones();
   if (!base) {
-    throw new Error("Configure la URL base de Netlify Functions para usar este módulo desde Electron o archivo local.");
+    throw new Error("No se pudo resolver la URL de Netlify Functions para el módulo de Títulos.");
   }
   return `${base}/${FUNCTION_NAMES[nombre]}`;
+}
+
+function mensajeErrorConexion(error) {
+  const base = obtenerBaseFunciones();
+  const detalle = error && error.message ? error.message : String(error || "");
+
+  if (base === LOCAL_FUNCTIONS_BASE) {
+    return "No se pudo conectar con las funciones locales. Abra este módulo con Netlify Dev en el puerto 8888 o configure la URL pública de Netlify Functions.";
+  }
+
+  return detalle || "No se pudo conectar con Netlify Functions.";
 }
 
 async function leerRespuestaJson(response) {
@@ -92,11 +125,16 @@ async function llamarFuncion(nombreFuncion, action, payload = {}, options = {}) 
     headers["x-ta-admin-token"] = options.adminToken;
   }
 
-  const response = await fetch(endpoint(nombreFuncion), {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ action, payload })
-  });
+  let response;
+  try {
+    response = await fetch(endpoint(nombreFuncion), {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ action, payload })
+    });
+  } catch (error) {
+    throw new Error(mensajeErrorConexion(error));
+  }
 
   const data = await leerRespuestaJson(response);
 
