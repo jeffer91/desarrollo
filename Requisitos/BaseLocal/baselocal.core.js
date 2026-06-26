@@ -3,11 +3,14 @@ Nombre completo: baselocal.core.js
 Ruta o ubicación: /Requisitos/BaseLocal/baselocal.core.js
 Función o funciones:
 - Leer la base local desde ExcelLocalRepo.
-- Preparar datos para la pantalla BL y futuras apps.
-- Evitar que cédulas aparezcan como períodos.
-- Unificar períodos repetidos por mayúsculas, minúsculas o tildes.
+- Preparar datos para la pantalla Base Local.
+- Usar servicios pequeños para campos, normalización y filtros.
+- Mostrar estudiantes activos por defecto y retirados solo con filtro.
 Con qué se conecta:
 - excel-local.repo.js
+- services/bl-campos.js
+- services/bl-normalizador.js
+- services/bl-filtros.js
 - baselocal.app.js
 ========================================================= */
 (function(window){
@@ -24,6 +27,27 @@ Con qué se conecta:
       throw new Error("ExcelLocalRepo no disponible.");
     }
     return window.ExcelLocalRepo;
+  }
+
+  function campos(){
+    if(!window.BLCampos){
+      throw new Error("BLCampos no disponible.");
+    }
+    return window.BLCampos;
+  }
+
+  function normalizador(){
+    if(!window.BLNormalizador){
+      throw new Error("BLNormalizador no disponible.");
+    }
+    return window.BLNormalizador;
+  }
+
+  function filtros(){
+    if(!window.BLFiltros){
+      throw new Error("BLFiltros no disponible.");
+    }
+    return window.BLFiltros;
   }
 
   function text(value){
@@ -43,6 +67,10 @@ Con qué se conecta:
     return /^\d{7,13}$/.test(text(value));
   }
 
+  function isMachinePeriodId(value){
+    return /^20\d{2}[-_]\d{2}(_{1,2}|[-_])20\d{2}[-_]\d{2}$/.test(text(value));
+  }
+
   function isValidPeriod(value){
     var raw = text(value);
     var clean = normalizeText(raw);
@@ -50,6 +78,9 @@ Con qué se conecta:
       return false;
     }
     if(clean === "sin_periodo" || clean === "sin periodo"){
+      return true;
+    }
+    if(isMachinePeriodId(raw)){
       return true;
     }
     return /\b(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)\b/.test(clean) && /20\d{2}/.test(clean);
@@ -78,37 +109,50 @@ Con qué se conecta:
     return repo().getSnapshot();
   }
 
+  function getAllStudentsRaw(){
+    if(typeof repo().listAllStudents === "function"){
+      return repo().listAllStudents() || [];
+    }
+    return repo().listStudentsByPeriod("") || [];
+  }
+
   function getPeriods(){
     var map = {};
     var result = [];
     (repo().listPeriods() || []).forEach(function(period){
-      var label = text(period && (period.label || period.periodoLabel || period.periodo || period.id));
-      var id = text(period && (period.id || period.periodoId || period.value || label));
-      var key = periodKey(period);
+      var normalized = normalizador().normalizePeriod(period);
+      var label = text(normalized.label || normalized.periodoLabel || normalized.id);
+      var id = text(normalized.id || normalized.periodoId || label);
+      var key = periodKey(normalized);
 
       if(!isValidPeriod(label || id) || !key || map[key]){
         return;
       }
 
       map[key] = true;
-      result.push(Object.assign({}, period, {
+      result.push(Object.assign({}, normalized, {
         id:id || key.replace(/\s+/g, "_"),
         label:prettyPeriodLabel(label || id),
-        updatedAt:text(period && period.updatedAt)
+        updatedAt:text(normalized.updatedAt)
       }));
     });
     return result;
   }
 
-  function getStudents(periodId, search){
-    var list = repo().listStudentsByPeriod(periodId || "");
-    var q = text(search).toLowerCase();
-    if(q){
-      list = list.filter(function(student){
-        return [student.cedula, student.numeroIdentificacion, student.nombres, student.nombrecarrera, student.periodoLabel].join(" ").toLowerCase().indexOf(q) >= 0;
-      });
-    }
-    return list;
+  function getStudents(periodId, search, estadoMatricula){
+    return filtros().filterStudents(getAllStudentsRaw(), {
+      periodoId:periodId || "",
+      search:search || "",
+      estadoMatricula:estadoMatricula == null ? "ACTIVO" : estadoMatricula
+    });
+  }
+
+  function getStudentsForPeriod(periodId){
+    return filtros().filterStudents(getAllStudentsRaw(), {
+      periodoId:periodId || "",
+      search:"",
+      estadoMatricula:""
+    });
   }
 
   function getHistory(){
@@ -119,23 +163,29 @@ Con qué se conecta:
     var diagnostics = repo().diagnostics();
     diagnostics.periodsFiltered = true;
     diagnostics.periodsVisible = getPeriods().length;
+    diagnostics.statusCounts = filtros().countByStatus(getAllStudentsRaw());
+    diagnostics.baseLocalServices = {
+      campos:!!window.BLCampos,
+      normalizador:!!window.BLNormalizador,
+      filtros:!!window.BLFiltros
+    };
     return diagnostics;
   }
 
   function getCareersCount(students){
-    var map = {};
-    (students || []).forEach(function(student){
-      var career = text(student.nombrecarrera || student.carrera) || "SIN CARRERA";
-      map[career] = true;
-    });
-    return Object.keys(map).length;
+    return filtros().uniqueCareers(students || []).length;
   }
 
-  function buildView(periodId, search){
-    var students = getStudents(periodId, search);
+  function buildView(periodId, search, estadoMatricula){
+    var students = getStudents(periodId, search, estadoMatricula);
+    var studentsForPeriod = getStudentsForPeriod(periodId);
+    var statusCounts = filtros().countByStatus(studentsForPeriod);
     return {
       periods:getPeriods(),
       students:students,
+      allStudentsForPeriod:studentsForPeriod,
+      statusCounts:statusCounts,
+      totalStudentsPeriod:statusCounts.TOTAL || studentsForPeriod.length,
       history:getHistory(),
       diagnostics:getDiagnostics(),
       careersCount:getCareersCount(students),
