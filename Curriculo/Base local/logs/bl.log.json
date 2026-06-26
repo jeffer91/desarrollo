@@ -1,0 +1,7 @@
+{
+  "version": "1.0.0",
+  "moduloPadre": "Curriculo",
+  "nombre": "Base local - log de consola",
+  "descripcion": "Registro de mensajes tecnicos de la Base local. El estado visible de sincronizacion se maneja solo por consola.",
+  "logs": []
+}
