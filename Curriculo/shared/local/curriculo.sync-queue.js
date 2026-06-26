@@ -27,14 +27,22 @@
     return null;
   }
 
+  function readCurriculoBL(sourceWindow) {
+    try {
+      return sourceWindow && sourceWindow.CurriculoBL ? sourceWindow.CurriculoBL : null;
+    } catch (error) {
+      return null;
+    }
+  }
+
   function getBaseLocalRoot() {
     var candidates = [window, safeParentWindow(), safeTopWindow()];
     var index;
+    var BL;
 
     for (index = 0; index < candidates.length; index += 1) {
-      if (candidates[index] && candidates[index].CurriculoBL) {
-        return candidates[index].CurriculoBL;
-      }
+      BL = readCurriculoBL(candidates[index]);
+      if (BL) return BL;
     }
 
     return null;
