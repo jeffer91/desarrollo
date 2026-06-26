@@ -8,6 +8,7 @@ Función o funciones:
 - Mostrar cálculo N-FIN en vivo antes de guardar.
 - Guardado automático y botón Guardar todo con barra pequeña de progreso.
 - Ordenar al hacer clic en encabezados sin romper edición pendiente.
+- Avanzar con Enter a la siguiente nota para carga rápida.
 - Descargar Excel visible.
 Con qué se conecta:
 - defart.core.js
@@ -27,6 +28,7 @@ Con qué se conecta:
     data:null,
     changes:{},
     autoTimer:null,
+    filterTimer:null,
     rendering:false,
     saving:false
   };
@@ -47,70 +49,33 @@ Con qué se conecta:
 
   function status(message, type){
     var box = el("def-status");
-    if(box){
-      box.textContent = message;
-      box.className = "def-status " + (type || "");
-    }
+    if(box){box.textContent = message;box.className = "def-status " + (type || "");}
   }
 
-  function saveState(message){
-    var box = el("def-save-state");
-    if(box){
-      box.textContent = message || "Listo";
-    }
-  }
+  function saveState(message){var box = el("def-save-state");if(box){box.textContent = message || "Listo";}}
 
   function setProgress(percent, message){
     var bar = el("def-progress-bar");
     var txt = el("def-progress-text");
-    if(bar){
-      bar.style.width = Math.max(0, Math.min(100, percent || 0)) + "%";
-    }
-    if(txt){
-      txt.textContent = message || "";
-    }
+    if(bar){bar.style.width = Math.max(0, Math.min(100, percent || 0)) + "%";}
+    if(txt){txt.textContent = message || "";}
   }
 
   function noteText(value){
-    if(window.DefartCore && typeof window.DefartCore.noteToText === "function"){
-      return window.DefartCore.noteToText(value);
-    }
+    if(window.DefartCore && typeof window.DefartCore.noteToText === "function") return window.DefartCore.noteToText(value);
     return value == null ? "" : String(value);
   }
 
-  function numberValue(value){
-    if(value === null || value === undefined || text(value) === ""){
-      return null;
-    }
-    var num = Number(text(value).replace(",", "."));
-    return Number.isFinite(num) ? num : null;
-  }
-
-  function option(value, label, selected){
-    return '<option value="' + esc(value) + '" ' + (selected ? "selected" : "") + '>' + esc(label) + '</option>';
-  }
+  function option(value, label, selected){return '<option value="' + esc(value) + '" ' + (selected ? "selected" : "") + '>' + esc(label) + '</option>';}
 
   function fillFilters(data){
     data = data || {};
     var periodo = el("def-filter-periodo");
     var carrera = el("def-filter-carrera");
     var sede = el("def-filter-sede");
-
-    if(periodo){
-      periodo.innerHTML = option("", "Todos", !state.periodId) + (data.periodList || []).map(function(item){
-        return option(item.id, item.label || item.id, state.periodId === item.id);
-      }).join("");
-    }
-    if(carrera){
-      carrera.innerHTML = option("", "Todas", !state.career) + (data.careerList || []).map(function(item){
-        return option(item, item, state.career === item);
-      }).join("");
-    }
-    if(sede){
-      sede.innerHTML = option("", "Todas", !state.sede) + (data.sedeList || []).map(function(item){
-        return option(item, item, state.sede === item);
-      }).join("");
-    }
+    if(periodo){periodo.innerHTML = option("", "Todos", !state.periodId) + (data.periodList || []).map(function(item){return option(item.id, item.label || item.id, state.periodId === item.id);}).join("");}
+    if(carrera){carrera.innerHTML = option("", "Todas", !state.career) + (data.careerList || []).map(function(item){return option(item, item, state.career === item);}).join("");}
+    if(sede){sede.innerHTML = option("", "Todas", !state.sede) + (data.sedeList || []).map(function(item){return option(item, item, state.sede === item);}).join("");}
   }
 
   function kpi(id, value){var box = el(id); if(box) box.textContent = value || 0;}
@@ -133,19 +98,12 @@ Con qué se conecta:
     return "estado-pendiente";
   }
 
-  function statePill(row){
-    return '<span class="def-pill ' + stateClass(row) + '">' + esc(row._estadoDefensa) + '</span>';
-  }
-
-  function pendingPatch(id){
-    return state.changes[id] ? clone(state.changes[id]) : null;
-  }
+  function statePill(row){return '<span class="def-pill ' + stateClass(row) + '">' + esc(row._estadoDefensa) + '</span>';}
+  function pendingPatch(id){return state.changes[id] ? clone(state.changes[id]) : null;}
 
   function withPending(row){
     var patch = pendingPatch(row._defId);
-    if(patch && window.DefartCore && typeof window.DefartCore.preview === "function"){
-      return window.DefartCore.preview(row, patch);
-    }
+    if(patch && window.DefartCore && typeof window.DefartCore.preview === "function") return window.DefartCore.preview(row, patch);
     return row;
   }
 
@@ -160,19 +118,11 @@ Con qué se conecta:
     return '<input class="def-note-input" type="number" min="0" max="10" step="0.01" inputmode="decimal" data-id="' + esc(row._defId) + '" data-field="' + field + '" value="' + esc(noteText(value)) + '" ' + (enabled ? "" : "disabled") + ' title="' + esc(title) + '" />';
   }
 
-  function sortIcon(key){
-    if(state.sortKey !== key) return "";
-    return state.sortDir === "asc" ? " ▲" : " ▼";
-  }
+  function sortIcon(key){if(state.sortKey !== key) return "";return state.sortDir === "asc" ? " ▲" : " ▼";}
 
   function tableHtml(rows){
-    if(!rows || !rows.length){
-      return '<div class="def-empty">Sin estudiantes con los filtros seleccionados.</div>';
-    }
-    var head = '<table class="def-table"><thead><tr>' + HEADERS.map(function(header){
-      return '<th class="' + esc(header.className || "") + '" data-sort="' + esc(header.key) + '">' + esc(header.label) + sortIcon(header.key) + '</th>';
-    }).join("") + '<th data-sort="_estadoDefensa">Estado' + sortIcon("_estadoDefensa") + '</th></tr></thead><tbody>';
-
+    if(!rows || !rows.length) return '<div class="def-empty">Sin estudiantes con los filtros seleccionados.</div>';
+    var head = '<table class="def-table"><thead><tr>' + HEADERS.map(function(header){return '<th class="' + esc(header.className || "") + '" data-sort="' + esc(header.key) + '">' + esc(header.label) + sortIcon(header.key) + '</th>';}).join("") + '<th data-sort="_estadoDefensa">Estado' + sortIcon("_estadoDefensa") + '</th></tr></thead><tbody>';
     var body = rows.map(function(original){
       var row = withPending(original);
       var pending = !!state.changes[original._defId];
@@ -189,9 +139,7 @@ Con qué se conecta:
     return head + body + '</tbody></table>';
   }
 
-  function collectOptions(){
-    return {periodId:state.periodId, career:state.career, status:state.status, sede:state.sede, search:state.search, sortKey:state.sortKey, sortDir:state.sortDir};
-  }
+  function collectOptions(){return {periodId:state.periodId, career:state.career, status:state.status, sede:state.sede, search:state.search, sortKey:state.sortKey, sortDir:state.sortDir};}
 
   function render(){
     if(state.rendering || state.saving) return;
@@ -210,63 +158,41 @@ Con qué se conecta:
     }catch(error){
       console.error("[Defensas]", error);
       status(error.message || String(error), "warn");
-    }finally{
-      state.rendering = false;
-    }
+    }finally{state.rendering = false;}
   }
 
-  function getRowById(id){
-    var rows = state.data && Array.isArray(state.data.rows) ? state.data.rows : [];
-    return rows.find(function(row){return row._defId === id;}) || null;
+  function scheduleFilterRender(){
+    if(state.filterTimer) clearTimeout(state.filterTimer);
+    state.filterTimer = setTimeout(render, 180);
   }
+
+  function getRowById(id){var rows = state.data && Array.isArray(state.data.rows) ? state.data.rows : [];return rows.find(function(row){return row._defId === id;}) || null;}
 
   function findInput(id, field){
     var found = null;
-    document.querySelectorAll(".def-note-input").forEach(function(input){
-      if(input.getAttribute("data-id") === id && input.getAttribute("data-field") === field){
-        found = input;
-      }
-    });
+    document.querySelectorAll(".def-note-input").forEach(function(input){if(input.getAttribute("data-id") === id && input.getAttribute("data-field") === field) found = input;});
     return found;
   }
 
-  function setChange(id, field, value){
-    if(!state.changes[id]) state.changes[id] = {id:id};
-    state.changes[id][field] = value;
-    updatePendingMessage();
-  }
+  function setChange(id, field, value){if(!state.changes[id]) state.changes[id] = {id:id};state.changes[id][field] = value;updatePendingMessage();}
 
   function updatePendingMessage(){
     var total = Object.keys(state.changes).length;
     var btn = el("def-btn-save");
     if(btn) btn.disabled = state.saving;
-    if(total){
-      setProgress(state.saving ? 60 : 12, total + " estudiante(s) con cambios pendientes.");
-      saveState(state.saving ? "Guardando..." : "Cambios pendientes");
-    }else{
-      setProgress(state.saving ? 60 : 0, state.saving ? "Guardando..." : "Sin cambios pendientes.");
-      saveState(state.saving ? "Guardando..." : "Listo");
-    }
+    if(total){setProgress(state.saving ? 60 : 12, total + " estudiante(s) con cambios pendientes.");saveState(state.saving ? "Guardando..." : "Cambios pendientes");}
+    else{setProgress(state.saving ? 60 : 0, state.saving ? "Guardando..." : "Sin cambios pendientes.");saveState(state.saving ? "Guardando..." : "Listo");}
   }
 
-  function validDecimals(value){
-    var raw = text(value).replace(",", ".");
-    if(!raw) return true;
-    return /^\d{1,2}(\.\d{0,2})?$|^10(\.0{0,2})?$|^0(\.\d{0,2})?$/.test(raw);
-  }
+  function validDecimals(value){var raw = text(value).replace(",", ".");if(!raw) return true;return /^\d{1,2}(\.\d{0,2})?$|^10(\.0{0,2})?$|^0(\.\d{0,2})?$/.test(raw);}
 
   function validateInput(input){
     var value = text(input.value);
-    if(!value){
-      input.classList.remove("is-invalid");
-      return true;
-    }
+    if(!value){input.classList.remove("is-invalid");return true;}
     var num = Number(value.replace(",", "."));
     var ok = Number.isFinite(num) && num >= 0 && num <= 10 && validDecimals(value);
     input.classList.toggle("is-invalid", !ok);
-    if(!ok){
-      status("La nota debe estar entre 0 y 10 y máximo 2 decimales.", "warn");
-    }
+    if(!ok) status("La nota debe estar entre 0 y 10 y máximo 2 decimales.", "warn");
     return ok;
   }
 
@@ -293,19 +219,10 @@ Con qué se conecta:
     var estado = rowEl.querySelector(".col-estado");
     if(estado) estado.innerHTML = statePill(preview);
     var ndefInput = findInput(id, "ndef");
-    if(ndefInput){
-      ndefInput.disabled = !preview._canDef;
-      ndefInput.title = preview._canDef ? "" : "Bloqueado hasta tener N-ART igual o mayor a 7.";
-    }
+    if(ndefInput){ndefInput.disabled = !preview._canDef;ndefInput.title = preview._canDef ? "" : "Bloqueado hasta tener N-ART igual o mayor a 7.";}
   }
 
-  function anyInvalidInputs(){
-    var invalid = false;
-    document.querySelectorAll(".def-note-input").forEach(function(input){
-      if(!validateInput(input)) invalid = true;
-    });
-    return invalid;
-  }
+  function anyInvalidInputs(){var invalid = false;document.querySelectorAll(".def-note-input").forEach(function(input){if(!validateInput(input)) invalid = true;});return invalid;}
 
   function onNoteInput(input){
     if(!validateInput(input)) return;
@@ -316,18 +233,31 @@ Con qué se conecta:
     scheduleAutoSave();
   }
 
+  function focusNextInput(input){
+    var inputs = Array.prototype.slice.call(document.querySelectorAll(".def-note-input:not(:disabled)"));
+    var index = inputs.indexOf(input);
+    if(index >= 0 && inputs[index + 1]){inputs[index + 1].focus();inputs[index + 1].select();return true;}
+    return false;
+  }
+
   function bindTableEvents(){
     document.querySelectorAll("#def-table-wrap th[data-sort]").forEach(function(th){
       th.addEventListener("click", function(){
         var key = th.getAttribute("data-sort");
         if(state.sortKey === key) state.sortDir = state.sortDir === "asc" ? "desc" : "asc";
-        else{state.sortKey = key; state.sortDir = "asc";}
+        else{state.sortKey = key;state.sortDir = "asc";}
         render();
       });
     });
     document.querySelectorAll(".def-note-input").forEach(function(input){
       input.addEventListener("input", function(){onNoteInput(input);});
       input.addEventListener("change", function(){onNoteInput(input);});
+      input.addEventListener("keydown", function(event){
+        if(event.key === "Enter"){
+          event.preventDefault();
+          if(validateInput(input)){focusNextInput(input);}
+        }
+      });
     });
   }
 
@@ -340,15 +270,13 @@ Con qué se conecta:
 
   function saveAll(mode){
     if(state.saving) return;
-    if(state.autoTimer){clearTimeout(state.autoTimer); state.autoTimer = null;}
+    if(state.autoTimer){clearTimeout(state.autoTimer);state.autoTimer = null;}
     if(anyInvalidInputs()) return;
     var changes = changesArray();
-    if(!changes.length){updatePendingMessage(); return;}
-
+    if(!changes.length){updatePendingMessage();return;}
     state.saving = true;
     setProgress(35, "Preparando guardado de notas...");
     saveState(mode === "auto" ? "Guardado automático..." : "Guardando...");
-
     setTimeout(function(){
       try{
         setProgress(70, "Guardando " + changes.length + " estudiante(s) en BaseLocal...");
@@ -357,15 +285,8 @@ Con qué se conecta:
         setProgress(100, result.message || "Notas guardadas.");
         saveState("Guardado");
         status((result.message || "Notas guardadas en BaseLocal.") + " BL sincronizará Firebase.", result.ok ? "ok" : "warn");
-        if(result.errors && result.errors.length){
-          status(result.message + " Errores: " + result.errors.slice(0, 2).join(" | "), "warn");
-        }
-        setTimeout(function(){
-          state.saving = false;
-          setProgress(0, "Sin cambios pendientes.");
-          saveState("Listo");
-          render();
-        }, 450);
+        if(result.errors && result.errors.length) status(result.message + " Errores: " + result.errors.slice(0, 2).join(" | "), "warn");
+        setTimeout(function(){state.saving = false;setProgress(0, "Sin cambios pendientes.");saveState("Listo");render();}, 450);
       }catch(error){
         console.error("[Defensas Guardar]", error);
         state.saving = false;
@@ -381,31 +302,31 @@ Con qué se conecta:
       var rows = ((state.data && state.data.rows) || []).map(withPending);
       var result = window.DefartExport.exportExcel(rows, {periodId:state.periodId || "TODOS", periodLabel:state.periodId || "TODOS"});
       status("Excel descargado: " + result.fileName, "ok");
-    }catch(error){
-      console.error("[Defensas Export]", error);
-      status(error.message || String(error), "warn");
-    }
+    }catch(error){console.error("[Defensas Export]", error);status(error.message || String(error), "warn");}
+  }
+
+  function clearFilters(){
+    state.periodId = "";state.career = "";state.status = "";state.sede = "";state.search = "";
+    if(el("def-filter-periodo")) el("def-filter-periodo").value = "";
+    if(el("def-filter-carrera")) el("def-filter-carrera").value = "";
+    if(el("def-filter-estado")) el("def-filter-estado").value = "";
+    if(el("def-filter-sede")) el("def-filter-sede").value = "";
+    if(el("def-filter-search")) el("def-filter-search").value = "";
+    render();
   }
 
   function bind(){
-    if(el("def-filter-periodo")) el("def-filter-periodo").addEventListener("change", function(event){state.periodId = event.target.value; render();});
-    if(el("def-filter-carrera")) el("def-filter-carrera").addEventListener("change", function(event){state.career = event.target.value; render();});
-    if(el("def-filter-estado")) el("def-filter-estado").addEventListener("change", function(event){state.status = event.target.value; render();});
-    if(el("def-filter-sede")) el("def-filter-sede").addEventListener("change", function(event){state.sede = event.target.value; render();});
-    if(el("def-filter-search")) el("def-filter-search").addEventListener("input", function(event){state.search = event.target.value; render();});
+    if(el("def-filter-periodo")) el("def-filter-periodo").addEventListener("change", function(event){state.periodId = event.target.value;render();});
+    if(el("def-filter-carrera")) el("def-filter-carrera").addEventListener("change", function(event){state.career = event.target.value;render();});
+    if(el("def-filter-estado")) el("def-filter-estado").addEventListener("change", function(event){state.status = event.target.value;render();});
+    if(el("def-filter-sede")) el("def-filter-sede").addEventListener("change", function(event){state.sede = event.target.value;render();});
+    if(el("def-filter-search")) el("def-filter-search").addEventListener("input", function(event){state.search = event.target.value;scheduleFilterRender();});
+    if(el("def-btn-clear")) el("def-btn-clear").addEventListener("click", clearFilters);
     if(el("def-btn-refresh")) el("def-btn-refresh").addEventListener("click", render);
     if(el("def-btn-save")) el("def-btn-save").addEventListener("click", function(){saveAll("manual");});
     if(el("def-btn-export")) el("def-btn-export").addEventListener("click", exportExcel);
-
-    window.addEventListener("storage", function(event){
-      if(event.key === "REQ_BL_SIGNAL_V1" || event.key === "REQ_EXCEL_LOCAL_V1:snapshot") render();
-    });
-    window.addEventListener("beforeunload", function(event){
-      if(Object.keys(state.changes).length){
-        event.preventDefault();
-        event.returnValue = "";
-      }
-    });
+    window.addEventListener("storage", function(event){if(event.key === "REQ_BL_SIGNAL_V1" || event.key === "REQ_EXCEL_LOCAL_V1:snapshot") render();});
+    window.addEventListener("beforeunload", function(event){if(Object.keys(state.changes).length){event.preventDefault();event.returnValue = "";}});
   }
 
   function boot(){
@@ -413,10 +334,7 @@ Con qué se conecta:
       if(window.ExcelLocalBridge && typeof window.ExcelLocalBridge.ensureReady === "function") window.ExcelLocalBridge.ensureReady();
       bind();
       render();
-    }catch(error){
-      console.error("[Defensas Boot]", error);
-      status(error.message || String(error), "warn");
-    }
+    }catch(error){console.error("[Defensas Boot]", error);status(error.message || String(error), "warn");}
   }
 
   if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
