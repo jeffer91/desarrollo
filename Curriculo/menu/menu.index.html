@@ -4,8 +4,9 @@ Ruta o ubicación: /Curriculo/menu/menu.index.html
 Función o funciones:
 - Mostrar la pantalla principal del menú del módulo Currículo
 - Renderizar marca, navegación superior, estado local y frame principal
-- Permitir navegar entre Inicio, Carreras, Materias, PEA, Fichas, Actas y Control
+- Permitir navegar entre Inicio, Base local, Carreras, Materias, PEA, Fichas, Actas y Control
 - Incluir botones para refrescar y abrir la vista actual
+- Cargar el motor de Base local para inicialización diaria desde Currículo
 ========================================================= -->
 <!doctype html>
 <html lang="es">
@@ -89,6 +90,17 @@ Función o funciones:
   <script src="../shared/local/curriculo.local-db.js"></script>
   <script src="../shared/local/curriculo.sync-queue.js"></script>
   <script src="../shared/local/curriculo.sync-status.js"></script>
+
+  <script src="../Base%20local/core/bl.config.js"></script>
+  <script src="../Base%20local/core/bl.utils.js"></script>
+  <script src="../Base%20local/core/bl.logger.js"></script>
+  <script src="../Base%20local/core/bl.storage.js"></script>
+  <script src="../Base%20local/core/bl.schema.js"></script>
+  <script src="../Base%20local/core/bl.compare.js"></script>
+  <script src="../Base%20local/core/bl.backup.js"></script>
+  <script src="../Base%20local/core/bl.diagnostics.js"></script>
+  <script src="../Base%20local/core/bl.sync.firebase.js"></script>
+
   <script src="./menu.config.js"></script>
   <script src="./menu.router.js"></script>
   <script src="./menu.render.js"></script>
