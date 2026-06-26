@@ -5,9 +5,8 @@ Función o funciones:
 - Conectar todos los módulos de Requisitos con una misma Base Local.
 - Compartir datos entre pantallas, iframes y la pantalla BL usando localStorage.
 - Exponer APIs simples: RequisitosBL, BaseLocalBridge.
-- Evitar bloqueos por escrituras repetidas al espejar estudiantes y períodos.
-- Reflejar estudiantes también en la colección defensas para control de notas.
-- No guarda archivos físicos; solo datos JSON, estados, referencias y registros.
+- Reconstruir colecciones espejo para eliminar residuos de periodos o estudiantes antiguos.
+- Reflejar estudiantes también en tabla, fichas, stats, coordi, reportes y defensas.
 ========================================================= */
 (function(window){
   "use strict";
@@ -17,36 +16,10 @@ Función o funciones:
   var SNAPSHOT_KEY = "REQ_EXCEL_LOCAL_V1:snapshot";
   var STATUS_KEY = "REQ_BL_CONNECTOR_STATUS_V1";
 
-  var COLLECTIONS = [
-    "periodos",
-    "estudiantes",
-    "requisitos",
-    "observaciones",
-    "fichas",
-    "tabla",
-    "stats",
-    "coordi",
-    "reportes",
-    "defensas",
-    "archivos_referencias",
-    "metadata"
-  ];
+  var COLLECTIONS = ["periodos","estudiantes","requisitos","observaciones","fichas","tabla","stats","coordi","reportes","defensas","archivos_referencias","metadata"];
+  var MIRROR_COLLECTIONS = ["periodos","estudiantes","requisitos","fichas","tabla","stats","coordi","reportes","defensas"];
 
-  var MODULE_COLLECTIONS = {
-    requisito:"requisitos",
-    excel:"requisitos",
-    carga:"requisitos",
-    tabla:"tabla",
-    ficha:"fichas",
-    stats:"stats",
-    coordi:"coordi",
-    repor:"reportes",
-    reportes:"reportes",
-    repo:"reportes",
-    defensas:"defensas",
-    defart:"defensas"
-  };
-
+  var MODULE_COLLECTIONS = {requisito:"requisitos",excel:"requisitos",carga:"requisitos",tabla:"tabla",ficha:"fichas",stats:"stats",coordi:"coordi",repor:"reportes",reportes:"reportes",repo:"reportes",defensas:"defensas",defart:"defensas"};
   var mirrorState = {running:false,lastSignature:"",lastAt:""};
 
   function now(){return new Date().toISOString();}
@@ -65,15 +38,28 @@ Función o funciones:
   function collectionFor(moduleName){var key = text(moduleName).toLowerCase();return MODULE_COLLECTIONS[key] || key || "metadata";}
   function getStorage(){return window.ExcelLocalStorage && typeof window.ExcelLocalStorage.readSnapshot === "function" ? window.ExcelLocalStorage : null;}
 
+  function canonicalizeSnapshot(snapshot){
+    var snap = snapshot || {};
+    if(window.BLPeriodosCanon && typeof window.BLPeriodosCanon.canonicalizeSnapshot === "function"){
+      snap = window.BLPeriodosCanon.canonicalizeSnapshot(snap);
+    }
+    snap.meta = snap.meta && typeof snap.meta === "object" ? snap.meta : {};
+    snap.periods = Array.isArray(snap.periods) ? snap.periods : [];
+    snap.students = Array.isArray(snap.students) ? snap.students : [];
+    snap.history = Array.isArray(snap.history) ? snap.history : [];
+    snap.diagnostics = Array.isArray(snap.diagnostics) ? snap.diagnostics : [];
+    return snap;
+  }
+
   function readRawSnapshot(){
     var storage = getStorage();
-    if(storage){return storage.readSnapshot();}
-    return safeParse(window.localStorage.getItem(SNAPSHOT_KEY), {meta:{app:"Requisitos", module:"BaseLocal", source:"fallback", updatedAt:now()}, periods:[], students:[], history:[], diagnostics:[]});
+    var snap = storage ? storage.readSnapshot() : safeParse(window.localStorage.getItem(SNAPSHOT_KEY), {meta:{app:"Requisitos", module:"BaseLocal", source:"fallback", updatedAt:now()}, periods:[], students:[], history:[], diagnostics:[]});
+    return canonicalizeSnapshot(snap);
   }
 
   function writeRawSnapshot(snapshot){
     var storage = getStorage();
-    var clean = snapshot || {};
+    var clean = canonicalizeSnapshot(snapshot || {});
     if(storage && typeof storage.writeSnapshot === "function"){storage.writeSnapshot(clean);}
     else{window.localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(clean));}
     signal("snapshot-changed", {updatedAt:now()});
@@ -85,10 +71,8 @@ Función o funciones:
 
   function getRecordId(record, collection){
     if(!record || typeof record !== "object"){return normalizeId("", collection);}
-    if(collection === "defensas"){
-      return normalizeId([record._blId,record.id,record.docId,record._docId,record.cedula,record.numeroIdentificacion,record.numeroidentificacion,record.identificacion,record.periodoId,record.ultimoPeriodoId].filter(Boolean).join("-"), collection);
-    }
-    return normalizeId(record._blId || record.id || record.docId || record._docId || record.cedula || record.Cedula || record.CEDULA || record.numeroIdentificacion || record.numeroidentificacion || record.identificacion || record.codigo || record.periodoId || record.periodId || record.reporteId || record.fichaId || record.key, collection);
+    if(collection === "periodos"){return normalizeId(record.id || record.periodoId || record.label, collection);}
+    return normalizeId(record.cedula || record.numeroIdentificacion || record.numeroidentificacion || record.identificacion || record.docId || record._docId || record.id || record.codigo || record.periodoId || record.periodId || record.reporteId || record.fichaId || record.key, collection);
   }
 
   function normalizeRecord(collection, record, source){
@@ -98,7 +82,7 @@ Función o funciones:
     copy._blCollection = collection;
     copy._blSource = source || copy._blSource || "module";
     copy._blCreatedAt = copy._blCreatedAt || copy.creadoEn || copy.createdAt || now();
-    copy._blUpdatedAt = copy._blUpdatedAt || copy.actualizadoEn || copy.updatedAt || copy.fechaActualizacion || now();
+    copy._blUpdatedAt = now();
     copy._blDeleted = copy._blDeleted === true;
     return copy;
   }
@@ -118,11 +102,7 @@ Función o funciones:
   function guardarMuchos(collection, records, source, options){
     options = options || {};
     if(!Array.isArray(records) || !collection){return [];}
-    if(!records.length){
-      if(options.silent !== true){signal("changed", {collection:collection, source:source || "module_many", count:readCollection(collection).length, changed:0, bulk:true});}
-      return [];
-    }
-    var rows = readCollection(collection);
+    var rows = options.replace === true ? [] : readCollection(collection);
     var indexById = {};
     rows.forEach(function(row, index){if(row && row._blId){indexById[row._blId] = index;}});
     var saved = [];
@@ -135,8 +115,12 @@ Función o funciones:
       saved.push(copy);
     });
     writeCollection(collection, rows);
-    if(options.silent !== true){signal("changed", {collection:collection, source:source || "module_many", count:rows.length, changed:saved.length, bulk:true});}
+    if(options.silent !== true){signal("changed", {collection:collection, source:source || "module_many", count:rows.length, changed:saved.length, bulk:true, replace:options.replace === true});}
     return saved;
+  }
+
+  function replaceCollection(collection, records, source, options){
+    return guardarMuchos(collection, Array.isArray(records) ? records : [], source || "replace", Object.assign({}, options || {}, {replace:true}));
   }
 
   function listar(collection, options){
@@ -147,26 +131,16 @@ Función o funciones:
   }
 
   function buscarPorId(collection, id){var cleanId = normalizeId(id, collection);return readCollection(collection).find(function(row){return row && row._blId === cleanId;}) || null;}
-
-  function marcarEliminado(collection, id, source){
-    var row = buscarPorId(collection, id);
-    if(!row){return null;}
-    row._blDeleted = true;row._blDeletedAt = now();row._blUpdatedAt = now();
-    return guardar(collection, row, source || "module_delete");
-  }
+  function marcarEliminado(collection, id, source){var row = buscarPorId(collection, id);if(!row){return null;}row._blDeleted = true;row._blDeletedAt = now();row._blUpdatedAt = now();return guardar(collection, row, source || "module_delete");}
 
   function snapshotSignature(snapshot){
     snapshot = snapshot || {};
     var meta = snapshot.meta || {};
     var periods = Array.isArray(snapshot.periods) ? snapshot.periods : [];
     var students = Array.isArray(snapshot.students) ? snapshot.students : [];
-    var notesUpdated = 0;
-    students.forEach(function(student){
-      if(student && (student.Notart !== undefined || student.Notdef !== undefined || student.Notafinal !== undefined)){
-        notesUpdated += String(student.cedula || student.numeroIdentificacion || student._docId || "").length + String(student.Notart || "") + String(student.Notdef || "") + String(student.Notafinal || "").length;
-      }
-    });
-    return [meta.updatedAt || meta.pulledAt || meta.createdAt || "", periods.length, students.length, students[0] && (students[0].cedula || students[0].numeroIdentificacion || students[0]._docId || students[0].docId || ""), students[students.length - 1] && (students[students.length - 1].cedula || students[students.length - 1].numeroIdentificacion || students[students.length - 1]._docId || students[students.length - 1].docId || ""), notesUpdated].join("|");
+    var first = students[0] && (students[0].cedula || students[0].numeroIdentificacion || students[0]._docId || students[0].docId || "");
+    var last = students[students.length - 1] && (students[students.length - 1].cedula || students[students.length - 1].numeroIdentificacion || students[students.length - 1]._docId || students[students.length - 1].docId || "");
+    return [meta.updatedAt || meta.pulledAt || meta.createdAt || "", periods.length, students.length, first, last].join("|");
   }
 
   function mirrorSnapshotToCollections(options){
@@ -176,22 +150,23 @@ Función o funciones:
     var periods = Array.isArray(snapshot.periods) ? snapshot.periods : [];
     var students = Array.isArray(snapshot.students) ? snapshot.students : [];
     var signature = snapshotSignature(snapshot);
-    if(options.force !== true && signature && signature === mirrorState.lastSignature){return {periods:periods.length, students:students.length, defensas:students.length, skipped:true, reason:"same_snapshot"};}
-
+    if(options.force !== true && options.rebuild !== true && signature && signature === mirrorState.lastSignature){return {periods:periods.length, students:students.length, defensas:students.length, skipped:true, reason:"same_snapshot"};}
     mirrorState.running = true;
     try{
-      guardarMuchos("periodos", periods, "snapshot_mirror", {silent:true});
-      guardarMuchos("estudiantes", students, "snapshot_mirror", {silent:true});
-      guardarMuchos("requisitos", students, "snapshot_mirror", {silent:true});
-      guardarMuchos("defensas", students, "snapshot_mirror", {silent:true});
-      guardar("metadata", {id:"snapshot_mirror_status", totalPeriods:periods.length, totalStudents:students.length, totalDefensas:students.length, updatedAt:now(), signature:signature}, "snapshot_mirror", {silent:true});
+      var replace = options.rebuild === true || options.replace === true || options.force === true;
+      guardarMuchos("periodos", periods, "snapshot_mirror", {silent:true, replace:replace});
+      ["estudiantes","requisitos","fichas","tabla","stats","coordi","reportes","defensas"].forEach(function(collection){guardarMuchos(collection, students, "snapshot_mirror", {silent:true, replace:replace});});
+      guardar("metadata", {id:"snapshot_mirror_status", totalPeriods:periods.length, totalStudents:students.length, totalDefensas:students.length, updatedAt:now(), signature:signature, rebuild:replace}, "snapshot_mirror", {silent:true});
       mirrorState.lastSignature = signature;
       mirrorState.lastAt = now();
-      if(options.silent !== true){signal("mirror-complete", {periods:periods.length, students:students.length, defensas:students.length, updatedAt:mirrorState.lastAt});}
-      return {periods:periods.length, students:students.length, defensas:students.length, skipped:false};
-    }finally{
-      mirrorState.running = false;
-    }
+      if(options.silent !== true){signal("mirror-complete", {periods:periods.length, students:students.length, defensas:students.length, updatedAt:mirrorState.lastAt, rebuild:replace});}
+      return {periods:periods.length, students:students.length, defensas:students.length, skipped:false, rebuild:replace};
+    }finally{mirrorState.running = false;}
+  }
+
+  function rebuildSnapshotToCollections(options){
+    options = Object.assign({}, options || {}, {force:true, rebuild:true, replace:true});
+    return mirrorSnapshotToCollections(options);
   }
 
   function conteos(){
@@ -200,7 +175,7 @@ Función o funciones:
     COLLECTIONS.forEach(function(collection){
       var total = listar(collection).length;
       if(collection === "periodos" && Array.isArray(snapshot.periods) && snapshot.periods.length > total){total = snapshot.periods.length;}
-      if((collection === "estudiantes" || collection === "requisitos" || collection === "defensas") && Array.isArray(snapshot.students) && snapshot.students.length > total){total = snapshot.students.length;}
+      if(["estudiantes","requisitos","fichas","tabla","stats","coordi","reportes","defensas"].indexOf(collection) >= 0 && Array.isArray(snapshot.students) && snapshot.students.length > total){total = snapshot.students.length;}
       result.byCollection[collection] = total;
       result.records += total;
     });
@@ -231,7 +206,7 @@ Función o funciones:
     var collection = options.collection || collectionFor(moduleName);
     var globalName = options.globalName || pascal(moduleName) + "BL";
     var globals = options.globals || [];
-    var api = {module:moduleName, collection:collection, guardar:function(record){return guardar(collection, record, moduleName);}, guardarMuchos:function(records){return guardarMuchos(collection, records, moduleName + "_many");}, listar:function(){return listar(collection);}, buscarPorId:function(id){return buscarPorId(collection, id);}, marcarEliminado:function(id){return marcarEliminado(collection, id, moduleName + "_delete");}, capturarAutomatico:function(){return capturarGlobales(collection, globals, "auto_capture_" + moduleName);}};
+    var api = {module:moduleName, collection:collection, guardar:function(record){return guardar(collection, record, moduleName);}, guardarMuchos:function(records){return guardarMuchos(collection, records, moduleName + "_many");}, reemplazar:function(records){return replaceCollection(collection, records, moduleName + "_replace");}, listar:function(){return listar(collection);}, buscarPorId:function(id){return buscarPorId(collection, id);}, marcarEliminado:function(id){return marcarEliminado(collection, id, moduleName + "_delete");}, capturarAutomatico:function(){return capturarGlobales(collection, globals, "auto_capture_" + moduleName);}};
     window[globalName] = api;
     setTimeout(function(){api.capturarAutomatico();signal("module-ready", {module:moduleName, collection:collection, globalName:globalName, count:listar(collection).length});}, 250);
     window.addEventListener("load", function(){api.capturarAutomatico();});
@@ -241,29 +216,9 @@ Función o funciones:
   function getStatus(){return safeParse(window.localStorage.getItem(STATUS_KEY), {ok:true, mode:"local", updatedAt:now()});}
   function saveStatus(status){var next = Object.assign({}, getStatus(), status || {}, {updatedAt:now(), today:today()});window.localStorage.setItem(STATUS_KEY, JSON.stringify(next));return next;}
 
-  window.RequisitosBL = {
-    version:"1.0.2",
-    collections:COLLECTIONS.slice(),
-    today:today,
-    collectionFor:collectionFor,
-    readSnapshot:readRawSnapshot,
-    writeSnapshot:writeRawSnapshot,
-    mirrorSnapshotToCollections:mirrorSnapshotToCollections,
-    guardar:guardar,
-    guardarMuchos:guardarMuchos,
-    listar:listar,
-    buscarPorId:buscarPorId,
-    marcarEliminado:marcarEliminado,
-    conteos:conteos,
-    capturarGlobales:capturarGlobales,
-    conectarModulo:conectarModulo,
-    notificar:signal,
-    getStatus:getStatus,
-    saveStatus:saveStatus
-  };
+  window.RequisitosBL = {version:"1.1.0",collections:COLLECTIONS.slice(),mirrorCollections:MIRROR_COLLECTIONS.slice(),today:today,collectionFor:collectionFor,readSnapshot:readRawSnapshot,writeSnapshot:writeRawSnapshot,mirrorSnapshotToCollections:mirrorSnapshotToCollections,rebuildSnapshotToCollections:rebuildSnapshotToCollections,replaceCollection:replaceCollection,guardar:guardar,guardarMuchos:guardarMuchos,listar:listar,buscarPorId:buscarPorId,marcarEliminado:marcarEliminado,conteos:conteos,capturarGlobales:capturarGlobales,conectarModulo:conectarModulo,notificar:signal,getStatus:getStatus,saveStatus:saveStatus};
+  window.BaseLocalBridge = {version:"1.1.0",counts:conteos,getSnapshot:readRawSnapshot,writeSnapshot:writeRawSnapshot,mirrorSnapshotToCollections:mirrorSnapshotToCollections,rebuildSnapshotToCollections:rebuildSnapshotToCollections,list:listar,upsert:guardar,upsertMany:guardarMuchos,replace:replaceCollection,status:getStatus};
 
-  window.BaseLocalBridge = {version:"1.0.2", counts:conteos, getSnapshot:readRawSnapshot, writeSnapshot:writeRawSnapshot, mirrorSnapshotToCollections:mirrorSnapshotToCollections, list:listar, upsert:guardar, upsertMany:guardarMuchos, status:getStatus};
-
-  try{mirrorSnapshotToCollections({silent:true});saveStatus({ok:true, mode:"connector_ready", optimized:true, defensasMirror:true});}
+  try{mirrorSnapshotToCollections({silent:true});saveStatus({ok:true, mode:"connector_ready", optimized:true, defensasMirror:true, rebuildReady:true});}
   catch(error){saveStatus({ok:false, mode:"connector_error", errorMessage:error.message || String(error)});}
 })(window);
