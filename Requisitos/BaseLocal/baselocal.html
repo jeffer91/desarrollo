@@ -6,10 +6,13 @@ Función o funciones:
 - Mostrar la base local generada desde carga Excel y Firebase.
 - Ver períodos, estudiantes activos, retirados, historial y diagnóstico.
 - Conectar servicios pequeños de campos, normalización, filtros, matrícula, Firebase, diagnóstico y prueba interna.
+- Cargar servicios base para períodos canónicos y divisiones.
 - No mostrar título propio porque Maqueta controla el menú superior.
 Con qué se conecta:
 - baselocal.css
 - services/bl-campos.js
+- services/bl-periodos-canon.service.js
+- services/bl-divisiones.service.js
 - services/bl-normalizador.js
 - services/bl-filtros.js
 - services/bl-periodos.service.js
@@ -99,6 +102,8 @@ Con qué se conecta:
   <script src="../Gestion/Excel/excel-local/excel-local.bridge.js"></script>
   <script src="../Gestion/Excel/excel-local.repo.js"></script>
   <script src="services/bl-campos.js"></script>
+  <script src="services/bl-periodos-canon.service.js"></script>
+  <script src="services/bl-divisiones.service.js"></script>
   <script src="services/bl-normalizador.js"></script>
   <script src="services/bl-filtros.js"></script>
   <script src="services/bl-periodos.service.js"></script>
