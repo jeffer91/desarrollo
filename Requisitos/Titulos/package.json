@@ -25,11 +25,12 @@
   "main": "electron/ta-titulo-articulo-main.js",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
+    "dev:netlify": "npx netlify-cli dev --host 127.0.0.1 --port 8888",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
     "electron": "electron electron/ta-titulo-articulo-main.js",
     "check": "node scripts/ta-titulo-articulo-check.mjs",
-    "start": "npm run dev"
+    "start": "npm run dev:netlify"
   },
   "dependencies": {
     "@netlify/functions": "^2.8.2",
