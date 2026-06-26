@@ -3,11 +3,13 @@ Nombre completo: baselocal.firebase.js
 Ruta o ubicación: /Requisitos/BaseLocal/baselocal.firebase.js
 Función o funciones:
 - Sincronizar Base Local ↔ Firebase una vez al día al abrir BL.
-- Permitir sincronización manual con botón.
-- Mantener funcionando la base local aunque no haya internet.
-- Evitar que cédulas se interpreten como períodos.
-- Unificar períodos repetidos por mayúsculas, minúsculas o tildes.
+- Leer principalmente las colecciones reales: Estudiantes y periodos.
+- Mantener funcionando la Base Local aunque no haya internet.
+- Usar servicios pequeños para estudiantes, periodos y sincronización diaria.
 Con qué se conecta:
+- services/bl-periodos.service.js
+- services/bl-estudiantes.service.js
+- services/bl-sync-diario.js
 - baselocal.app.js
 - baselocal.connector.js
 - excel-local.storage.js
@@ -20,18 +22,6 @@ Con qué se conecta:
   var SYNC_STATUS_KEY = "REQ_BL_DAILY_SYNC_STATUS_V1";
   var BACKUP_KEY_PREFIX = "REQ_EXCEL_LOCAL_V1:beforeFirebaseSync:";
   var SIGNAL_KEY = "REQ_BL_SIGNAL_V1";
-
-  var COLLECTIONS = {
-    students:["Estudiantes", "estudiantes", "requisitos_estudiantes"],
-    periods:["periodos", "Periodos", "requisitos_periodos"],
-    snapshots:["requisitos_base_local", "base_local", "BaseLocal"]
-  };
-
-  var MONTHS = {
-    enero:"Enero", febrero:"Febrero", marzo:"Marzo", abril:"Abril", mayo:"Mayo", junio:"Junio",
-    julio:"Julio", agosto:"Agosto", septiembre:"Septiembre", setiembre:"Septiembre",
-    octubre:"Octubre", noviembre:"Noviembre", diciembre:"Diciembre"
-  };
 
   function text(value){
     return String(value == null ? "" : value).trim();
@@ -53,89 +43,29 @@ Con qué se conecta:
     }
   }
 
-  function normalizeText(value){
-    return text(value)
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/\s+/g, " ")
-      .trim()
-      .toLowerCase();
+  function getStorage(){
+    if(!window.ExcelLocalStorage){
+      throw new Error("ExcelLocalStorage no está disponible.");
+    }
+    return window.ExcelLocalStorage;
   }
 
-  function isCedulaLike(value){
-    return /^\d{7,13}$/.test(text(value));
+  function getPeriodosService(){
+    if(!window.BLPeriodosService){
+      throw new Error("BLPeriodosService no está disponible.");
+    }
+    return window.BLPeriodosService;
   }
 
-  function hasMonthAndYear(value){
-    var clean = normalizeText(value);
-    return /\b(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)\b/.test(clean) && /20\d{2}/.test(clean);
+  function getEstudiantesService(){
+    if(!window.BLEstudiantesService){
+      throw new Error("BLEstudiantesService no está disponible.");
+    }
+    return window.BLEstudiantesService;
   }
 
-  function isValidPeriodText(value){
-    var raw = text(value);
-    var clean = normalizeText(raw);
-    if(!raw || isCedulaLike(raw)){
-      return false;
-    }
-    if(clean === "sin_periodo" || clean === "sin periodo"){
-      return true;
-    }
-    return hasMonthAndYear(raw);
-  }
-
-  function periodKey(value){
-    var clean = normalizeText(value);
-    if(clean === "setiembre"){
-      clean = "septiembre";
-    }
-    return clean.replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
-  }
-
-  function prettyPeriodLabel(value){
-    var clean = normalizeText(value);
-    if(!clean){
-      return text(value);
-    }
-    Object.keys(MONTHS).forEach(function(month){
-      clean = clean.replace(new RegExp("\\b" + month + "\\b", "g"), MONTHS[month]);
-    });
-    return clean.replace(/\ba\b/g, "a").replace(/\s+/g, " ").trim();
-  }
-
-  function safeDate(value){
-    try{
-      if(value && typeof value.toDate === "function"){
-        return value.toDate().toISOString();
-      }
-      if(value instanceof Date){
-        return value.toISOString();
-      }
-    }catch(error){
-      return text(value);
-    }
-    return value;
-  }
-
-  function cleanValue(value){
-    var dated = safeDate(value);
-    if(dated !== value){
-      return dated;
-    }
-    if(Array.isArray(value)){
-      return value.map(cleanValue);
-    }
-    if(value && typeof value === "object"){
-      var out = {};
-      Object.keys(value).forEach(function(key){
-        out[key] = cleanValue(value[key]);
-      });
-      return out;
-    }
-    return value;
-  }
-
-  function cleanObject(value){
-    return cleanValue(value || {});
+  function getDailyService(){
+    return window.BLSyncDiario || null;
   }
 
   function emit(kind, payload){
@@ -165,6 +95,15 @@ Con qué se conecta:
     return status;
   }
 
+  function getLastStatus(){
+    try{
+      var raw = window.localStorage.getItem(STATUS_KEY);
+      return raw ? JSON.parse(raw) : {ok:false, mode:"sin_estado"};
+    }catch(error){
+      return {ok:false, mode:"sin_estado"};
+    }
+  }
+
   function getSyncStatus(){
     try{
       var raw = window.localStorage.getItem(SYNC_STATUS_KEY);
@@ -183,22 +122,6 @@ Con qué se conecta:
       console.warn("[BaseLocalFirebase] No se pudo guardar estado diario", error);
     }
     return status;
-  }
-
-  function getLastStatus(){
-    try{
-      var raw = window.localStorage.getItem(STATUS_KEY);
-      return raw ? JSON.parse(raw) : {ok:false, mode:"sin_estado"};
-    }catch(error){
-      return {ok:false, mode:"sin_estado"};
-    }
-  }
-
-  function getStorage(){
-    if(!window.ExcelLocalStorage){
-      throw new Error("ExcelLocalStorage no está disponible.");
-    }
-    return window.ExcelLocalStorage;
   }
 
   function getFirebaseConfigIfAvailable(){
@@ -244,198 +167,16 @@ Con qué se conecta:
     return window.firebase.firestore();
   }
 
-  function docToObject(doc, collectionName){
-    var data = cleanObject(typeof doc.data === "function" ? doc.data() : {});
-    var id = text(doc.id || data.id || data._docId || data.docId);
-    return Object.assign({}, data, {_firebaseId:id, _firebaseCollection:collectionName});
-  }
-
-  async function readCollection(db, collectionName){
-    var snap = await db.collection(collectionName).get();
-    var rows = [];
-    if(snap && typeof snap.forEach === "function"){
-      snap.forEach(function(doc){
-        rows.push(docToObject(doc, collectionName));
-      });
-      return rows;
-    }
-    if(snap && Array.isArray(snap.docs)){
-      return snap.docs.map(function(doc){return docToObject(doc, collectionName);});
-    }
-    return rows;
-  }
-
-  async function readCollections(db, names){
-    var all = [];
-    var details = [];
-    var firstError = null;
-    var successfulReads = 0;
-    for(var i = 0; i < names.length; i += 1){
-      var name = names[i];
-      if(!name){
-        continue;
-      }
-      try{
-        var rows = await readCollection(db, name);
-        successfulReads += 1;
-        if(rows.length){
-          all = all.concat(rows);
-        }
-        details.push({collection:name, rows:rows.length});
-      }catch(error){
-        if(!firstError){
-          firstError = error;
-        }
-        details.push({collection:name, rows:0, error:error && error.message ? error.message : String(error)});
-      }
-    }
-    if(!successfulReads && firstError){
-      throw firstError;
-    }
-    return {rows:all, details:details};
-  }
-
-  function pickValidPeriodText(row, allowDocId){
-    row = row || {};
-    var candidates = [
-      row.periodoId,
-      row.periodId,
-      row.idPeriodo,
-      row.periodo_id,
-      row.periodoLabel,
-      row.label,
-      row.nombrePeriodo,
-      row.periodo,
-      row.Periodo,
-      row.cohorte,
-      row.Cohorte,
-      row.periodoAcademico,
-      row.periodo_academico
-    ];
-    if(allowDocId){
-      candidates.push(row.id, row._firebaseId);
-    }
-    for(var i = 0; i < candidates.length; i += 1){
-      if(isValidPeriodText(candidates[i])){
-        return text(candidates[i]);
-      }
-    }
-    return "";
-  }
-
-  function normalizePeriod(row){
-    var src = cleanObject(row || {});
-    var raw = pickValidPeriodText(src, true);
-    if(!raw){
-      return null;
-    }
-    var id = periodKey(raw) || "SIN_PERIODO";
-    return Object.assign({}, src, {
-      id:id,
-      periodoId:id,
-      label:prettyPeriodLabel(raw),
-      periodoLabel:prettyPeriodLabel(raw),
-      updatedAt:text(src.updatedAt || src.actualizadoEn || src.fechaActualizacion) || now()
-    });
-  }
-
-  function inferPeriods(periodRows, studentRows){
-    var map = {};
-    var list = [];
-
-    function add(period){
-      if(!period){
-        return;
-      }
-      var key = periodKey(period.label || period.id);
-      if(!key || map[key]){
-        return;
-      }
-      map[key] = true;
-      list.push(period);
-    }
-
-    (periodRows || []).forEach(function(row){
-      add(normalizePeriod(row));
-    });
-
-    (studentRows || []).forEach(function(row){
-      var raw = pickValidPeriodText(row, false);
-      if(!raw){
-        return;
-      }
-      add({id:periodKey(raw), periodoId:periodKey(raw), label:prettyPeriodLabel(raw), periodoLabel:prettyPeriodLabel(raw), updatedAt:now(), inferredFrom:"Estudiantes"});
-    });
-
-    if(!list.length && (studentRows || []).length){
-      list.push({id:"SIN_PERIODO", periodoId:"SIN_PERIODO", label:"Sin período", periodoLabel:"Sin período", updatedAt:now(), inferredFrom:"Estudiantes"});
-    }
-    return list;
-  }
-
-  function pickStudentId(row, index){
-    return text(row._docId || row.docId || row._firebaseId || row.id || row.uid || row.cedula || row.Cedula || row.CEDULA || row.numeroIdentificacion || row.numeroidentificacion || row.NumeroIdentificacion || row.identificacion || row.Identificacion || ("firebase_" + (index + 1)));
-  }
-
-  function normalizeStudent(row, index, periods){
-    var src = cleanObject(row || {});
-    var rawPeriod = pickValidPeriodText(src, false);
-    var fallbackPeriod = periods && periods.length ? periods[0] : {id:"SIN_PERIODO", label:"Sin período"};
-    var periodId = rawPeriod ? periodKey(rawPeriod) : fallbackPeriod.id;
-    var periodLabel = rawPeriod ? prettyPeriodLabel(rawPeriod) : fallbackPeriod.label;
-    var docId = pickStudentId(src, index);
-    var cedula = text(src.cedula || src.Cedula || src.CEDULA || src.numeroIdentificacion || src.numeroidentificacion || src.NumeroIdentificacion || src.identificacion || src.Identificacion || docId);
-    var nombres = text(src.nombres || src.Nombres || src.nombre || src.Nombre || src.estudiante || src.Estudiante || src.apellidosNombres || src.apellidos_nombres);
-    var carrera = text(src.nombrecarrera || src.nombreCarrera || src.NombreCarrera || src.carrera || src.Carrera || src.programa || src.Programa);
-
-    return Object.assign({}, src, {
-      _docId:docId,
-      docId:docId,
-      periodoId:periodId,
-      periodoLabel:periodLabel,
-      cedula:cedula,
-      numeroIdentificacion:text(src.numeroIdentificacion || src.numeroidentificacion || cedula),
-      nombres:nombres,
-      nombrecarrera:carrera,
-      updatedAt:text(src.updatedAt || src.actualizadoEn || src.fechaActualizacion) || now(),
-      _source:src._source || "firebase"
-    });
-  }
-
-  function normalizeStudents(studentRows, periods){
-    var map = {};
-    (studentRows || []).forEach(function(row, index){
-      var student = normalizeStudent(row, index, periods);
-      var key = student.periodoId + "::" + (student.cedula || student.docId || index);
-      map[key] = student;
-    });
-    return Object.keys(map).map(function(key){return map[key];});
-  }
-
-  function findSnapshotFromRows(snapshotRows){
-    var found = null;
-    (snapshotRows || []).forEach(function(row){
-      if(found){
-        return;
-      }
-      if(row && Array.isArray(row.students) && Array.isArray(row.periods)){
-        found = row;
-      }else if(row && row.snapshot && Array.isArray(row.snapshot.students) && Array.isArray(row.snapshot.periods)){
-        found = row.snapshot;
-      }
-    });
-    return found;
-  }
-
   function normalizeSnapshot(snapshot){
-    var base = snapshot || {};
-    var meta = Object.assign({app:"Requisitos", module:"ExcelLocal", updatedAt:now()}, base.meta || {});
-    var rawStudents = Array.isArray(base.students) ? base.students : [];
-    var rawPeriods = Array.isArray(base.periods) ? base.periods : [];
-    var periods = inferPeriods(rawPeriods, rawStudents);
-    var students = normalizeStudents(rawStudents, periods);
+    var base = snapshot && typeof snapshot === "object" ? snapshot : {};
+    var meta = Object.assign({app:"Requisitos", module:"ExcelLocal", version:"1.2.0", updatedAt:now()}, base.meta || {});
+    var periods = getPeriodosService().dedupe((base.periods || []).map(function(period){
+      return getPeriodosService().normalizePeriod(period);
+    }));
+    var students = getEstudiantesService().normalizeLocalList(base.students || []);
     meta.totalStudents = students.length;
     meta.totalPeriods = periods.length;
+    meta.updatedAt = meta.updatedAt || now();
     return {
       meta:meta,
       periods:periods,
@@ -445,40 +186,26 @@ Con qué se conecta:
     };
   }
 
-  function buildSnapshot(studentRows, periodRows, remoteDetails){
-    var pulledAt = now();
-    var periods = inferPeriods(periodRows, studentRows);
-    var students = normalizeStudents(studentRows, periods);
-    return normalizeSnapshot({
-      meta:{app:"Requisitos", module:"ExcelLocal", version:"1.0.1", source:"firebase", pulledAt:pulledAt, updatedAt:pulledAt},
-      periods:periods,
-      students:students,
-      history:[{id:"firebase_pull_" + Date.now(), action:"pullFirebase", periodoId:"TODOS", periodoLabel:"Todos los períodos", fileName:"Firebase", totalRows:students.length, totalPeriods:periods.length, collections:remoteDetails || [], createdAt:pulledAt}],
-      diagnostics:[{ok:true, source:"firebase", pulledAt:pulledAt, totalStudents:students.length, totalPeriods:periods.length, collections:remoteDetails || []}]
-    });
-  }
-
   function readLocalSnapshot(){
     return normalizeSnapshot(getStorage().readSnapshot());
   }
 
   function writeLocalSnapshot(snapshot, action){
-    var storage = getStorage();
     var clean = normalizeSnapshot(snapshot);
     clean.meta = clean.meta || {};
-    clean.meta.updatedAt = clean.meta.updatedAt || now();
+    clean.meta.updatedAt = now();
     clean.history = Array.isArray(clean.history) ? clean.history : [];
     clean.history.unshift({
       id:"bl_" + (action || "sync") + "_" + Date.now(),
       action:action || "sync",
       periodoId:"TODOS",
       periodoLabel:"Todos los períodos",
-      fileName:"BaseLocal",
+      fileName:"Base Local",
       totalRows:Array.isArray(clean.students) ? clean.students.length : 0,
       totalPeriods:Array.isArray(clean.periods) ? clean.periods.length : 0,
       createdAt:now()
     });
-    storage.writeSnapshot(clean);
+    getStorage().writeSnapshot(clean);
     if(window.RequisitosBL && typeof window.RequisitosBL.mirrorSnapshotToCollections === "function"){
       window.RequisitosBL.mirrorSnapshotToCollections({force:true, silent:true});
     }
@@ -489,7 +216,7 @@ Con qué se conecta:
   function backupCurrentLocal(reason){
     try{
       var current = readLocalSnapshot();
-      var hasData = current && ((Array.isArray(current.students) && current.students.length) || (Array.isArray(current.periods) && current.periods.length) || (Array.isArray(current.history) && current.history.length));
+      var hasData = current && ((Array.isArray(current.students) && current.students.length) || (Array.isArray(current.periods) && current.periods.length));
       if(hasData){
         window.localStorage.setItem(BACKUP_KEY_PREFIX + Date.now(), JSON.stringify({reason:reason || "before_sync", createdAt:now(), snapshot:current}));
       }
@@ -513,15 +240,39 @@ Con qué se conecta:
   }
 
   async function readRemoteSnapshot(db){
-    var snapshotResult = await readCollections(db, COLLECTIONS.snapshots);
-    var remoteSnapshot = findSnapshotFromRows(snapshotResult.rows);
-    if(remoteSnapshot){
-      return {snapshot:normalizeSnapshot(remoteSnapshot), details:snapshotResult.details, source:"snapshot"};
+    var pulledAt = now();
+    var periodRows = await getPeriodosService().read(db);
+    var studentRows = await getEstudiantesService().read(db);
+    return normalizeSnapshot({
+      meta:{app:"Requisitos", module:"ExcelLocal", version:"1.2.0", source:"firebase", pulledAt:pulledAt, updatedAt:pulledAt},
+      periods:periodRows,
+      students:studentRows,
+      history:[{id:"firebase_pull_" + Date.now(), action:"pullFirebase", periodoId:"TODOS", periodoLabel:"Todos los períodos", fileName:"Firebase", totalRows:studentRows.length, totalPeriods:periodRows.length, createdAt:pulledAt}],
+      diagnostics:[{ok:true, source:"firebase", pulledAt:pulledAt, totalStudents:studentRows.length, totalPeriods:periodRows.length, collections:[{collection:"periodos", rows:periodRows.length}, {collection:"Estudiantes", rows:studentRows.length}]}]
+    });
+  }
+
+  function cleanForFirebase(row){
+    var clean = clone(row || {}) || {};
+    Object.keys(clean).forEach(function(key){
+      if(key.charAt(0) === "_"){
+        delete clean[key];
+      }
+    });
+    clean.updatedAt = clean.updatedAt || now();
+    clean.ultimaSincronizacion = now();
+    return clean;
+  }
+
+  async function commitInChunks(db, writes){
+    var size = 450;
+    for(var i = 0; i < writes.length; i += size){
+      var batch = db.batch();
+      writes.slice(i, i + size).forEach(function(item){
+        batch.set(item.ref, item.data, {merge:true});
+      });
+      await batch.commit();
     }
-    var periodResult = await readCollections(db, COLLECTIONS.periods);
-    var studentResult = await readCollections(db, COLLECTIONS.students);
-    var details = periodResult.details.concat(studentResult.details).concat(snapshotResult.details);
-    return {snapshot:buildSnapshot(studentResult.rows, periodResult.rows, details), details:details, source:"collections"};
   }
 
   async function writeRemoteSnapshot(db, snapshot){
@@ -530,33 +281,33 @@ Con qué se conecta:
       app:"Requisitos",
       module:"ExcelLocal",
       source:"local_to_firebase",
-      updatedAt:clean.meta && clean.meta.updatedAt ? clean.meta.updatedAt : now(),
+      updatedAt:now(),
       pushedAt:now(),
       totalStudents:Array.isArray(clean.students) ? clean.students.length : 0,
       totalPeriods:Array.isArray(clean.periods) ? clean.periods.length : 0
     });
 
-    await db.collection("requisitos_base_local").doc("snapshot_principal").set(clean, {merge:true});
-
-    var batchLimit = 400;
-    var students = Array.isArray(clean.students) ? clean.students : [];
-    var periods = Array.isArray(clean.periods) ? clean.periods : [];
-
-    for(var p = 0; p < periods.length && p < batchLimit; p += 1){
-      var period = periods[p] || {};
-      var periodId = text(period.id || period.periodoId || periodKey(period.label) || ("periodo_" + p));
-      if(periodId && !isCedulaLike(periodId)){
-        await db.collection("requisitos_periodos").doc(periodId).set(cleanObject(period), {merge:true});
+    var writes = [];
+    (clean.periods || []).forEach(function(period){
+      var periodId = text(period.id || period.periodoId);
+      if(!periodId){
+        return;
       }
-    }
+      writes.push({ref:db.collection("periodos").doc(periodId), data:cleanForFirebase(period)});
+    });
 
-    for(var s = 0; s < students.length && s < batchLimit; s += 1){
-      var student = students[s] || {};
-      var docId = text(student.docId || student._docId || student.id || student.cedula || student.numeroIdentificacion || ("student_" + s));
-      if(docId){
-        await db.collection("requisitos_estudiantes").doc(docId).set(cleanObject(student), {merge:true});
+    (clean.students || []).forEach(function(student){
+      var docId = text(student.cedula || student.numeroIdentificacion || student.docId || student._docId);
+      if(!docId){
+        return;
       }
-    }
+      var data = cleanForFirebase(student);
+      data.cedula = text(data.cedula || docId);
+      data.numeroIdentificacion = text(data.numeroIdentificacion || data.cedula || docId);
+      writes.push({ref:db.collection("Estudiantes").doc(docId), data:data});
+    });
+
+    await commitInChunks(db, writes);
     return clean;
   }
 
@@ -564,12 +315,11 @@ Con qué se conecta:
     try{
       var db = getDb();
       var remote = await readRemoteSnapshot(db);
-      var snapshot = remote.snapshot;
-      if(!snapshotHasData(snapshot)){
-        throw new Error("Firebase no devolvió estudiantes ni períodos para BL.");
+      if(!snapshotHasData(remote)){
+        throw new Error("Firebase no devolvió estudiantes ni períodos para Base Local.");
       }
       backupCurrentLocal("before_pull");
-      var written = writeLocalSnapshot(snapshot, "pullFirebase");
+      var written = writeLocalSnapshot(remote, "pullFirebase");
       var summary = saveStatus({
         ok:true,
         mode:"pull",
@@ -577,8 +327,8 @@ Con qué se conecta:
         pulledAt:written.meta.pulledAt || now(),
         totalStudents:written.students.length,
         totalPeriods:written.periods.length,
-        collections:remote.details,
-        message:"Datos bajados correctamente desde Firebase. Períodos depurados: " + written.periods.length + "."
+        collections:[{collection:"periodos", rows:written.periods.length}, {collection:"Estudiantes", rows:written.students.length}],
+        message:"Datos bajados correctamente desde Firebase."
       });
       saveSyncStatus({ok:true, mode:"pull", lastSyncDate:today(), lastSyncAt:now(), message:summary.message});
       emit("firebase-pull-finished", summary);
@@ -605,7 +355,8 @@ Con qué se conecta:
         pushedAt:now(),
         totalStudents:pushed.students.length,
         totalPeriods:pushed.periods.length,
-        message:"Datos locales depurados y actualizados en Firebase."
+        collections:[{collection:"periodos", rows:pushed.periods.length}, {collection:"Estudiantes", rows:pushed.students.length}],
+        message:"Datos locales actualizados en Firebase."
       });
       saveSyncStatus({ok:true, mode:"push", lastSyncDate:today(), lastSyncAt:now(), message:summary.message});
       emit("firebase-push-finished", summary);
@@ -625,12 +376,12 @@ Con qué se conecta:
       emit("sync-offline", offline);
       return offline;
     }
+
     try{
       var db = getDb();
       backupCurrentLocal("before_sync_" + mode);
       var local = readLocalSnapshot();
-      var remoteResult = await readRemoteSnapshot(db);
-      var remote = remoteResult.snapshot;
+      var remote = await readRemoteSnapshot(db);
       var localHas = snapshotHasData(local);
       var remoteHas = snapshotHasData(remote);
       var action = "none";
@@ -643,7 +394,7 @@ Con qué se conecta:
         finalSnapshot = writeLocalSnapshot(remote, "restoreLocalFromFirebase");
         action = "restore_local_from_firebase";
       }else if(localHas && remoteHas){
-        if(snapshotUpdatedAt(local) >= snapshotUpdatedAt(remote)){
+        if(snapshotUpdatedAt(local) > snapshotUpdatedAt(remote)){
           finalSnapshot = await writeRemoteSnapshot(db, local);
           action = "local_newer_to_firebase";
         }else{
@@ -659,54 +410,53 @@ Con qué se conecta:
         mode:"sync",
         syncMode:mode,
         action:action,
-        source:"local_firebase_compare",
+        source:"Estudiantes_periodos",
         syncedAt:now(),
-        totalStudents:Array.isArray(finalSnapshot.students) ? finalSnapshot.students.length : 0,
-        totalPeriods:Array.isArray(finalSnapshot.periods) ? finalSnapshot.periods.length : 0,
-        localUpdatedAt:(local.meta || {}).updatedAt || "",
-        remoteUpdatedAt:(remote.meta || {}).updatedAt || "",
-        collections:remoteResult.details || [],
-        message:"Sincronización BL finalizada. Períodos corregidos. Acción: " + action
+        totalStudents:finalSnapshot && finalSnapshot.students ? finalSnapshot.students.length : 0,
+        totalPeriods:finalSnapshot && finalSnapshot.periods ? finalSnapshot.periods.length : 0,
+        message:"Sincronización Base Local ↔ Firebase finalizada. Acción: " + action + "."
       });
-      saveSyncStatus({ok:true, mode:mode, lastSyncDate:today(), lastSyncAt:now(), action:action, message:summary.message});
+      saveSyncStatus({ok:true, mode:"sync", action:action, lastSyncDate:today(), lastSyncAt:now(), message:summary.message});
       emit("sync-complete", summary);
       return summary;
     }catch(error){
-      var failed = saveStatus({ok:false, mode:"sync", syncMode:mode, errorMessage:error && error.message ? error.message : String(error), message:error && error.message ? error.message : String(error)});
+      var failed = saveStatus({ok:false, mode:"sync", source:"Estudiantes_periodos", errorMessage:error && error.message ? error.message : String(error), message:error && error.message ? error.message : String(error)});
       saveSyncStatus({ok:false, mode:"sync_error", lastError:failed.message, message:failed.message});
       emit("sync-error", failed);
-      return failed;
+      throw new Error(failed.message || "No se pudo sincronizar Base Local con Firebase.");
     }
   }
 
-  async function runDailyIfNeeded(){
-    var status = getSyncStatus();
-    if(status.lastSyncDate === today() && status.ok){
-      return {ok:true, skipped:true, mode:"daily", message:"La sincronización diaria ya se ejecutó hoy.", status:status};
+  async function runDailyIfNeeded(forceRun){
+    var daily = getDailyService();
+    if(daily && !daily.shouldRun(forceRun)){
+      return daily.skipped();
     }
-    return sync({mode:"daily_first_open"});
-  }
-
-  async function compare(){
-    var local = readLocalSnapshot();
-    return {
-      ok:true,
-      localStudents:Array.isArray(local.students) ? local.students.length : 0,
-      localPeriods:Array.isArray(local.periods) ? local.periods.length : 0,
-      localUpdatedAt:(local.meta || {}).updatedAt || "",
-      firebaseStatus:getLastStatus(),
-      syncStatus:getSyncStatus()
-    };
+    if(daily){
+      daily.markStarted("daily");
+    }
+    try{
+      var result = await sync({mode:"daily"});
+      if(daily){
+        daily.markSuccess(result);
+      }
+      return result;
+    }catch(error){
+      if(daily){
+        daily.markError(error);
+      }
+      throw error;
+    }
   }
 
   window.BaseLocalFirebase = {
-    push:push,
     pull:pull,
+    push:push,
     sync:sync,
-    syncNow:sync,
     runDailyIfNeeded:runDailyIfNeeded,
-    compare:compare,
     getLastStatus:getLastStatus,
-    getSyncStatus:getSyncStatus
+    getSyncStatus:getSyncStatus,
+    readLocalSnapshot:readLocalSnapshot,
+    readRemoteSnapshot:function(){return readRemoteSnapshot(getDb());}
   };
 })(window);
