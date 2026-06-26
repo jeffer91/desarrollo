@@ -5,8 +5,8 @@ Ruta o ubicación: /Requisitos/BaseLocal/baselocal.html
 Función o funciones:
 - Mostrar la base local generada desde carga Excel y Firebase.
 - Ver períodos, estudiantes activos, retirados, historial y diagnóstico.
-- Conectar servicios pequeños de campos, normalización, filtros, matrícula, Firebase, diagnóstico y prueba interna.
-- Cargar servicios base para períodos canónicos, divisiones y limpieza.
+- Crear divisiones por período desde un modal de Base Local.
+- Conectar servicios base para períodos canónicos, divisiones y limpieza.
 - No mostrar título propio porque Maqueta controla el menú superior.
 Con qué se conecta:
 - baselocal.css
@@ -26,6 +26,7 @@ Con qué se conecta:
 - baselocal.connector.js
 - baselocal.core.js
 - baselocal.firebase.js
+- baselocal.divisiones.js
 - baselocal.limpiar.js
 - baselocal.app.js
 ========================================================= -->
@@ -75,6 +76,7 @@ Con qué se conecta:
       <button id="bl-btn-refresh" type="button">Actualizar vista</button>
       <button id="bl-btn-sync-now" type="button">Sincronizar ahora</button>
       <button id="bl-btn-pull-firebase" type="button">Solo bajar Firebase</button>
+      <button id="bl-btn-create-division" class="bl-btn-primary" type="button">Crear división</button>
       <button id="bl-btn-clean-base" class="bl-btn-danger" type="button">Limpiar base</button>
       <button id="bl-btn-export" type="button">Exportar JSON</button>
       <button id="bl-btn-copy-refs" type="button">Copiar referencias</button>
@@ -96,6 +98,31 @@ Con qué se conecta:
       <section id="bl-tab-manual" class="bl-panel"><textarea id="bl-manual-text" readonly></textarea></section>
     </main>
   </div>
+
+  <section id="bl-division-modal" class="bl-modal" aria-hidden="true">
+    <div class="bl-modal-card" role="dialog" aria-modal="true" aria-labelledby="bl-division-title">
+      <div class="bl-modal-head">
+        <div>
+          <h2 id="bl-division-title">Crear división</h2>
+          <p>La división se aplicará a activos y retirados de las carreras seleccionadas.</p>
+        </div>
+        <button id="bl-division-close" class="bl-modal-close" type="button">×</button>
+      </div>
+      <div class="bl-modal-body">
+        <label>Período seleccionado<span id="bl-division-period-label" class="bl-readonly-pill">—</span></label>
+        <label>Nombre de la división<input id="bl-division-name" type="text" placeholder="Ejemplo: Universitarias 1" /></label>
+        <div class="bl-modal-section">
+          <strong>Carreras disponibles</strong>
+          <p id="bl-division-help" class="bl-help">Selecciona las carreras.</p>
+          <div id="bl-division-careers" class="bl-check-list"></div>
+        </div>
+      </div>
+      <div class="bl-modal-actions">
+        <button id="bl-division-cancel" type="button">Cancelar</button>
+        <button id="bl-division-save" class="bl-btn-primary" type="button">Guardar división</button>
+      </div>
+    </div>
+  </section>
 
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
@@ -121,6 +148,7 @@ Con qué se conecta:
   <script src="baselocal.core.js"></script>
   <script src="baselocal.firebase.js"></script>
   <script src="baselocal.manual.js"></script>
+  <script src="baselocal.divisiones.js"></script>
   <script src="baselocal.limpiar.js"></script>
   <script src="baselocal.app.js"></script>
 </body>
