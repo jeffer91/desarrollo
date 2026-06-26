@@ -6,7 +6,7 @@
   - Detectar archivos faltantes antes de correr Vite, Netlify, Firebase o Electron.
   - Validar rutas HTML principales de estudiante, coordinador y administrador.
   - Detectar HTML duplicado o pantallas mezcladas.
-  - Verificar servicios centrales de runtime, origen de datos y Firebase directo.
+  - Verificar servicios centrales de runtime, origen de datos, Firebase directo y Electron.
   - Servir como prueba final del bloque desde la terminal.
   Se conecta con:
   - Requisitos/Titulos/package.json
@@ -47,7 +47,8 @@ const requiredFiles = [
   "src/services/ta-titulo-articulo-periodos.service.js",
   "src/estudiante/ta-titulo-articulo-estudiante.app.js",
   "src/coordinador/ta-titulo-articulo-coordinador.app.js",
-  "src/admin/ta-titulo-articulo-admin.app.js"
+  "src/admin/ta-titulo-articulo-admin.app.js",
+  "src/admin/ta-titulo-articulo-admin-diagnostico.app.js"
 ];
 
 const firebaseImportMapChecks = [
@@ -98,9 +99,12 @@ const htmlChecks = [
       "../../src/styles/ta-titulo-articulo-base.css",
       "../../src/styles/ta-titulo-articulo-layout.css",
       "../../src/styles/ta-titulo-articulo-components.css",
+      "../../src/admin/ta-titulo-articulo-admin-diagnostico.app.js",
       "../../src/admin/ta-titulo-articulo-admin.app.js",
       'data-ta-screen="administrador"',
       'data-ta-runtime="electron"',
+      "ta-admin-diagnostico-card",
+      "ta-admin-origen-datos",
       ...firebaseImportMapChecks
     ],
     mustNotInclude: [
@@ -134,6 +138,14 @@ const serviceChecks = [
   {
     file: "src/services/ta-titulo-articulo-functions-client.service.js",
     mustInclude: ["TaTituloArticuloFunctionsClient", "/.netlify/functions"]
+  },
+  {
+    file: "src/admin/ta-titulo-articulo-admin-diagnostico.app.js",
+    mustInclude: ["obtenerFirebaseConfigPublica", "obtenerOrigenDatos", "ta-admin-runtime", "ta-admin-origen"]
+  },
+  {
+    file: "electron/ta-titulo-articulo-main.js",
+    mustInclude: ["taDataMode", "firebase-direct", "setWindowOpenHandler", "loadFile"]
   }
 ];
 
