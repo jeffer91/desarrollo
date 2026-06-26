@@ -3,8 +3,8 @@ Nombre completo: bl-firestore-patch.js
 Ruta o ubicación: /Requisitos/BaseLocal/services/bl-firestore-patch.js
 Función o funciones:
 - Preparar correcciones controladas para Firestore.
-- Actualizar solo campos permitidos de matrícula, cédula, período y sincronización.
-- Evitar sobrescribir datos académicos, notas, correos, carrera, sede o requisitos.
+- Actualizar solo campos permitidos de matrícula, cédula, período, notas de defensa y sincronización.
+- Evitar sobrescribir datos académicos, correos, carrera, sede o requisitos.
 Con qué se conecta:
 - bl-campos.js
 - bl-matricula.service.js
@@ -14,6 +14,7 @@ Con qué se conecta:
   "use strict";
 
   var COLLECTION = "Estudiantes";
+  var NOTE_FIELDS = ["Notart", "Notdef", "Notafinal"];
   var ALLOWED = [
     "cedula",
     "numeroIdentificacion",
@@ -22,8 +23,12 @@ Con qué se conecta:
     "historialEstadoMatricula",
     "periodoId",
     "ultimoPeriodoId",
+    "Notart",
+    "Notdef",
+    "Notafinal",
     "updatedAt",
-    "ultimaSincronizacion"
+    "ultimaSincronizacion",
+    "ultimaEdicionLocal"
   ];
 
   function text(value){
@@ -44,19 +49,45 @@ Con qué se conecta:
     return text(student && (student.cedula || student.numeroIdentificacion || student.docId || student._docId));
   }
 
+  function isNoteField(field){
+    return NOTE_FIELDS.indexOf(field) >= 0;
+  }
+
+  function normalizeNote(value){
+    if(value === undefined){return undefined;}
+    if(value === null || text(value) === ""){
+      return null;
+    }
+    var num = Number(text(value).replace(",", "."));
+    if(!Number.isFinite(num)){
+      return null;
+    }
+    return Math.round(num * 100) / 100;
+  }
+
   function buildPatch(student, extra){
     var source = Object.assign({}, student || {}, extra || {});
     var patch = {};
+
     ALLOWED.forEach(function(field){
+      if(isNoteField(field)){
+        if(Object.prototype.hasOwnProperty.call(source, field)){
+          patch[field] = normalizeNote(source[field]);
+        }
+        return;
+      }
+
       if(source[field] !== undefined && source[field] !== null && text(source[field]) !== ""){
         patch[field] = clone(source[field]);
       }
     });
+
     var id = cedulaOf(source);
     if(id){
       patch.cedula = text(patch.cedula || id);
       patch.numeroIdentificacion = text(patch.numeroIdentificacion || patch.cedula || id);
     }
+
     patch.updatedAt = now();
     patch.ultimaSincronizacion = now();
     return patch;
@@ -89,6 +120,7 @@ Con qué se conecta:
   window.BLFirestorePatch = {
     collection:COLLECTION,
     allowedFields:ALLOWED.slice(),
+    noteFields:NOTE_FIELDS.slice(),
     buildPatch:buildPatch,
     patchOne:patchOne,
     patchMany:patchMany
