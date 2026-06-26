@@ -23,21 +23,43 @@ function exists(filePath) {
   }
 }
 
+function getNpmCommand() {
+  const npmExecPath = process.env.npm_execpath;
+
+  if (npmExecPath && exists(npmExecPath)) {
+    return {
+      command: process.execPath,
+      args: [npmExecPath, 'install', '--no-audit', '--no-fund'],
+      shell: false
+    };
+  }
+
+  return {
+    command: process.platform === 'win32' ? 'npm.cmd' : 'npm',
+    args: ['install', '--no-audit', '--no-fund'],
+    shell: process.platform === 'win32'
+  };
+}
+
 function runNpmInstall() {
-  const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-  const result = spawnSync(npmCommand, ['install'], {
+  const npmInstall = getNpmCommand();
+  const result = spawnSync(npmInstall.command, npmInstall.args, {
     cwd: electronDir,
-    stdio: 'inherit'
+    stdio: 'inherit',
+    shell: npmInstall.shell,
+    windowsHide: false
   });
 
   if (result.error) {
     console.error('[desarrollo] No se pudo ejecutar npm install dentro de electron.');
     console.error(result.error.message);
+    console.error('[desarrollo] Prueba manual: cd electron && npm install');
     process.exit(1);
   }
 
   if (result.status !== 0) {
     console.error('[desarrollo] Fallo la instalacion de dependencias de Electron.');
+    console.error('[desarrollo] Prueba manual: cd electron && npm install');
     process.exit(result.status || 1);
   }
 }
