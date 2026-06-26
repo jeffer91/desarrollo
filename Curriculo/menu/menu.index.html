@@ -100,6 +100,60 @@ Función o funciones:
   <script src="../Base%20local/core/bl.backup.js"></script>
   <script src="../Base%20local/core/bl.diagnostics.js"></script>
   <script src="../Base%20local/core/bl.sync.firebase.js"></script>
+  <script>
+    (function iniciarBaseLocalDiaria(window, document) {
+      "use strict";
+
+      async function run() {
+        var BL = window.CurriculoBL;
+        var estado;
+        var ultimaCarga;
+        var debeCargar;
+        var adapter;
+
+        if (!BL || !BL.storage || !BL.utils) return;
+
+        try {
+          await BL.storage.initialize();
+          estado = await BL.storage.readStore("estado");
+          ultimaCarga = estado && estado.cargaAutomatica ? estado.cargaAutomatica.ultimaCarga : null;
+          debeCargar = typeof BL.utils.shouldRunDaily === "function" ? BL.utils.shouldRunDaily(ultimaCarga) : true;
+
+          if (debeCargar) {
+            await BL.storage.patchStore("estado", {
+              cargaAutomatica: {
+                activa: true,
+                frecuencia: "una vez al dia al abrir Curriculo",
+                ultimaCarga: BL.utils.nowISO ? BL.utils.nowISO() : new Date().toISOString()
+              }
+            });
+            BL.logger && BL.logger.info && BL.logger.info("Base local cargada automaticamente al abrir Curriculo.");
+          } else {
+            BL.logger && BL.logger.info && BL.logger.info("Base local no se recargo; ya fue cargada hoy.");
+          }
+
+          if (BL.syncFirebase && typeof BL.syncFirebase.getFirebaseAdapter === "function") {
+            adapter = BL.syncFirebase.getFirebaseAdapter();
+            if (adapter && adapter.disponible && typeof BL.syncFirebase.syncDailyIfNeeded === "function") {
+              await BL.syncFirebase.syncDailyIfNeeded();
+            } else if (BL.logger && BL.logger.info) {
+              BL.logger.info("Sincronizacion diaria no ejecutada: adaptador Firebase de Curriculo aun no disponible.");
+            }
+          }
+        } catch (error) {
+          if (BL && BL.logger && BL.logger.error) {
+            BL.logger.error("No se pudo iniciar Base local desde el menu Curriculo.", { error: error.message });
+          }
+        }
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", run);
+      } else {
+        run();
+      }
+    })(window, document);
+  </script>
 
   <script src="./menu.config.js"></script>
   <script src="./menu.router.js"></script>
