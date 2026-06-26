@@ -6,7 +6,7 @@
   - Detectar archivos faltantes antes de correr Vite, Netlify, Firebase o Electron.
   - Validar rutas HTML principales de estudiante, coordinador y administrador.
   - Detectar HTML duplicado o pantallas mezcladas.
-  - Verificar servicios centrales de runtime, origen de datos, Firebase directo, Electron y pruebas locales.
+  - Verificar servicios centrales de runtime, origen de datos, Firebase directo, Electron, pruebas locales y Netlify.
   - Servir como prueba final del bloque desde la terminal.
   Se conecta con:
   - Requisitos/Titulos/package.json
@@ -26,6 +26,7 @@ const root = resolve(__dirname, "..");
 const requiredFiles = [
   "package.json",
   "netlify.toml",
+  ".env.example",
   "vite.config.js",
   "README.md",
   "public/ta-titulo-articulo-estudiante.html",
@@ -51,7 +52,13 @@ const requiredFiles = [
   "src/admin/ta-titulo-articulo-admin.app.js",
   "src/admin/ta-titulo-articulo-admin-diagnostico.app.js",
   "scripts/ta-titulo-articulo-local-check.mjs",
-  "scripts/ta-titulo-articulo-build-local.mjs"
+  "scripts/ta-titulo-articulo-netlify-check.mjs",
+  "scripts/ta-titulo-articulo-build-local.mjs",
+  "netlify/functions/ta-titulo-articulo-api-security.js",
+  "netlify/functions/ta-titulo-articulo-api-estudiante.js",
+  "netlify/functions/ta-titulo-articulo-api-coordinador.js",
+  "netlify/functions/ta-titulo-articulo-api-admin.js",
+  "netlify/functions/ta-titulo-articulo-api-telegram.js"
 ];
 
 const firebaseImportMapChecks = [
@@ -66,11 +73,13 @@ const packageScripts = [
   "dev:netlify",
   "build",
   "build:local",
+  "build:netlify",
   "preview",
   "electron",
   "electron:dev",
   "check",
   "check:local",
+  "check:netlify",
   "check:all",
   "start"
 ];
@@ -170,8 +179,20 @@ const serviceChecks = [
     mustInclude: ["Live Server", "check:local", "firebase-direct", "rutas compatibles"]
   },
   {
+    file: "scripts/ta-titulo-articulo-netlify-check.mjs",
+    mustInclude: ["check:netlify", "build:netlify", "Publish directory", "Functions directory"]
+  },
+  {
     file: "scripts/ta-titulo-articulo-build-local.mjs",
     mustInclude: ["dist-local", "manifest.local.json", "local-firebase-direct"]
+  },
+  {
+    file: "netlify.toml",
+    mustInclude: ["npm run build:netlify", "node_bundler = \"esbuild\"", "functions = \"netlify/functions\"", "publish = \"dist\""]
+  },
+  {
+    file: ".env.example",
+    mustInclude: ["FIREBASE_ADMIN_PRIVATE_KEY", "TA_TITULO_ARTICULO_ADMIN_TOKEN", "TELEGRAM_BOT_TOKEN", "Base directory recomendada"]
   },
   {
     file: "README.md",
