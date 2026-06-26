@@ -3,9 +3,9 @@
 Nombre completo: repo.html
 Ruta o ubicación: /Requisitos/Reportes/repo.html
 Función o funciones:
-- Generar reportes rápidos del módulo Requisitos usando BaseLocal.
+- Generar reportes rápidos del módulo Carga usando Base Local.
 - Mostrar resumen general, carreras, requisitos y estudiantes pendientes.
-- Exportar reporte en TXT, HTML y JSON.
+- Mostrar activos por defecto y permitir reportar retirados.
 Con qué se conecta:
 - repo.css
 - repo.core.js
@@ -29,6 +29,7 @@ Con qué se conecta:
     <section class="repo-tools">
       <label>Tipo de reporte<select id="repo-tipo"><option value="general">General</option><option value="carreras">Por carreras</option><option value="requisitos">Por requisitos</option><option value="pendientes">Pendientes críticos</option></select></label>
       <label>Período<select id="repo-periodo"><option value="">Todos</option></select></label>
+      <label>Matrícula<select id="repo-matricula"><option value="ACTIVO">Activos</option><option value="RETIRADO">Retirados</option><option value="">Todos</option></select></label>
       <label>Carrera<select id="repo-carrera"><option value="">Todas</option></select></label>
       <button id="repo-refresh" type="button">Actualizar</button>
       <button id="repo-copy" type="button">Copiar</button>
@@ -44,37 +45,16 @@ Con qué se conecta:
     </section>
 
     <section class="repo-grid">
-      <article class="repo-card repo-preview-card">
-        <div class="repo-card-head"><h2>Reporte generado</h2><span id="repo-generated-at">—</span></div>
-        <textarea id="repo-preview" readonly></textarea>
-        <div class="repo-actions">
-          <button id="repo-export-txt" type="button">Exportar TXT</button>
-          <button id="repo-export-html" type="button">Exportar HTML</button>
-          <button id="repo-export-json" type="button">Exportar JSON</button>
-        </div>
-      </article>
-
-      <article class="repo-card">
-        <div class="repo-card-head"><h2>Resumen por carreras</h2><span id="repo-carreras-meta">0 carreras</span></div>
-        <div id="repo-carreras" class="repo-table-wrap"></div>
-      </article>
+      <article class="repo-card repo-preview-card"><div class="repo-card-head"><h2>Reporte generado</h2><span id="repo-generated-at">—</span></div><textarea id="repo-preview" readonly></textarea><div class="repo-actions"><button id="repo-export-txt" type="button">Exportar TXT</button><button id="repo-export-html" type="button">Exportar HTML</button><button id="repo-export-json" type="button">Exportar JSON</button></div></article>
+      <article class="repo-card"><div class="repo-card-head"><h2>Resumen por carreras</h2><span id="repo-carreras-meta">0 carreras</span></div><div id="repo-carreras" class="repo-table-wrap"></div></article>
     </section>
 
     <section class="repo-grid">
-      <article class="repo-card">
-        <div class="repo-card-head"><h2>Resumen por requisitos</h2><span>Mayor atención primero</span></div>
-        <div id="repo-requisitos" class="repo-table-wrap"></div>
-      </article>
-      <article class="repo-card">
-        <div class="repo-card-head"><h2>Estudiantes pendientes</h2><span id="repo-estudiantes-meta">0 estudiantes</span></div>
-        <div id="repo-estudiantes" class="repo-table-wrap tall"></div>
-      </article>
+      <article class="repo-card"><div class="repo-card-head"><h2>Resumen por requisitos</h2><span>Mayor atención primero</span></div><div id="repo-requisitos" class="repo-table-wrap"></div></article>
+      <article class="repo-card"><div class="repo-card-head"><h2>Estudiantes pendientes</h2><span id="repo-estudiantes-meta">0 estudiantes</span></div><div id="repo-estudiantes" class="repo-table-wrap tall"></div></article>
     </section>
 
-    <section class="repo-card">
-      <div class="repo-card-head"><h2>Diagnóstico del reporte</h2><span>BaseLocal</span></div>
-      <pre id="repo-diagnostics"></pre>
-    </section>
+    <section class="repo-card"><div class="repo-card-head"><h2>Diagnóstico del reporte</h2><span>Base Local</span></div><pre id="repo-diagnostics"></pre></section>
   </main>
 
   <script src="../Gestion/Excel/excel-local/excel-local.config.js"></script>
