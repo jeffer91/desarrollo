@@ -6,8 +6,8 @@ Función o funciones:
 - Normalizar campos reales de Firebase para Defensas.
 - Habilitar N-ART según requisitos cumplidos/aprobados.
 - Habilitar N-DEF solo si N-ART es igual o mayor a 7.
-- Calcular N-FIN = N-ART 70% + N-DEF 30%.
-- Guardar Notart, Notdef y Notafinal en BaseLocal.
+- Calcular N-FIN = N-ART 70% + N-DEF 30% solo cuando corresponde.
+- Guardar Notart, Notdef y Notafinal en BaseLocal con validación fina.
 Con qué se conecta:
 - excel-local.repo.js
 - excel-local.storage.js
@@ -29,22 +29,9 @@ Con qué se conecta:
     {key:"actualizacion", label:"Actualización datos", fields:["ActualizaciónDatos", "ActualizacionDatos", "Actualización datos", "actualizacionDatos", "actualizaciondatos"]}
   ];
 
-  function text(value){
-    return String(value == null ? "" : value).trim();
-  }
-
-  function norm(value){
-    return text(value)
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/\s+/g, " ")
-      .trim()
-      .toLowerCase();
-  }
-
-  function now(){
-    return new Date().toISOString();
-  }
+  function text(value){return String(value == null ? "" : value).trim();}
+  function now(){return new Date().toISOString();}
+  function norm(value){return text(value).normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim().toLowerCase();}
 
   function repo(){
     if(!window.ExcelLocalRepo){
@@ -58,6 +45,10 @@ Con qué se conecta:
       return window.ExcelLocalStorage;
     }
     return null;
+  }
+
+  function clone(value){
+    try{return JSON.parse(JSON.stringify(value == null ? null : value));}catch(error){return value;}
   }
 
   function getSnapshot(){
@@ -88,19 +79,16 @@ Con qué se conecta:
     return saved;
   }
 
-  function rawStudents(){
-    if(repo().listAllStudents){
-      return repo().listAllStudents();
+  function backupSnapshot(snapshot, reason){
+    try{
+      window.localStorage.setItem("REQ_DEFART_BACKUP_V1:" + Date.now(), JSON.stringify({reason:reason || "before_save", createdAt:now(), snapshot:clone(snapshot)}));
+    }catch(error){
+      console.warn("[DefartCore] No se pudo crear backup", error);
     }
-    return getSnapshot().students || [];
   }
 
-  function rawPeriods(){
-    if(repo().listPeriods){
-      return repo().listPeriods();
-    }
-    return getSnapshot().periods || [];
-  }
+  function rawStudents(){return repo().listAllStudents ? repo().listAllStudents() : (getSnapshot().students || []);}
+  function rawPeriods(){return repo().listPeriods ? repo().listPeriods() : (getSnapshot().periods || []);}
 
   function pick(row, names){
     row = row || {};
@@ -112,43 +100,40 @@ Con qué se conecta:
     return "";
   }
 
+  function noteString(value){return text(value).replace(",", ".");}
   function numberValue(value){
     if(value === null || value === undefined || text(value) === ""){
       return null;
     }
-    var clean = text(value).replace(",", ".");
-    var num = Number(clean);
+    var num = Number(noteString(value));
     return Number.isFinite(num) ? num : null;
   }
 
   function round2(value){
-    if(!Number.isFinite(value)){
-      return null;
-    }
+    if(!Number.isFinite(value)) return null;
     return Math.round(value * 100) / 100;
   }
 
   function noteToText(value){
     var num = numberValue(value);
-    if(num === null){
-      return "";
-    }
+    if(num === null) return "";
     return String(round2(num));
   }
 
+  function hasMaxTwoDecimals(value){
+    var raw = noteString(value);
+    if(!raw) return true;
+    return /^\d{1,2}(\.\d{0,2})?$|^10(\.0{0,2})?$|^0(\.\d{0,2})?$/.test(raw);
+  }
+
   function isValidNote(value){
+    if(text(value) === "") return true;
     var num = numberValue(value);
-    return num !== null && num >= 0 && num <= 10;
+    return num !== null && num >= 0 && num <= 10 && hasMaxTwoDecimals(value);
   }
 
-  function requirementValue(row, req){
-    return text(pick(row, req.fields));
-  }
-
-  function requirementOk(value){
-    var clean = norm(value);
-    return PASS_VALUES.indexOf(clean) >= 0;
-  }
+  function requirementValue(row, req){return text(pick(row, req.fields));}
+  function requirementOk(value){return PASS_VALUES.indexOf(norm(value)) >= 0;}
 
   function requirementSummary(row){
     var missing = [];
@@ -165,9 +150,7 @@ Con qué se conecta:
 
   function isActive(row){
     var value = norm(pick(row, ["estadoMatricula", "EstadoMatricula", "estado", "Estado"]));
-    if(!value){
-      return true;
-    }
+    if(!value) return true;
     return value === "activo";
   }
 
@@ -175,12 +158,13 @@ Con qué se conecta:
     return text(pick(row, ["_docId", "docId", "cedula", "Cedula", "CEDULA", "numeroIdentificacion", "numeroidentificacion", "NumeroIdentificacion", "identificacion", "Identificacion"])) || ("fila_" + index);
   }
 
-  function periodId(row){
-    return text(pick(row, ["periodoId", "ultimoPeriodoId", "periodId", "PeriodoId", "periodo", "Periodo"]));
-  }
+  function periodId(row){return text(pick(row, ["periodoId", "ultimoPeriodoId", "periodId", "PeriodoId", "periodo", "Periodo"]));}
+  function periodLabel(row){return text(pick(row, ["periodoLabel", "PeriodoLabel", "periodo", "Periodo"])) || periodId(row) || "Sin período";}
 
-  function periodLabel(row){
-    return text(pick(row, ["periodoLabel", "PeriodoLabel", "periodo", "Periodo"])) || periodId(row) || "Sin período";
+  function calculateFinal(nart, ndef){
+    if(nart === null || ndef === null) return null;
+    if(nart < 7) return null;
+    return round2((nart * 0.70) + (ndef * 0.30));
   }
 
   function decorate(row, index){
@@ -188,9 +172,9 @@ Con qué se conecta:
     var req = requirementSummary(source);
     var nart = numberValue(pick(source, ["Notart", "Nart", "N_ART", "N-ART", "notart", "notaArticulo", "nota_articulo"]));
     var ndef = numberValue(pick(source, ["Notdef", "Ndef", "N_DEF", "N-DEF", "notdef", "notaDefensa", "nota_defensa"]));
-    var nfin = nart !== null && ndef !== null ? round2((nart * 0.70) + (ndef * 0.30)) : null;
     var canArt = req.ok;
     var canDef = canArt && nart !== null && nart >= 7;
+    var nfin = canDef ? calculateFinal(nart, ndef) : null;
     var estado = "Pendiente Art";
 
     if(!canArt){
@@ -226,13 +210,19 @@ Con qué se conecta:
     return source;
   }
 
+  function preview(row, patch){
+    var next = Object.assign({}, row || {});
+    patch = patch || {};
+    if(Object.prototype.hasOwnProperty.call(patch, "nart")) next.Notart = numberValue(patch.nart);
+    if(Object.prototype.hasOwnProperty.call(patch, "ndef")) next.Notdef = numberValue(patch.ndef);
+    return decorate(next, 0);
+  }
+
   function unique(list, getter){
     var map = {};
     (list || []).forEach(function(item){
       var value = text(getter(item));
-      if(value){
-        map[value] = true;
-      }
+      if(value) map[value] = true;
     });
     return Object.keys(map).sort(function(a, b){return a.localeCompare(b, "es");});
   }
@@ -241,9 +231,7 @@ Con qué se conecta:
     var map = {};
     rawPeriods().forEach(function(period){
       var id = text(period.id || period.periodoId || period.value);
-      if(id){
-        map[id] = {id:id, label:text(period.label || period.periodoLabel || id)};
-      }
+      if(id) map[id] = {id:id, label:text(period.label || period.periodoLabel || id)};
     });
     rows.forEach(function(row){
       if(row._periodoId && !map[row._periodoId]){
@@ -254,8 +242,7 @@ Con qué se conecta:
   }
 
   function compareValues(a, b, key){
-    var av = a[key];
-    var bv = b[key];
+    var av = a[key], bv = b[key];
     if(key === "_nart" || key === "_ndef" || key === "_nfin"){
       av = av === null ? -1 : av;
       bv = bv === null ? -1 : bv;
@@ -268,23 +255,13 @@ Con qué se conecta:
     options = options || {};
     var q = norm(options.search || "");
     var rows = rawStudents().filter(isActive).map(decorate).filter(function(row){
-      if(options.periodId && row._periodoId !== options.periodId){
-        return false;
-      }
-      if(options.career && row._carrera !== options.career){
-        return false;
-      }
-      if(options.status && row._estadoDefensa !== options.status){
-        return false;
-      }
-      if(options.sede && row._sede !== options.sede){
-        return false;
-      }
+      if(options.periodId && row._periodoId !== options.periodId) return false;
+      if(options.career && row._carrera !== options.career) return false;
+      if(options.status && row._estadoDefensa !== options.status) return false;
+      if(options.sede && row._sede !== options.sede) return false;
       if(q){
         var hay = norm([row._cedula, row._nombre, row._carrera, row._sede, row._periodoLabel, row._estadoDefensa].join(" "));
-        if(hay.indexOf(q) < 0){
-          return false;
-        }
+        if(hay.indexOf(q) < 0) return false;
       }
       return true;
     });
@@ -295,9 +272,7 @@ Con qué se conecta:
         return options.sortDir === "desc" ? -result : result;
       });
     }else{
-      rows.sort(function(a, b){
-        return a._nombre.localeCompare(b._nombre, "es");
-      });
+      rows.sort(function(a, b){return a._nombre.localeCompare(b._nombre, "es");});
     }
     return rows;
   }
@@ -306,9 +281,7 @@ Con qué se conecta:
     var result = {total:rows.length};
     STATES.forEach(function(state){result[state] = 0;});
     rows.forEach(function(row){
-      if(Object.prototype.hasOwnProperty.call(result, row._estadoDefensa)){
-        result[row._estadoDefensa] += 1;
-      }
+      if(Object.prototype.hasOwnProperty.call(result, row._estadoDefensa)) result[row._estadoDefensa] += 1;
     });
     return result;
   }
@@ -323,36 +296,42 @@ Con qué se conecta:
       careerList:unique(allActive, function(row){return row._carrera;}),
       sedeList:unique(allActive, function(row){return row._sede;}),
       states:STATES.slice(),
-      diagnostics:{
-        generatedAt:now(),
-        totalActive:allActive.length,
-        visible:rows.length,
-        filters:options || {},
-        source:"BaseLocal"
-      }
+      diagnostics:{generatedAt:now(), totalActive:allActive.length, visible:rows.length, filters:options || {}, source:"BaseLocal", version:"defensas-bloque-2"}
     };
   }
 
   function findStudentIndex(students, id){
     id = text(id);
     for(var i = 0; i < students.length; i += 1){
-      var candidate = studentId(students[i], i);
-      if(candidate === id){
-        return i;
-      }
+      if(studentId(students[i], i) === id) return i;
     }
     return -1;
   }
 
   function normalizePatch(patch){
     var out = {};
-    if(Object.prototype.hasOwnProperty.call(patch, "nart")){
-      out.Notart = numberValue(patch.nart);
-    }
-    if(Object.prototype.hasOwnProperty.call(patch, "ndef")){
-      out.Notdef = numberValue(patch.ndef);
-    }
+    if(Object.prototype.hasOwnProperty.call(patch, "nart")) out.Notart = numberValue(patch.nart);
+    if(Object.prototype.hasOwnProperty.call(patch, "ndef")) out.Notdef = numberValue(patch.ndef);
     return out;
+  }
+
+  function validateChange(current, change, patch, nart, ndef){
+    var errors = [];
+    if(Object.prototype.hasOwnProperty.call(change, "nart") && !isValidNote(change.nart)){
+      errors.push("N-ART inválida: " + current._nombre);
+    }
+    if(Object.prototype.hasOwnProperty.call(change, "ndef") && !isValidNote(change.ndef)){
+      errors.push("N-DEF inválida: " + current._nombre);
+    }
+    if(Object.prototype.hasOwnProperty.call(change, "nart") && !current._canArt){
+      errors.push("N-ART bloqueada por requisitos: " + current._nombre);
+    }
+    if(Object.prototype.hasOwnProperty.call(change, "ndef") && (!current._canArt || nart === null || nart < 7)){
+      errors.push("N-DEF bloqueada hasta que N-ART sea 7 o más: " + current._nombre);
+    }
+    if(nart !== null && (nart < 0 || nart > 10)) errors.push("N-ART fuera de rango: " + current._nombre);
+    if(ndef !== null && (ndef < 0 || ndef > 10)) errors.push("N-DEF fuera de rango: " + current._nombre);
+    return errors;
   }
 
   function saveNotes(changes){
@@ -364,6 +343,8 @@ Con qué se conecta:
     var snapshot = getSnapshot();
     snapshot.students = Array.isArray(snapshot.students) ? snapshot.students : [];
     snapshot.history = Array.isArray(snapshot.history) ? snapshot.history : [];
+    backupSnapshot(snapshot, "before_defensas_save");
+
     var saved = 0;
     var errors = [];
 
@@ -378,30 +359,24 @@ Con qué se conecta:
       var patch = normalizePatch(change);
       var nart = Object.prototype.hasOwnProperty.call(patch, "Notart") ? patch.Notart : current._nart;
       var ndef = Object.prototype.hasOwnProperty.call(patch, "Notdef") ? patch.Notdef : current._ndef;
-
-      if(nart !== null && (nart < 0 || nart > 10)){
-        errors.push("N-ART fuera de rango: " + current._nombre);
-        return;
-      }
-      if(ndef !== null && (ndef < 0 || ndef > 10)){
-        errors.push("N-DEF fuera de rango: " + current._nombre);
+      var validationErrors = validateChange(current, change, patch, nart, ndef);
+      if(validationErrors.length){
+        errors = errors.concat(validationErrors);
         return;
       }
 
-      patch.Notafinal = nart !== null && ndef !== null ? round2((nart * 0.70) + (ndef * 0.30)) : null;
+      patch.Notafinal = calculateFinal(nart, ndef);
       patch.ultimaEdicionLocal = now();
       patch.updatedAt = now();
       snapshot.students[index] = Object.assign({}, snapshot.students[index], patch);
       saved += 1;
     });
 
-    snapshot.meta = Object.assign({}, snapshot.meta || {}, {
-      updatedAt:now(),
-      lastDefensasUpdateAt:now(),
-      lastDefensasSaved:saved
-    });
-    snapshot.history.unshift({id:"defensas_notas_" + Date.now(), action:"guardarNotasDefensas", periodoId:"VARIOS", periodoLabel:"Varios", fileName:"Defensas", totalRows:saved, createdAt:now()});
-    writeSnapshot(snapshot);
+    if(saved > 0){
+      snapshot.meta = Object.assign({}, snapshot.meta || {}, {updatedAt:now(), lastDefensasUpdateAt:now(), lastDefensasSaved:saved});
+      snapshot.history.unshift({id:"defensas_notas_" + Date.now(), action:"guardarNotasDefensas", periodoId:"VARIOS", periodoLabel:"Varios", fileName:"Defensas", totalRows:saved, errores:errors.length, createdAt:now()});
+      writeSnapshot(snapshot);
+    }
 
     return {ok:errors.length === 0, saved:saved, total:changes.length, errors:errors, message:saved + " cambio(s) guardado(s) en BaseLocal."};
   }
@@ -410,8 +385,10 @@ Con qué se conecta:
     summary:summary,
     saveNotes:saveNotes,
     decorate:decorate,
+    preview:preview,
     noteToText:noteToText,
     isValidNote:isValidNote,
+    calculateFinal:calculateFinal,
     requirements:REQUIREMENTS.slice(),
     states:STATES.slice()
   };
