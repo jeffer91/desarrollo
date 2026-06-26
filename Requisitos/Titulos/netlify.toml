@@ -2,9 +2,10 @@
 # Ruta o ubicación: /Requisitos/Titulos/netlify.toml
 # Función o funciones:
 # - Configurar el despliegue público de Netlify.
-# - Publicar únicamente las pantallas públicas compiladas en dist.
+# - Publicar las pantallas públicas compiladas en dist.
 # - Definir rutas limpias para estudiante y coordinador.
 # - Preparar la carpeta de funciones privadas de Netlify.
+# - Mantener Netlify como último paso después de pruebas locales.
 # Se conecta con:
 # - package.json
 # - vite.config.js
@@ -13,12 +14,16 @@
 # - netlify/functions/*
 
 [build]
-  command = "npm run build"
+  command = "npm run build:netlify"
   publish = "dist"
   functions = "netlify/functions"
 
 [build.environment]
   NODE_VERSION = "20"
+
+[functions]
+  node_bundler = "esbuild"
+  external_node_modules = ["firebase-admin"]
 
 [dev]
   command = "npm run dev"
@@ -42,14 +47,26 @@
   to = "/public/ta-titulo-articulo-coordinador.html"
   status = 200
 
+[[redirects]]
+  from = "/admin"
+  to = "/"
+  status = 302
+  force = true
+
 [[headers]]
   for = "/*"
   [headers.values]
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+    X-Frame-Options = "SAMEORIGIN"
 
 [[headers]]
   for = "/assets/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/.netlify/functions/*"
+  [headers.values]
+    Cache-Control = "no-store"
