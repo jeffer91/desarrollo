@@ -6,6 +6,7 @@
   - Mantener fuera del build público la pantalla privada/local del administrador.
   - Preparar la salida de producción para Netlify en la carpeta dist.
   - Copiar los assets públicos del módulo, incluido el logo institucional.
+  - Evitar que Vite abra el puerto 5173 cuando se ejecuta con Netlify Dev.
   Se conecta con:
   - package.json
   - netlify.toml
@@ -27,7 +28,7 @@ export default defineConfig({
     host: "127.0.0.1",
     port: 5173,
     strictPort: false,
-    open: "/public/ta-titulo-articulo-estudiante.html"
+    open: false
   },
   preview: {
     host: "127.0.0.1",
