@@ -9,6 +9,37 @@
     return window.CurriculoLocal;
   }
 
+  function safeParentWindow() {
+    try {
+      if (window.parent && window.parent !== window) return window.parent;
+    } catch (error) {
+      return null;
+    }
+    return null;
+  }
+
+  function safeTopWindow() {
+    try {
+      if (window.top && window.top !== window) return window.top;
+    } catch (error) {
+      return null;
+    }
+    return null;
+  }
+
+  function getBaseLocalRoot() {
+    var candidates = [window, safeParentWindow(), safeTopWindow()];
+    var index;
+
+    for (index = 0; index < candidates.length; index += 1) {
+      if (candidates[index] && candidates[index].CurriculoBL) {
+        return candidates[index].CurriculoBL;
+      }
+    }
+
+    return null;
+  }
+
   function normalizeModuleName(value) {
     return String(value || "general")
       .trim()
@@ -18,7 +49,7 @@
   }
 
   function getBaseLocalModule(collection) {
-    var BL = window.CurriculoBL;
+    var BL = getBaseLocalRoot();
     var moduleName = normalizeModuleName(collection);
 
     if (!BL || !BL.modulos) return null;
@@ -26,7 +57,7 @@
   }
 
   async function mirrorToBaseLocal(collection, id, data, options) {
-    var BL = window.CurriculoBL;
+    var BL = getBaseLocalRoot();
     var moduleConnector = getBaseLocalModule(collection);
     var payload;
 
@@ -113,6 +144,7 @@
     markSynced: markSynced,
     status: status,
     syncNow: syncNow,
-    mirrorToBaseLocal: mirrorToBaseLocal
+    mirrorToBaseLocal: mirrorToBaseLocal,
+    getBaseLocalRoot: getBaseLocalRoot
   };
 })(window);
