@@ -6,6 +6,7 @@
   - Detectar archivos faltantes antes de correr Vite, Netlify, Firebase o Electron.
   - Validar rutas HTML principales de estudiante, coordinador y administrador.
   - Detectar HTML duplicado o pantallas mezcladas.
+  - Verificar servicios centrales de runtime y origen de datos.
   - Servir como prueba final del bloque desde la terminal.
   Se conecta con:
   - Requisitos/Titulos/package.json
@@ -36,7 +37,10 @@ const requiredFiles = [
   "src/styles/ta-titulo-articulo-components.css",
   "src/firebase/ta-titulo-articulo-firebase-client.js",
   "src/firebase/ta-titulo-articulo-collections.js",
+  "src/services/ta-titulo-articulo-runtime.service.js",
+  "src/services/ta-titulo-articulo-data-adapter.service.js",
   "src/services/ta-titulo-articulo-api-client.service.js",
+  "src/services/ta-titulo-articulo-functions-client.service.js",
   "src/services/ta-titulo-articulo-firebase-direct.service.js",
   "src/services/ta-titulo-articulo-coherencia.service.js",
   "src/services/ta-titulo-articulo-periodos.service.js",
@@ -96,6 +100,25 @@ const htmlChecks = [
   }
 ];
 
+const serviceChecks = [
+  {
+    file: "src/services/ta-titulo-articulo-runtime.service.js",
+    mustInclude: ["TaTituloArticuloRuntime", "obtenerOrigenDatos", "firebase-direct", "netlify-functions"]
+  },
+  {
+    file: "src/services/ta-titulo-articulo-data-adapter.service.js",
+    mustInclude: ["TaTituloArticuloData", "ta-titulo-articulo-runtime.service.js", "ta-titulo-articulo-firebase-direct.service.js"]
+  },
+  {
+    file: "src/services/ta-titulo-articulo-api-client.service.js",
+    mustInclude: ["TaTituloArticuloApi", "ta-titulo-articulo-runtime.service.js", "ta-titulo-articulo-firebase-direct.service.js", "origenDatos"]
+  },
+  {
+    file: "src/services/ta-titulo-articulo-functions-client.service.js",
+    mustInclude: ["TaTituloArticuloFunctionsClient", "/.netlify/functions"]
+  }
+];
+
 function readRelative(file) {
   return readFileSync(resolve(root, file), "utf8");
 }
@@ -143,6 +166,18 @@ for (const check of htmlChecks) {
   }
 }
 
+for (const check of serviceChecks) {
+  const fullPath = resolve(root, check.file);
+  if (!existsSync(fullPath)) continue;
+
+  const content = readRelative(check.file);
+  for (const value of check.mustInclude) {
+    if (!content.includes(value)) {
+      errors.push(`${check.file}: falta "${value}".`);
+    }
+  }
+}
+
 if (errors.length) {
   console.error("Títulos: revisión con errores.");
   errors.forEach((error) => console.error(`- ${error}`));
@@ -152,3 +187,4 @@ if (errors.length) {
 console.log("Títulos: revisión de estructura correcta.");
 console.log(`Archivos verificados: ${requiredFiles.length}`);
 console.log(`HTML verificados: ${htmlChecks.length}`);
+console.log(`Servicios verificados: ${serviceChecks.length}`);
