@@ -1,0 +1,27 @@
+{
+  "version": "1.0.0",
+  "moduloPadre": "Curriculo",
+  "nombre": "Base local - estado",
+  "descripcion": "Estado general de carga, respaldo y sincronizacion de la Base local de Curriculo.",
+  "tipoBase": "JSON inicial, migrable a SQLite",
+  "cargaAutomatica": {
+    "activa": true,
+    "frecuencia": "una vez al dia al abrir Curriculo",
+    "ultimaCarga": null
+  },
+  "sincronizacionFirebase": {
+    "activa": true,
+    "frecuencia": "una vez al dia",
+    "ultimaSincronizacion": null,
+    "estado": "pendiente"
+  },
+  "salidaEstado": "consola",
+  "resumen": {
+    "totalRegistros": 0,
+    "totalPendientes": 0,
+    "totalSincronizados": 0,
+    "totalConflictos": 0,
+    "totalErrores": 0,
+    "totalCamposNuevos": 0
+  }
+}
