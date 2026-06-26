@@ -9,12 +9,12 @@
   <link rel="stylesheet" href="../src/styles/ta-titulo-articulo-layout.css" />
   <link rel="stylesheet" href="../src/styles/ta-titulo-articulo-components.css" />
 </head>
-<body class="ta-body ta-body--public">
+<body class="ta-body ta-body--public" data-ta-runtime="public">
   <main class="ta-shell" id="ta-estudiante-app" data-ta-screen="estudiante">
     <header class="ta-header">
       <div class="ta-brand">
         <div class="ta-brand__mark" aria-label="Logo ITSQMET">
-          <img class="ta-brand__logo" src="./assets/logo-itsqmet.png" alt="Logo ITSQMET" onerror="this.remove()" />
+          <img class="ta-brand__logo" src="./assets/logo-itsqmet.svg" alt="Logo ITSQMET" onerror="this.remove()" />
           <span class="ta-brand__fallback">ITSQMET</span>
         </div>
         <div><p class="ta-brand__eyebrow">Titulación</p><h1 class="ta-brand__title">Títulos de artículos académicos</h1><p class="ta-brand__subtitle">Pantalla del estudiante</p></div>
@@ -25,7 +25,7 @@
     <section class="ta-card ta-card--compact" id="ta-estudiante-busqueda-card">
       <div class="ta-section-heading"><div><h2>Ingreso por cédula</h2><p>Ingrese su número de identificación para consultar sus datos y cargar sus propuestas.</p></div></div>
       <form class="ta-form ta-form--inline" id="ta-estudiante-busqueda-form" autocomplete="off">
-        <label class="ta-field ta-field--grow" for="ta-estudiante-cedula"><span>Cédula</span><input id="ta-estudiante-cedula" name="cedula" type="text" inputmode="numeric" maxlength="13" placeholder="Ejemplo: 1721142444" required /></label>
+        <label class="ta-field ta-field--grow" for="ta-estudiante-cedula"><span>Cédula</span><input id="ta-estudiante-cedula" name="cedula" type="text" inputmode="numeric" maxlength="13" placeholder="Ingrese su cédula" required /></label>
         <button class="ta-button ta-button--primary" type="submit">Consultar</button>
       </form>
       <p class="ta-message" id="ta-estudiante-busqueda-mensaje" hidden></p>
