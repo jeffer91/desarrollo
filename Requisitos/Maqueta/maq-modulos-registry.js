@@ -13,7 +13,7 @@ Con qué se conecta:
   "use strict";
   var base="..";
   var modules={
-    carga_excel:{id:"carga_excel",nombre:"Requisito",ruta:base+"/Gestion/Excel/excel.html",estado:"activo"},
+    carga_excel:{id:"carga_excel",nombre:"Carga",ruta:base+"/Gestion/Excel/excel.html",estado:"activo"},
     baselocal:{id:"baselocal",nombre:"Bl",ruta:base+"/BaseLocal/baselocal.html",estado:"activo"},
     tabla_principal:{id:"tabla_principal",nombre:"tabla",ruta:base+"/Gestion/Tabla/tabla.html",estado:"activo"},
     ficha_estudiante:{id:"ficha_estudiante",nombre:"Ficha",ruta:base+"/Ficha/ficha.html",estado:"activo"},
