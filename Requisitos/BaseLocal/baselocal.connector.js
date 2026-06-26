@@ -5,6 +5,7 @@ Función o funciones:
 - Conectar todos los módulos de Requisitos con una misma Base Local.
 - Compartir datos entre pantallas, iframes y la pantalla BL usando localStorage.
 - Exponer APIs simples: RequisitosBL, BaseLocalBridge.
+- Evitar bloqueos por escrituras repetidas al espejar estudiantes y períodos.
 - No guarda archivos físicos; solo datos JSON, estados, referencias y registros.
 ========================================================= */
 (function(window){
@@ -42,6 +43,12 @@ Función o funciones:
     repo:"reportes",
     defensas:"defensas",
     defart:"defensas"
+  };
+
+  var mirrorState = {
+    running:false,
+    lastSignature:"",
+    lastAt:""
   };
 
   function now(){
@@ -181,7 +188,8 @@ Función o funciones:
     return copy;
   }
 
-  function guardar(collection, record, source){
+  function guardar(collection, record, source, options){
+    options = options || {};
     if(!collection || !record || typeof record !== "object"){
       return null;
     }
@@ -198,17 +206,55 @@ Función o funciones:
     }
 
     writeCollection(collection, rows);
-    signal("changed", {collection:collection, id:copy._blId, source:source || "module", count:rows.length});
+    if(options.silent !== true){
+      signal("changed", {collection:collection, id:copy._blId, source:source || "module", count:rows.length});
+    }
     return copy;
   }
 
-  function guardarMuchos(collection, records, source){
-    if(!Array.isArray(records)){
+  function guardarMuchos(collection, records, source, options){
+    options = options || {};
+    if(!Array.isArray(records) || !collection){
       return [];
     }
-    return records.map(function(record){
-      return guardar(collection, record, source || "module_many");
-    }).filter(Boolean);
+
+    if(!records.length){
+      if(options.silent !== true){
+        signal("changed", {collection:collection, source:source || "module_many", count:readCollection(collection).length, changed:0, bulk:true});
+      }
+      return [];
+    }
+
+    var rows = readCollection(collection);
+    var indexById = {};
+    rows.forEach(function(row, index){
+      if(row && row._blId){
+        indexById[row._blId] = index;
+      }
+    });
+
+    var saved = [];
+    records.forEach(function(record){
+      if(!record || typeof record !== "object"){
+        return;
+      }
+      var copy = normalizeRecord(collection, record, source || "module_many");
+      var index = Object.prototype.hasOwnProperty.call(indexById, copy._blId) ? indexById[copy._blId] : -1;
+      if(index >= 0){
+        copy._blCreatedAt = rows[index]._blCreatedAt || copy._blCreatedAt;
+        rows[index] = copy;
+      }else{
+        indexById[copy._blId] = rows.length;
+        rows.push(copy);
+      }
+      saved.push(copy);
+    });
+
+    writeCollection(collection, rows);
+    if(options.silent !== true){
+      signal("changed", {collection:collection, source:source || "module_many", count:rows.length, changed:saved.length, bulk:true});
+    }
+    return saved;
   }
 
   function listar(collection, options){
@@ -236,20 +282,57 @@ Función o funciones:
     return guardar(collection, row, source || "module_delete");
   }
 
-  function mirrorSnapshotToCollections(){
+  function snapshotSignature(snapshot){
+    snapshot = snapshot || {};
+    var meta = snapshot.meta || {};
+    var periods = Array.isArray(snapshot.periods) ? snapshot.periods : [];
+    var students = Array.isArray(snapshot.students) ? snapshot.students : [];
+    return [
+      meta.updatedAt || meta.pulledAt || meta.createdAt || "",
+      periods.length,
+      students.length,
+      students[0] && (students[0].cedula || students[0].numeroIdentificacion || students[0]._docId || students[0].docId || ""),
+      students[students.length - 1] && (students[students.length - 1].cedula || students[students.length - 1].numeroIdentificacion || students[students.length - 1]._docId || students[students.length - 1].docId || "")
+    ].join("|");
+  }
+
+  function mirrorSnapshotToCollections(options){
+    options = options || {};
+    if(mirrorState.running){
+      return {periods:0, students:0, skipped:true, reason:"running"};
+    }
+
     var snapshot = readRawSnapshot();
     var periods = Array.isArray(snapshot.periods) ? snapshot.periods : [];
     var students = Array.isArray(snapshot.students) ? snapshot.students : [];
-    guardarMuchos("periodos", periods, "snapshot_mirror");
-    guardarMuchos("estudiantes", students, "snapshot_mirror");
-    guardarMuchos("requisitos", students, "snapshot_mirror");
-    guardar("metadata", {
-      id:"snapshot_mirror_status",
-      totalPeriods:periods.length,
-      totalStudents:students.length,
-      updatedAt:now()
-    }, "snapshot_mirror");
-    return {periods:periods.length, students:students.length};
+    var signature = snapshotSignature(snapshot);
+
+    if(options.force !== true && signature && signature === mirrorState.lastSignature){
+      return {periods:periods.length, students:students.length, skipped:true, reason:"same_snapshot"};
+    }
+
+    mirrorState.running = true;
+    try{
+      guardarMuchos("periodos", periods, "snapshot_mirror", {silent:true});
+      guardarMuchos("estudiantes", students, "snapshot_mirror", {silent:true});
+      guardarMuchos("requisitos", students, "snapshot_mirror", {silent:true});
+      guardar("metadata", {
+        id:"snapshot_mirror_status",
+        totalPeriods:periods.length,
+        totalStudents:students.length,
+        updatedAt:now(),
+        signature:signature
+      }, "snapshot_mirror", {silent:true});
+
+      mirrorState.lastSignature = signature;
+      mirrorState.lastAt = now();
+      if(options.silent !== true){
+        signal("mirror-complete", {periods:periods.length, students:students.length, updatedAt:mirrorState.lastAt});
+      }
+      return {periods:periods.length, students:students.length, skipped:false};
+    }finally{
+      mirrorState.running = false;
+    }
   }
 
   function conteos(){
@@ -353,7 +436,7 @@ Función o funciones:
   }
 
   window.RequisitosBL = {
-    version:"1.0.0",
+    version:"1.0.1",
     collections:COLLECTIONS.slice(),
     today:today,
     collectionFor:collectionFor,
@@ -374,19 +457,20 @@ Función o funciones:
   };
 
   window.BaseLocalBridge = {
-    version:"1.0.0",
+    version:"1.0.1",
     counts:conteos,
     getSnapshot:readRawSnapshot,
     writeSnapshot:writeRawSnapshot,
     mirrorSnapshotToCollections:mirrorSnapshotToCollections,
     list:listar,
     upsert:guardar,
+    upsertMany:guardarMuchos,
     status:getStatus
   };
 
   try{
-    mirrorSnapshotToCollections();
-    saveStatus({ok:true, mode:"connector_ready"});
+    mirrorSnapshotToCollections({silent:true});
+    saveStatus({ok:true, mode:"connector_ready", optimized:true});
   }catch(error){
     saveStatus({ok:false, mode:"connector_error", errorMessage:error.message || String(error)});
   }
