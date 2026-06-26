@@ -5,7 +5,7 @@ Función o funciones:
 - Repositorio local central del módulo Carga Excel.
 - Guardar períodos, estudiantes e historial desde el análisis Excel.
 - Aplicar reglas de matrícula: ACTIVO, RETIRADO, cambio de período y reactivación.
-- Exponer datos para Base Local, Tabla, Ficha, Stats y Reportes.
+- Exponer datos filtrables por estado para Base Local, Tabla, Ficha, Stats y Reportes.
 Con qué se conecta:
 - excel-local.storage.js
 - excel-ui.cargar.js
@@ -20,6 +20,11 @@ Con qué se conecta:
   function now(){return new Date().toISOString();}
   function read(){return S().readSnapshot();}
   function write(snap){return S().writeSnapshot(snap);}
+
+  function normalizeEstado(value){
+    if(window.BLMatriculaService&&typeof window.BLMatriculaService.normalizeEstado==="function")return window.BLMatriculaService.normalizeEstado(value);
+    return text(value||"ACTIVO").toUpperCase()==="RETIRADO"?"RETIRADO":"ACTIVO";
+  }
 
   function getCedula(row){
     row=row||{};
@@ -47,7 +52,7 @@ Con qué se conecta:
     r.numeroIdentificacion=text(r.numeroIdentificacion||r.numeroidentificacion||r.NumeroIdentificacion||r.cedula||id);
     r.nombres=text(r.nombres||r.Nombres||r.nombre||r.estudiante);
     r.nombrecarrera=text(r.nombrecarrera||r.nombreCarrera||r.carrera||r.NombreCarrera);
-    r.estadoMatricula=text(r.estadoMatricula||"ACTIVO").toUpperCase()==="RETIRADO"?"RETIRADO":"ACTIVO";
+    r.estadoMatricula=normalizeEstado(r.estadoMatricula||"ACTIVO");
     r.historialEstadoMatricula=Array.isArray(r.historialEstadoMatricula)?r.historialEstadoMatricula:[];
     r.updatedAt=now();
     r.ultimaSincronizacion=now();
@@ -73,7 +78,7 @@ Con qué se conecta:
 
   function markRetiradoFallback(student,period){
     var s=Object.assign({},student||{});
-    if(text(s.estadoMatricula).toUpperCase()==="RETIRADO")return s;
+    if(normalizeEstado(s.estadoMatricula)==="RETIRADO")return s;
     s.estadoMatricula="RETIRADO";
     s.retiradoEn=text(s.retiradoEn)||now();
     s.updatedAt=now();
@@ -92,7 +97,7 @@ Con qué se conecta:
       if(!cedula)return;
       incomingCedulas[cedula]=true;
       var previous=byCedula[cedula]||null;
-      var wasRetirado=previous&&text(previous.estadoMatricula).toUpperCase()==="RETIRADO";
+      var wasRetirado=previous&&normalizeEstado(previous.estadoMatricula)==="RETIRADO";
       var moved=previous&&text(previous.periodoId)&&text(previous.periodoId)!==text(period.id);
       var merged=Object.assign({},previous||{},incoming,{cedula:cedula,numeroIdentificacion:text(incoming.numeroIdentificacion||cedula),periodoId:period.id,ultimoPeriodoId:period.id,periodoLabel:period.label,estadoMatricula:"ACTIVO",updatedAt:now(),ultimaSincronizacion:now()});
       if(!previous)stats.added+=1;else stats.updated+=1;
@@ -103,7 +108,7 @@ Con qué se conecta:
     Object.keys(byCedula).forEach(function(cedula){
       var student=byCedula[cedula];
       if(text(student.periodoId)===text(period.id)&&!incomingCedulas[cedula]){
-        var before=text(student.estadoMatricula).toUpperCase();
+        var before=normalizeEstado(student.estadoMatricula);
         byCedula[cedula]=markRetiradoFallback(student,period);
         if(before!=="RETIRADO")stats.retired+=1;
       }
@@ -112,9 +117,7 @@ Con qué se conecta:
   }
 
   function reconcileStudents(snap,rows,period){
-    if(window.BLMatriculaService&&typeof window.BLMatriculaService.reconcile==="function"){
-      return window.BLMatriculaService.reconcile(snap,rows,period,{source:"excel-local.repo"});
-    }
+    if(window.BLMatriculaService&&typeof window.BLMatriculaService.reconcile==="function")return window.BLMatriculaService.reconcile(snap,rows,period,{source:"excel-local.repo"});
     return reconcileFallback(snap,rows,period);
   }
 
@@ -141,9 +144,24 @@ Con qué se conecta:
     return saved;
   }
 
+  function filterStudents(options){
+    options=options||{};
+    var periodoId=text(options.periodoId||"");
+    var estado=options.estadoMatricula==null?"":text(options.estadoMatricula);
+    return read().students.filter(function(s){
+      var okPeriod=!periodoId||text(s.periodoId)===periodoId;
+      var okEstado=!estado||normalizeEstado(s.estadoMatricula)===estado;
+      return okPeriod&&okEstado;
+    });
+  }
+
   function listPeriods(){return read().periods.slice();}
   function listAllStudents(){return read().students.slice();}
-  function listStudentsByPeriod(periodId){periodId=text(periodId);return read().students.filter(function(s){return !periodId||s.periodoId===periodId;});}
+  function listStudentsByPeriod(periodId,options){options=options||{};options.periodoId=periodId;return filterStudents(options);}
+  function listStudentsByStatus(estadoMatricula,periodoId){return filterStudents({estadoMatricula:estadoMatricula,periodoId:periodoId});}
+  function listActiveStudents(periodoId){return listStudentsByStatus("ACTIVO",periodoId);}
+  function listRetiredStudents(periodoId){return listStudentsByStatus("RETIRADO",periodoId);}
+  function countByStatus(periodoId){var rows=filterStudents({periodoId:periodoId||""});var out={ACTIVO:0,RETIRADO:0,TOTAL:0};rows.forEach(function(s){var e=normalizeEstado(s.estadoMatricula);out[e]=(out[e]||0)+1;out.TOTAL+=1;});return out;}
   function listHistory(){return read().history.slice().reverse();}
 
   function patchStudentById(id,patch){
@@ -178,13 +196,8 @@ Con qué se conecta:
   function diagnostics(){
     var snap=read();
     var careers={};
-    var estados={ACTIVO:0,RETIRADO:0};
-    snap.students.forEach(function(s){
-      var c=text(s.nombrecarrera||s.NombreCarrera||s.carrera)||"SIN CARRERA";
-      var e=text(s.estadoMatricula||"ACTIVO").toUpperCase()==="RETIRADO"?"RETIRADO":"ACTIVO";
-      careers[c]=(careers[c]||0)+1;
-      estados[e]=(estados[e]||0)+1;
-    });
+    var estados=countByStatus();
+    snap.students.forEach(function(s){var c=text(s.nombrecarrera||s.NombreCarrera||s.carrera)||"SIN CARRERA";careers[c]=(careers[c]||0)+1;});
     return {ok:true,updatedAt:snap.meta.updatedAt,totalPeriods:snap.periods.length,totalStudents:snap.students.length,totalHistory:snap.history.length,careers:careers,estados:estados,meta:snap.meta};
   }
 
@@ -208,18 +221,27 @@ Con qué se conecta:
       var current=document.currentScript&&document.currentScript.src?document.currentScript.src:window.location.href;
       var base=new URL("../../BaseLocal/",current).href;
       loadScriptOnce(base+"services/bl-campos.js","__REQ_BL_CAMPOS_SCRIPT__",function(){
-        loadScriptOnce(base+"services/bl-normalizador.js","__REQ_BL_NORMALIZADOR_SCRIPT__",function(){
-          loadScriptOnce(base+"services/bl-matricula.service.js","__REQ_BL_MATRICULA_SCRIPT__");
-        });
+        loadScriptOnce(base+"services/bl-normalizador.js","__REQ_BL_NORMALIZADOR_SCRIPT__",function(){loadScriptOnce(base+"services/bl-matricula.service.js","__REQ_BL_MATRICULA_SCRIPT__");});
       });
-      loadScriptOnce(base+"baselocal.connector.js","__REQ_BL_CONNECTOR_SCRIPT__",function(){
-        loadScriptOnce(base+"baselocal.autoconnect.js","__REQ_BL_AUTOCONNECT_SCRIPT__");
-      });
-    }catch(error){
-      console.warn("[ExcelLocalRepo] Conector BaseLocal no cargado",error);
-    }
+      loadScriptOnce(base+"baselocal.connector.js","__REQ_BL_CONNECTOR_SCRIPT__",function(){loadScriptOnce(base+"baselocal.autoconnect.js","__REQ_BL_AUTOCONNECT_SCRIPT__");});
+    }catch(error){console.warn("[ExcelLocalRepo] Conector BaseLocal no cargado",error);}
   }
 
-  window.ExcelLocalRepo={saveAnalysis:saveAnalysis,listPeriods:listPeriods,listAllStudents:listAllStudents,listStudentsByPeriod:listStudentsByPeriod,listHistory:listHistory,patchStudentById:patchStudentById,clearPeriod:clearPeriod,clearAll:clearAll,diagnostics:diagnostics,getSnapshot:getSnapshot};
+  window.ExcelLocalRepo={
+    saveAnalysis:saveAnalysis,
+    listPeriods:listPeriods,
+    listAllStudents:listAllStudents,
+    listStudentsByPeriod:listStudentsByPeriod,
+    listStudentsByStatus:listStudentsByStatus,
+    listActiveStudents:listActiveStudents,
+    listRetiredStudents:listRetiredStudents,
+    countByStatus:countByStatus,
+    listHistory:listHistory,
+    patchStudentById:patchStudentById,
+    clearPeriod:clearPeriod,
+    clearAll:clearAll,
+    diagnostics:diagnostics,
+    getSnapshot:getSnapshot
+  };
   loadBaseLocalConnector();
 })(window,document);
