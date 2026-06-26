@@ -4,36 +4,35 @@ Ruta o ubicación: /Requisitos/BaseLocal/baselocal.core.js
 Función o funciones:
 - Leer la base local desde ExcelLocalRepo.
 - Preparar datos para la pantalla Base Local.
-- Usar servicios pequeños para campos, normalización, filtros y diagnóstico.
+- Usar servicios pequeños para campos, normalización, filtros, diagnóstico y divisiones.
 - Mostrar estudiantes activos por defecto y retirados solo con filtro.
+- Crear divisiones por período asignando carreras a estudiantes activos y retirados.
 Con qué se conecta:
 - excel-local.repo.js
 - services/bl-campos.js
 - services/bl-normalizador.js
 - services/bl-filtros.js
+- services/bl-divisiones.service.js
 - services/bl-healthcheck.js
 - baselocal.app.js
+- baselocal.divisiones.js
 ========================================================= */
 (function(window){
   "use strict";
 
-  var MONTHS = {
-    enero:"Enero", febrero:"Febrero", marzo:"Marzo", abril:"Abril", mayo:"Mayo", junio:"Junio",
-    julio:"Julio", agosto:"Agosto", septiembre:"Septiembre", setiembre:"Septiembre",
-    octubre:"Octubre", noviembre:"Noviembre", diciembre:"Diciembre"
-  };
+  var MONTHS = {enero:"Enero", febrero:"Febrero", marzo:"Marzo", abril:"Abril", mayo:"Mayo", junio:"Junio", julio:"Julio", agosto:"Agosto", septiembre:"Septiembre", setiembre:"Septiembre", octubre:"Octubre", noviembre:"Noviembre", diciembre:"Diciembre"};
 
   function repo(){if(!window.ExcelLocalRepo){throw new Error("ExcelLocalRepo no disponible.");}return window.ExcelLocalRepo;}
   function normalizador(){if(!window.BLNormalizador){throw new Error("BLNormalizador no disponible.");}return window.BLNormalizador;}
   function filtros(){if(!window.BLFiltros){throw new Error("BLFiltros no disponible.");}return window.BLFiltros;}
+  function divisiones(){if(!window.BLDivisionesService){throw new Error("BLDivisionesService no disponible.");}return window.BLDivisionesService;}
   function text(value){return String(value == null ? "" : value).trim();}
   function normalizeText(value){return text(value).normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim().toLowerCase();}
   function isCedulaLike(value){return /^\d{7,13}$/.test(text(value));}
   function isMachinePeriodId(value){return /^20\d{2}[-_]\d{2}(_{1,2}|[-_])20\d{2}[-_]\d{2}$/.test(text(value));}
 
   function isValidPeriod(value){
-    var raw = text(value);
-    var clean = normalizeText(raw);
+    var raw = text(value);var clean = normalizeText(raw);
     if(!raw || isCedulaLike(raw)){return false;}
     if(clean === "sin_periodo" || clean === "sin periodo"){return true;}
     if(isMachinePeriodId(raw)){return true;}
@@ -41,32 +40,27 @@ Con qué se conecta:
   }
 
   function periodKey(period){
+    if(window.BLPeriodosCanon && typeof window.BLPeriodosCanon.keyFromPeriod === "function"){return window.BLPeriodosCanon.keyFromPeriod(period);}
     var label = text(period && (period.label || period.periodoLabel || period.periodo || period.id));
     return normalizeText(label || (period && period.id));
   }
 
   function prettyPeriodLabel(value){
-    var raw = text(value);
-    var clean = normalizeText(raw);
+    var raw = text(value);var clean = normalizeText(raw);
     if(!clean){return raw;}
-    Object.keys(MONTHS).forEach(function(month){
-      var reg = new RegExp("\\b" + month + "\\b", "g");
-      clean = clean.replace(reg, MONTHS[month]);
-    });
+    Object.keys(MONTHS).forEach(function(month){var reg = new RegExp("\\b" + month + "\\b", "g");clean = clean.replace(reg, MONTHS[month]);});
     clean = clean.replace(/\ba\b/g, "a").replace(/\s+/g, " ").trim();
     return clean || raw;
   }
 
+  function clone(value){try{return JSON.parse(JSON.stringify(value == null ? null : value));}catch(error){return value;}}
+  function now(){return new Date().toISOString();}
   function getSnapshot(){return repo().getSnapshot();}
 
-  function getAllStudentsRaw(){
-    if(typeof repo().listAllStudents === "function"){return repo().listAllStudents() || [];}
-    return repo().listStudentsByPeriod("") || [];
-  }
+  function getAllStudentsRaw(){if(typeof repo().listAllStudents === "function"){return repo().listAllStudents() || [];}return repo().listStudentsByPeriod("") || [];}
 
   function getPeriods(){
-    var map = {};
-    var result = [];
+    var map = {};var result = [];
     (repo().listPeriods() || []).forEach(function(period){
       var normalized = normalizador().normalizePeriod(period);
       var label = text(normalized.label || normalized.periodoLabel || normalized.id);
@@ -79,39 +73,75 @@ Con qué se conecta:
     return result;
   }
 
-  function getStudents(periodId, search, estadoMatricula){
-    return filtros().filterStudents(getAllStudentsRaw(), {periodoId:periodId || "", search:search || "", estadoMatricula:estadoMatricula == null ? "ACTIVO" : estadoMatricula});
-  }
+  function samePeriod(a,b){if(!text(b)){return true;}if(window.BLPeriodosCanon && typeof window.BLPeriodosCanon.samePeriod === "function"){return window.BLPeriodosCanon.samePeriod(a,b);}return text(a) === text(b);}
 
-  function getStudentsForPeriod(periodId){
-    return filtros().filterStudents(getAllStudentsRaw(), {periodoId:periodId || "", search:"", estadoMatricula:""});
-  }
-
+  function getStudents(periodId, search, estadoMatricula){return filtros().filterStudents(getAllStudentsRaw(), {periodoId:periodId || "", search:search || "", estadoMatricula:estadoMatricula == null ? "ACTIVO" : estadoMatricula});}
+  function getStudentsForPeriod(periodId){return filtros().filterStudents(getAllStudentsRaw(), {periodoId:periodId || "", search:"", estadoMatricula:""});}
   function getHistory(){return repo().listHistory();}
 
   function getDiagnostics(){
-    var diagnostics = repo().diagnostics();
-    var snapshot = getSnapshot();
+    var diagnostics = repo().diagnostics();var snapshot = getSnapshot();
     diagnostics.periodsFiltered = true;
     diagnostics.periodsVisible = getPeriods().length;
     diagnostics.statusCounts = filtros().countByStatus(getAllStudentsRaw());
-    diagnostics.baseLocalServices = window.BLHealthCheck && typeof window.BLHealthCheck.serviceStatus === "function"
-      ? window.BLHealthCheck.serviceStatus()
-      : {campos:!!window.BLCampos, normalizador:!!window.BLNormalizador, filtros:!!window.BLFiltros};
-    diagnostics.health = window.BLHealthCheck && typeof window.BLHealthCheck.run === "function"
-      ? window.BLHealthCheck.run(snapshot)
-      : {ok:false, issues:["BLHealthCheck no cargado"]};
+    diagnostics.divisiones = getDivisionsSummary("");
+    diagnostics.baseLocalServices = window.BLHealthCheck && typeof window.BLHealthCheck.serviceStatus === "function" ? window.BLHealthCheck.serviceStatus() : {campos:!!window.BLCampos, normalizador:!!window.BLNormalizador, filtros:!!window.BLFiltros, divisiones:!!window.BLDivisionesService};
+    diagnostics.health = window.BLHealthCheck && typeof window.BLHealthCheck.run === "function" ? window.BLHealthCheck.run(snapshot) : {ok:false, issues:["BLHealthCheck no cargado"]};
     return diagnostics;
   }
 
   function getCareersCount(students){return filtros().uniqueCareers(students || []).length;}
 
+  function getDivisions(periodId){return divisiones().listDivisions(getAllStudentsRaw(), periodId || "");}
+  function getDivisionsWithEmpty(periodId){return divisiones().listDivisionsWithEmpty(getAllStudentsRaw(), periodId || "");}
+  function getAvailableDivisionCareers(periodId){return divisiones().availableCareers(getAllStudentsRaw(), periodId || "");}
+  function getDivisionsSummary(periodId){return divisiones().divisionsSummary(getAllStudentsRaw(), periodId || "");}
+
+  function writeSnapshot(snapshot){
+    var clean = snapshot || {};
+    clean.meta = Object.assign({}, clean.meta || {}, {updatedAt:now(), totalStudents:Array.isArray(clean.students) ? clean.students.length : 0, totalPeriods:Array.isArray(clean.periods) ? clean.periods.length : 0});
+    if(window.RequisitosBL && typeof window.RequisitosBL.writeSnapshot === "function"){
+      window.RequisitosBL.writeSnapshot(clean);
+    }else if(window.ExcelLocalStorage && typeof window.ExcelLocalStorage.writeSnapshot === "function"){
+      window.ExcelLocalStorage.writeSnapshot(clean);
+    }else{
+      throw new Error("No hay escritura disponible para Base Local.");
+    }
+    if(window.RequisitosBL && typeof window.RequisitosBL.rebuildSnapshotToCollections === "function"){
+      window.RequisitosBL.rebuildSnapshotToCollections({force:true});
+    }
+    if(window.RequisitosBL && typeof window.RequisitosBL.notificar === "function"){
+      window.RequisitosBL.notificar("snapshot-changed", {source:"division", updatedAt:now()});
+    }
+    return clean;
+  }
+
+  function applyDivisionToCareers(periodId, divisionName, careers){
+    periodId = text(periodId);divisionName = text(divisionName);
+    if(!periodId){throw new Error("Selecciona un período antes de crear la división.");}
+    if(!divisionName){throw new Error("Escribe el nombre de la división.");}
+    if(!Array.isArray(careers) || !careers.length){throw new Error("Selecciona al menos una carrera.");}
+    var snapshot = clone(getSnapshot()) || {meta:{},periods:[],students:[],history:[],diagnostics:[]};
+    snapshot.students = Array.isArray(snapshot.students) ? snapshot.students : [];
+    var available = divisiones().availableCareers(snapshot.students, periodId);
+    var availableMap = {};
+    available.forEach(function(career){availableMap[normalizeText(career)] = true;});
+    var validCareers = careers.filter(function(career){return availableMap[normalizeText(career)];});
+    if(!validCareers.length){throw new Error("Las carreras seleccionadas ya tienen división o no pertenecen al período.");}
+    var applied = divisiones().applyDivision(snapshot.students, periodId, divisionName, validCareers);
+    snapshot.students = applied.students;
+    snapshot.history = Array.isArray(snapshot.history) ? snapshot.history : [];
+    snapshot.history.unshift({id:"division_" + Date.now(), action:"crearDivision", periodoId:periodId, periodoLabel:(getPeriods().find(function(p){return samePeriod(p.id, periodId);}) || {}).label || periodId, fileName:"Base Local", division:divisionName, carreras:validCareers, totalRows:applied.updated || 0, createdAt:now()});
+    var saved = writeSnapshot(snapshot);
+    return {ok:true, periodId:periodId, division:divisionName, careers:validCareers, updated:applied.updated || 0, snapshot:saved};
+  }
+
   function buildView(periodId, search, estadoMatricula){
     var students = getStudents(periodId, search, estadoMatricula);
     var studentsForPeriod = getStudentsForPeriod(periodId);
     var statusCounts = filtros().countByStatus(studentsForPeriod);
-    return {periods:getPeriods(), students:students, allStudentsForPeriod:studentsForPeriod, statusCounts:statusCounts, totalStudentsPeriod:statusCounts.TOTAL || studentsForPeriod.length, history:getHistory(), diagnostics:getDiagnostics(), careersCount:getCareersCount(students), snapshot:getSnapshot()};
+    return {periods:getPeriods(), students:students, allStudentsForPeriod:studentsForPeriod, statusCounts:statusCounts, totalStudentsPeriod:statusCounts.TOTAL || studentsForPeriod.length, history:getHistory(), diagnostics:getDiagnostics(), careersCount:getCareersCount(students), divisions:getDivisionsWithEmpty(periodId || ""), divisionsSummary:getDivisionsSummary(periodId || ""), snapshot:getSnapshot()};
   }
 
-  window.BaseLocalAPI = {getSnapshot:getSnapshot, getPeriods:getPeriods, getStudents:getStudents, getHistory:getHistory, getDiagnostics:getDiagnostics, buildView:buildView};
+  window.BaseLocalAPI = {getSnapshot:getSnapshot,getPeriods:getPeriods,getStudents:getStudents,getHistory:getHistory,getDiagnostics:getDiagnostics,buildView:buildView,getDivisions:getDivisions,getDivisionsWithEmpty:getDivisionsWithEmpty,getAvailableDivisionCareers:getAvailableDivisionCareers,getDivisionsSummary:getDivisionsSummary,applyDivisionToCareers:applyDivisionToCareers};
 })(window);
