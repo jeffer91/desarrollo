@@ -2,26 +2,35 @@
   Nombre completo: ta-titulo-articulo-firebase-client.js
   Ruta o ubicación: /Requisitos/Titulos/src/firebase/ta-titulo-articulo-firebase-client.js
   Función o funciones:
-  - Inicializar Firebase en el frontend únicamente cuando existan variables públicas VITE_FIREBASE_*.
-  - Exponer una instancia segura y única de Firebase App y Firestore para usos futuros del cliente.
-  - Evitar que la app falle si Netlify todavía no tiene configuradas las variables de entorno.
+  - Inicializar Firebase en el frontend del módulo Títulos.
+  - Usar variables VITE_FIREBASE_* cuando existan.
+  - Usar la configuración pública institucional por defecto cuando se trabaja localmente.
+  - Exponer una instancia única de Firebase App y Firestore.
   Se conecta con:
   - Requisitos/Titulos/src/firebase/ta-titulo-articulo-collections.js
+  - Requisitos/Titulos/src/services/ta-titulo-articulo-firebase-direct.service.js
   - Requisitos/Titulos/src/services/ta-titulo-articulo-api-client.service.js
-  - Requisitos/Titulos/public/ta-titulo-articulo-estudiante.html
-  - Requisitos/Titulos/public/ta-titulo-articulo-coordinador.html
 */
 
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 
+const DEFAULT_FIREBASE_CONFIG = Object.freeze({
+  apiKey: "AIzaSyCaHf1C0BB0X_H3BDZ1o-UDAsPmLTjsZLA",
+  authDomain: "utet-4387a.firebaseapp.com",
+  projectId: "utet-4387a",
+  storageBucket: "utet-4387a.firebasestorage.app",
+  messagingSenderId: "902848131454",
+  appId: "1:902848131454:web:47f515eb6480834724c32f"
+});
+
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || ""
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || DEFAULT_FIREBASE_CONFIG.apiKey,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || DEFAULT_FIREBASE_CONFIG.authDomain,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || DEFAULT_FIREBASE_CONFIG.projectId,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || DEFAULT_FIREBASE_CONFIG.storageBucket,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || DEFAULT_FIREBASE_CONFIG.messagingSenderId,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || DEFAULT_FIREBASE_CONFIG.appId
 };
 
 function tieneConfigFirebase(config) {
