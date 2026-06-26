@@ -1,6 +1,6 @@
 {
   "name": "desarrollo",
-  "version": "1.0.111",
+  "version": "1.0.112",
   "description": "Puente principal para ejecutar la aplicación desde la raíz del proyecto desarrollo.",
   "private": true,
   "author": "Jeff",
