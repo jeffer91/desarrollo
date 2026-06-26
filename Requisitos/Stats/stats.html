@@ -3,9 +3,9 @@
 Nombre completo: stats.html
 Ruta o ubicación: /Requisitos/Stats/stats.html
 Función o funciones:
-- Mostrar estadísticas del módulo Requisitos usando BaseLocal.
-- Resumir estudiantes por estado, carrera, período y requisito.
-- Exportar el resumen para revisión rápida.
+- Mostrar estadísticas del módulo Carga usando Base Local.
+- Resumir estudiantes por matrícula, estado, carrera, período y requisito.
+- Mostrar activos por defecto y permitir ver retirados.
 Con qué se conecta:
 - stats.css
 - stats.core.js
@@ -28,6 +28,7 @@ Con qué se conecta:
 
     <section class="stats-tools">
       <label>Período<select id="stats-periodo"><option value="">Todos</option></select></label>
+      <label>Matrícula<select id="stats-matricula"><option value="ACTIVO">Activos</option><option value="RETIRADO">Retirados</option><option value="">Todos</option></select></label>
       <label>Carrera<select id="stats-carrera"><option value="">Todas</option></select></label>
       <label>Estado<select id="stats-estado"><option value="">Todos</option><option value="cumple">Cumple todo</option><option value="pendiente">Con pendientes</option><option value="no_cumple">No cumple</option></select></label>
       <button id="stats-refresh" type="button">Actualizar</button>
@@ -44,31 +45,16 @@ Con qué se conecta:
     </section>
 
     <section class="stats-grid-main">
-      <article class="stats-card">
-        <div class="stats-card-head"><h2>Estados generales</h2><span id="stats-estados-meta">0 estudiantes</span></div>
-        <div id="stats-estados" class="stats-bars"></div>
-      </article>
-      <article class="stats-card">
-        <div class="stats-card-head"><h2>Requisitos</h2><span>Cumplimiento por requisito</span></div>
-        <div id="stats-requisitos" class="stats-bars"></div>
-      </article>
+      <article class="stats-card"><div class="stats-card-head"><h2>Estados generales</h2><span id="stats-estados-meta">0 estudiantes</span></div><div id="stats-estados" class="stats-bars"></div></article>
+      <article class="stats-card"><div class="stats-card-head"><h2>Requisitos</h2><span>Cumplimiento por requisito</span></div><div id="stats-requisitos" class="stats-bars"></div></article>
     </section>
 
     <section class="stats-grid-main">
-      <article class="stats-card">
-        <div class="stats-card-head"><h2>Carreras</h2><span id="stats-carreras-meta">0 carreras</span></div>
-        <div id="stats-carreras" class="stats-table-wrap"></div>
-      </article>
-      <article class="stats-card">
-        <div class="stats-card-head"><h2>Períodos</h2><span id="stats-periodos-meta">0 períodos</span></div>
-        <div id="stats-periodos" class="stats-table-wrap"></div>
-      </article>
+      <article class="stats-card"><div class="stats-card-head"><h2>Carreras</h2><span id="stats-carreras-meta">0 carreras</span></div><div id="stats-carreras" class="stats-table-wrap"></div></article>
+      <article class="stats-card"><div class="stats-card-head"><h2>Períodos</h2><span id="stats-periodos-meta">0 períodos</span></div><div id="stats-periodos" class="stats-table-wrap"></div></article>
     </section>
 
-    <section class="stats-card">
-      <div class="stats-card-head"><h2>Diagnóstico estadístico</h2><span>BaseLocal</span></div>
-      <pre id="stats-diagnostics"></pre>
-    </section>
+    <section class="stats-card"><div class="stats-card-head"><h2>Diagnóstico estadístico</h2><span>Base Local</span></div><pre id="stats-diagnostics"></pre></section>
   </main>
 
   <script src="../Gestion/Excel/excel-local/excel-local.config.js"></script>
