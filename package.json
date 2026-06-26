@@ -1,11 +1,20 @@
 {
   "name": "desarrollo",
-  "version": "1.0.110",
+  "version": "1.0.111",
   "description": "Puente principal para ejecutar la aplicación desde la raíz del proyecto desarrollo.",
   "private": true,
   "author": "Jeff",
   "license": "UNLICENSED",
   "scripts": {
+    "postinstall": "node scripts/ensure-electron-deps.js",
+    "prestart": "node scripts/ensure-electron-deps.js",
+    "predev": "node scripts/ensure-electron-deps.js",
+    "prepack": "node scripts/ensure-electron-deps.js",
+    "predist": "node scripts/ensure-electron-deps.js",
+    "predist:portable": "node scripts/ensure-electron-deps.js",
+    "predist:nsis": "node scripts/ensure-electron-deps.js",
+    "prerelease:win": "node scripts/ensure-electron-deps.js",
+    "prerelease:auto": "node scripts/ensure-electron-deps.js",
     "start": "npm --prefix electron start",
     "dev": "npm --prefix electron dev",
     "pack": "npm --prefix electron run pack",
@@ -15,6 +24,7 @@
     "release:win": "npm --prefix electron run release:win",
     "release:auto": "npm --prefix electron run release:auto",
     "version:show": "npm --prefix electron run version:show",
-    "install:electron": "npm --prefix electron install"
+    "install:electron": "npm --prefix electron install",
+    "setup": "node scripts/ensure-electron-deps.js"
   }
 }
