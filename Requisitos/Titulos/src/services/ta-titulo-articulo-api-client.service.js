@@ -2,198 +2,124 @@
   Nombre completo: ta-titulo-articulo-api-client.service.js
   Ruta o ubicación: /Requisitos/Titulos/src/services/ta-titulo-articulo-api-client.service.js
   Función o funciones:
-  - Centralizar llamadas del frontend hacia Netlify Functions.
-  - Enviar acciones de estudiante, coordinador, administrador y Telegram sin repetir código.
-  - Normalizar respuestas correctas y errores para las pantallas públicas y la pantalla local.
-  - Resolver automáticamente la URL base para Netlify, Vite local, Netlify Dev, Electron y archivo local.
+  - Centralizar las llamadas del frontend del módulo Títulos.
+  - Trabajar directamente con Firebase/Firestore.
+  - Eliminar la dependencia obligatoria de Netlify Functions para estudiante, coordinador y administrador.
+  - Mantener la base institucional en solo lectura y escribir únicamente datos propios de títulos.
 */
 
-const DEFAULT_FUNCTIONS_PATH = "/.netlify/functions";
-const LOCAL_FUNCTIONS_BASE = "http://127.0.0.1:8888/.netlify/functions";
-const FUNCTIONS_BASE_KEY = "ta.titulo.articulo.functionsBase";
+import { TaTituloArticuloFirebaseDirect } from "./ta-titulo-articulo-firebase-direct.service.js";
 
-const FUNCTION_NAMES = Object.freeze({
-  estudiante: "ta-titulo-articulo-api-estudiante",
-  coordinador: "ta-titulo-articulo-api-coordinador",
-  admin: "ta-titulo-articulo-api-admin",
-  telegram: "ta-titulo-articulo-api-telegram"
-});
-
-function clean(value) {
-  return String(value ?? "").trim().replace(/\/+$/g, "");
+function normalizarError(error, fallback) {
+  return new Error(error?.message || fallback);
 }
 
-function obtenerBaseDesdeBuild() {
+async function ejecutarDirecto(fn, fallback) {
   try {
-    return clean(import.meta.env?.VITE_TA_TITULO_ARTICULO_FUNCTIONS_BASE);
+    return await fn();
   } catch (error) {
-    return "";
+    console.error("[Títulos Firebase]", error);
+    throw normalizarError(error, fallback);
   }
 }
 
-function esHostLocal(hostname) {
-  const host = clean(hostname).toLowerCase();
-  return host === "localhost" || host === "127.0.0.1" || host === "0.0.0.0";
-}
-
-function obtenerBaseFunciones() {
-  const globalBase = clean(globalThis.TA_TITULO_ARTICULO_FUNCTIONS_BASE);
-  if (globalBase) return globalBase;
-
-  const buildBase = obtenerBaseDesdeBuild();
-  if (buildBase) return buildBase;
-
-  try {
-    const savedBase = clean(globalThis.localStorage?.getItem(FUNCTIONS_BASE_KEY));
-    if (savedBase) return savedBase;
-  } catch (error) {
-    console.warn("[Títulos API] No se pudo leer localStorage.", error);
-  }
-
-  const location = globalThis.location || {};
-  const protocol = location.protocol || "";
-  const hostname = location.hostname || "";
-  const port = location.port || "";
-
-  if (protocol === "file:") return LOCAL_FUNCTIONS_BASE;
-  if (esHostLocal(hostname) && port !== "8888") return LOCAL_FUNCTIONS_BASE;
-
-  return DEFAULT_FUNCTIONS_PATH;
-}
-
-export function configurarBaseFunciones(baseUrl) {
-  const base = clean(baseUrl);
-  if (!base) return "";
-
-  try {
-    globalThis.localStorage?.setItem(FUNCTIONS_BASE_KEY, base);
-  } catch (error) {
-    console.warn("[Títulos API] No se pudo guardar la URL base.", error);
-  }
-
-  globalThis.TA_TITULO_ARTICULO_FUNCTIONS_BASE = base;
-  return base;
+export function configurarBaseFunciones() {
+  return "firebase-direct";
 }
 
 export function obtenerEstadoApiTitulos() {
-  const base = obtenerBaseFunciones();
   return {
-    configurado: Boolean(base),
-    base,
-    modoLocal: ["file:", "http:"].includes(globalThis.location?.protocol || "") && esHostLocal(globalThis.location?.hostname || "")
+    configurado: TaTituloArticuloFirebaseDirect.disponible(),
+    base: "firebase-direct",
+    modoLocal: true
   };
-}
-
-function endpoint(nombre) {
-  const base = obtenerBaseFunciones();
-  if (!base) {
-    throw new Error("No se pudo resolver la URL de Netlify Functions para el módulo de Títulos.");
-  }
-  return `${base}/${FUNCTION_NAMES[nombre]}`;
-}
-
-function mensajeErrorConexion(error) {
-  const base = obtenerBaseFunciones();
-  const detalle = error && error.message ? error.message : String(error || "");
-
-  if (base === LOCAL_FUNCTIONS_BASE) {
-    return "No se pudo conectar con las funciones locales. Abra este módulo con Netlify Dev en el puerto 8888 o configure la URL pública de Netlify Functions.";
-  }
-
-  return detalle || "No se pudo conectar con Netlify Functions.";
-}
-
-async function leerRespuestaJson(response) {
-  const text = await response.text();
-  if (!text) return {};
-
-  try {
-    return JSON.parse(text);
-  } catch (error) {
-    return {
-      ok: false,
-      error: "La respuesta del servidor no tiene formato JSON válido.",
-      detalle: error && error.message ? error.message : String(error)
-    };
-  }
-}
-
-async function llamarFuncion(nombreFuncion, action, payload = {}, options = {}) {
-  const headers = { "Content-Type": "application/json" };
-
-  if (options.adminToken) {
-    headers["x-ta-admin-token"] = options.adminToken;
-  }
-
-  let response;
-  try {
-    response = await fetch(endpoint(nombreFuncion), {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ action, payload })
-    });
-  } catch (error) {
-    throw new Error(mensajeErrorConexion(error));
-  }
-
-  const data = await leerRespuestaJson(response);
-
-  if (!response.ok || data.ok === false) {
-    throw new Error(data.error || `Error HTTP ${response.status}`);
-  }
-
-  return data;
 }
 
 export const TaTituloArticuloApi = Object.freeze({
   estudiante: {
     buscarPorCedula(cedula) {
-      return llamarFuncion("estudiante", "buscarPorCedula", { cedula });
+      return ejecutarDirecto(
+        () => TaTituloArticuloFirebaseDirect.estudiante.buscarPorCedula(cedula),
+        "No se pudo consultar la cédula en Firebase."
+      );
     },
     consultarEstado(cedula) {
-      return llamarFuncion("estudiante", "consultarEstado", { cedula });
+      return ejecutarDirecto(
+        () => TaTituloArticuloFirebaseDirect.estudiante.consultarEstado(cedula),
+        "No se pudo consultar el estado en Firebase."
+      );
     },
     guardarTelegram(cedula, telegramUser) {
-      return llamarFuncion("estudiante", "guardarTelegram", { cedula, telegramUser });
+      return ejecutarDirecto(
+        () => TaTituloArticuloFirebaseDirect.estudiante.guardarTelegram(cedula, telegramUser),
+        "No se pudo guardar el usuario de Telegram."
+      );
     },
     enviarPropuestas(datosEnvio) {
-      return llamarFuncion("estudiante", "enviarPropuestas", datosEnvio);
+      return ejecutarDirecto(
+        () => TaTituloArticuloFirebaseDirect.estudiante.enviarPropuestas(datosEnvio),
+        "No se pudieron enviar las propuestas."
+      );
     }
   },
 
   coordinador: {
     listarCoordinadores() {
-      return llamarFuncion("coordinador", "listarCoordinadores");
+      return ejecutarDirecto(
+        () => TaTituloArticuloFirebaseDirect.coordinador.listarCoordinadores(),
+        "No se pudieron cargar los coordinadores desde Firebase."
+      );
     },
     cargarEstudiantes(coordinadorId) {
-      return llamarFuncion("coordinador", "cargarEstudiantes", { coordinadorId });
+      return ejecutarDirecto(
+        () => TaTituloArticuloFirebaseDirect.coordinador.cargarEstudiantes(coordinadorId),
+        "No se pudieron cargar los estudiantes desde Firebase."
+      );
     },
     iniciarRevision(envioId, coordinadorId) {
-      return llamarFuncion("coordinador", "iniciarRevision", { envioId, coordinadorId });
+      return ejecutarDirecto(
+        () => TaTituloArticuloFirebaseDirect.coordinador.iniciarRevision(envioId, coordinadorId),
+        "No se pudo iniciar la revisión."
+      );
     },
     guardarRevision(revision) {
-      return llamarFuncion("coordinador", "guardarRevision", revision);
+      return ejecutarDirecto(
+        () => TaTituloArticuloFirebaseDirect.coordinador.guardarRevision(revision),
+        "No se pudo guardar la revisión."
+      );
     }
   },
 
   admin: {
-    listarResumen(adminToken) {
-      return llamarFuncion("admin", "listarResumen", {}, { adminToken });
+    listarResumen() {
+      return ejecutarDirecto(
+        () => TaTituloArticuloFirebaseDirect.admin.listarResumen(),
+        "No se pudo cargar el resumen administrativo desde Firebase."
+      );
     },
-    activarPeriodo(periodoId, adminToken) {
-      return llamarFuncion("admin", "activarPeriodo", { periodoId }, { adminToken });
+    activarPeriodo(periodoId) {
+      return ejecutarDirecto(
+        () => TaTituloArticuloFirebaseDirect.admin.activarPeriodo(periodoId),
+        "No se pudo activar el período."
+      );
     },
-    guardarCoordinador(nombre, adminToken) {
-      return llamarFuncion("admin", "guardarCoordinador", { nombre }, { adminToken });
+    guardarCoordinador(nombre) {
+      return ejecutarDirecto(
+        () => TaTituloArticuloFirebaseDirect.admin.guardarCoordinador(nombre),
+        "No se pudo guardar el coordinador."
+      );
     },
-    asignarCoordinadorCarrera(datos, adminToken) {
-      return llamarFuncion("admin", "asignarCoordinadorCarrera", datos, { adminToken });
+    asignarCoordinadorCarrera(datos) {
+      return ejecutarDirecto(
+        () => TaTituloArticuloFirebaseDirect.admin.asignarCoordinadorCarrera(datos),
+        "No se pudo asignar la carrera."
+      );
     }
   },
 
   telegram: {
-    enviarMensaje(chatId, mensaje, adminToken) {
-      return llamarFuncion("telegram", "enviarMensaje", { chatId, mensaje }, { adminToken });
+    enviarMensaje() {
+      return Promise.resolve({ ok: true, mensaje: "Telegram queda pendiente fuera del modo Firebase directo." });
     }
   }
 });
