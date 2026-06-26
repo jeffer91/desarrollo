@@ -15,26 +15,11 @@ Con qué se conecta:
 (function(window){
   "use strict";
 
-  function campos(){
-    if(window.BLCampos){return window.BLCampos;}
-    return null;
-  }
-
-  function normalizador(){
-    if(window.BLNormalizador){return window.BLNormalizador;}
-    return null;
-  }
-
-  function text(value){
-    if(campos()){return campos().text(value);}
-    return String(value == null ? "" : value).trim();
-  }
-
+  function campos(){return window.BLCampos || null;}
+  function normalizador(){return window.BLNormalizador || null;}
+  function text(value){return campos()?campos().text(value):String(value == null ? "" : value).trim();}
   function now(){return new Date().toISOString();}
-
-  function clone(value){
-    try{return JSON.parse(JSON.stringify(value == null ? null : value));}catch(error){return value;}
-  }
+  function clone(value){try{return JSON.parse(JSON.stringify(value == null ? null : value));}catch(error){return value;}}
 
   function normalizeEstado(value){
     if(campos()){return campos().normalizeEstado(value);}
@@ -51,13 +36,16 @@ Con qué se conecta:
   }
 
   function normalizeStudent(row, index, period){
+    period = period || {id:"", label:""};
+    var r;
     if(normalizador()){
-      return normalizador().normalizeStudent(row, index || 0, {periodoId:period.id, periodoLabel:period.label, source:"excel"});
+      r = normalizador().normalizeStudent(row, index || 0, {periodoId:period.id, periodoLabel:period.label, source:"excel"});
+    }else{
+      r = Object.assign({}, row || {});
     }
-    var r = Object.assign({}, row || {});
     var id = getCedula(r) || text(r._docId || r.docId || r.id) || [period.id, "fila", (index || 0) + 1].join("_");
     r._docId = text(r._docId || r.docId || id);
-    r.docId = r._docId;
+    r.docId = text(r.docId || r._docId || id);
     r.cedula = text(r.cedula || r.Cedula || r.CEDULA || r.numeroIdentificacion || r.numeroidentificacion || id);
     r.numeroIdentificacion = text(r.numeroIdentificacion || r.numeroidentificacion || r.cedula || id);
     r.periodoId = period.id;
@@ -66,33 +54,25 @@ Con qué se conecta:
     r.nombres = text(r.nombres || r.Nombres || r.nombre || r.estudiante);
     r.nombrecarrera = text(r.nombrecarrera || r.nombreCarrera || r.carrera || r.NombreCarrera);
     r.estadoMatricula = normalizeEstado(r.estadoMatricula || "ACTIVO");
+    r.historialEstadoMatricula = Array.isArray(r.historialEstadoMatricula) ? r.historialEstadoMatricula : [];
     r.updatedAt = now();
+    r.ultimaSincronizacion = now();
     return r;
   }
 
-  function historyList(student){
-    return Array.isArray(student && student.historialEstadoMatricula) ? student.historialEstadoMatricula.slice() : [];
-  }
+  function historyList(student){return Array.isArray(student && student.historialEstadoMatricula) ? student.historialEstadoMatricula.slice() : [];}
 
   function addStateEvent(student, estado, periodo, motivo, extra){
     var out = Object.assign({}, student || {});
     var list = historyList(out);
-    list.push(Object.assign({
-      estado:estado,
-      fecha:now(),
-      periodoId:periodo.id,
-      periodoLabel:periodo.label,
-      motivo:motivo
-    }, extra || {}));
+    list.push(Object.assign({estado:estado, fecha:now(), periodoId:periodo.id, periodoLabel:periodo.label, motivo:motivo}, extra || {}));
     out.historialEstadoMatricula = list;
     return out;
   }
 
   function markRetirado(student, period, motivo){
     var out = Object.assign({}, student || {});
-    if(normalizeEstado(out.estadoMatricula) === "RETIRADO"){
-      return out;
-    }
+    if(normalizeEstado(out.estadoMatricula) === "RETIRADO"){return out;}
     out.estadoMatricula = "RETIRADO";
     out.retiradoEn = text(out.retiradoEn) || now();
     out.updatedAt = now();
@@ -106,18 +86,13 @@ Con qué se conecta:
     out.estadoMatricula = "ACTIVO";
     out.updatedAt = now();
     out.ultimaSincronizacion = now();
-    if(wasRetirado){
-      out = addStateEvent(out, "ACTIVO", period, motivo || "Volvió a aparecer en carga nueva");
-    }
+    if(wasRetirado){out = addStateEvent(out, "ACTIVO", period, motivo || "Volvió a aparecer en carga nueva");}
     return out;
   }
 
   function buildIndex(students){
     var map = {};
-    (students || []).forEach(function(student){
-      var key = getCedula(student);
-      if(key){map[key] = clone(student);}
-    });
+    (students || []).forEach(function(student){var key = getCedula(student);if(key){map[key] = clone(student);}});
     return map;
   }
 
@@ -138,26 +113,10 @@ Con qué se conecta:
       var previous = byCedula[cedula] || null;
       var wasRetirado = previous && normalizeEstado(previous.estadoMatricula) === "RETIRADO";
       var moved = previous && text(previous.periodoId) && text(previous.periodoId) !== text(period.id);
-      var merged = Object.assign({}, previous || {}, incoming, {
-        cedula:cedula,
-        numeroIdentificacion:text(incoming.numeroIdentificacion || cedula),
-        periodoId:period.id,
-        ultimoPeriodoId:period.id,
-        periodoLabel:period.label,
-        estadoMatricula:"ACTIVO",
-        updatedAt:now(),
-        ultimaSincronizacion:now()
-      });
-      if(!previous){stats.added += 1;}
-      else{stats.updated += 1;}
-      if(moved){
-        stats.moved += 1;
-        merged = addStateEvent(merged, "ACTIVO", period, "Cambio de período: se reemplazó el período anterior", {periodoAnterior:previous.periodoId || ""});
-      }
-      if(wasRetirado){
-        stats.reactivated += 1;
-        merged = addStateEvent(merged, "ACTIVO", period, "Volvió a aparecer en carga nueva");
-      }
+      var merged = Object.assign({}, previous || {}, incoming, {cedula:cedula, numeroIdentificacion:text(incoming.numeroIdentificacion || cedula), periodoId:period.id, ultimoPeriodoId:period.id, periodoLabel:period.label, estadoMatricula:"ACTIVO", updatedAt:now(), ultimaSincronizacion:now()});
+      if(!previous){stats.added += 1;}else{stats.updated += 1;}
+      if(moved){stats.moved += 1;merged = addStateEvent(merged, "ACTIVO", period, "Cambio de período: se reemplazó el período anterior", {periodoAnterior:previous.periodoId || ""});}
+      if(wasRetirado){stats.reactivated += 1;merged = addStateEvent(merged, "ACTIVO", period, "Volvió a aparecer en carga nueva");}
       byCedula[cedula] = merged;
     });
 
@@ -166,22 +125,12 @@ Con qué se conecta:
       if(text(student.periodoId) === text(period.id) && !incomingCedulas[cedula]){
         var before = normalizeEstado(student.estadoMatricula);
         byCedula[cedula] = markRetirado(student, period, "No apareció en la última carga del período");
-        if(before !== "RETIRADO"){
-          stats.retired += 1;
-        }
+        if(before !== "RETIRADO"){stats.retired += 1;}
       }
     });
 
-    var students = Object.keys(byCedula).map(function(cedula){return byCedula[cedula];});
-    return {students:students, stats:stats, incoming:normalizedIncoming};
+    return {students:Object.keys(byCedula).map(function(cedula){return byCedula[cedula];}), stats:stats, incoming:normalizedIncoming};
   }
 
-  window.BLMatriculaService = {
-    getCedula:getCedula,
-    normalizeEstado:normalizeEstado,
-    normalizeStudent:normalizeStudent,
-    markRetirado:markRetirado,
-    markActivo:markActivo,
-    reconcile:reconcile
-  };
+  window.BLMatriculaService = {getCedula:getCedula, normalizeEstado:normalizeEstado, normalizeStudent:normalizeStudent, markRetirado:markRetirado, markActivo:markActivo, reconcile:reconcile};
 })(window);
