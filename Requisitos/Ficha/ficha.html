@@ -3,9 +3,9 @@
 Nombre completo: ficha.html
 Ruta o ubicación: /Requisitos/Ficha/ficha.html
 Función o funciones:
-- Mostrar la ficha individual de un estudiante cargado desde BaseLocal.
+- Mostrar la ficha individual de un estudiante cargado desde Base Local.
 - Buscar por cédula, nombre, carrera, correo o celular.
-- Mostrar datos generales, requisitos y acciones rápidas.
+- Mostrar activos por defecto y permitir ver retirados.
 Con qué se conecta:
 - ficha.css
 - ficha.core.js
@@ -27,6 +27,7 @@ Con qué se conecta:
 
     <section class="ficha-toolbar">
       <label>Período<select id="ficha-periodo"><option value="">Todos</option></select></label>
+      <label>Matrícula<select id="ficha-matricula"><option value="ACTIVO">Activos</option><option value="RETIRADO">Retirados</option><option value="">Todos</option></select></label>
       <label>Buscar estudiante<input id="ficha-search" type="search" placeholder="Cédula, nombre, carrera, correo o celular..." /></label>
       <button id="ficha-btn-refresh" type="button">Actualizar</button>
       <button id="ficha-btn-copy" type="button">Copiar ficha</button>
@@ -35,10 +36,7 @@ Con qué se conecta:
 
     <section class="ficha-layout">
       <aside class="ficha-list-card">
-        <div class="ficha-list-head">
-          <strong>Estudiantes</strong>
-          <span id="ficha-count">0</span>
-        </div>
+        <div class="ficha-list-head"><strong>Estudiantes</strong><span id="ficha-count">0</span></div>
         <div id="ficha-list" class="ficha-list"></div>
       </aside>
 
@@ -46,17 +44,14 @@ Con qué se conecta:
         <div id="ficha-empty" class="ficha-empty">Selecciona un estudiante para ver la ficha.</div>
         <div id="ficha-detail" class="ficha-detail is-hidden">
           <div class="ficha-top">
-            <div>
-              <p class="ficha-label">Estudiante</p>
-              <h2 id="ficha-nombre">—</h2>
-              <p id="ficha-identidad" class="ficha-subtitle">—</p>
-            </div>
+            <div><p class="ficha-label">Estudiante</p><h2 id="ficha-nombre">—</h2><p id="ficha-identidad" class="ficha-subtitle">—</p></div>
             <span id="ficha-estado" class="ficha-pill ficha-pill-warn">Pendiente</span>
           </div>
 
           <section class="ficha-grid-info">
             <article><span>Carrera</span><strong id="ficha-carrera">—</strong></article>
             <article><span>Período</span><strong id="ficha-periodo-label">—</strong></article>
+            <article><span>Matrícula</span><strong id="ficha-matricula-label">—</strong></article>
             <article><span>Sede</span><strong id="ficha-sede">—</strong></article>
             <article><span>Horario</span><strong id="ficha-horario">—</strong></article>
             <article><span>Correo</span><strong id="ficha-correo">—</strong></article>
@@ -69,15 +64,8 @@ Con qué se conecta:
             <button id="ficha-copy-correo" class="ficha-action" type="button">Copiar correo</button>
           </section>
 
-          <section class="ficha-req-card">
-            <div class="ficha-section-title">Requisitos</div>
-            <div id="ficha-requisitos" class="ficha-requisitos"></div>
-          </section>
-
-          <section class="ficha-raw-card">
-            <div class="ficha-section-title">Datos completos</div>
-            <pre id="ficha-json"></pre>
-          </section>
+          <section class="ficha-req-card"><div class="ficha-section-title">Requisitos</div><div id="ficha-requisitos" class="ficha-requisitos"></div></section>
+          <section class="ficha-raw-card"><div class="ficha-section-title">Datos completos</div><pre id="ficha-json"></pre></section>
         </div>
       </section>
     </section>
