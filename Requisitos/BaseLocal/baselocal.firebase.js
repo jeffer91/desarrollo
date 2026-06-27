@@ -8,11 +8,13 @@ Función o funciones:
 - Subir estudiantes con parche controlado para no sobrescribir campos sensibles.
 - Usar siempre cédula como ID oficial del documento estudiante.
 - Reconstruir colecciones espejo después de pull, push y sync.
+- Respetar períodos borrados/archivados para que Firebase no los restaure durante 1 mes.
 Con qué se conecta:
 - services/bl-periodos.service.js
 - services/bl-estudiantes.service.js
 - services/bl-sync-diario.js
 - services/bl-firestore-patch.js
+- services/bl-borrar-periodo.service.js
 - baselocal.app.js
 - excel-local.storage.js
 - firebase-config.js
@@ -29,6 +31,7 @@ Con qué se conecta:
   function now(){return new Date().toISOString();}
   function today(){return now().slice(0, 10);}
   function clone(value){try{return JSON.parse(JSON.stringify(value == null ? null : value));}catch(error){return value;}}
+  function norm(value){return text(value).normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim().toLowerCase();}
   function getStorage(){if(!window.ExcelLocalStorage){throw new Error("ExcelLocalStorage no está disponible.");}return window.ExcelLocalStorage;}
   function getPeriodosService(){if(!window.BLPeriodosService){throw new Error("BLPeriodosService no está disponible.");}return window.BLPeriodosService;}
   function getEstudiantesService(){if(!window.BLEstudiantesService){throw new Error("BLEstudiantesService no está disponible.");}return window.BLEstudiantesService;}
@@ -60,6 +63,39 @@ Con qué se conecta:
   function snapshotHasData(snapshot){return !!(snapshot && ((Array.isArray(snapshot.students) && snapshot.students.length) || (Array.isArray(snapshot.periods) && snapshot.periods.length)));}
   function snapshotUpdatedAt(snapshot){if(!snapshot){return 0;}var meta = snapshot.meta || {};var byMeta = parseTime(meta.updatedAt || meta.pulledAt || meta.createdAt || snapshot.updatedAt || snapshot.actualizadoEn || "");var byRows = 0;(snapshot.students || []).concat(snapshot.periods || []).forEach(function(row){byRows = Math.max(byRows, rowUpdatedAt(row));});return Math.max(byMeta, byRows);}
 
+  function samePeriod(a,b){
+    if(!text(a) || !text(b)){return false;}
+    try{if(window.BLPeriodosCanon && typeof window.BLPeriodosCanon.samePeriod === "function"){return window.BLPeriodosCanon.samePeriod(a,b);}}catch(error){}
+    return norm(a) === norm(b);
+  }
+  function isDeleteHistory(row){return text(row && row.action) === "borrarPeriodo";}
+  function isExpiredDeleteHistory(row){var limit = Date.parse(text(row && (row.archivadoHasta || row.expiresAt)));return Number.isFinite(limit) && Date.now() > limit;}
+  function activeDeleteRows(snapshot){return (Array.isArray(snapshot && snapshot.history) ? snapshot.history : []).filter(function(row){return isDeleteHistory(row) && !isExpiredDeleteHistory(row);});}
+  function deletedByHistory(periodId, deleteRows){return (deleteRows || []).some(function(row){return samePeriod(row.periodoId || row.periodoLabel, periodId) || samePeriod(row.periodoLabel, periodId);});}
+  function periodValue(row){row=row || {};return text(row.id || row.periodoId || row.label || row.periodoLabel || row.periodo);}
+  function studentPeriodValue(row){row=row || {};return text(row.periodoId || row.periodoLabel || row.periodo || row.ultimoPeriodoId);}
+
+  function mergeProtectedHistory(clean, current){
+    clean = clean || {};current = current || {};
+    var keep = activeDeleteRows(current).concat(activeDeleteRows(clean));
+    var seen = {};
+    var merged = [];
+    keep.forEach(function(row){var id=text(row.id || row.periodoId || row.periodoLabel || JSON.stringify(row));if(!id || seen[id]){return;}seen[id]=true;merged.push(row);});
+    var rest = (Array.isArray(clean.history) ? clean.history : []).filter(function(row){return !isDeleteHistory(row) || !isExpiredDeleteHistory(row);}).filter(function(row){var id=text(row.id || row.periodoId || row.periodoLabel || JSON.stringify(row));return !id || !seen[id];});
+    clean.history = merged.concat(rest);
+    return clean;
+  }
+
+  function filterDeletedPeriods(snapshot, sourceSnapshot){
+    var clean = snapshot || {};
+    var deleteRows = activeDeleteRows(sourceSnapshot || {}).concat(activeDeleteRows(clean));
+    if(!deleteRows.length){return clean;}
+    clean.periods = (Array.isArray(clean.periods) ? clean.periods : []).filter(function(period){return !deletedByHistory(periodValue(period), deleteRows);});
+    clean.students = (Array.isArray(clean.students) ? clean.students : []).filter(function(student){return !deletedByHistory(studentPeriodValue(student), deleteRows);});
+    clean.meta = Object.assign({}, clean.meta || {}, {periodosBorradosProtegidos:deleteRows.length});
+    return clean;
+  }
+
   function rebuildMirrors(){
     try{
       if(window.RequisitosBL && typeof window.RequisitosBL.rebuildSnapshotToCollections === "function"){window.RequisitosBL.rebuildSnapshotToCollections({force:true, silent:true});return;}
@@ -72,16 +108,20 @@ Con qué se conecta:
     var periods = getPeriodosService().dedupe((base.periods || []).map(function(period){return getPeriodosService().normalizePeriod(period);}));
     var students = getEstudiantesService().normalizeLocalList(base.students || []);
     var maxDataUpdatedAt = maxUpdatedIso(students.concat(periods), "");
-    var meta = Object.assign({app:"Requisitos", module:"ExcelLocal", version:"1.2.2", updatedAt:maxDataUpdatedAt || now()}, base.meta || {});
+    var meta = Object.assign({app:"Requisitos", module:"ExcelLocal", version:"1.2.3", updatedAt:maxDataUpdatedAt || now()}, base.meta || {});
     meta.totalStudents = students.length;
     meta.totalPeriods = periods.length;
     meta.updatedAt = meta.updatedAt || maxDataUpdatedAt || now();
     return {meta:meta, periods:periods, students:students, history:Array.isArray(base.history) ? base.history : [], diagnostics:Array.isArray(base.diagnostics) ? base.diagnostics : []};
   }
 
-  function readLocalSnapshot(){return normalizeSnapshot(getStorage().readSnapshot());}
+  function readLocalSnapshot(){return filterDeletedPeriods(normalizeSnapshot(getStorage().readSnapshot()), getStorage().readSnapshot());}
   function writeLocalSnapshot(snapshot, action){
+    var current = null;
+    try{current = getStorage().readSnapshot();}catch(error){current = null;}
     var clean = normalizeSnapshot(snapshot);
+    clean = mergeProtectedHistory(clean, current);
+    clean = filterDeletedPeriods(clean, clean);
     clean.meta = Object.assign({}, clean.meta || {}, {updatedAt:now()});
     clean.history = Array.isArray(clean.history) ? clean.history : [];
     clean.history.unshift({id:"bl_" + (action || "sync") + "_" + Date.now(), action:action || "sync", periodoId:"TODOS", periodoLabel:"Todos los períodos", fileName:"Base Local", totalRows:Array.isArray(clean.students) ? clean.students.length : 0, totalPeriods:Array.isArray(clean.periods) ? clean.periods.length : 0, createdAt:now()});
@@ -94,10 +134,15 @@ Con qué se conecta:
 
   async function readRemoteSnapshot(db){
     var pulledAt = now();
+    var localForDeleted = null;
+    try{localForDeleted = getStorage().readSnapshot();}catch(error){localForDeleted = null;}
     var periodRows = await getPeriodosService().read(db);
     var studentRows = await getEstudiantesService().read(db);
     var remoteUpdatedAt = maxUpdatedIso(studentRows.concat(periodRows), pulledAt);
-    return normalizeSnapshot({meta:{app:"Requisitos", module:"ExcelLocal", version:"1.2.2", source:"firebase", pulledAt:pulledAt, updatedAt:remoteUpdatedAt}, periods:periodRows, students:studentRows, history:[{id:"firebase_pull_" + Date.now(), action:"pullFirebase", periodoId:"TODOS", periodoLabel:"Todos los períodos", fileName:"Firebase", totalRows:studentRows.length, totalPeriods:periodRows.length, createdAt:pulledAt}], diagnostics:[{ok:true, source:"firebase", pulledAt:pulledAt, updatedAt:remoteUpdatedAt, totalStudents:studentRows.length, totalPeriods:periodRows.length, collections:[{collection:"periodos", rows:periodRows.length}, {collection:"Estudiantes", rows:studentRows.length}]}]});
+    var remote = normalizeSnapshot({meta:{app:"Requisitos", module:"ExcelLocal", version:"1.2.3", source:"firebase", pulledAt:pulledAt, updatedAt:remoteUpdatedAt}, periods:periodRows, students:studentRows, history:[{id:"firebase_pull_" + Date.now(), action:"pullFirebase", periodoId:"TODOS", periodoLabel:"Todos los períodos", fileName:"Firebase", totalRows:studentRows.length, totalPeriods:periodRows.length, createdAt:pulledAt}], diagnostics:[{ok:true, source:"firebase", pulledAt:pulledAt, updatedAt:remoteUpdatedAt, totalStudents:studentRows.length, totalPeriods:periodRows.length, collections:[{collection:"periodos", rows:periodRows.length}, {collection:"Estudiantes", rows:studentRows.length}]}]});
+    remote = mergeProtectedHistory(remote, localForDeleted);
+    remote = filterDeletedPeriods(remote, localForDeleted);
+    return remote;
   }
 
   function cleanForFirebase(row){var clean = clone(row || {}) || {};Object.keys(clean).forEach(function(key){if(key.charAt(0) === "_"){delete clean[key];}});clean.updatedAt = clean.updatedAt || now();clean.ultimaSincronizacion = now();return clean;}
@@ -123,7 +168,11 @@ Con qué se conecta:
 
   async function commitInChunks(db, writes){var size = 450;for(var i = 0; i < writes.length; i += size){var batch = db.batch();writes.slice(i, i + size).forEach(function(item){batch.set(item.ref, item.data, {merge:true});});await batch.commit();}}
   async function writeRemoteSnapshot(db, snapshot){
+    var currentLocal = null;
+    try{currentLocal = getStorage().readSnapshot();}catch(error){currentLocal = null;}
     var clean = normalizeSnapshot(snapshot);
+    clean = mergeProtectedHistory(clean, currentLocal);
+    clean = filterDeletedPeriods(clean, currentLocal || clean);
     clean.meta = Object.assign({}, clean.meta || {}, {app:"Requisitos", module:"ExcelLocal", source:"local_to_firebase", updatedAt:now(), pushedAt:now(), totalStudents:Array.isArray(clean.students) ? clean.students.length : 0, totalPeriods:Array.isArray(clean.periods) ? clean.periods.length : 0});
     var writes = [];
     (clean.periods || []).forEach(function(period){var periodId = text(period.id || period.periodoId);if(periodId){writes.push({ref:db.collection("periodos").doc(periodId), data:cleanForFirebase(period)});}});
@@ -133,7 +182,7 @@ Con qué se conecta:
   }
 
   async function pull(){
-    try{var db = getDb();var remote = await readRemoteSnapshot(db);if(!snapshotHasData(remote)){throw new Error("Firebase no devolvió estudiantes ni períodos para Base Local.");}backupCurrentLocal("before_pull");var written = writeLocalSnapshot(remote, "pullFirebase");var summary = saveStatus({ok:true, mode:"pull", source:"firebase", pulledAt:written.meta.pulledAt || now(), totalStudents:written.students.length, totalPeriods:written.periods.length, collections:[{collection:"periodos", rows:written.periods.length}, {collection:"Estudiantes", rows:written.students.length}], message:"Datos bajados correctamente desde Firebase."});saveSyncStatus({ok:true, mode:"pull", lastSyncDate:today(), lastSyncAt:now(), message:summary.message});emit("firebase-pull-finished", summary);return summary;}
+    try{var db = getDb();var remote = await readRemoteSnapshot(db);if(!snapshotHasData(remote) && !activeDeleteRows(remote).length){throw new Error("Firebase no devolvió estudiantes ni períodos para Base Local.");}backupCurrentLocal("before_pull");var written = writeLocalSnapshot(remote, "pullFirebase");var summary = saveStatus({ok:true, mode:"pull", source:"firebase", pulledAt:written.meta.pulledAt || now(), totalStudents:written.students.length, totalPeriods:written.periods.length, collections:[{collection:"periodos", rows:written.periods.length}, {collection:"Estudiantes", rows:written.students.length}], message:"Datos bajados correctamente desde Firebase."});saveSyncStatus({ok:true, mode:"pull", lastSyncDate:today(), lastSyncAt:now(), message:summary.message});emit("firebase-pull-finished", summary);return summary;}
     catch(error){var failed = saveStatus({ok:false, mode:"pull", source:"firebase", errorMessage:error && error.message ? error.message : String(error), message:error && error.message ? error.message : String(error)});saveSyncStatus({ok:false, mode:"pull_error", lastError:failed.message, message:failed.message});throw new Error(failed.message || "No se pudo bajar la información desde Firebase.");}
   }
   async function push(){
