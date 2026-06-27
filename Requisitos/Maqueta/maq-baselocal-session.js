@@ -2,10 +2,11 @@
 Nombre completo: maq-baselocal-session.js
 Ruta o ubicación: /Requisitos/Maqueta/maq-baselocal-session.js
 Función o funciones:
-- Preparar la Base Local una sola vez al abrir Requisitos.
+- Preparar la Base Local solo cuando una pantalla realmente la necesita.
 - Mantener una copia rápida en memoria mientras el módulo está abierto.
 - Entregar la misma Base Local a las pantallas internas sin releer todo desde cero.
 - No sincronizar Firebase; este archivo solo acelera la lectura local.
+- No bloquear el arranque de Requisitos leyendo un snapshot grande de localStorage.
 Con qué se conecta:
 - maq-index.html
 - maq-core.js
@@ -18,7 +19,7 @@ Con qué se conecta:
   var SNAPSHOT_KEY = "REQ_EXCEL_LOCAL_V1:snapshot";
   var SIGNAL_KEY = "REQ_BL_SIGNAL_V1";
   var STATUS_KEY = "REQ_MAQ_BASELOCAL_SESSION_STATUS_V1";
-  var VERSION = "1.0.1";
+  var VERSION = "1.1.0";
 
   var cache = {
     ready:false,
@@ -26,7 +27,7 @@ Con qué se conecta:
     snapshot:null,
     loadedAt:"",
     updatedAt:"",
-    source:"none",
+    source:"lazy",
     errorMessage:""
   };
 
@@ -137,6 +138,7 @@ Con qué se conecta:
     cache.raw = raw;
     cache.snapshot = clean;
     cache.updatedAt = now();
+    cache.loadedAt = cache.loadedAt || now();
     cache.source = options.source || "setSnapshot";
     cache.errorMessage = "";
 
@@ -155,11 +157,7 @@ Con qué se conecta:
 
   function getCounts(){
     ensureReady();
-    return {
-      periods:Array.isArray(cache.snapshot && cache.snapshot.periods) ? cache.snapshot.periods.length : 0,
-      students:Array.isArray(cache.snapshot && cache.snapshot.students) ? cache.snapshot.students.length : 0,
-      history:Array.isArray(cache.snapshot && cache.snapshot.history) ? cache.snapshot.history.length : 0
-    };
+    return getCountsRaw();
   }
 
   function getStatus(){
@@ -186,7 +184,8 @@ Con qué se conecta:
   }
 
   function boot(){
-    ensureReady();
+    saveStatus(getStatus());
+    emit("lazy", {ready:false, source:"lazy", message:"Base Local se cargará cuando una pantalla la necesite."});
   }
 
   window.MAQ_BASELOCAL_SESSION = {
