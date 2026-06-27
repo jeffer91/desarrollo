@@ -10,13 +10,14 @@ Función o funciones:
 - Pintar aprobaciones especiales y abrir Telegram con mensaje copiado.
 - Renderizar notas finales Nart, Ndef y Nfin.
 - Evitar renderizar en cada tecla y evitar refiltrar todo para mostrar el seleccionado.
+- Usar BL2 para consultas rápidas de Ficha cuando esté disponible.
 Con qué se conecta:
 - ficha.core.js
 - ficha.export.js
 ========================================================= */
 (function(window,document){
   "use strict";
-  var state={periodId:"",division:"",matricula:"ACTIVO",search:"",rows:[],selectedId:"",renderTimer:null,divisionKey:"",divisionOptions:[]};
+  var state={periodId:"",division:"",matricula:"ACTIVO",search:"",rows:[],selectedId:"",renderTimer:null,divisionKey:"",divisionOptions:[],listBound:false};
   function el(id){return document.getElementById(id);}
   function text(v){return String(v==null?"":v).trim();}
   function esc(v){return text(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;").replace(/'/g,"&#039;");}
@@ -26,18 +27,18 @@ Con qué se conecta:
   function copyText(value,successMessage){return window.FichaExport.copyText(value||"").then(function(){status(successMessage||"Copiado.","ok");});}
   function selectedFromRows(){var wanted=text(state.selectedId);return state.rows.find(function(row){return text(row._id)===wanted;})||null;}
   function scheduleRender(reason){if(state.renderTimer){clearTimeout(state.renderTimer);}state.renderTimer=setTimeout(function(){state.renderTimer=null;render(reason||"programado");},260);}
+  function sourceLabel(){return window.FichaCore&&typeof window.FichaCore.source==="function"?window.FichaCore.source():"Base Local";}
 
   function fillPeriodAndMatricula(){
     var sel=el("ficha-periodo"), mat=el("ficha-matricula");
-    if(sel){var list=window.FichaCore.periods();sel.innerHTML=option("","Todos",!state.periodId)+list.map(function(p){return option(p.id,p.label||p.id,state.periodId===p.id);}).join("");}
+    if(sel){var list=window.FichaCore.periods();sel.innerHTML=option("","Todos",!state.periodId)+list.map(function(p){return option(p.id,p.label||p.periodoLabel||p.id,state.periodId===p.id);}).join("");}
     if(mat)mat.value=state.matricula;
   }
 
   function getDivisionOptions(){
-    var key=[state.periodId,state.matricula].join("|");
+    var key=[state.periodId,state.matricula,sourceLabel()].join("|");
     if(state.divisionKey===key&&Array.isArray(state.divisionOptions)){return state.divisionOptions;}
-    var baseRows=window.FichaCore.filter({periodId:state.periodId,division:"",matricula:state.matricula,search:""});
-    state.divisionOptions=window.FichaCore.divisions(baseRows);
+    state.divisionOptions=window.FichaCore.divisions(null,{periodId:state.periodId,matricula:state.matricula});
     state.divisionKey=key;
     return state.divisionOptions;
   }
@@ -53,13 +54,18 @@ Con qué se conecta:
   function invalidateDivisionOptions(){state.divisionKey="";state.divisionOptions=[];}
 
   function estadoClass(e){return e&&e.id==="cumple"?"ficha-pill-ok":e&&e.id==="no_cumple"?"ficha-pill-bad":"ficha-pill-warn";}
+  function bindListOnce(){
+    var box=el("ficha-list");if(!box||state.listBound)return;
+    box.addEventListener("click",function(event){var btn=event.target.closest?event.target.closest("[data-id]"):null;if(btn){select(btn.getAttribute("data-id"));}});
+    state.listBound=true;
+  }
   function renderList(){
     var box=el("ficha-list");
     if(el("ficha-count"))el("ficha-count").textContent=String(state.rows.length);
     if(!box)return;
+    bindListOnce();
     if(!state.rows.length){box.innerHTML='<div class="empty-list">Sin estudiantes. Primero carga un Excel en Carga o cambia los filtros.</div>';return;}
     box.innerHTML=state.rows.slice(0,400).map(function(s){var active=s._id===state.selectedId?' is-active':'';return '<button type="button" class="ficha-item'+active+'" data-id="'+esc(s._id)+'"><strong>'+esc(s._nombres||'Sin nombre')+'</strong><span>'+esc(s._cedula)+' · '+esc(s._carrera)+' · '+esc(s._division||'Sin división')+' · '+esc(s._estadoMatricula)+'</span></button>';}).join('');
-    box.querySelectorAll('[data-id]').forEach(function(btn){btn.addEventListener('click',function(){select(btn.getAttribute('data-id'));});});
   }
   function reqClass(r){return r.estado==="cumple"?"ficha-pill-ok":"ficha-pill-bad";}
   function renderReqs(row){var box=el("ficha-requisitos");if(!box)return;var reqs=window.FichaCore.requisitos(row);box.innerHTML=reqs.map(function(r){return '<div class="ficha-req"><span class="ficha-req-name">'+esc(r.label)+'</span><span class="ficha-req-value '+reqClass(r)+'">'+esc(r.estado==="cumple"?"CUMPLE":"NO CUMPLE")+'</span></div>';}).join('');}
@@ -93,11 +99,11 @@ Con qué se conecta:
   function render(reason){
     try{
       fillFilters();
-      state.rows=window.FichaCore.filter({periodId:state.periodId,division:state.division,matricula:state.matricula,search:state.search});
+      state.rows=window.FichaCore.filter({periodId:state.periodId,division:state.division,matricula:state.matricula,search:state.search,limit:400});
       if(!state.rows.some(function(x){return x._id===state.selectedId;})){state.selectedId=state.rows[0]?state.rows[0]._id:"";}
       renderList();
       renderDetail(selectedFromRows());
-      status("Ficha cargada. Matrícula: "+(state.matricula||"Todos")+". División: "+(state.division||"Todas")+". Resultados: "+state.rows.length+".","ok");
+      status("Ficha cargada por "+sourceLabel()+". Matrícula: "+(state.matricula||"Todos")+". División: "+(state.division||"Todas")+". Resultados: "+state.rows.length+".","ok");
     }catch(e){console.error("[Ficha]",e);status(e.message||String(e),"warn");}
   }
   function bind(){
