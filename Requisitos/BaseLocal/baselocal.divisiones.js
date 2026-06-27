@@ -6,6 +6,7 @@ Función o funciones:
 - Crear, editar y borrar divisiones por período.
 - Cargar carreras disponibles y carreras asignadas a la división seleccionada.
 - Permitir arrastrar carreras para agregar o quitar de una división.
+- Permitir que el botón + Crear guarde una división nueva si ya tiene nombre y carreras.
 - Permitir botón Editar para enfocar nombre de división sin guardar automático.
 - Guardar divisiones: ["Nombre"] en estudiantes activos y retirados.
 - Evitar que el modal se congele por sincronización Firebase pesada.
@@ -52,6 +53,18 @@ Con qué se conecta:
     modal.setAttribute("aria-hidden", open ? "false" : "true");
   }
 
+  function updateNewButtonLabel(){
+    var btn = el("bl-division-new");
+    if(!btn){return;}
+    if(state.selectedDivision){
+      btn.innerHTML = "<span>＋</span>Nueva";
+      btn.title = "Preparar una nueva división";
+      return;
+    }
+    btn.innerHTML = "<span>＋</span>Crear";
+    btn.title = "Crear y guardar esta nueva división";
+  }
+
   function setBusy(on){
     state.saving = !!on;
     var save = el("bl-division-save");
@@ -59,6 +72,7 @@ Con qué se conecta:
     var close = el("bl-division-close");
     var del = el("bl-division-delete");
     var edit = el("bl-division-edit");
+    var newBtn = el("bl-division-new");
     var existing = el("bl-division-existing");
     var name = el("bl-division-name");
     if(save){save.disabled = !!on;save.textContent = on ? "Guardando..." : "💾 Guardar cambios";}
@@ -66,8 +80,10 @@ Con qué se conecta:
     if(close){close.disabled = !!on;}
     if(del){del.disabled = !!on || !state.selectedDivision;}
     if(edit){edit.disabled = !!on || !state.selectedDivision;}
+    if(newBtn){newBtn.disabled = !!on;}
     if(existing){existing.disabled = !!on;}
     if(name){name.disabled = !!on;}
+    updateNewButtonLabel();
   }
 
   function uniqueSorted(values){
@@ -164,6 +180,7 @@ Con qué se conecta:
     if(name){name.value = state.selectedDivision || text(name.value);}
     if(del){del.disabled = !state.selectedDivision || state.saving;}
     if(edit){edit.disabled = !state.selectedDivision || state.saving;}
+    updateNewButtonLabel();
   }
 
   function careerCard(career, fromZone){
@@ -180,9 +197,10 @@ Con qué se conecta:
     var help = el("bl-division-help");
     if(!wrap){return;}
     if(help){
-      help.textContent = state.selectedDivision ? "Editando: " + state.selectedDivision + ". Arrastra carreras para agregar o quitar." : "Nueva división. Arrastra carreras disponibles hacia la columna derecha.";
+      help.textContent = state.selectedDivision ? "Editando: " + state.selectedDivision + ". Arrastra carreras para agregar o quitar." : "Nueva división. Arrastra carreras disponibles hacia la columna derecha y presiona + Crear o Guardar cambios.";
     }
     wrap.innerHTML = bucket("Carreras disponibles", "available", state.available, "No hay carreras libres.") + bucket("Carreras en esta división", "selected", state.selected, "Arrastra aquí las carreras.");
+    updateNewButtonLabel();
   }
 
   function renderAll(){
@@ -207,10 +225,33 @@ Con qué se conecta:
   function focusNameForEdit(){
     var name = el("bl-division-name");
     if(!state.selectedDivision){
-      status("Selecciona una división para editarla o presiona Nueva división.", "bl-status-warn");
+      status("Estás creando una división nueva. Escribe el nombre, agrega carreras y presiona + Crear o Guardar cambios.", "bl-status-warn");
+      if(name){name.focus();}
       return;
     }
     if(name){name.focus();name.select();}
+  }
+
+  function prepareNewDivision(){
+    var name = el("bl-division-name");
+    loadDivisionState(state.periodId || getSelectedPeriod(), "");
+    if(name){name.value = "";name.focus();}
+    renderAll();
+  }
+
+  function handleNewButton(){
+    var name = text(el("bl-division-name") && el("bl-division-name").value);
+    if(!state.selectedDivision){
+      if(name || state.selected.length){
+        saveDivision();
+        return;
+      }
+      status("Para crear una división: escribe el nombre, arrastra al menos una carrera y presiona + Crear.", "bl-status-warn");
+      var input = el("bl-division-name");
+      if(input){input.focus();}
+      return;
+    }
+    prepareNewDivision();
   }
 
   function openModal(){
@@ -295,14 +336,7 @@ Con qué se conecta:
     if(el("bl-division-save")){el("bl-division-save").addEventListener("click", saveDivision);}
     if(el("bl-division-delete")){el("bl-division-delete").addEventListener("click", deleteSelectedDivision);}
     if(el("bl-division-edit")){el("bl-division-edit").addEventListener("click", focusNameForEdit);}
-    if(el("bl-division-new")){
-      el("bl-division-new").addEventListener("click", function(){
-        var name = el("bl-division-name");
-        loadDivisionState(state.periodId || getSelectedPeriod(), "");
-        if(name){name.value = "";name.focus();}
-        renderAll();
-      });
-    }
+    if(el("bl-division-new")){el("bl-division-new").addEventListener("click", handleNewButton);}
     if(el("bl-division-existing")){
       el("bl-division-existing").addEventListener("change", function(event){
         loadDivisionState(state.periodId || getSelectedPeriod(), event.target.value);
