@@ -9,6 +9,7 @@ Función o funciones:
 - Borrar períodos con respaldo Excel obligatorio, alerta de vigencia y doble confirmación.
 - Conectar servicios base para períodos canónicos, divisiones, limpieza y borrado seguro.
 - Cargar BL2 para mostrar el panel como vista liviana.
+- Cargar cola incremental BL2 antes de Firebase para evitar sobrescribir variables globales.
 - No mostrar título propio porque Maqueta controla el menú superior.
 Con qué se conecta:
 - baselocal.css
@@ -30,6 +31,10 @@ Con qué se conecta:
 - ../BaseLocal2/bl2-config.js
 - ../BaseLocal2/repositories/bl2-periodos.repo.js
 - ../BaseLocal2/repositories/bl2-dashboard.repo.js
+- ../BaseLocal2/sync/bl2-sync-queue.js
+- ../BaseLocal2/sync/bl2-conflicts.js
+- ../BaseLocal2/sync/bl2-firebase-push.js
+- ../BaseLocal2/sync/bl2-firebase-pull.js
 - baselocal.connector.js
 - baselocal.core.js
 - baselocal.firebase.js
@@ -204,6 +209,10 @@ Con qué se conecta:
   <script src="../BaseLocal2/bl2-api.js"></script>
   <script src="../BaseLocal2/repositories/bl2-periodos.repo.js"></script>
   <script src="../BaseLocal2/repositories/bl2-dashboard.repo.js"></script>
+  <script src="../BaseLocal2/sync/bl2-sync-queue.js"></script>
+  <script src="../BaseLocal2/sync/bl2-conflicts.js"></script>
+  <script src="../BaseLocal2/sync/bl2-firebase-push.js"></script>
+  <script src="../BaseLocal2/sync/bl2-firebase-pull.js"></script>
   <script src="baselocal.connector.js"></script>
   <script src="baselocal.core.js"></script>
   <script src="baselocal.firebase.js"></script>
