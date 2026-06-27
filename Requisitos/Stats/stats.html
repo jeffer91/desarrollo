@@ -4,9 +4,9 @@ Nombre completo: stats.html
 Ruta o ubicación: /Requisitos/Stats/stats.html
 Función o funciones:
 - Mostrar estadísticas del módulo Requisitos usando Base Local / BL2.
-- Resumir estudiantes por matrícula, período, división, carrera, estado y requisito.
-- Preparar navegación compacta por resumen, gráficos, requisitos, carreras, períodos, aprobación final y estudiantes.
-- Conectar reglas PVC/Regular y separar aprobación final de requisitos normales.
+- Resumir estudiantes por matrícula, período, división, carrera, estado, requisito y notas.
+- Preparar navegación compacta por resumen, gráficos, notas, requisitos, carreras, períodos, aprobación final y estudiantes.
+- Conectar reglas PVC/Regular, notas de defensa y aprobación final.
 Con qué se conecta:
 - stats.css
 - stats.rules.js
@@ -14,7 +14,9 @@ Con qué se conecta:
 - stats.charts.js
 - stats.tables.js
 - stats.students.js
+- stats.notes.js
 - stats.app.js
+- ../BaseLocal/services/bl-notas-defensa.service.js
 - ../BaseLocal2/services/bl2-cache-resumen.service.js
 - ../BaseLocal2/repositories/bl2-stats.repo.js
 ========================================================= -->
@@ -31,6 +33,7 @@ Con qué se conecta:
       <div class="stats-side-title">Stats</div>
       <a href="#stats-resumen-section">Resumen</a>
       <a href="#stats-graficos-section">Gráficos</a>
+      <a href="#stats-notas-section">Notas</a>
       <a href="#stats-requisitos-section">Requisitos</a>
       <a href="#stats-carreras-section">Carreras</a>
       <a href="#stats-periodos-section">Períodos</a>
@@ -80,6 +83,11 @@ Con qué se conecta:
         </article>
       </section>
 
+      <section id="stats-notas-section" class="stats-section stats-card">
+        <div class="stats-card-head"><h2>Notas</h2><span>Artículo, defensa y nota final</span></div>
+        <div id="stats-notes" class="stats-notes-wrap"><div class="empty">Cargando resumen de notas...</div></div>
+      </section>
+
       <section id="stats-requisitos-section" class="stats-section stats-grid-main">
         <article class="stats-card">
           <div class="stats-card-head"><h2>Estados generales</h2><span id="stats-estados-meta">0 estudiantes</span></div>
@@ -109,6 +117,7 @@ Con qué se conecta:
 
       <section id="stats-estudiantes-section" class="stats-section stats-card">
         <div class="stats-card-head"><h2>Estudiantes</h2><span id="stats-estudiantes-meta">0 estudiantes</span></div>
+        <div class="stats-student-search"><label>Buscar estudiante<input id="stats-student-search" type="search" placeholder="Nombre o cédula" autocomplete="off" /></label></div>
         <div id="stats-estudiantes" class="stats-table-wrap"><div class="empty">La tabla de estudiantes se activará en su bloque.</div></div>
       </section>
 
@@ -128,6 +137,7 @@ Con qué se conecta:
   <script src="../BaseLocal/services/bl-campos.js"></script>
   <script src="../BaseLocal/services/bl-periodos-canon.service.js"></script>
   <script src="../BaseLocal/services/bl-divisiones.service.js"></script>
+  <script src="../BaseLocal/services/bl-notas-defensa.service.js"></script>
   <script src="../BaseLocal2/bl2-config.js"></script>
   <script src="../BaseLocal2/bl2-detect-runtime.js"></script>
   <script src="../BaseLocal2/bl2-legacy-adapter.js"></script>
@@ -141,6 +151,7 @@ Con qué se conecta:
   <script src="stats.charts.js"></script>
   <script src="stats.tables.js"></script>
   <script src="stats.students.js"></script>
+  <script src="stats.notes.js"></script>
   <script src="stats.app.js"></script>
 </body>
 </html>
