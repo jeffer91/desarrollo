@@ -2,10 +2,12 @@
 Nombre completo: titulacion.app.js
 Ruta o ubicación: /Requisitos/Titulacion/frontend/titulacion.app.js
 Función o funciones:
-- Orquestar la nueva pantalla Infor del Bloque 1.
+- Orquestar la nueva pantalla Infor.
 - Manejar período, tipo Regular/PVC, Excel, cronogramas, anexos, Gemini y diagnóstico.
+- Usar InforPeriodo como fuente única para períodos, conteo y modalidades automáticas.
 - Guardar insumos mínimos por período usando InforState.
 Con qué se conecta:
+- ../core/infor.periodo.js
 - ../core/infor.state.js
 - ../../Stats/stats.rules.js
 - titulacion.html
@@ -13,7 +15,7 @@ Con qué se conecta:
 (function(window, document){
   "use strict";
 
-  var state = {periods:[], anexos:[], booted:false};
+  var state = {periods:[], anexos:[], booted:false, periodSummary:null};
 
   function el(id){return document.getElementById(id);}
   function text(value){return String(value == null ? "" : value).trim();}
@@ -22,22 +24,12 @@ Con qué se conecta:
   function status(message, cls){var box = el("infor-status");if(box){box.textContent = message;box.className = "infor-status " + (cls || "");}}
   function bind(id,eventName,handler){var node = el(id);if(node){node.addEventListener(eventName,handler);}}
 
-  function periodIdOf(period){return text(period && (period.id || period.periodoId || period.value || period.key) || period);}
-  function periodLabelOf(period){return text(period && (period.label || period.periodoLabel || period.nombre || period.name || period.id || period.periodoId) || period);}
+  function periodo(){return window.InforPeriodo || null;}
+  function periodIdOf(period){return periodo() ? periodo().periodIdOf(period) : text(period && (period.id || period.periodoId || period.value || period.key) || period);}
+  function periodLabelOf(period){return periodo() ? periodo().periodLabelOf(period) : text(period && (period.label || period.periodoLabel || period.nombre || period.name || period.id || period.periodoId) || period);}
 
   function listPeriods(){
-    try{
-      if(window.ExcelLocalBridge && typeof window.ExcelLocalBridge.ensureReady === "function"){window.ExcelLocalBridge.ensureReady();}
-    }catch(error){}
-
-    try{
-      if(window.ExcelLocalRepo && typeof window.ExcelLocalRepo.listPeriods === "function"){
-        return window.ExcelLocalRepo.listPeriods() || [];
-      }
-      if(window.ExcelLocalRepo && typeof window.ExcelLocalRepo.getSnapshot === "function"){
-        return (window.ExcelLocalRepo.getSnapshot().periods || []);
-      }
-    }catch(error){console.warn("[Infor periods]", error);}
+    if(periodo() && typeof periodo().list === "function"){return periodo().list();}
     return [];
   }
 
@@ -58,6 +50,7 @@ Con qué se conecta:
 
   function reportName(snapshot){
     snapshot = snapshot || window.InforState.getState();
+    if(state.periodSummary && state.periodSummary.reportName){return state.periodSummary.reportName;}
     var label = text(snapshot.periodLabel || snapshot.periodId);
     return label ? "Informe de Titulación " + label : "—";
   }
@@ -69,16 +62,42 @@ Con qué se conecta:
     node.className = "infor-chip " + (cls || "");
   }
 
+  function updatePeriodSummary(snapshot){
+    snapshot = snapshot || window.InforState.getState();
+    if(periodo() && typeof periodo().summary === "function" && text(snapshot.periodId || snapshot.periodLabel)){
+      state.periodSummary = periodo().summary({id:snapshot.periodId,label:snapshot.periodLabel});
+    }else{
+      state.periodSummary = null;
+    }
+    return state.periodSummary;
+  }
+
+  function renderModalidades(summary){
+    var box = el("infor-modalidades");
+    if(!box){return;}
+    var list = summary && Array.isArray(summary.modalities) ? summary.modalities : [];
+    if(!list.length){box.innerHTML = "<em>Selecciona un período.</em>";return;}
+    box.innerHTML = list.map(function(item){
+      var cls = item.locked ? " locked" : (item.default ? " default" : "");
+      var tag = item.locked ? "fijo" : (item.default ? "por defecto" : "editable en Ficha");
+      return '<span class="infor-mode-pill' + cls + '">' + esc(item.label) + ' · ' + esc(tag) + '</span>';
+    }).join("");
+  }
+
   function renderByPeriod(snapshot){
     snapshot = snapshot || window.InforState.getState();
-    var info = snapshot.periodType || {id:"", label:"Sin período"};
+    var summary = updatePeriodSummary(snapshot);
+    var info = summary && summary.type ? summary.type : (snapshot.periodType || {id:"", label:"Sin período"});
     var isRegular = info.id === "REGULAR";
     setChip("infor-period-type", info.label || "Sin período", isRegular ? "ok" : (info.id === "PVC" ? "warn" : ""));
-    setChip("infor-cronograma-mode", isRegular ? "Regular: Complexivo + Trabajo" : "PVC: Artículo Académico", isRegular ? "ok" : "warn");
+    setChip("infor-cronograma-mode", isRegular ? "Regular: Complexivo + Trabajo" : (info.id === "PVC" ? "PVC: Artículo Académico" : "Automático"), isRegular ? "ok" : (info.id === "PVC" ? "warn" : ""));
     if(el("infor-type-label")){el("infor-type-label").textContent = info.label || "—";}
+    if(el("infor-source-label")){el("infor-source-label").textContent = summary && summary.students ? summary.students.source : "—";}
+    if(el("infor-students-count")){el("infor-students-count").textContent = summary && summary.students ? String(summary.students.total || 0) : "0";}
     if(el("infor-report-name")){el("infor-report-name").textContent = reportName(snapshot);}
+    renderModalidades(summary);
     if(el("infor-cronogramas-regular")){el("infor-cronogramas-regular").classList.toggle("is-hidden", !isRegular);}
-    if(el("infor-cronogramas-pvc")){el("infor-cronogramas-pvc").classList.toggle("is-hidden", isRegular);}
+    if(el("infor-cronogramas-pvc")){el("infor-cronogramas-pvc").classList.toggle("is-hidden", isRegular || !info.id);}
   }
 
   function renderGemini(){
@@ -128,11 +147,12 @@ Con qué se conecta:
     if(!node){return;}
     var snapshot = window.InforState.getState();
     node.textContent = JSON.stringify({
-      bloque:"Bloque 1 - Pantalla y estado interno",
+      bloque:"Bloque 2 - Período, Regular/PVC y modalidades",
       generatedAt:new Date().toISOString(),
       periodId:snapshot.periodId,
       periodLabel:snapshot.periodLabel,
       periodType:snapshot.periodType,
+      periodSummary:state.periodSummary,
       excel:snapshot.excel,
       cronogramas:{
         complexivo:!!text(snapshot.cronogramas && snapshot.cronogramas.complexivo),
@@ -205,7 +225,7 @@ Con qué se conecta:
     if(!text(snapshot.periodId || snapshot.periodLabel)){status("Primero selecciona un período.", "warn");return;}
     if(!window.InforState.getGeminiKey()){status("Proceso detenido: falta configurar la clave de Gemini.", "bad");renderDiagnostics();return;}
     window.InforState.processDraft();
-    renderAll("Bloque 1 procesado: insumos guardados y pantalla lista para el siguiente bloque.", "ok");
+    renderAll("Bloque 2 procesado: período, tipo y modalidad automática quedaron listos.", "ok");
   }
 
   function bindEvents(){
