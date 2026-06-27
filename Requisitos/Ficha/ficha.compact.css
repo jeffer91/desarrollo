@@ -9,6 +9,7 @@ Función o funciones:
 - Compactar botones del toolbar y mantener copiar ficha como icono.
 - Compactar la ficha del estudiante, sus datos y requisitos.
 - Mostrar acciones rápidas visuales: aprobaciones, copiar ficha y Telegram.
+- Mostrar encabezado por filas sin repetir cédula, carrera ni período en tarjetas.
 - Mostrar notas finales en tarjetas visuales.
 Con qué se conecta:
 - ficha.html
@@ -118,7 +119,7 @@ Con qué se conecta:
 
 .ficha-top h2,
 h2#ficha-nombre{
-  margin:2px 0;
+  margin:2px 0 5px;
   font-size:21px;
   line-height:1.1;
 }
@@ -127,6 +128,38 @@ h2#ficha-nombre{
   max-width:900px;
   font-size:12.5px;
   line-height:1.25;
+}
+
+.ficha-identity-lines{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:2px;
+  margin-top:2px;
+}
+
+.ficha-identity-row{
+  display:grid;
+  grid-template-columns:76px minmax(0,1fr);
+  align-items:start;
+  gap:8px;
+  color:var(--muted);
+  font-weight:850;
+}
+
+.ficha-identity-row span{
+  font-size:10.5px;
+  font-weight:950;
+  text-transform:uppercase;
+  letter-spacing:.035em;
+  color:#64748b;
+}
+
+.ficha-identity-row strong{
+  font-size:12.5px;
+  line-height:1.25;
+  font-weight:900;
+  color:#64748b;
+  overflow-wrap:anywhere;
 }
 
 .ficha-top-side{
@@ -189,7 +222,7 @@ h2#ficha-nombre{
 }
 
 .ficha-grid-info{
-  grid-template-columns:1.45fr .85fr 1fr .75fr .75fr .85fr 1.25fr .85fr;
+  grid-template-columns:.85fr .75fr .75fr .85fr 1.25fr .85fr;
   gap:7px;
   margin-bottom:8px;
 }
@@ -304,7 +337,7 @@ h2#ficha-nombre{
 
 @media(max-width:1450px){
   .ficha-grid-info{
-    grid-template-columns:repeat(4,minmax(150px,1fr));
+    grid-template-columns:repeat(3,minmax(150px,1fr));
   }
 
   .ficha-requisitos{
