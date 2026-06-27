@@ -10,6 +10,7 @@ Función o funciones:
 - Mantener Firebase automático pausado para no bloquear pantallas.
 - Mantener pantallas en memoria mediante iframes para no recargar desde cero.
 - Cargar el puente BL2 para migración segura hacia SQLite/IndexedDB.
+- Cargar el motor local BL2 sin usarlo todavía como fuente principal síncrona.
 - Volver a Desarrollo sin usar la palabra Regresar.
 Con qué se conecta:
 - maq-ui.css
@@ -17,6 +18,11 @@ Con qué se conecta:
 - maq-baselocal-session.js
 - ../BaseLocal2/bl2-config.js
 - ../BaseLocal2/bl2-detect-runtime.js
+- ../BaseLocal2/db/bl2-schema.js
+- ../BaseLocal2/db/bl2-migrations.js
+- ../BaseLocal2/db/bl2-indexeddb-adapter.js
+- ../BaseLocal2/db/bl2-sqlite-adapter.js
+- ../BaseLocal2/db/bl2-storage.js
 - ../BaseLocal2/bl2-legacy-adapter.js
 - ../BaseLocal2/bl2-api.js
 - maq-baselocal-background-sync.js
@@ -60,6 +66,11 @@ Con qué se conecta:
   <script src="maq-baselocal-session.js"></script>
   <script src="../BaseLocal2/bl2-config.js"></script>
   <script src="../BaseLocal2/bl2-detect-runtime.js"></script>
+  <script src="../BaseLocal2/db/bl2-schema.js"></script>
+  <script src="../BaseLocal2/db/bl2-migrations.js"></script>
+  <script src="../BaseLocal2/db/bl2-indexeddb-adapter.js"></script>
+  <script src="../BaseLocal2/db/bl2-sqlite-adapter.js"></script>
+  <script src="../BaseLocal2/db/bl2-storage.js"></script>
   <script src="../BaseLocal2/bl2-legacy-adapter.js"></script>
   <script src="../BaseLocal2/bl2-api.js"></script>
   <script src="maq-modulos-registry.js"></script>
