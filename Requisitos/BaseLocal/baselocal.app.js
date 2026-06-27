@@ -7,6 +7,7 @@ Función o funciones:
 - Aplicar filtro por estado de matrícula: ACTIVO, RETIRADO o todos.
 - Permitir sincronización manual, bajada manual desde Firebase, limpieza de base y borrado seguro de período.
 - Ejecutar sincronización diaria en segundo plano sin bloquear la vista.
+- Evitar doble sincronización diaria cuando Maqueta ya controla Firebase en segundo plano.
 - Evitar pantalla blanca por eventos repetidos durante la sincronización.
 Con qué se conecta:
 - services/bl-campos.js
@@ -196,7 +197,13 @@ Con qué se conecta:
     finally{setBusy(false);}
   }
 
+  function parentOwnsDailySync(){
+    try{return !!(window.parent && window.parent !== window && window.parent.MAQ_BASELOCAL_BACKGROUND_SYNC);}
+    catch(error){return false;}
+  }
+
   function runDailySync(){
+    if(parentOwnsDailySync()){state.dailyStarted = true;return;}
     if(state.dailyStarted){return;}state.dailyStarted = true;
     setTimeout(async function(){
       try{
