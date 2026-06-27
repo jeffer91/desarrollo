@@ -4,8 +4,11 @@ Ruta o ubicación: /Requisitos/BaseLocal/services/bl-sync-diario.js
 Función o funciones:
 - Controlar la sincronización automática una vez al día.
 - Evitar consultas repetidas a Firebase en el mismo día.
+- Evitar doble ejecución si una sincronización ya está corriendo.
+- Si no hay internet o falla Firebase, dejar pendiente para intentar después.
 - Guardar estado diario en localStorage.
 Con qué se conecta:
+- maq-baselocal-background-sync.js
 - baselocal.firebase.js
 - baselocal.app.js
 ========================================================= */
@@ -13,16 +16,18 @@ Con qué se conecta:
   "use strict";
 
   var KEY = "REQ_BL_LAST_DAILY_SYNC";
+  var RUNNING_LIMIT_MINUTES = 12;
 
   function now(){return new Date().toISOString();}
   function today(){return now().slice(0, 10);}
+  function minutesSince(value){var time = Date.parse(String(value || ""));return Number.isFinite(time) ? ((Date.now() - time) / 60000) : 9999;}
 
   function read(){
     try{
       var raw = window.localStorage.getItem(KEY);
-      return raw ? JSON.parse(raw) : {date:"", lastRunAt:"", ok:false};
+      return raw ? JSON.parse(raw) : {date:"", lastRunAt:"", ok:false, running:false};
     }catch(error){
-      return {date:"", lastRunAt:"", ok:false};
+      return {date:"", lastRunAt:"", ok:false, running:false};
     }
   }
 
@@ -36,29 +41,44 @@ Con qué se conecta:
     return data;
   }
 
+  function isRunningFresh(state){
+    state = state || read();
+    return state.running === true && minutesSince(state.startedAt) < RUNNING_LIMIT_MINUTES;
+  }
+
   function shouldRun(forceRun){
     if(forceRun){return true;}
     var state = read();
+    if(isRunningFresh(state)){return false;}
     return state.date !== today() || state.ok !== true;
   }
 
   function markStarted(mode){
-    return save({date:today(), mode:mode || "daily", startedAt:now(), ok:false, running:true, message:"Sincronización diaria iniciada."});
+    return save({date:today(), mode:mode || "daily", startedAt:now(), ok:false, running:true, skipped:false, message:"Sincronización diaria iniciada en segundo plano."});
   }
 
   function markSuccess(summary){
-    return save(Object.assign({}, summary || {}, {date:today(), lastRunAt:now(), ok:true, running:false, message:(summary && summary.message) || "Sincronización diaria completada."}));
+    return save(Object.assign({}, summary || {}, {date:today(), lastRunAt:now(), ok:true, running:false, skipped:false, message:(summary && summary.message) || "Sincronización diaria completada."}));
+  }
+
+  function markPending(reason){
+    var msg = reason && reason.message ? reason.message : String(reason || "Sincronización diaria pendiente.");
+    return save({date:today(), lastRunAt:now(), ok:false, running:false, skipped:false, pending:true, errorMessage:msg, message:msg});
   }
 
   function markError(error){
     var msg = error && error.message ? error.message : String(error || "Error desconocido");
-    return save({date:today(), lastRunAt:now(), ok:false, running:false, errorMessage:msg, message:msg});
+    return save({date:today(), lastRunAt:now(), ok:false, running:false, skipped:false, errorMessage:msg, message:msg});
   }
 
   function skipped(){
     var state = read();
-    return Object.assign({}, state, {ok:true, skipped:true, message:"La sincronización diaria ya se ejecutó hoy."});
+    return Object.assign({}, state, {ok:state.ok === true, skipped:true, running:isRunningFresh(state), message:state.ok === true ? "La sincronización diaria ya se ejecutó hoy." : "La sincronización diaria ya está en curso o pendiente."});
   }
 
-  window.BLSyncDiario = {key:KEY, today:today, read:read, save:save, shouldRun:shouldRun, markStarted:markStarted, markSuccess:markSuccess, markError:markError, skipped:skipped};
+  function clearRunning(){
+    return save({running:false});
+  }
+
+  window.BLSyncDiario = {key:KEY, today:today, read:read, save:save, shouldRun:shouldRun, markStarted:markStarted, markSuccess:markSuccess, markPending:markPending, markError:markError, skipped:skipped, clearRunning:clearRunning, isRunningFresh:isRunningFresh};
 })(window);
