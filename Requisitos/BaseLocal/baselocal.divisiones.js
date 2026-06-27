@@ -2,9 +2,10 @@
 Nombre completo: baselocal.divisiones.js
 Ruta o ubicación: /Requisitos/BaseLocal/baselocal.divisiones.js
 Función o funciones:
-- Mostrar modal Crear división en Base Local.
-- Cargar carreras disponibles según el período seleccionado.
-- Ocultar carreras ya usadas en otra división del mismo período.
+- Mostrar modal Divisiones en Base Local.
+- Crear, editar y borrar divisiones por período.
+- Cargar carreras disponibles y carreras asignadas a la división seleccionada.
+- Permitir arrastrar carreras para agregar o quitar de una división.
 - Guardar divisiones: ["Nombre"] en estudiantes activos y retirados.
 - Evitar que el modal se congele por sincronización Firebase pesada.
 - Sincronizar Firebase en segundo plano después de guardar localmente.
@@ -21,8 +22,9 @@ Con qué se conecta:
   function el(id){return document.getElementById(id);}
   function text(value){return String(value == null ? "" : value).trim();}
   function esc(value){return text(value).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;");}
+  function norm(value){return text(value).normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").trim().toLowerCase();}
 
-  var state = {periodId:"", careers:[], saving:false, lastResult:null};
+  var state = {periodId:"", divisions:[], selectedDivision:"", available:[], selected:[], saving:false, lastResult:null, draggingCareer:""};
 
   function getSelectedPeriod(){
     var selector = el("bl-filter-period");
@@ -54,15 +56,39 @@ Con qué se conecta:
     var save = el("bl-division-save");
     var cancel = el("bl-division-cancel");
     var close = el("bl-division-close");
-    if(save){save.disabled = !!on;save.textContent = on ? "Guardando..." : "Guardar división";}
+    var del = el("bl-division-delete");
+    var existing = el("bl-division-existing");
+    var name = el("bl-division-name");
+    if(save){save.disabled = !!on;save.textContent = on ? "Guardando..." : "Guardar cambios";}
     if(cancel){cancel.disabled = !!on;}
     if(close){close.disabled = !!on;}
+    if(del){del.disabled = !!on || !state.selectedDivision;}
+    if(existing){existing.disabled = !!on;}
+    if(name){name.disabled = !!on;}
   }
 
-  function selectedCareers(){
-    var selected = [];
-    document.querySelectorAll("#bl-division-careers input[type='checkbox']:checked").forEach(function(input){selected.push(input.value);});
-    return selected;
+  function uniqueSorted(values){
+    var seen = {};
+    var out = [];
+    (values || []).forEach(function(value){
+      var clean = text(value);
+      var key = norm(clean);
+      if(!clean || seen[key]){return;}
+      seen[key] = true;
+      out.push(clean);
+    });
+    return out.sort(function(a,b){return a.localeCompare(b,"es");});
+  }
+
+  function removeValue(list, value){
+    var key = norm(value);
+    return (list || []).filter(function(item){return norm(item) !== key;});
+  }
+
+  function addValue(list, value){
+    var out = removeValue(list, value);
+    if(text(value)){out.push(text(value));}
+    return uniqueSorted(out);
   }
 
   function emitChange(kind, payload){
@@ -106,41 +132,85 @@ Con qué se conecta:
     }, 300);
   }
 
-  function renderCareers(periodId){
+  function loadDivisionState(periodId, selectedDivision){
+    state.periodId = periodId;
+    state.divisions = window.BaseLocalAPI && typeof window.BaseLocalAPI.getDivisions === "function" ? window.BaseLocalAPI.getDivisions(periodId) : [];
+    state.selectedDivision = text(selectedDivision || "");
+
+    var available = window.BaseLocalAPI && typeof window.BaseLocalAPI.getAvailableDivisionCareers === "function" ? window.BaseLocalAPI.getAvailableDivisionCareers(periodId) : [];
+    var selected = [];
+
+    if(state.selectedDivision && window.BaseLocalAPI && typeof window.BaseLocalAPI.getDivisionDetail === "function"){
+      var detail = window.BaseLocalAPI.getDivisionDetail(periodId, state.selectedDivision);
+      selected = detail && Array.isArray(detail.carreras) ? detail.carreras : [];
+    }
+
+    state.selected = uniqueSorted(selected);
+    state.available = uniqueSorted(available).filter(function(career){return !state.selected.some(function(sel){return norm(sel) === norm(career);});});
+  }
+
+  function renderDivisionSelector(){
+    var selector = el("bl-division-existing");
+    var name = el("bl-division-name");
+    var del = el("bl-division-delete");
+    if(selector){
+      selector.innerHTML = '<option value="">Nueva división</option>' + state.divisions.map(function(division){return '<option value="' + esc(division) + '">' + esc(division) + '</option>';}).join("");
+      selector.value = state.selectedDivision;
+    }
+    if(name){name.value = state.selectedDivision || text(name.value);}
+    if(del){del.disabled = !state.selectedDivision || state.saving;}
+  }
+
+  function careerCard(career, fromZone){
+    var targetHint = fromZone === "available" ? "Agregar a la división" : "Quitar de la división";
+    return '<button type="button" class="bl-career-chip" draggable="true" data-zone="' + esc(fromZone) + '" data-career="' + esc(career) + '">' + esc(career) + '<small>' + esc(targetHint) + '</small></button>';
+  }
+
+  function bucket(title, zone, rows, emptyText){
+    return '<section class="bl-division-bucket"><h3>' + esc(title) + '</h3><div class="bl-division-dropzone" data-dropzone="' + esc(zone) + '">' + (rows.length ? rows.map(function(career){return careerCard(career, zone);}).join("") : '<div class="bl-empty-drop">' + esc(emptyText) + '</div>') + '</div></section>';
+  }
+
+  function renderCareers(){
     var wrap = el("bl-division-careers");
     var help = el("bl-division-help");
     if(!wrap){return;}
-    var careers = [];
-    if(window.BaseLocalAPI && typeof window.BaseLocalAPI.getAvailableDivisionCareers === "function"){
-      careers = window.BaseLocalAPI.getAvailableDivisionCareers(periodId);
-    }
-    state.careers = careers;
     if(help){
-      var divisions = window.BaseLocalAPI && typeof window.BaseLocalAPI.getDivisions === "function" ? window.BaseLocalAPI.getDivisions(periodId) : [];
-      help.textContent = divisions.length ? "Ya existen divisiones: " + divisions.join(", ") + ". Las carreras usadas no aparecen aquí." : "Selecciona las carreras que entrarán en esta división.";
+      help.textContent = state.selectedDivision ? "Editando: " + state.selectedDivision + ". Arrastra carreras para agregar o quitar." : "Nueva división. Arrastra carreras disponibles hacia la columna derecha.";
     }
-    if(!careers.length){
-      wrap.innerHTML = '<p class="bl-help">No hay carreras disponibles. Todas las carreras de este período ya tienen división o no hay estudiantes.</p>';
-      return;
+    wrap.innerHTML = bucket("Carreras disponibles", "available", state.available, "No hay carreras libres.") + bucket("Carreras en esta división", "selected", state.selected, "Arrastra aquí las carreras.");
+  }
+
+  function renderAll(){
+    renderDivisionSelector();
+    renderCareers();
+    setBusy(state.saving);
+  }
+
+  function moveCareer(career, targetZone){
+    career = text(career);
+    if(!career){return;}
+    if(targetZone === "selected"){
+      state.available = removeValue(state.available, career);
+      state.selected = addValue(state.selected, career);
+    }else{
+      state.selected = removeValue(state.selected, career);
+      state.available = addValue(state.available, career);
     }
-    wrap.innerHTML = careers.map(function(career){
-      var id = "bl-div-career-" + career.normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-zA-Z0-9]+/g,"_");
-      return '<label class="bl-check-row" for="'+esc(id)+'"><input id="'+esc(id)+'" type="checkbox" value="'+esc(career)+'" /> <span>'+esc(career)+'</span></label>';
-    }).join("");
+    renderCareers();
   }
 
   function openModal(){
     var periodId = getSelectedPeriod();
     if(!periodId){
-      status("Selecciona primero un período para crear la división.", "bl-status-warn");
+      status("Selecciona primero un período para crear o editar divisiones.", "bl-status-warn");
       return;
     }
-    state.periodId = periodId;
     var periodBox = el("bl-division-period-label");
     var name = el("bl-division-name");
     if(periodBox){periodBox.textContent = periodLabel(periodId);}
     if(name){name.value = "";}
-    renderCareers(periodId);
+    loadDivisionState(periodId, "");
+    renderAll();
     setModalOpen(true);
     setTimeout(function(){if(name){name.focus();}}, 60);
   }
@@ -154,28 +224,52 @@ Con qué se conecta:
     if(state.saving){return;}
     var name = text(el("bl-division-name") && el("bl-division-name").value);
     var periodId = state.periodId || getSelectedPeriod();
-    var careers = selectedCareers();
+    var careers = state.selected.slice();
     if(!periodId){status("Selecciona un período.", "bl-status-warn");return;}
     if(!name){status("Escribe el nombre de la división.", "bl-status-warn");return;}
-    if(!careers.length){status("Selecciona al menos una carrera.", "bl-status-warn");return;}
+    if(!careers.length){status("Arrastra al menos una carrera a la división.", "bl-status-warn");return;}
 
     try{
-      if(!window.BaseLocalAPI || typeof window.BaseLocalAPI.applyDivisionToCareers !== "function"){
-        throw new Error("La API de divisiones no está disponible.");
+      if(!window.BaseLocalAPI || typeof window.BaseLocalAPI.replaceDivisionToCareers !== "function"){
+        throw new Error("La API de edición de divisiones no está disponible.");
       }
       setBusy(true);
-
-      var result = window.BaseLocalAPI.applyDivisionToCareers(periodId, name, careers);
+      var result = window.BaseLocalAPI.replaceDivisionToCareers(periodId, state.selectedDivision, name, careers);
       state.lastResult = result;
-
       setBusy(false);
       setModalOpen(false);
       refreshBaseLocalView(result);
-      status("División creada localmente: " + name + ". Estudiantes actualizados: " + (result.updated || 0) + ". Firebase se sincroniza en segundo plano.", "bl-status-ok");
+      status("División guardada localmente: " + name + ". Estudiantes actualizados: " + (result.updated || 0) + ". Firebase se sincroniza en segundo plano.", "bl-status-ok");
       syncDivisionInBackground(result);
     }catch(error){
       console.error("[BaseLocal Divisiones]", error);
-      status("No se pudo crear la división: " + (error.message || String(error)), "bl-status-warn");
+      status("No se pudo guardar la división: " + (error.message || String(error)), "bl-status-warn");
+      setBusy(false);
+    }
+  }
+
+  async function deleteSelectedDivision(){
+    if(state.saving){return;}
+    var periodId = state.periodId || getSelectedPeriod();
+    var division = state.selectedDivision;
+    if(!periodId || !division){status("Selecciona una división para borrar.", "bl-status-warn");return;}
+    if(!window.confirm("¿Borrar la división " + division + "? Las carreras quedarán sin división.")){return;}
+
+    try{
+      if(!window.BaseLocalAPI || typeof window.BaseLocalAPI.deleteDivision !== "function"){
+        throw new Error("La API para borrar divisiones no está disponible.");
+      }
+      setBusy(true);
+      var result = window.BaseLocalAPI.deleteDivision(periodId, division);
+      state.lastResult = result;
+      setBusy(false);
+      setModalOpen(false);
+      refreshBaseLocalView(result);
+      status("División borrada localmente: " + division + ". Estudiantes actualizados: " + (result.updated || 0) + ". Firebase se sincroniza en segundo plano.", "bl-status-ok");
+      syncDivisionInBackground(result);
+    }catch(error){
+      console.error("[BaseLocal Divisiones delete]", error);
+      status("No se pudo borrar la división: " + (error.message || String(error)), "bl-status-warn");
       setBusy(false);
     }
   }
@@ -185,13 +279,59 @@ Con qué se conecta:
     if(el("bl-division-cancel")){el("bl-division-cancel").addEventListener("click", closeModal);}
     if(el("bl-division-close")){el("bl-division-close").addEventListener("click", closeModal);}
     if(el("bl-division-save")){el("bl-division-save").addEventListener("click", saveDivision);}
+    if(el("bl-division-delete")){el("bl-division-delete").addEventListener("click", deleteSelectedDivision);}
+    if(el("bl-division-new")){
+      el("bl-division-new").addEventListener("click", function(){
+        var name = el("bl-division-name");
+        loadDivisionState(state.periodId || getSelectedPeriod(), "");
+        if(name){name.value = "";name.focus();}
+        renderAll();
+      });
+    }
+    if(el("bl-division-existing")){
+      el("bl-division-existing").addEventListener("change", function(event){
+        loadDivisionState(state.periodId || getSelectedPeriod(), event.target.value);
+        renderAll();
+      });
+    }
     if(el("bl-division-modal")){
       el("bl-division-modal").addEventListener("click", function(event){if(event.target === el("bl-division-modal")){closeModal();}});
+      el("bl-division-modal").addEventListener("dragstart", function(event){
+        var card = event.target && event.target.closest ? event.target.closest(".bl-career-chip") : null;
+        if(!card){return;}
+        state.draggingCareer = card.getAttribute("data-career") || "";
+        if(event.dataTransfer){event.dataTransfer.setData("text/plain", state.draggingCareer);event.dataTransfer.effectAllowed = "move";}
+      });
+      el("bl-division-modal").addEventListener("dragover", function(event){
+        var zone = event.target && event.target.closest ? event.target.closest("[data-dropzone]") : null;
+        if(!zone){return;}
+        event.preventDefault();
+        zone.classList.add("is-over");
+        if(event.dataTransfer){event.dataTransfer.dropEffect = "move";}
+      });
+      el("bl-division-modal").addEventListener("dragleave", function(event){
+        var zone = event.target && event.target.closest ? event.target.closest("[data-dropzone]") : null;
+        if(zone){zone.classList.remove("is-over");}
+      });
+      el("bl-division-modal").addEventListener("drop", function(event){
+        var zone = event.target && event.target.closest ? event.target.closest("[data-dropzone]") : null;
+        if(!zone){return;}
+        event.preventDefault();
+        zone.classList.remove("is-over");
+        var career = event.dataTransfer ? event.dataTransfer.getData("text/plain") : state.draggingCareer;
+        moveCareer(career, zone.getAttribute("data-dropzone"));
+      });
+      el("bl-division-modal").addEventListener("click", function(event){
+        var card = event.target && event.target.closest ? event.target.closest(".bl-career-chip") : null;
+        if(!card){return;}
+        var zone = card.getAttribute("data-zone");
+        moveCareer(card.getAttribute("data-career"), zone === "available" ? "selected" : "available");
+      });
     }
     document.addEventListener("keydown", function(event){if(event.key === "Escape" && el("bl-division-modal") && el("bl-division-modal").classList.contains("is-open")){closeModal();}});
   }
 
-  window.BaseLocalDivisionesUI = {open:openModal, close:closeModal, save:saveDivision, renderCareers:renderCareers, lastResult:function(){return state.lastResult;}};
+  window.BaseLocalDivisionesUI = {open:openModal, close:closeModal, save:saveDivision, renderCareers:renderCareers, lastResult:function(){return state.lastResult;}, getState:function(){return Object.assign({}, state);}};
 
   if(document.readyState === "loading"){document.addEventListener("DOMContentLoaded", bind);}else{bind();}
 })(window, document);
