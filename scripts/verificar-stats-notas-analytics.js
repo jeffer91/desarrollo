@@ -1,4 +1,4 @@
-import fs from 'fs';
+const fs = require('fs');
 
 function exigir(condicion, mensaje) {
   if (!condicion) throw new Error(mensaje);
@@ -9,17 +9,27 @@ function leer(ruta) {
   return fs.readFileSync(ruta, 'utf-8');
 }
 
+function exigirContenido(ruta, claves) {
+  const contenido = leer(ruta);
+  claves.forEach((clave) => exigir(contenido.includes(clave), `${ruta} no incluye ${clave}`));
+}
+
 function verificarHtml() {
   const html = leer('Requisitos/Stats/stats.html');
-  exigir(html.includes('stats.notes.analytics.css'), 'stats.html no carga stats.notes.analytics.css.');
-  exigir(html.includes('stats.notes.analytics.js'), 'stats.html no carga stats.notes.analytics.js.');
+  exigirContenido('Requisitos/Stats/stats.html', [
+    'stats.notes.analytics.css',
+    'stats.notes.analytics.js',
+    'stats.notes.charts.js',
+    'stats.notes.enhancer.js',
+    'tendencias y riesgo por carrera'
+  ]);
   exigir(html.indexOf('stats.notes.analytics.js') < html.indexOf('stats.notes.js'), 'La analítica debe cargarse antes de stats.notes.js.');
-  exigir(html.includes('tendencias y riesgo por carrera'), 'La sección Notas no anuncia tendencias y riesgo por carrera.');
+  exigir(html.indexOf('stats.notes.charts.js') < html.indexOf('stats.notes.enhancer.js'), 'Los gráficos deben cargarse antes del enhancer.');
+  exigir(html.indexOf('stats.notes.js') < html.indexOf('stats.notes.enhancer.js'), 'El enhancer debe cargarse después de stats.notes.js.');
 }
 
 function verificarMotor() {
-  const js = leer('Requisitos/Stats/stats.notes.analytics.js');
-  const claves = [
+  exigirContenido('Requisitos/Stats/stats.notes.analytics.js', [
     'StatsNotesAnalytics',
     'analizar',
     'tendencias',
@@ -31,13 +41,11 @@ function verificarMotor() {
     'semaforo',
     'riskOf',
     'Nfin = (Nart * 0.70) + (Ndef * 0.30)'
-  ];
-  for (const clave of claves) exigir(js.includes(clave), `El motor analítico no incluye ${clave}.`);
+  ]);
 }
 
 function verificarVista() {
-  const js = leer('Requisitos/Stats/stats.notes.js');
-  const claves = [
+  exigirContenido('Requisitos/Stats/stats.notes.js', [
     'StatsNotesAnalytics.analizar',
     'Lectura automática',
     'Distribución de notas finales',
@@ -45,22 +53,48 @@ function verificarVista() {
     'Resumen por carrera',
     'Tendencia de registro',
     'Riesgo alto'
-  ];
-  for (const clave of claves) exigir(js.includes(clave), `La vista de notas no incluye ${clave}.`);
+  ]);
+}
+
+function verificarGraficos() {
+  exigirContenido('Requisitos/Stats/stats.notes.charts.js', [
+    'StatsNotesCharts',
+    'Promedio final por carrera',
+    'Nart vs Ndef por carrera',
+    'Notas finales pendientes',
+    'Distribución por rangos',
+    'Semáforo por carrera',
+    'Riesgo alto por carrera'
+  ]);
+  exigirContenido('Requisitos/Stats/stats.notes.enhancer.js', [
+    'originalRender',
+    'insertarGraficos',
+    'StatsNotesCharts.render',
+    'window.StatsNotes.render=render'
+  ]);
 }
 
 function verificarCss() {
-  const css = leer('Requisitos/Stats/stats.notes.analytics.css');
-  const clases = ['notes-analytics-dashboard', 'notes-analytics-panel', 'notes-ranking-grid', 'notes-analytics-bar', 'notes-semaforo'];
-  for (const clase of clases) exigir(css.includes(clase), `Falta estilo ${clase}.`);
+  exigirContenido('Requisitos/Stats/stats.notes.analytics.css', [
+    'notes-analytics-dashboard',
+    'notes-analytics-panel',
+    'notes-ranking-grid',
+    'notes-analytics-bar',
+    'notes-semaforo',
+    'stats-note-chart-grid',
+    'stats-note-chart-card',
+    'stats-note-group-row',
+    'stats-note-semaforo-row'
+  ]);
 }
 
 function main() {
   verificarHtml();
   verificarMotor();
   verificarVista();
+  verificarGraficos();
   verificarCss();
-  console.log('OK Stats Notas Analytics: dashboard analítico conectado.');
+  console.log('OK Stats Notas Analytics: dashboard analítico, gráficos y enhancer conectados.');
 }
 
 try {
