@@ -5,17 +5,19 @@ Función o funciones:
 - Renderizar la pantalla Base Local.
 - Mostrar períodos, estudiantes, historial y diagnóstico local.
 - Aplicar filtro por estado de matrícula: ACTIVO, RETIRADO o todos.
-- Permitir sincronización manual, bajada manual desde Firebase y limpieza de base.
+- Permitir sincronización manual, bajada manual desde Firebase, limpieza de base y borrado seguro de período.
 - Evitar pantalla blanca por eventos repetidos durante la sincronización.
 Con qué se conecta:
 - services/bl-campos.js
 - services/bl-normalizador.js
 - services/bl-filtros.js
 - services/bl-limpiar-base.service.js
+- services/bl-borrar-periodo.service.js
 - baselocal.core.js
 - baselocal.firebase.js
 - baselocal.connector.js
 - baselocal.limpiar.js
+- baselocal.borrar-periodo.js
 - baselocal.manual.js
 ========================================================= */
 (function(window,document){
@@ -50,9 +52,11 @@ Con qué se conecta:
     var pullBtn = el("bl-btn-pull-firebase");
     var syncBtn = el("bl-btn-sync-now");
     var cleanBtn = el("bl-btn-clean-base");
+    var deleteBtn = el("bl-btn-delete-period");
     if(pullBtn){pullBtn.disabled = !!isBusy;pullBtn.textContent = isBusy && mode === "pull" ? "Bajando..." : "Solo bajar Firebase";}
     if(syncBtn){syncBtn.disabled = !!isBusy;syncBtn.textContent = isBusy && mode === "sync" ? "Sincronizando..." : "Sincronizar ahora";}
     if(cleanBtn){cleanBtn.disabled = !!isBusy;cleanBtn.textContent = isBusy && mode === "clean" ? "Limpiando..." : "Limpiar base";}
+    if(deleteBtn){deleteBtn.disabled = !!isBusy;deleteBtn.textContent = isBusy && mode === "delete" ? "Borrando..." : "Borrar período";}
     if(message){status(message, "bl-status-info");}
   }
 
@@ -205,8 +209,10 @@ Con qué se conecta:
   function bindCrossWindowEvents(){
     window.addEventListener("storage", function(event){if(event.key === "REQ_BL_SIGNAL_V1"){scheduleRender("storage");}});
     window.addEventListener("message", function(event){var data = event.data || {};var type = String(data.type || "");if(type.indexOf("requisitos:bl:") === 0){scheduleRender(type);}});
-    ["requisitos:bl:changed","requisitos:bl:snapshot-changed","requisitos:bl:sync-complete","baselocal:sync-complete","baselocal:firebase-pull-finished","requisitos:bl:mirror-complete","requisitos:bl:limpieza-complete"].forEach(function(name){window.addEventListener(name, function(){scheduleRender(name);});});
+    ["requisitos:bl:changed","requisitos:bl:snapshot-changed","requisitos:bl:sync-complete","baselocal:sync-complete","baselocal:firebase-pull-finished","requisitos:bl:mirror-complete","requisitos:bl:limpieza-complete","requisitos:bl:periodo-borrado","baselocal:periodo-borrado","requisitos:bl:periodo-borrado-historial-purgado"].forEach(function(name){window.addEventListener(name, function(){scheduleRender(name);});});
   }
+
+  window.BaseLocalApp = {render:render,scheduleRender:scheduleRender,status:status,setBusy:setBusy,getState:function(){return Object.assign({}, state);}};
 
   function boot(){
     bindGlobalErrors();
