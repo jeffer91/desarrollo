@@ -6,6 +6,7 @@ Función o funciones:
 - Ocultar el aviso verde de éxito para recuperar espacio útil.
 - Reordenar proporciones de filtros: búsqueda más amplia y división menos dominante.
 - Reducir espacios generales de la pantalla Ficha.
+- Compactar botones del toolbar y mantener copiar ficha como icono.
 Con qué se conecta:
 - ficha.html
 - ficha.css
@@ -27,7 +28,7 @@ Con qué se conecta:
 }
 
 .ficha-toolbar{
-  grid-template-columns:minmax(170px,.85fr) minmax(220px,1fr) 116px minmax(360px,2.3fr) auto auto auto;
+  grid-template-columns:minmax(170px,.85fr) minmax(220px,1fr) 116px minmax(390px,2.5fr) auto 42px;
   gap:8px;
   padding:10px 12px;
   margin-bottom:10px;
@@ -52,6 +53,14 @@ Con qué se conecta:
   min-height:34px;
   height:34px;
   padding:0 14px;
+}
+
+.ficha-toolbar .ficha-icon-btn{
+  width:38px;
+  min-width:38px;
+  padding:0;
+  font-size:17px;
+  line-height:1;
 }
 
 .ficha-filter-search input{
@@ -88,10 +97,10 @@ Con qué se conecta:
 
 @media(max-width:1200px){
   .ficha-toolbar{
-    grid-template-columns:1fr 1fr 120px 2fr;
+    grid-template-columns:1fr 1fr 120px 2fr 120px 42px;
   }
 
-  .ficha-toolbar button{
+  .ficha-toolbar button:not(.ficha-icon-btn){
     width:100%;
   }
 }
@@ -100,5 +109,9 @@ Con qué se conecta:
   .ficha-toolbar,
   .ficha-layout{
     grid-template-columns:1fr;
+  }
+
+  .ficha-toolbar .ficha-icon-btn{
+    width:100%;
   }
 }
