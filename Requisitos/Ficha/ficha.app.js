@@ -34,6 +34,19 @@ Con qué se conecta:
   function scheduleRender(reason){if(state.renderTimer){clearTimeout(state.renderTimer);}state.renderTimer = setTimeout(function(){state.renderTimer = null;render(reason || "programado");}, 260);}
   function sourceLabel(){return window.FichaCore && typeof window.FichaCore.source === "function" ? window.FichaCore.source() : "Base Local";}
 
+  function periodDisplay(row){
+    row = row || {};
+    var raw = text(row._periodoNormalizado || row._periodo || row.periodoLabel || row.periodoId || row.ultimoPeriodoId || row.periodo || row.Periodo);
+    if(!raw){return "Sin período";}
+    try{
+      if(window.BLPeriodosCanon && typeof window.BLPeriodosCanon.normalizePeriod === "function"){
+        var normalized = window.BLPeriodosCanon.normalizePeriod({id:raw, periodoId:raw, label:raw, periodoLabel:raw});
+        return text(normalized.label || normalized.periodoLabel || raw) || raw;
+      }
+    }catch(error){}
+    return raw;
+  }
+
   function fillPeriodAndMatricula(){
     var sel = el("ficha-periodo"), mat = el("ficha-matricula");
     if(sel){
@@ -101,11 +114,10 @@ Con qué se conecta:
   function renderHeaderIdentity(row){
     var box = el("ficha-identidad");
     if(!box){return;}
-    var periodo = row._periodoNormalizado || row._periodo || "Sin período";
     box.innerHTML = [
       headerLine("Cédula", row._cedula || "—"),
       headerLine("Carrera", row._carrera || "Sin carrera"),
-      headerLine("Período", periodo)
+      headerLine("Período", periodDisplay(row))
     ].join("");
   }
 
