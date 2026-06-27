@@ -5,10 +5,14 @@ Función o funciones:
 - Orquestar la nueva pantalla Infor.
 - Manejar período, tipo Regular/PVC, Excel, cronogramas, anexos, Gemini y diagnóstico.
 - Usar InforPeriodo como fuente única para períodos, conteo y modalidades automáticas.
-- Guardar insumos mínimos por período usando InforState.
+- Leer Excel desde Infor y mostrar hojas útiles/ignoradas.
+- Interpretar cronogramas pegados y mostrar tabla previa.
+- Guardar insumos por período usando InforState.
 Con qué se conecta:
 - ../core/infor.periodo.js
+- ../core/infor.excel.js
 - ../core/infor.state.js
+- ../sections/cronograma/cronograma.parser.js
 - ../../Stats/stats.rules.js
 - titulacion.html
 ========================================================= */
@@ -27,11 +31,7 @@ Con qué se conecta:
   function periodo(){return window.InforPeriodo || null;}
   function periodIdOf(period){return periodo() ? periodo().periodIdOf(period) : text(period && (period.id || period.periodoId || period.value || period.key) || period);}
   function periodLabelOf(period){return periodo() ? periodo().periodLabelOf(period) : text(period && (period.label || period.periodoLabel || period.nombre || period.name || period.id || period.periodoId) || period);}
-
-  function listPeriods(){
-    if(periodo() && typeof periodo().list === "function"){return periodo().list();}
-    return [];
-  }
+  function listPeriods(){return periodo() && typeof periodo().list === "function" ? periodo().list() : [];}
 
   function selectedPeriod(){
     var id = el("infor-periodo") ? el("infor-periodo").value : "";
@@ -41,10 +41,11 @@ Con qué se conecta:
   function fillPeriods(){
     var select = el("infor-periodo");
     if(!select){return;}
+    var current = select.value;
     state.periods = listPeriods();
-    select.innerHTML = option("", "Selecciona un período", !select.value) + state.periods.map(function(period){
+    select.innerHTML = option("", "Selecciona un período", !current) + state.periods.map(function(period){
       var id = periodIdOf(period);
-      return option(id, periodLabelOf(period), select.value === id);
+      return option(id, periodLabelOf(period), current === id);
     }).join("");
   }
 
@@ -108,9 +109,41 @@ Con qué se conecta:
   function renderExcel(snapshot){
     snapshot = snapshot || window.InforState.getState();
     var excel = snapshot.excel || {};
-    setChip("infor-excel-state", excel.loaded ? "Excel registrado" : "Sin Excel", excel.loaded ? "ok" : "warn");
+    setChip("infor-excel-state", excel.loaded ? "Excel leído" : "Sin Excel", excel.loaded ? "ok" : "warn");
     if(el("infor-excel-name")){el("infor-excel-name").textContent = excel.fileName || "—";}
-    if(el("infor-excel-sheets")){el("infor-excel-sheets").textContent = excel.loaded ? "Pendiente de lectura inteligente" : "Pendiente";}
+    if(el("infor-excel-sheets")){el("infor-excel-sheets").textContent = String(excel.usefulSheets || 0);}
+    if(el("infor-excel-ignored")){el("infor-excel-ignored").textContent = String(excel.ignoredSheets || 0);}
+    if(el("infor-excel-rows")){el("infor-excel-rows").textContent = String(excel.totalRows || 0);}
+    renderExcelPreview(snapshot);
+  }
+
+  function smallTable(headers, rows){
+    if(!rows || !rows.length){return '<div class="infor-empty">Sin datos.</div>';}
+    var html = '<div class="infor-table-wrap"><table class="infor-small-table"><thead><tr>';
+    html += headers.map(function(h){return '<th>' + esc(h.label) + '</th>';}).join("");
+    html += '</tr></thead><tbody>';
+    html += rows.map(function(row){
+      return '<tr>' + headers.map(function(h){
+        var value = typeof h.value === "function" ? h.value(row) : row[h.key];
+        return '<td>' + value + '</td>';
+      }).join("") + '</tr>';
+    }).join("");
+    return html + '</tbody></table></div>';
+  }
+
+  function renderExcelPreview(snapshot){
+    var box = el("infor-excel-preview");
+    if(!box){return;}
+    var data = snapshot.excelData || {};
+    var sheets = Array.isArray(data.sheets) ? data.sheets : [];
+    if(!sheets.length){box.innerHTML = '<div class="infor-empty">Sin Excel leído.</div>';return;}
+    box.innerHTML = smallTable([
+      {label:"Hoja", value:function(r){return esc(r.name);}},
+      {label:"Filas", value:function(r){return esc(r.totalRows || 0);}},
+      {label:"Estudiantes", value:function(r){return '<span class="infor-pill-mini ' + (r.detectedStudents ? 'ok' : 'warn') + '">' + esc(r.detectedStudents || 0) + '</span>'; }},
+      {label:"Estado", value:function(r){return r.ignored ? '<span class="infor-pill-mini warn">Ignorada</span>' : '<span class="infor-pill-mini ok">Útil</span>'; }},
+      {label:"Detalle", value:function(r){return esc(r.reason || 'Procesada');}}
+    ], sheets);
   }
 
   function renderCronogramas(snapshot){
@@ -119,6 +152,35 @@ Con qué se conecta:
     if(el("infor-cronograma-complexivo") && el("infor-cronograma-complexivo").value !== text(c.complexivo)){el("infor-cronograma-complexivo").value = text(c.complexivo);}
     if(el("infor-cronograma-trabajo") && el("infor-cronograma-trabajo").value !== text(c.trabajoTitulacion)){el("infor-cronograma-trabajo").value = text(c.trabajoTitulacion);}
     if(el("infor-cronograma-pvc") && el("infor-cronograma-pvc").value !== text(c.pvc)){el("infor-cronograma-pvc").value = text(c.pvc);}
+    renderCronogramaPreview(snapshot);
+  }
+
+  function cronogramaTitle(kind){
+    if(kind === "complexivo"){return "Examen Complexivo";}
+    if(kind === "trabajoTitulacion"){return "Trabajo de Titulación";}
+    if(kind === "pvc"){return "Artículo Académico PVC";}
+    return kind;
+  }
+
+  function renderCronogramaPreview(snapshot){
+    var box = el("infor-cronograma-preview");
+    if(!box){return;}
+    var parsed = snapshot.cronogramasParsed || {};
+    var type = snapshot.periodType || {};
+    var kinds = type.id === "REGULAR" ? ["complexivo","trabajoTitulacion"] : (type.id === "PVC" ? ["pvc"] : []);
+    var cards = [];
+    kinds.forEach(function(kind){
+      var info = parsed[kind];
+      if(info && info.ok){
+        cards.push('<article class="infor-preview-card"><h3>' + esc(cronogramaTitle(kind)) + '</h3><p>' + esc((info.rows || []).length) + ' actividades interpretadas.</p>' + smallTable([
+          {label:"Fecha", value:function(r){return esc(r.fecha || '—');}},
+          {label:"Actividad", value:function(r){return esc(r.actividad || '—');}},
+          {label:"Responsable", value:function(r){return esc(r.responsable || '—');}},
+          {label:"Observación", value:function(r){return esc(r.observacion || '—');}}
+        ], (info.rows || []).slice(0, 8)) + '</article>');
+      }
+    });
+    box.innerHTML = cards.length ? cards.join("") : '<div class="infor-empty">Pega un cronograma para ver la tabla interpretada.</div>';
   }
 
   function renderAnexos(){
@@ -136,9 +198,7 @@ Con qué se conecta:
   }
 
   function saveAnexosToState(){
-    window.InforState.setAnexos(state.anexos.map(function(item){
-      return {name:item.name,size:item.size,type:item.type,title:item.title || item.name,createdAt:item.createdAt};
-    }));
+    window.InforState.setAnexos(state.anexos.map(function(item){return {name:item.name,size:item.size,type:item.type,title:item.title || item.name,createdAt:item.createdAt};}));
     renderDiagnostics();
   }
 
@@ -147,18 +207,21 @@ Con qué se conecta:
     if(!node){return;}
     var snapshot = window.InforState.getState();
     node.textContent = JSON.stringify({
-      bloque:"Bloque 2 - Período, Regular/PVC y modalidades",
+      bloque:"Bloque 3 - Insumos del informe",
       generatedAt:new Date().toISOString(),
       periodId:snapshot.periodId,
       periodLabel:snapshot.periodLabel,
       periodType:snapshot.periodType,
       periodSummary:state.periodSummary,
       excel:snapshot.excel,
+      excelSheets:snapshot.excelData && snapshot.excelData.sheets,
+      excelRows:snapshot.excelData && snapshot.excelData.rows ? snapshot.excelData.rows.length : 0,
       cronogramas:{
         complexivo:!!text(snapshot.cronogramas && snapshot.cronogramas.complexivo),
         trabajoTitulacion:!!text(snapshot.cronogramas && snapshot.cronogramas.trabajoTitulacion),
         pvc:!!text(snapshot.cronogramas && snapshot.cronogramas.pvc)
       },
+      cronogramasParsed:snapshot.cronogramasParsed,
       anexos:state.anexos.map(function(x){return {name:x.name,title:x.title,size:x.size,type:x.type};}),
       gemini:snapshot.gemini,
       lastProcess:snapshot.lastProcess,
@@ -186,16 +249,41 @@ Con qué se conecta:
     renderAll("Período cargado: " + label + ".", "ok");
   }
 
-  function onExcelChange(event){
+  async function onExcelChange(event){
     var file = event.target.files && event.target.files[0];
     if(!file){return;}
-    window.InforState.setExcelInfo({fileName:file.name,size:file.size,type:file.type || "",loaded:true,sheetCount:0,ignoredSheets:0});
-    renderAll("Excel registrado. La lectura inteligente se conectará en el bloque siguiente.", "ok");
+    try{
+      status("Leyendo Excel desde Infor...", "warn");
+      if(!(window.InforExcel && typeof window.InforExcel.readFile === "function")){throw new Error("InforExcel no está disponible.");}
+      var analysis = await window.InforExcel.readFile(file);
+      window.InforState.setExcelAnalysis(analysis);
+      renderAll("Excel leído: " + (analysis.usefulSheets || 0) + " hojas útiles, " + (analysis.totalRows || 0) + " filas detectadas.", "ok");
+    }catch(error){
+      console.error("[Infor Excel]", error);
+      window.InforState.setExcelInfo({fileName:file.name,size:file.size,type:file.type || "",loaded:false,sheetCount:0,ignoredSheets:0,usefulSheets:0,totalRows:0,error:error.message || String(error)});
+      renderAll("No se pudo leer el Excel: " + (error.message || String(error)), "bad");
+    }
+  }
+
+  function parseCronograma(kind, value){
+    window.InforState.setCronograma(kind, value);
+    if(window.InforCronogramaParser && typeof window.InforCronogramaParser.parse === "function"){
+      window.InforState.setCronogramaParsed(kind, window.InforCronogramaParser.parse(value));
+    }
   }
 
   function onCronogramaInput(kind, value){
-    window.InforState.setCronograma(kind, value);
+    parseCronograma(kind, value);
+    renderCronogramas(window.InforState.getState());
     renderDiagnostics();
+  }
+
+  function reparseAllCronogramas(){
+    var snapshot = window.InforState.getState();
+    var c = snapshot.cronogramas || {};
+    if(window.InforCronogramaParser && typeof window.InforCronogramaParser.parseMany === "function"){
+      window.InforState.setCronogramasParsed(window.InforCronogramaParser.parseMany(c));
+    }
   }
 
   function onAnexosChange(event){
@@ -223,9 +311,9 @@ Con qué se conecta:
   function process(){
     var snapshot = window.InforState.getState();
     if(!text(snapshot.periodId || snapshot.periodLabel)){status("Primero selecciona un período.", "warn");return;}
-    if(!window.InforState.getGeminiKey()){status("Proceso detenido: falta configurar la clave de Gemini.", "bad");renderDiagnostics();return;}
+    reparseAllCronogramas();
     window.InforState.processDraft();
-    renderAll("Bloque 2 procesado: período, tipo y modalidad automática quedaron listos.", "ok");
+    renderAll("Bloque 3 procesado: Excel y cronogramas quedaron guardados como insumos del informe.", "ok");
   }
 
   function bindEvents(){
@@ -252,7 +340,7 @@ Con qué se conecta:
       fillPeriods();
       bindEvents();
       window.InforState.loadPeriod("", "");
-      renderAll(state.periods.length ? "Infor listo. Selecciona un período." : "Infor listo, pero no encontré períodos cargados todavía.", state.periods.length ? "ok" : "warn");
+      renderAll(state.periods.length ? "Infor listo. Selecciona un período y carga los insumos." : "Infor listo, pero no encontré períodos cargados todavía.", state.periods.length ? "ok" : "warn");
       state.booted = true;
     }catch(error){
       console.error("[Infor boot]", error);
