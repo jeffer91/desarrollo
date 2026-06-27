@@ -7,11 +7,14 @@ Función o funciones:
 - Preparar flujo Periodo -> Excel/cronogramas/anexos -> Procesar.
 - Mantener entrada del módulo sin romper la ruta registrada en Maqueta.
 - Cargar estado interno modular de Infor.
+- Conectar gestor de períodos Regular/PVC del Bloque 2.
 Con qué se conecta:
 - titulacion.css
 - titulacion.app.js
+- ../core/infor.periodo.js
 - ../core/infor.state.js
 - ../../Stats/stats.rules.js
+- ../../BaseLocal2/*
 - ../../Gestion/Excel/excel-local/*
 ========================================================= -->
 <html lang="es">
@@ -60,16 +63,22 @@ Con qué se conecta:
         <div class="infor-card-head">
           <div>
             <h2>1. Período</h2>
-            <p>La lógica Regular/PVC se toma de Stats.</p>
+            <p>La lógica Regular/PVC se toma de Stats y se centraliza en InforPeriodo.</p>
           </div>
           <span id="infor-period-type" class="infor-chip">Sin período</span>
         </div>
         <label class="infor-field">Período
           <select id="infor-periodo"><option value="">Selecciona un período</option></select>
         </label>
-        <div class="infor-mini-grid">
+        <div class="infor-mini-grid infor-mini-grid-4">
           <article><span>Tipo detectado</span><strong id="infor-type-label">—</strong></article>
+          <article><span>Fuente estudiantes</span><strong id="infor-source-label">—</strong></article>
+          <article><span>Estudiantes activos</span><strong id="infor-students-count">0</strong></article>
           <article><span>Nombre del informe</span><strong id="infor-report-name">—</strong></article>
+        </div>
+        <div class="infor-mode-box">
+          <span>Modalidad automática</span>
+          <div id="infor-modalidades" class="infor-modalidades"><em>Selecciona un período.</em></div>
         </div>
       </article>
 
@@ -144,7 +153,7 @@ Con qué se conecta:
       <div class="infor-card-head">
         <div>
           <h2>Diagnóstico interno</h2>
-          <p>Estado vivo del Bloque 1.</p>
+          <p>Estado vivo del Bloque 2.</p>
         </div>
         <span>BaseLocal Infor</span>
       </div>
@@ -176,7 +185,14 @@ Con qué se conecta:
   <script src="../../Gestion/Excel/excel-local/excel-local.bridge.js"></script>
   <script src="../../Gestion/Excel/excel-local.repo.js"></script>
   <script src="../../BaseLocal/services/bl-periodos-canon.service.js"></script>
+  <script src="../../BaseLocal2/bl2-config.js"></script>
+  <script src="../../BaseLocal2/bl2-detect-runtime.js"></script>
+  <script src="../../BaseLocal2/bl2-legacy-adapter.js"></script>
+  <script src="../../BaseLocal2/bl2-api.js"></script>
+  <script src="../../BaseLocal2/services/bl2-search.service.js"></script>
+  <script src="../../BaseLocal2/repositories/bl2-estudiantes.repo.js"></script>
   <script src="../../Stats/stats.rules.js"></script>
+  <script src="../core/infor.periodo.js"></script>
   <script src="../core/infor.state.js"></script>
   <script src="titulacion.app.js"></script>
 </body>
