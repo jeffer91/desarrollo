@@ -8,6 +8,7 @@ Función o funciones:
 - Reducir espacios generales de la pantalla Ficha.
 - Compactar botones del toolbar y mantener copiar ficha como icono.
 - Compactar la ficha del estudiante, sus datos y requisitos.
+- Mostrar acciones rápidas visuales: aprobaciones, copiar ficha y Telegram.
 Con qué se conecta:
 - ficha.html
 - ficha.css
@@ -29,7 +30,7 @@ Con qué se conecta:
 }
 
 .ficha-toolbar{
-  grid-template-columns:minmax(170px,.85fr) minmax(220px,1fr) 116px minmax(390px,2.5fr) auto 42px;
+  grid-template-columns:minmax(170px,.85fr) minmax(220px,1fr) 116px minmax(390px,2.5fr) auto;
   gap:8px;
   padding:10px 12px;
   margin-bottom:10px;
@@ -110,6 +111,11 @@ Con qué se conecta:
   padding-bottom:10px;
   margin-bottom:10px;
   gap:10px;
+  align-items:flex-start;
+}
+
+.ficha-main-head{
+  min-width:0;
 }
 
 .ficha-label{
@@ -125,7 +131,63 @@ h2#ficha-nombre{
 }
 
 .ficha-subtitle{
+  max-width:900px;
   font-size:12.5px;
+  line-height:1.25;
+}
+
+.ficha-top-side{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:7px;
+  flex-shrink:0;
+}
+
+.ficha-top-actions{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:6px;
+}
+
+.ficha-mini-badge,
+.ficha-mini-btn{
+  width:34px;
+  height:34px;
+  min-width:34px;
+  border-radius:999px;
+  border:1px solid var(--line);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-size:16px;
+  text-decoration:none;
+  cursor:pointer;
+  background:#fff;
+  color:var(--text);
+}
+
+.ficha-mini-btn:hover{
+  background:#eff6ff;
+}
+
+.ficha-badge-ok{
+  background:#ecfdf5;
+  border-color:#bbf7d0;
+  color:#166534;
+}
+
+.ficha-badge-bad{
+  background:#fef2f2;
+  border-color:#fecaca;
+  color:#991b1b;
+}
+
+.ficha-mini-btn.is-disabled,
+.ficha-action.is-disabled{
+  opacity:.45;
+  cursor:not-allowed;
 }
 
 .ficha-pill{
@@ -229,7 +291,7 @@ h2#ficha-nombre{
 
 @media(max-width:1200px){
   .ficha-toolbar{
-    grid-template-columns:1fr 1fr 120px 2fr 120px 42px;
+    grid-template-columns:1fr 1fr 120px 2fr 120px;
   }
 
   .ficha-toolbar button:not(.ficha-icon-btn){
@@ -247,6 +309,14 @@ h2#ficha-nombre{
   .ficha-grid-info,
   .ficha-requisitos{
     grid-template-columns:1fr;
+  }
+
+  .ficha-top{
+    flex-direction:column;
+  }
+
+  .ficha-top-side{
+    align-items:flex-start;
   }
 
   .ficha-toolbar .ficha-icon-btn{
