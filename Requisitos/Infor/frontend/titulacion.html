@@ -1,0 +1,35 @@
+<!doctype html>
+<!-- =========================================================
+Nombre completo: titulacion.html
+Ruta o ubicación: /Requisitos/Infor/frontend/titulacion.html
+Función o funciones:
+- Servir como entrada segura del módulo Infor desde la nueva carpeta /Requisitos/Infor.
+- Mantener compatibilidad temporal con la implementación anterior ubicada en /Requisitos/Titulacion.
+- Evitar que el menú principal siga apuntando a la carpeta Titulacion.
+Con qué se conecta:
+- ../../Titulacion/frontend/titulacion.html
+========================================================= -->
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Infor · Informe de Titulación</title>
+  <meta http-equiv="refresh" content="0; url=../../Titulacion/frontend/titulacion.html" />
+  <script>
+    (function(){
+      "use strict";
+      var destino = "../../Titulacion/frontend/titulacion.html";
+      if(window.location && typeof window.location.replace === "function"){
+        window.location.replace(destino);
+      }
+    })();
+  </script>
+</head>
+<body>
+  <main style="font-family:system-ui,-apple-system,'Segoe UI',Arial,sans-serif;padding:24px;color:#0f172a;">
+    <h1>Infor · Informe de Titulación</h1>
+    <p>Abriendo módulo Infor...</p>
+    <p><a href="../../Titulacion/frontend/titulacion.html">Abrir Infor</a></p>
+  </main>
+</body>
+</html>
