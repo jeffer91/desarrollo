@@ -5,10 +5,12 @@ Función o funciones:
 - Centralizar campos oficiales y variantes toleradas de Base Local.
 - Reconocer campos de Firestore con tildes, sin tildes, mayúsculas o minúsculas.
 - Mantener nombres originales al guardar, pero permitir lectura tolerante.
+- Normalizar nombres visibles sin modificar la base de datos.
 Con qué se conecta:
 - bl-normalizador.js
 - bl-filtros.js
 - baselocal.core.js
+- pantallas que muestran requisitos
 ========================================================= */
 (function(window){
   "use strict";
@@ -26,6 +28,24 @@ Con qué se conecta:
     "Titulacion",
     "Vinculacion"
   ];
+
+  var DISPLAY_LABELS = {
+    academico:"Académico",
+    actualizaciondatos:"Actualización de datos",
+    aprobacioncomplexivoproyecto:"Aprobación complexivo/proyecto",
+    aprobaciontitulacion:"Aprobación titulación",
+    documentacion:"Documentación",
+    financiero:"Financiero",
+    ingles:"Inglés",
+    practicasvinculacion:"Prácticas",
+    practicasvinculación:"Prácticas",
+    "prácticasvinculación":"Prácticas",
+    "practicas/vinculacion":"Prácticas",
+    "prácticas/vinculación":"Prácticas",
+    seguimientograduados:"Seguimiento graduados",
+    titulacion:"Titulación",
+    vinculacion:"Vinculación"
+  };
 
   var STATUS = {
     ACTIVO:"ACTIVO",
@@ -58,7 +78,7 @@ Con qué se conecta:
     documentacion:["Documentacion", "Documentación", "documentacion", "documentación"],
     financiero:["Financiero", "financiero"],
     ingles:["Ingles", "Inglés", "ingles", "inglés"],
-    practicasVinculacion:["PrácticasVinculacion", "PracticasVinculacion", "practicasVinculacion", "prácticasVinculacion"],
+    practicasVinculacion:["PrácticasVinculacion", "PracticasVinculacion", "practicasVinculacion", "prácticasVinculacion", "Prácticas/Vinculación", "Practicas/Vinculacion", "practicas/vinculacion"],
     seguimientoGraduados:["SeguimientoGraduados", "seguimientoGraduados"],
     titulacion:["Titulacion", "Titulación", "titulacion", "titulación"],
     vinculacion:["Vinculacion", "Vinculación", "vinculacion", "vinculación"]
@@ -89,6 +109,19 @@ Con qué se conecta:
       .replace(/[\u0300-\u036f]/g, "")
       .replace(/[^a-zA-Z0-9]/g, "")
       .toLowerCase();
+  }
+
+  function displayLabel(value, fallback){
+    var raw = text(value);
+    if(!raw){
+      return fallback || "";
+    }
+    var normalized = normalizeKey(raw);
+    return DISPLAY_LABELS[raw] || DISPLAY_LABELS[normalized] || fallback || raw;
+  }
+
+  function requirementLabel(value, fallback){
+    return displayLabel(value, fallback);
   }
 
   function getOwnKey(row, wanted){
@@ -157,11 +190,14 @@ Con qué se conecta:
 
   window.BLCampos = {
     requisitoFields:REQUISITO_FIELDS.slice(),
+    displayLabels:Object.assign({}, DISPLAY_LABELS),
     aliases:ALIASES,
     status:STATUS,
     searchCanonicalFields:SEARCH_CANONICAL_FIELDS.slice(),
     text:text,
     normalizeKey:normalizeKey,
+    displayLabel:displayLabel,
+    requirementLabel:requirementLabel,
     getOwnKey:getOwnKey,
     getValue:getValue,
     setIfMissing:setIfMissing,
