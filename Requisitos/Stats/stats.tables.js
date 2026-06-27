@@ -18,7 +18,10 @@ Con qué se conecta:
   function text(value){return String(value==null?"":value).trim();}
   function norm(value){return text(value).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase("es");}
   function number(value){
-    var raw=text(value).replace(/%/g,"").replace(/\./g,"").replace(/,/g,".").replace(/[^0-9.\-]/g,"");
+    var raw=text(value).replace(/%/g,"").replace(/\s/g,"");
+    if(raw.indexOf(",")>=0&&raw.indexOf(".")>=0)raw=raw.replace(/\./g,"").replace(",",".");
+    else if(raw.indexOf(",")>=0)raw=raw.replace(",",".");
+    raw=raw.replace(/[^0-9.\-]/g,"");
     var parsed=Number(raw);
     return isFinite(parsed)?parsed:0;
   }
@@ -34,10 +37,7 @@ Con qué se conecta:
 
   function clearHeaders(table,active){
     Array.prototype.forEach.call(table.querySelectorAll("thead th"),function(th){
-      if(th!==active){
-        th.removeAttribute("aria-sort");
-        th.classList.remove("sort-asc","sort-desc");
-      }
+      if(th!==active){th.removeAttribute("aria-sort");th.classList.remove("sort-asc","sort-desc");}
     });
   }
 
@@ -45,16 +45,9 @@ Con qué se conecta:
     var av=cellValue(a.children[index],type);
     var bv=cellValue(b.children[index],type);
     var result=0;
-
     if(type==="number"||type==="percent")result=av-bv;
     else result=String(av).localeCompare(String(bv),"es",{numeric:true,sensitivity:"base"});
-
-    if(result===0){
-      var at=norm(a.textContent);
-      var bt=norm(b.textContent);
-      result=at.localeCompare(bt,"es",{numeric:true,sensitivity:"base"});
-    }
-
+    if(result===0)result=norm(a.textContent).localeCompare(norm(b.textContent),"es",{numeric:true,sensitivity:"base"});
     return dir==="desc"?-result:result;
   }
 
@@ -86,38 +79,15 @@ Con qué se conecta:
       }
 
       th.addEventListener("click",activate);
-      th.addEventListener("keydown",function(event){
-        if(event.key==="Enter"||event.key===" "){
-          event.preventDefault();
-          activate();
-        }
-      });
+      th.addEventListener("keydown",function(event){if(event.key==="Enter"||event.key===" "){event.preventDefault();activate();}});
     });
     table.setAttribute("data-sortable-bound","true");
   }
 
-  function bindAll(root){
-    root=root||document;
-    Array.prototype.forEach.call(root.querySelectorAll('table[data-sortable="true"], table.stats-sortable-table'),bindTable);
-  }
+  function bindAll(root){root=root||document;Array.prototype.forEach.call(root.querySelectorAll('table[data-sortable="true"], table.stats-sortable-table'),bindTable);}
+  function reset(table){if(!table)return;table.removeAttribute("data-sortable-bound");Array.prototype.forEach.call(table.querySelectorAll("thead th"),function(th){th.removeAttribute("aria-sort");th.classList.remove("sort-asc","sort-desc");});bindTable(table);}
 
-  function reset(table){
-    if(!table)return;
-    table.removeAttribute("data-sortable-bound");
-    Array.prototype.forEach.call(table.querySelectorAll("thead th"),function(th){
-      th.removeAttribute("aria-sort");
-      th.classList.remove("sort-asc","sort-desc");
-    });
-    bindTable(table);
-  }
-
-  window.StatsTables={
-    bindTable:bindTable,
-    bindAll:bindAll,
-    sortTable:sortTable,
-    reset:reset
-  };
-
+  window.StatsTables={bindTable:bindTable,bindAll:bindAll,sortTable:sortTable,reset:reset};
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",function(){bindAll(document);});
   else bindAll(document);
 })(window,document);
