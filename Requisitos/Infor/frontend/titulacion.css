@@ -1,0 +1,12 @@
+/* =========================================================
+Nombre completo: titulacion.css
+Ruta o ubicación: /Requisitos/Infor/frontend/titulacion.css
+Función o funciones:
+- Mantener el archivo de estilos propio del módulo Infor desde la carpeta definitiva /Requisitos/Infor.
+- Cargar temporalmente el diseño vigente desde /Requisitos/Titulacion mientras se completa la migración interna.
+- Evitar que la pantalla principal dependa visualmente de una ruta llamada Titulacion.
+Con qué se conecta:
+- titulacion.html
+- ../../Titulacion/frontend/titulacion.css
+========================================================= */
+@import url("../../Titulacion/frontend/titulacion.css");
