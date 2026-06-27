@@ -6,9 +6,11 @@ Función o funciones:
 - Guardar configuración mínima por período en almacenamiento local.
 - Clasificar períodos como REGULAR o PVC usando InforPeriodo/StatsRules cuando esté disponible.
 - Guardar cronogramas crudos e interpretados.
+- Guardar análisis del Excel cargado desde Infor.
 - Guardar la clave de Gemini en BaseLocal local de Infor.
 Con qué se conecta:
 - core/infor.periodo.js
+- core/infor.excel.js
 - sections/cronograma/cronograma.parser.js
 - frontend/titulacion.app.js
 - Stats/stats.rules.js
@@ -18,13 +20,14 @@ Con qué se conecta:
 
   var STORAGE_KEY = "requisitos.infor.v1";
   var GEMINI_KEY = "requisitos.infor.gemini.key";
-
   var emptyParsed = {complexivo:null, trabajoTitulacion:null, pvc:null};
+
   var state = {
     periodId:"",
     periodLabel:"",
     periodType:null,
-    excel:{fileName:"",sheetCount:0,ignoredSheets:0,loaded:false},
+    excel:{fileName:"",sheetCount:0,ignoredSheets:0,usefulSheets:0,totalRows:0,loaded:false},
+    excelData:{sheets:[],rows:[],generatedAt:null},
     cronogramas:{complexivo:"",trabajoTitulacion:"",pvc:""},
     cronogramasParsed:Object.assign({}, emptyParsed),
     anexos:[],
@@ -40,8 +43,13 @@ Con qué se conecta:
   function loadRoot(){return safeParse(localStorage.getItem(STORAGE_KEY), {periods:{}, updatedAt:null});}
   function saveRoot(root){root.updatedAt = now();localStorage.setItem(STORAGE_KEY, JSON.stringify(root));return root;}
 
+  function emptyExcel(){return {fileName:"",sheetCount:0,ignoredSheets:0,usefulSheets:0,totalRows:0,loaded:false};}
+  function emptyExcelData(){return {sheets:[],rows:[],generatedAt:null};}
+
   function defaultPeriodData(){
     return {
+      excel:emptyExcel(),
+      excelData:emptyExcelData(),
       cronogramas:{complexivo:"",trabajoTitulacion:"",pvc:""},
       cronogramasParsed:Object.assign({}, emptyParsed),
       anexos:[],
@@ -74,6 +82,8 @@ Con qué se conecta:
     state.periodId = text(periodId);
     state.periodLabel = text(periodLabel || periodId || "");
     state.periodType = classifyPeriod(state.periodLabel || state.periodId);
+    state.excel = Object.assign(emptyExcel(), saved.excel || {});
+    state.excelData = Object.assign(emptyExcelData(), saved.excelData || {});
     state.cronogramas = Object.assign({complexivo:"",trabajoTitulacion:"",pvc:""}, saved.cronogramas || {});
     state.cronogramasParsed = Object.assign({}, emptyParsed, saved.cronogramasParsed || {});
     state.anexos = Array.isArray(saved.anexos) ? saved.anexos.slice() : [];
@@ -91,6 +101,8 @@ Con qué se conecta:
       periodId:state.periodId,
       periodLabel:state.periodLabel,
       periodType:state.periodType,
+      excel:clone(state.excel),
+      excelData:clone(state.excelData),
       cronogramas:clone(state.cronogramas),
       cronogramasParsed:clone(state.cronogramasParsed),
       anexos:clone(state.anexos),
@@ -102,8 +114,29 @@ Con qué se conecta:
   }
 
   function setExcelInfo(info){
-    state.excel = Object.assign({fileName:"",sheetCount:0,ignoredSheets:0,loaded:false}, info || {});
+    state.excel = Object.assign(emptyExcel(), info || {});
     pushDiagnostic("excel", "Excel registrado en estado interno.");
+    return savePeriod();
+  }
+
+  function setExcelAnalysis(analysis){
+    analysis = analysis || {};
+    state.excel = Object.assign(emptyExcel(), {
+      fileName:analysis.fileName || "",
+      size:analysis.size || 0,
+      type:analysis.type || "",
+      sheetCount:analysis.sheetCount || 0,
+      usefulSheets:analysis.usefulSheets || 0,
+      ignoredSheets:analysis.ignoredSheets || 0,
+      totalRows:analysis.totalRows || 0,
+      loaded:analysis.loaded !== false
+    });
+    state.excelData = {
+      sheets:Array.isArray(analysis.sheets) ? analysis.sheets : [],
+      rows:Array.isArray(analysis.rows) ? analysis.rows : [],
+      generatedAt:analysis.generatedAt || now()
+    };
+    pushDiagnostic("excel", "Excel leído e interpretado desde Infor.");
     return savePeriod();
   }
 
@@ -136,12 +169,13 @@ Con qué se conecta:
       periodLabel:state.periodLabel,
       periodType:state.periodType,
       excel:clone(state.excel),
+      excelData:{sheets:clone(state.excelData.sheets || []),totalRows:(state.excelData.rows || []).length},
       cronogramas:clone(state.cronogramas),
       cronogramasParsed:clone(state.cronogramasParsed),
       anexosCount:state.anexos.length,
       readyForNextBlock:true
     };
-    pushDiagnostic("procesar", "Bloque 3 guardó cronogramas crudos e interpretados.");
+    pushDiagnostic("procesar", "Bloque 3 guardó insumos del informe: Excel y cronogramas.");
     return savePeriod();
   }
 
@@ -153,6 +187,7 @@ Con qué se conecta:
     savePeriod:savePeriod,
     getState:getState,
     setExcelInfo:setExcelInfo,
+    setExcelAnalysis:setExcelAnalysis,
     setCronograma:setCronograma,
     setCronogramaParsed:setCronogramaParsed,
     setCronogramasParsed:setCronogramasParsed,
