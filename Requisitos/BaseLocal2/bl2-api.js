@@ -6,6 +6,7 @@ Función o funciones:
 - Usar por ahora el adaptador legado sin romper Base Local V1.
 - Preparar la ruta para SQLite en Electron e IndexedDB en navegador.
 - Entregar consultas rápidas de estudiantes, períodos, resumen y diagnóstico.
+- No leer el snapshot pesado durante el arranque de Maqueta.
 Con qué se conecta:
 - bl2-config.js
 - bl2-detect-runtime.js
@@ -46,8 +47,9 @@ Con qué se conecta:
     return ad;
   }
 
-  function status(){
-    var adStatus = safe("adapter.status", function(){return adapter().status ? adapter().status() : {ok:true};}, {ok:false, mode:"sin_adapter"});
+  function status(options){
+    options = options || {};
+    var adStatus = safe("adapter.status", function(){return adapter().status ? adapter().status({deep:options.deep === true}) : {ok:true};}, {ok:false, mode:"sin_adapter"});
     var data = {ok:adStatus.ok !== false && !state.lastError, version:VERSION, ready:state.ready, mode:state.mode, storage:state.storage, adapter:state.adapterName, bootedAt:bootedAt, runtime:state.runtime, lastError:state.lastError, adapterStatus:adStatus, updatedAt:now()};
     if(config() && typeof config().saveStatus === "function"){config().saveStatus(data);}
     return data;
@@ -55,7 +57,7 @@ Con qué se conecta:
 
   function invalidate(){
     safe("adapter.invalidate", function(){if(adapter().invalidate){adapter().invalidate();}}, null);
-    emit("invalidated", status());
+    emit("invalidated", status({deep:false}));
   }
 
   function boot(){
@@ -63,13 +65,13 @@ Con qué se conecta:
       resolveAdapter();
       state.ready = true;
       state.lastError = "";
-      var current = status();
+      var current = status({deep:false});
       emit("ready", current);
       return current;
     }catch(error){
       state.ready = false;
       state.lastError = error && error.message ? error.message : String(error);
-      var failed = status();
+      var failed = status({deep:false});
       emit("error", failed);
       return failed;
     }
