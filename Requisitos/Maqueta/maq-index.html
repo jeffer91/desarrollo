@@ -7,12 +7,14 @@ Función o funciones:
 - Mostrar menú superior fijo, claro y rápido.
 - Abrir Excel/Requisito por defecto.
 - Preparar Base Local una sola vez al abrir Requisitos.
+- Lanzar Firebase en segundo plano sin bloquear pantallas.
 - Mantener pantallas en memoria mediante iframes para no recargar desde cero.
 - Volver a Desarrollo sin usar la palabra Regresar.
 Con qué se conecta:
 - maq-ui.css
 - maq-utils.js
 - maq-baselocal-session.js
+- maq-baselocal-background-sync.js
 - maq-modulos-registry.js
 - maq-config-service.js
 - maq-core.js
@@ -57,5 +59,6 @@ Con qué se conecta:
   <script src="maq-core.js"></script>
   <script src="maq-menu.js"></script>
   <script src="maq-health.js"></script>
+  <script src="maq-baselocal-background-sync.js"></script>
 </body>
 </html>
