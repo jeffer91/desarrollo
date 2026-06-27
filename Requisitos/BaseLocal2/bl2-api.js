@@ -8,11 +8,13 @@ Función o funciones:
 - Entregar consultas rápidas de estudiantes, períodos, resumen y diagnóstico.
 - No leer el snapshot pesado durante el arranque de Maqueta.
 - Mantener SQLite/IndexedDB como motor asíncrono hasta migrar pantallas en bloques siguientes.
+- Exponer migración manual de Base Local V1 hacia BL2.
 Con qué se conecta:
 - bl2-config.js
 - bl2-detect-runtime.js
 - bl2-legacy-adapter.js
 - db/bl2-storage.js
+- migration/bl2-migrate-from-v1.js
 - futuras capas SQLite/IndexedDB
 ========================================================= */
 (function(window){
@@ -30,6 +32,8 @@ Con qué se conecta:
   function runtime(){return window.BL2Runtime || null;}
   function legacy(){return window.BL2LegacyAdapter || null;}
   function storage(){return window.BL2Storage || null;}
+  function migrator(){return window.BL2Migrator || null;}
+  function migrationReport(){return window.BL2MigrationReport || null;}
   function canServeSync(ad){return !!(ad && typeof ad.canServeSync === "function" && ad.canServeSync());}
 
   function resolveAdapter(){
@@ -55,7 +59,8 @@ Con qué se conecta:
     options = options || {};
     var adStatus = safe("adapter.status", function(){return adapter().status ? adapter().status({deep:options.deep === true}) : {ok:true};}, {ok:false, mode:"sin_adapter"});
     var storageStatus = safe("storage.status", function(){return storage() && typeof storage().status === "function" ? storage().status() : {ok:false, mode:"sin_storage"};}, {ok:false, mode:"sin_storage"});
-    var data = {ok:adStatus.ok !== false && !state.lastError, version:VERSION, ready:state.ready, mode:state.mode, storage:state.storage, adapter:state.adapterName, bootedAt:bootedAt, runtime:state.runtime, lastError:state.lastError, adapterStatus:adStatus, storageStatus:storageStatus, updatedAt:now()};
+    var migrationStatus = safe("migration.status", function(){return migrator() && typeof migrator().status === "function" ? migrator().status() : {ok:true, mode:"sin_migrador"};}, {ok:false, mode:"sin_migrador"});
+    var data = {ok:adStatus.ok !== false && !state.lastError, version:VERSION, ready:state.ready, mode:state.mode, storage:state.storage, adapter:state.adapterName, bootedAt:bootedAt, runtime:state.runtime, lastError:state.lastError, adapterStatus:adStatus, storageStatus:storageStatus, migrationStatus:migrationStatus, updatedAt:now()};
     if(config() && typeof config().saveStatus === "function"){config().saveStatus(data);}
     return data;
   }
@@ -103,6 +108,12 @@ Con qué se conecta:
       estado:function(){return safe("storage.estado", function(){return storage() && typeof storage().status === "function" ? storage().status() : {ok:false, mode:"sin_storage"};}, {ok:false, mode:"sin_storage"});},
       inicializar:function(options){return storage() && typeof storage().initialize === "function" ? storage().initialize(options || {}) : Promise.resolve({ok:false, mode:"sin_storage"});},
       copiarDesdeLegacy:function(options){return storage() && typeof storage().copyFromLegacy === "function" ? storage().copyFromLegacy(options || {}) : Promise.resolve({ok:false, mode:"sin_storage"});}
+    },
+    migracion:{
+      estado:function(){return safe("migracion.estado", function(){return migrator() && typeof migrator().status === "function" ? migrator().status() : {ok:false, mode:"sin_migrador"};}, {ok:false, mode:"sin_migrador"});},
+      previsualizar:function(options){return safe("migracion.previsualizar", function(){return migrator() && typeof migrator().preview === "function" ? migrator().preview(options || {}) : {ok:false, errors:[{message:"Migrador no disponible"}]};}, {ok:false, errors:[{message:"Migrador no disponible"}]});},
+      ejecutar:function(options){return migrator() && typeof migrator().run === "function" ? migrator().run(options || {}) : Promise.resolve({ok:false, mode:"sin_migrador"});},
+      reporte:function(){return safe("migracion.reporte", function(){return migrationReport() && typeof migrationReport().read === "function" ? migrationReport().read() : null;}, null);}
     },
     sync:{
       estado:function(){return {ok:true, mode:"pendiente_bloque_10", message:"Firebase incremental se implementará en el bloque 10.", updatedAt:now()};}
