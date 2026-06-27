@@ -8,6 +8,7 @@ Función o funciones:
 - Mostrar ACTIVO por defecto.
 - Mantener compatibilidad aunque algunos botones visuales se oculten o retiren.
 - Pintar aprobaciones especiales y abrir Telegram con mensaje copiado.
+- Renderizar notas finales Nart, Ndef y Nfin.
 Con qué se conecta:
 - ficha.core.js
 - ficha.export.js
@@ -43,6 +44,7 @@ Con qué se conecta:
   }
   function reqClass(r){return r.estado==="cumple"?"ficha-pill-ok":"ficha-pill-bad";}
   function renderReqs(row){var box=el("ficha-requisitos");if(!box)return;var reqs=window.FichaCore.requisitos(row);box.innerHTML=reqs.map(function(r){return '<div class="ficha-req"><span class="ficha-req-name">'+esc(r.label)+'</span><span class="ficha-req-value '+reqClass(r)+'">'+esc(r.estado==="cumple"?"CUMPLE":"NO CUMPLE")+'</span></div>';}).join('');}
+  function renderNotas(row){var box=el("ficha-notas");if(!box)return;var notas=window.FichaCore.notas?window.FichaCore.notas(row):[];box.innerHTML=notas.map(function(n){var ok=n.estado==="cumple";return '<article class="ficha-note '+(ok?'ficha-note-ok':'ficha-note-bad')+'"><span>'+esc(n.label)+'</span><strong>'+esc(n.value)+'</strong></article>';}).join('');}
   function applySpecialBadge(id,item){var node=el(id);if(!node||!item)return;var ok=item.estado==="cumple";node.className="ficha-mini-badge "+(ok?"ficha-badge-ok":"ficha-badge-bad");node.title=item.label+": "+(ok?"CUMPLE":"NO CUMPLE");node.setAttribute("aria-label",node.title);}
   function renderSpecials(row){var list=window.FichaCore.especiales?window.FichaCore.especiales(row):[];var titulacion=list.find(function(x){return x.key==="aprobaciontitulacion";});var complexivo=list.find(function(x){return x.key==="aprobacioncomplexivoproyecto";});applySpecialBadge("ficha-special-titulacion",titulacion);applySpecialBadge("ficha-special-complexivo",complexivo);}
 
@@ -65,7 +67,7 @@ Con qué se conecta:
     var tg=el("ficha-telegram");var tgUrl=window.FichaCore.telegramUrl?window.FichaCore.telegramUrl(row):"";if(tg){tg.href=tgUrl||"#";tg.classList.toggle("is-disabled",!tgUrl);tg.title=tgUrl?"Copiar mensaje y abrir Telegram":"Telegram no registrado";}
     renderSpecials(row);
     renderReqs(row);
-    if(el("ficha-json"))el("ficha-json").textContent=JSON.stringify(row,null,2);
+    renderNotas(row);
   }
 
   function selected(){return window.FichaCore.getById(state.selectedId,{periodId:state.periodId,division:state.division,matricula:state.matricula});}
