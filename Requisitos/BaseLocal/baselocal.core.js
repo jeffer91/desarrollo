@@ -7,6 +7,8 @@ Función o funciones:
 - Usar servicios pequeños para campos, normalización, filtros, diagnóstico y divisiones.
 - Mostrar estudiantes activos por defecto y retirados solo con filtro.
 - Crear divisiones por período asignando carreras a estudiantes activos y retirados.
+- Ocultar períodos borrados que siguen archivados en historial por seguridad.
+- Exponer escritura controlada para servicios internos de Base Local.
 Con qué se conecta:
 - excel-local.repo.js
 - services/bl-campos.js
@@ -14,6 +16,7 @@ Con qué se conecta:
 - services/bl-filtros.js
 - services/bl-divisiones.service.js
 - services/bl-healthcheck.js
+- services/bl-borrar-periodo.service.js
 - baselocal.app.js
 - baselocal.divisiones.js
 ========================================================= */
@@ -57,23 +60,37 @@ Con qué se conecta:
   function now(){return new Date().toISOString();}
   function getSnapshot(){return repo().getSnapshot();}
 
-  function getAllStudentsRaw(){if(typeof repo().listAllStudents === "function"){return repo().listAllStudents() || [];}return repo().listStudentsByPeriod("") || [];}
+  function samePeriod(a,b){if(!text(b)){return true;}if(window.BLPeriodosCanon && typeof window.BLPeriodosCanon.samePeriod === "function"){return window.BLPeriodosCanon.samePeriod(a,b);}return text(a) === text(b);}
+
+  function isDeleteHistory(row){return text(row && row.action) === "borrarPeriodo";}
+  function isExpiredDeleteHistory(row){var limit = Date.parse(text(row && (row.archivadoHasta || row.expiresAt)));return Number.isFinite(limit) && Date.now() > limit;}
+  function activeDeleteHistory(snapshot){return (Array.isArray(snapshot && snapshot.history) ? snapshot.history : []).filter(function(row){return isDeleteHistory(row) && !isExpiredDeleteHistory(row);});}
+  function isPeriodArchived(periodId, snapshot){
+    var id = text(periodId);
+    if(!id){return false;}
+    return activeDeleteHistory(snapshot).some(function(row){return samePeriod(row.periodoId || row.periodoLabel, id) || samePeriod(row.periodoLabel, id);});
+  }
+
+  function getAllStudentsRaw(){
+    var snapshot = getSnapshot();
+    var rows = typeof repo().listAllStudents === "function" ? (repo().listAllStudents() || []) : (repo().listStudentsByPeriod("") || []);
+    return rows.filter(function(row){return !isPeriodArchived(row && (row.periodoId || row.periodoLabel || row.ultimoPeriodoId), snapshot);});
+  }
 
   function getPeriods(){
+    var snapshot = getSnapshot();
     var map = {};var result = [];
     (repo().listPeriods() || []).forEach(function(period){
       var normalized = normalizador().normalizePeriod(period);
       var label = text(normalized.label || normalized.periodoLabel || normalized.id);
       var id = text(normalized.id || normalized.periodoId || label);
       var key = periodKey(normalized);
-      if(!isValidPeriod(label || id) || !key || map[key]){return;}
+      if(!isValidPeriod(label || id) || !key || map[key] || isPeriodArchived(id || label, snapshot) || isPeriodArchived(label, snapshot)){return;}
       map[key] = true;
       result.push(Object.assign({}, normalized, {id:id || key.replace(/\s+/g, "_"), label:prettyPeriodLabel(label || id), updatedAt:text(normalized.updatedAt)}));
     });
     return result;
   }
-
-  function samePeriod(a,b){if(!text(b)){return true;}if(window.BLPeriodosCanon && typeof window.BLPeriodosCanon.samePeriod === "function"){return window.BLPeriodosCanon.samePeriod(a,b);}return text(a) === text(b);}
 
   function getStudents(periodId, search, estadoMatricula){return filtros().filterStudents(getAllStudentsRaw(), {periodoId:periodId || "", search:search || "", estadoMatricula:estadoMatricula == null ? "ACTIVO" : estadoMatricula});}
   function getStudentsForPeriod(periodId){return filtros().filterStudents(getAllStudentsRaw(), {periodoId:periodId || "", search:"", estadoMatricula:""});}
@@ -83,6 +100,7 @@ Con qué se conecta:
     var diagnostics = repo().diagnostics();var snapshot = getSnapshot();
     diagnostics.periodsFiltered = true;
     diagnostics.periodsVisible = getPeriods().length;
+    diagnostics.periodosArchivados = activeDeleteHistory(snapshot).map(function(row){return {periodoId:row.periodoId, periodoLabel:row.periodoLabel, archivadoHasta:row.archivadoHasta, backupFileName:row.backupFileName};});
     diagnostics.statusCounts = filtros().countByStatus(getAllStudentsRaw());
     diagnostics.divisiones = getDivisionsSummary("");
     diagnostics.baseLocalServices = window.BLHealthCheck && typeof window.BLHealthCheck.serviceStatus === "function" ? window.BLHealthCheck.serviceStatus() : {campos:!!window.BLCampos, normalizador:!!window.BLNormalizador, filtros:!!window.BLFiltros, divisiones:!!window.BLDivisionesService};
@@ -97,9 +115,12 @@ Con qué se conecta:
   function getAvailableDivisionCareers(periodId){return divisiones().availableCareers(getAllStudentsRaw(), periodId || "");}
   function getDivisionsSummary(periodId){return divisiones().divisionsSummary(getAllStudentsRaw(), periodId || "");}
 
-  function writeSnapshot(snapshot){
+  function writeSnapshot(snapshot, options){
+    options = options || {};
     var clean = snapshot || {};
     clean.meta = Object.assign({}, clean.meta || {}, {updatedAt:now(), totalStudents:Array.isArray(clean.students) ? clean.students.length : 0, totalPeriods:Array.isArray(clean.periods) ? clean.periods.length : 0});
+    clean.history = Array.isArray(clean.history) ? clean.history : [];
+    clean.diagnostics = Array.isArray(clean.diagnostics) ? clean.diagnostics : [];
     if(window.RequisitosBL && typeof window.RequisitosBL.writeSnapshot === "function"){
       window.RequisitosBL.writeSnapshot(clean);
     }else if(window.ExcelLocalStorage && typeof window.ExcelLocalStorage.writeSnapshot === "function"){
@@ -111,7 +132,7 @@ Con qué se conecta:
       window.RequisitosBL.rebuildSnapshotToCollections({force:true});
     }
     if(window.RequisitosBL && typeof window.RequisitosBL.notificar === "function"){
-      window.RequisitosBL.notificar("snapshot-changed", {source:"division", updatedAt:now()});
+      window.RequisitosBL.notificar("snapshot-changed", {source:options.source || "baseLocalCore", updatedAt:now()});
     }
     return clean;
   }
@@ -132,7 +153,7 @@ Con qué se conecta:
     snapshot.students = applied.students;
     snapshot.history = Array.isArray(snapshot.history) ? snapshot.history : [];
     snapshot.history.unshift({id:"division_" + Date.now(), action:"crearDivision", periodoId:periodId, periodoLabel:(getPeriods().find(function(p){return samePeriod(p.id, periodId);}) || {}).label || periodId, fileName:"Base Local", division:divisionName, carreras:validCareers, totalRows:applied.updated || 0, createdAt:now()});
-    var saved = writeSnapshot(snapshot);
+    var saved = writeSnapshot(snapshot, {source:"division"});
     return {ok:true, periodId:periodId, division:divisionName, careers:validCareers, updated:applied.updated || 0, snapshot:saved};
   }
 
@@ -143,5 +164,5 @@ Con qué se conecta:
     return {periods:getPeriods(), students:students, allStudentsForPeriod:studentsForPeriod, statusCounts:statusCounts, totalStudentsPeriod:statusCounts.TOTAL || studentsForPeriod.length, history:getHistory(), diagnostics:getDiagnostics(), careersCount:getCareersCount(students), divisions:getDivisionsWithEmpty(periodId || ""), divisionsSummary:getDivisionsSummary(periodId || ""), snapshot:getSnapshot()};
   }
 
-  window.BaseLocalAPI = {getSnapshot:getSnapshot,getPeriods:getPeriods,getStudents:getStudents,getHistory:getHistory,getDiagnostics:getDiagnostics,buildView:buildView,getDivisions:getDivisions,getDivisionsWithEmpty:getDivisionsWithEmpty,getAvailableDivisionCareers:getAvailableDivisionCareers,getDivisionsSummary:getDivisionsSummary,applyDivisionToCareers:applyDivisionToCareers};
+  window.BaseLocalAPI = {getSnapshot:getSnapshot,writeSnapshot:writeSnapshot,getPeriods:getPeriods,getStudents:getStudents,getHistory:getHistory,getDiagnostics:getDiagnostics,buildView:buildView,getDivisions:getDivisions,getDivisionsWithEmpty:getDivisionsWithEmpty,getAvailableDivisionCareers:getAvailableDivisionCareers,getDivisionsSummary:getDivisionsSummary,applyDivisionToCareers:applyDivisionToCareers,isPeriodArchived:function(periodId){return isPeriodArchived(periodId, getSnapshot());}};
 })(window);
