@@ -6,6 +6,7 @@ Función o funciones:
 - Mostrar períodos, estudiantes, historial y diagnóstico local.
 - Aplicar filtro por estado de matrícula: ACTIVO, RETIRADO o todos.
 - Permitir sincronización manual, bajada manual desde Firebase, limpieza de base y borrado seguro de período.
+- Ejecutar sincronización diaria en segundo plano sin bloquear la vista.
 - Evitar pantalla blanca por eventos repetidos durante la sincronización.
 Con qué se conecta:
 - services/bl-campos.js
@@ -158,6 +159,7 @@ Con qué se conecta:
       state.periodId = "";state.search = "";state.statusFilter = "ACTIVO";
       if(el("bl-filter-search")){el("bl-filter-search").value = "";}if(el("bl-filter-estado")){el("bl-filter-estado").value = "ACTIVO";}
       if(window.RequisitosBL && typeof window.RequisitosBL.rebuildSnapshotToCollections === "function"){window.RequisitosBL.rebuildSnapshotToCollections({force:true});}
+      if(window.BaseLocalAPI && typeof window.BaseLocalAPI.clearSnapshotCache === "function"){window.BaseLocalAPI.clearSnapshotCache();}
       render();
       status("Datos bajados correctamente desde Firebase. Estudiantes: " + (result.totalStudents || 0) + ". Períodos: " + (result.totalPeriods || 0) + ".", "bl-status-ok");
     }catch(error){console.error("[BaseLocal Firebase Pull]", error);status("Base Local sigue activa. Error al bajar Firebase: " + (error.message || String(error)), "bl-status-warn");}
@@ -171,6 +173,7 @@ Con qué se conecta:
       setBusy(true, "Sincronizando Base Local con Firebase...", "sync");
       var result = await window.BaseLocalFirebase.sync({mode:mode || "manual"});
       if(window.RequisitosBL && typeof window.RequisitosBL.rebuildSnapshotToCollections === "function"){window.RequisitosBL.rebuildSnapshotToCollections({force:true});}
+      if(window.BaseLocalAPI && typeof window.BaseLocalAPI.clearSnapshotCache === "function"){window.BaseLocalAPI.clearSnapshotCache();}
       render();
       if(result && result.ok){status(result.message || "Sincronización finalizada correctamente.", "bl-status-ok");}
       else{status((result && result.message) || "No se pudo sincronizar. Base Local sigue funcionando.", "bl-status-warn");}
@@ -186,6 +189,7 @@ Con qué se conecta:
       var result = await window.BaseLocalLimpiar.ejecutar();
       state.periodId = "";state.search = "";state.statusFilter = "ACTIVO";
       if(el("bl-filter-search")){el("bl-filter-search").value = "";}if(el("bl-filter-estado")){el("bl-filter-estado").value = "ACTIVO";}
+      if(window.BaseLocalAPI && typeof window.BaseLocalAPI.clearSnapshotCache === "function"){window.BaseLocalAPI.clearSnapshotCache();}
       render();
       status((result && result.mensaje) || "Firebase y Base Local reparados.", result && result.errores && result.errores.length ? "bl-status-warn" : "bl-status-ok");
     }catch(error){console.error("[BaseLocal Limpiar]", error);status("Base Local sigue activa. Error al limpiar base: " + (error.message || String(error)), "bl-status-warn");}
@@ -195,10 +199,24 @@ Con qué se conecta:
   function runDailySync(){
     if(state.dailyStarted){return;}state.dailyStarted = true;
     setTimeout(async function(){
-      try{if(!window.BaseLocalFirebase || typeof window.BaseLocalFirebase.runDailyIfNeeded !== "function"){return;}setBusy(true, "Revisando sincronización diaria Base Local ↔ Firebase...", "sync");var result = await window.BaseLocalFirebase.runDailyIfNeeded();if(window.RequisitosBL && typeof window.RequisitosBL.rebuildSnapshotToCollections === "function"){window.RequisitosBL.rebuildSnapshotToCollections({force:true});}render();if(result && result.skipped){status(result.message || "La sincronización diaria ya estaba hecha.", "bl-status-ok");}else if(result && result.ok){status(result.message || "Sincronización diaria completada.", "bl-status-ok");}else if(result && result.message){status(result.message, "bl-status-warn");}}
-      catch(error){console.warn("[BaseLocal Daily Sync]", error);status("Base Local queda activa. Sincronización diaria pendiente: " + (error.message || error), "bl-status-warn");}
-      finally{setBusy(false);}
-    }, 1600);
+      try{
+        if(!window.BaseLocalFirebase || typeof window.BaseLocalFirebase.runDailyIfNeeded !== "function"){return;}
+        var result = await window.BaseLocalFirebase.runDailyIfNeeded(false, {mode:"daily_from_bl", background:true});
+        if(result && result.ok){
+          if(window.RequisitosBL && typeof window.RequisitosBL.mirrorSnapshotToCollections === "function"){window.RequisitosBL.mirrorSnapshotToCollections({silent:true});}
+          if(window.BaseLocalAPI && typeof window.BaseLocalAPI.clearSnapshotCache === "function"){window.BaseLocalAPI.clearSnapshotCache();}
+          render();
+          status(result.message || "Sincronización diaria completada en segundo plano.", "bl-status-ok");
+        }else if(result && result.skipped){
+          return;
+        }else if(result && result.message){
+          status("Base Local activa. Firebase queda pendiente: " + result.message, "bl-status-warn");
+        }
+      }catch(error){
+        console.warn("[BaseLocal Daily Sync]", error);
+        status("Base Local activa. Firebase queda pendiente: " + (error.message || error), "bl-status-warn");
+      }
+    }, 2200);
   }
 
   function bindGlobalErrors(){
