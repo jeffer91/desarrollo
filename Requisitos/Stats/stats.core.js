@@ -3,12 +3,14 @@ Nombre completo: stats.core.js
 Ruta o ubicación: /Requisitos/Stats/stats.core.js
 Función o funciones:
 - Leer estudiantes desde BL2/cache cuando esté disponible y usar ExcelLocalRepo como respaldo.
-- Calcular KPIs, matrícula, estados, carreras, divisiones, períodos, requisitos y aprobación final.
+- Calcular KPIs, matrícula, estados, carreras, divisiones, períodos, requisitos, notas y aprobación final.
 - Aplicar reglas PVC/Regular desde stats.rules.js cuando esté cargado.
+- Leer notas con BLNotasDefensa cuando esté disponible.
 - Filtrar por período, división, matrícula, carrera, estado y requisito seleccionado.
 - Mantener ACTIVO por defecto.
 Con qué se conecta:
 - stats.rules.js
+- ../BaseLocal/services/bl-notas-defensa.service.js
 - ../BaseLocal2/repositories/bl2-stats.repo.js
 - excel-local.repo.js
 - bl-periodos-canon.service.js
@@ -17,6 +19,7 @@ Con qué se conecta:
 - stats.app.js
 - stats.charts.js
 - stats.students.js
+- stats.notes.js
 ========================================================= */
 (function(window){
   "use strict";
@@ -25,6 +28,7 @@ Con qué se conecta:
   function norm(value){return text(value).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();}
   function compact(value){return norm(value).replace(/[^a-z0-9]/g,"");}
   function pct(n,d){return d?Math.round((n*10000)/d)/100:0;}
+  function round2(value){return Number.isFinite(value)?Math.round((value+Number.EPSILON)*100)/100:null;}
   function label(key,fallback){try{if(window.BLCampos&&typeof window.BLCampos.requirementLabel==="function")return window.BLCampos.requirementLabel(key,fallback);}catch(error){}return fallback||key;}
   function req(key,fallback,group){return {key:key,label:label(key,fallback),group:group||"requisito"};}
 
@@ -65,52 +69,59 @@ Con qué se conecta:
 
   function requirementLists(){
     var r=rules();
-    return {
-      base:(r.BASE_REQUIREMENTS||[]).slice(),
-      regularExtra:(r.REGULAR_EXTRA_REQUIREMENTS||[]).slice(),
-      finals:(r.FINAL_REQUIREMENTS||[]).slice(),
-      filter:(r.FILTER_REQUIREMENTS||[]).slice(),
-      normal:(r.BASE_REQUIREMENTS||[]).concat(r.REGULAR_EXTRA_REQUIREMENTS||[])
-    };
+    return {base:(r.BASE_REQUIREMENTS||[]).slice(),regularExtra:(r.REGULAR_EXTRA_REQUIREMENTS||[]).slice(),finals:(r.FINAL_REQUIREMENTS||[]).slice(),filter:(r.FILTER_REQUIREMENTS||[]).slice(),normal:(r.BASE_REQUIREMENTS||[]).concat(r.REGULAR_EXTRA_REQUIREMENTS||[])};
   }
 
   var REQS=requirementLists().filter;
 
   function estadoMatricula(value){return norm(value||"ACTIVO")==="retirado"?"RETIRADO":"ACTIVO";}
   function estadoCelda(value){return rules().cellStatus(value);}
-
   function valueOf(row,key){return rules().valueOf(row,key);}
 
-  function periodValue(row){
-    row=row||{};
-    return text(row._periodo||row._bl2Periodo||row.periodoLabel||row.periodo||row.Periodo||row.periodoId||row.idPeriodo||row.periodId||"");
+  function noteNumber(value){
+    if(window.BLNotasDefensa&&typeof window.BLNotasDefensa.normalizarNota==="function")return window.BLNotasDefensa.normalizarNota(value);
+    if(value===null||value===undefined||text(value)==="")return null;
+    var n=Number(text(value).replace(",","."));
+    return Number.isFinite(n)?n:null;
   }
 
+  function fallbackNoteValue(row,aliases){
+    row=row||{};
+    var keys=Object.keys(row);
+    for(var i=0;i<aliases.length;i++){
+      var wanted=compact(aliases[i]);
+      for(var j=0;j<keys.length;j++){
+        if(compact(keys[j])===wanted){
+          var v=row[keys[j]];
+          if(v!==null&&v!==undefined&&text(v)!=="")return v;
+        }
+      }
+    }
+    return "";
+  }
+
+  function extractNotes(row){
+    if(window.BLNotasDefensa&&typeof window.BLNotasDefensa.extraerNotas==="function")return window.BLNotasDefensa.extraerNotas(row||{});
+    var nart=noteNumber(fallbackNoteValue(row,["Notart","Nart","nart","N_ART","N-ART","NotaArt","notaArticulo"]));
+    var ndef=noteNumber(fallbackNoteValue(row,["Notdef","Ndef","ndef","N_DEF","N-DEF","NotaDef","notaDefensa"]));
+    var nfin=noteNumber(fallbackNoteValue(row,["Notafinal","NotaFinal","Nfin","nfin","N_FIN","N-FIN","notaFinal"]));
+    if(nfin===null&&nart!==null&&ndef!==null&&nart>=7)nfin=round2((nart*.7)+(ndef*.3));
+    return {nart:nart,ndef:ndef,nfin:nfin,nfinCalculado:null,nfinGuardado:nfin,completo:nfin!==null};
+  }
+
+  function periodValue(row){row=row||{};return text(row._periodo||row._bl2Periodo||row.periodoLabel||row.periodo||row.Periodo||row.periodoId||row.idPeriodo||row.periodId||"");}
   function classifyPeriodOf(row){return rules().classifyPeriod(periodValue(row));}
 
   function estadoGeneral(row){
     var approval=rules().studentApproval(row||{});
     var ok=approval.applicableRequirements.length-approval.missingRequirements.length;
     var no=approval.missingRequirements.length;
-    return {
-      id:approval.approved?"cumple":"no_cumple",
-      label:approval.approved?"Aprobado":"No cumple",
-      ok:ok,
-      no:no,
-      pend:0,
-      approved:approval.approved,
-      periodType:approval.periodType,
-      applicableRequirements:approval.applicableRequirements,
-      missingRequirements:approval.missingRequirements,
-      notApplicableRequirements:approval.notApplicableRequirements||[]
-    };
+    return {id:approval.approved?"cumple":"no_cumple",label:approval.approved?"Aprobado":"No cumple",ok:ok,no:no,pend:0,approved:approval.approved,periodType:approval.periodType,applicableRequirements:approval.applicableRequirements,missingRequirements:approval.missingRequirements,notApplicableRequirements:approval.notApplicableRequirements||[]};
   }
 
   function periods(){
     if(window.BL2EstudiantesRepo&&typeof window.BL2EstudiantesRepo.listPeriods==="function")return window.BL2EstudiantesRepo.listPeriods();
-    if(bl2()&&typeof bl2().resumen==="function"){
-      try{return (bl2().resumen({matricula:"ACTIVO"}).periodList||[]);}catch(error){}
-    }
+    if(bl2()&&typeof bl2().resumen==="function"){try{return (bl2().resumen({matricula:"ACTIVO"}).periodList||[]);}catch(error){}}
     return repo().listPeriods?repo().listPeriods():(repo().getSnapshot().periods||[]);
   }
 
@@ -119,24 +130,9 @@ Con qué se conecta:
     return repo().listAllStudents?repo().listAllStudents():(repo().getSnapshot().students||[]);
   }
 
-  function samePeriod(a,b){
-    if(!text(b))return true;
-    if(window.BLPeriodosCanon&&typeof window.BLPeriodosCanon.samePeriod==="function")return window.BLPeriodosCanon.samePeriod(a,b);
-    return text(a)===text(b)||norm(a)===norm(b);
-  }
-
-  function divisionOf(row){
-    if(row&&row._bl2Division)return row._bl2Division;
-    if(window.BLDivisionesService&&typeof window.BLDivisionesService.studentDivision==="function")return window.BLDivisionesService.studentDivision(row);
-    var list=Array.isArray(row&&row.divisiones)?row.divisiones:[];
-    return list[0]||row.division||row.Division||"Sin división";
-  }
-
-  function hasDivision(row,division){
-    if(!text(division))return true;
-    if(window.BLDivisionesService&&typeof window.BLDivisionesService.hasDivision==="function")return window.BLDivisionesService.hasDivision(row,division);
-    return norm(divisionOf(row))===norm(division);
-  }
+  function samePeriod(a,b){if(!text(b))return true;if(window.BLPeriodosCanon&&typeof window.BLPeriodosCanon.samePeriod==="function")return window.BLPeriodosCanon.samePeriod(a,b);return text(a)===text(b)||norm(a)===norm(b);}
+  function divisionOf(row){if(row&&row._bl2Division)return row._bl2Division;if(window.BLDivisionesService&&typeof window.BLDivisionesService.studentDivision==="function")return window.BLDivisionesService.studentDivision(row);var list=Array.isArray(row&&row.divisiones)?row.divisiones:[];return list[0]||row.division||row.Division||"Sin división";}
+  function hasDivision(row,division){if(!text(division))return true;if(window.BLDivisionesService&&typeof window.BLDivisionesService.hasDivision==="function")return window.BLDivisionesService.hasDivision(row,division);return norm(divisionOf(row))===norm(division);}
 
   function decorate(row){
     var r=Object.assign({},row||{});
@@ -153,27 +149,12 @@ Con qué se conecta:
     r._approval=rules().studentApproval(r);
     r._estado=estadoGeneral(r);
     r._finalApproval=rules().finalApproval(r);
+    r._notas=extractNotes(r);
     return r;
   }
 
-  function rowsFromBL2(opts){
-    opts=opts||{};
-    var query={
-      periodId:opts.periodId||"",
-      division:opts.division||"",
-      matricula:opts.matricula==null?"ACTIVO":opts.matricula,
-      career:opts.career||"",
-      status:""
-    };
-    return (bl2().rows(query)||[]).map(decorate);
-  }
-
-  function rowsFromExcel(opts){
-    opts=opts||{};
-    var matricula=opts.matricula==null?"ACTIVO":text(opts.matricula);
-    return rawStudents(matricula).map(decorate);
-  }
-
+  function rowsFromBL2(opts){opts=opts||{};var query={periodId:opts.periodId||"",division:opts.division||"",matricula:opts.matricula==null?"ACTIVO":opts.matricula,career:opts.career||"",status:""};return (bl2().rows(query)||[]).map(decorate);}
+  function rowsFromExcel(opts){opts=opts||{};var matricula=opts.matricula==null?"ACTIVO":text(opts.matricula);return rawStudents(matricula).map(decorate);}
   function baseRows(opts){return useBL2Rows()?rowsFromBL2(opts):rowsFromExcel(opts);}
 
   function requirementStatus(row,key){
@@ -181,131 +162,73 @@ Con qué se conecta:
     var req=rules().getRequirementByKey(key);
     var isFinal=rules().isFinalRequirement(req.key);
     var applies=isFinal||rules().appliesRequirement(req.key,period.raw||row._periodo||row._periodoId);
-    if(!applies){return {key:req.key,label:req.label,status:"no_aplica",labelStatus:"No aplica para PVC",cumple:false,applies:false};}
+    if(!applies)return {key:req.key,label:req.label,status:"no_aplica",labelStatus:"No aplica para PVC",cumple:false,applies:false};
     var status=estadoCelda(valueOf(row,req.key));
     return {key:req.key,label:req.label,status:status,labelStatus:status==="cumple"?"Cumple":"No cumple",cumple:status==="cumple",applies:true};
   }
 
-  function normalizeStatusFilter(status){
-    status=text(status);
-    if(status==="pendiente")return "no_cumple";
-    return status;
-  }
-
+  function normalizeStatusFilter(status){status=text(status);if(status==="pendiente")return "no_cumple";return status;}
   function filtered(opts){
     opts=opts||{};
-    var periodId=text(opts.periodId);
-    var division=text(opts.division);
-    var career=text(opts.career);
-    var status=normalizeStatusFilter(opts.status);
-    var matricula=opts.matricula==null?"ACTIVO":text(opts.matricula);
+    var periodId=text(opts.periodId),division=text(opts.division),career=text(opts.career),status=normalizeStatusFilter(opts.status),matricula=opts.matricula==null?"ACTIVO":text(opts.matricula);
     var list=baseRows({periodId:periodId,division:division,matricula:matricula,career:career});
-
-    return list.filter(function(row){
-      if(matricula&&row._estadoMatricula!==matricula)return false;
-      if(periodId&&!samePeriod(row._periodoId||row._periodo,periodId))return false;
-      if(division&&!hasDivision(row,division))return false;
-      if(career&&row._carrera!==career)return false;
-      if(status&&row._estado.id!==status)return false;
-      return true;
-    });
+    return list.filter(function(row){if(matricula&&row._estadoMatricula!==matricula)return false;if(periodId&&!samePeriod(row._periodoId||row._periodo,periodId))return false;if(division&&!hasDivision(row,division))return false;if(career&&row._carrera!==career)return false;if(status&&row._estado.id!==status)return false;return true;});
   }
 
-  function listOptions(values){
-    var map={};
-    (values||[]).forEach(function(value){value=text(value);if(value)map[value]=true;});
-    return Object.keys(map).sort(function(a,b){return a.localeCompare(b,"es");});
-  }
-
-  function careers(list){
-    var rows=list||filtered({matricula:"ACTIVO",status:""});
-    return listOptions(rows.map(function(row){return row._carrera||"SIN CARRERA";}));
-  }
-
-  function divisions(list){
-    var rows=list||filtered({matricula:"ACTIVO",status:""});
-    if(window.BLDivisionesService&&typeof window.BLDivisionesService.listDivisionsWithEmpty==="function")return window.BLDivisionesService.listDivisionsWithEmpty(rows,"");
-    return listOptions(rows.map(function(row){return row._division||"Sin división";}));
-  }
+  function listOptions(values){var map={};(values||[]).forEach(function(value){value=text(value);if(value)map[value]=true;});return Object.keys(map).sort(function(a,b){return a.localeCompare(b,"es");});}
+  function careers(list){var rows=list||filtered({matricula:"ACTIVO",status:""});return listOptions(rows.map(function(row){return row._carrera||"SIN CARRERA";}));}
+  function divisions(list){var rows=list||filtered({matricula:"ACTIVO",status:""});if(window.BLDivisionesService&&typeof window.BLDivisionesService.listDivisionsWithEmpty==="function")return window.BLDivisionesService.listDivisionsWithEmpty(rows,"");return listOptions(rows.map(function(row){return row._division||"Sin división";}));}
 
   function byKey(list,getKey){
     var out={};
-    (list||[]).forEach(function(row){
-      var key=getKey(row)||"Sin dato";
-      if(!out[key])out[key]={key:key,total:0,cumple:0,pendiente:0,no_cumple:0,avance:0};
-      out[key].total++;
-      out[key][row._estado.id]++;
-    });
+    (list||[]).forEach(function(row){var key=getKey(row)||"Sin dato";if(!out[key])out[key]={key:key,total:0,cumple:0,pendiente:0,no_cumple:0,avance:0};out[key].total++;out[key][row._estado.id]++;});
     Object.keys(out).forEach(function(key){out[key].avance=pct(out[key].cumple,out[key].total);});
     return Object.keys(out).map(function(key){return out[key];}).sort(function(a,b){return b.total-a.total||a.key.localeCompare(b.key,"es");});
   }
 
   function requirementSummary(list,requirements){
     list=list||[];
-    return (requirements||[]).map(function(reqItem){
-      var item={key:reqItem.key,label:reqItem.label,group:reqItem.group||"requisito",total:list.length,aplica:0,no_aplica:0,cumple:0,pendiente:0,no_cumple:0,avance:0};
-      list.forEach(function(row){
-        var status=requirementStatus(row,reqItem.key);
-        if(!status.applies){item.no_aplica++;return;}
-        item.aplica++;
-        if(status.cumple)item.cumple++;else item.no_cumple++;
-      });
-      item.avance=pct(item.cumple,item.aplica);
-      return item;
-    });
+    return (requirements||[]).map(function(reqItem){var item={key:reqItem.key,label:reqItem.label,group:reqItem.group||"requisito",total:list.length,aplica:0,no_aplica:0,cumple:0,pendiente:0,no_cumple:0,avance:0};list.forEach(function(row){var status=requirementStatus(row,reqItem.key);if(!status.applies){item.no_aplica++;return;}item.aplica++;if(status.cumple)item.cumple++;else item.no_cumple++;});item.avance=pct(item.cumple,item.aplica);return item;});
   }
 
   function requisitos(list){return requirementSummary(list,requirementLists().normal);}
   function requisitosFinales(list){return requirementSummary(list,requirementLists().finals);}
-  function requisitosFiltro(){
-    var lists=requirementLists();
-    return {
-      requisitos:lists.normal.map(function(item){return {key:item.key,label:item.label,group:"requisito"};}),
-      finales:lists.finals.map(function(item){return {key:item.key,label:item.label,group:"final"};}),
-      all:lists.filter.map(function(item){return {key:item.key,label:item.label,group:item.group||"requisito"};})
-    };
-  }
+  function requisitosFiltro(){var lists=requirementLists();return {requisitos:lists.normal.map(function(item){return {key:item.key,label:item.label,group:"requisito"};}),finales:lists.finals.map(function(item){return {key:item.key,label:item.label,group:"final"};}),all:lists.filter.map(function(item){return {key:item.key,label:item.label,group:item.group||"requisito"};})};}
 
   function selectedRequirementSummary(list,key){
-    key=text(key);
-    if(!key)return null;
+    key=text(key);if(!key)return null;
     var reqItem=rules().getRequirementByKey(key);
     var stats=requirementSummary(list,[reqItem])[0];
-    var rows=(list||[]).map(function(row){
-      var status=requirementStatus(row,reqItem.key);
-      return Object.assign({},row,{_selectedRequirementStatus:status});
-    });
+    var rows=(list||[]).map(function(row){var status=requirementStatus(row,reqItem.key);return Object.assign({},row,{_selectedRequirementStatus:status});});
     return {key:reqItem.key,label:reqItem.label,group:reqItem.group||"requisito",stats:stats,rows:rows};
   }
 
   function periodApproval(list,opts){
-    opts=opts||{};
-    if(!text(opts.periodId))return null;
+    opts=opts||{};if(!text(opts.periodId))return null;
     var reference=(list&&list[0])?periodValue(list[0]):text(opts.periodLabel||opts.periodId);
     var period=rules().classifyPeriod(reference||opts.periodId);
-    var approved=0;
-    (list||[]).forEach(function(row){if(row._estado.id==="cumple")approved++;});
-    return {
-      visible:true,
-      type:period.id,
-      label:period.label,
-      pattern:period.pattern,
-      total:(list||[]).length,
-      approved:approved,
-      rejected:(list||[]).length-approved,
-      avance:pct(approved,(list||[]).length)
-    };
+    var approved=0;(list||[]).forEach(function(row){if(row._estado.id==="cumple")approved++;});
+    return {visible:true,type:period.id,label:period.label,pattern:period.pattern,total:(list||[]).length,approved:approved,rejected:(list||[]).length-approved,avance:pct(approved,(list||[]).length)};
   }
 
-  function requirementTotals(list){
-    var totalReq=0;
-    var okReq=0;
-    (list||[]).forEach(function(row){
-      var approval=row._approval||rules().studentApproval(row);
-      totalReq+=approval.applicableRequirements.length;
-      okReq+=approval.applicableRequirements.length-approval.missingRequirements.length;
+  function requirementTotals(list){var totalReq=0,okReq=0;(list||[]).forEach(function(row){var approval=row._approval||rules().studentApproval(row);totalReq+=approval.applicableRequirements.length;okReq+=approval.applicableRequirements.length-approval.missingRequirements.length;});return {total:totalReq,ok:okReq,avance:pct(okReq,totalReq)};}
+
+  function notasResumen(list){
+    list=list||[];
+    var finales=[],nart=0,ndef=0;
+    list.forEach(function(row){
+      var notes=row._notas||extractNotes(row);
+      if(notes.nart!==null&&notes.nart!==undefined)nart++;
+      if(notes.ndef!==null&&notes.ndef!==undefined)ndef++;
+      if(notes.nfin!==null&&notes.nfin!==undefined)finales.push(Number(notes.nfin));
     });
-    return {total:totalReq,ok:okReq,avance:pct(okReq,totalReq)};
+    var total=list.length;
+    var conNota=finales.length;
+    var sum=finales.reduce(function(a,b){return a+b;},0);
+    var promedio=conNota?round2(sum/conNota):null;
+    var minima=conNota?round2(Math.min.apply(Math,finales)):null;
+    var maxima=conNota?round2(Math.max.apply(Math,finales)):null;
+    return {total:total,conNota:conNota,sinNota:total-conNota,promedio:promedio,minima:minima,maxima:maxima,conNart:nart,conNdef:ndef};
   }
 
   function resumen(opts){
@@ -314,57 +237,16 @@ Con qué se conecta:
     var total=list.length;
     var estados={cumple:0,pendiente:0,no_cumple:0};
     var matriculas={ACTIVO:0,RETIRADO:0};
-    list.forEach(function(row){
-      estados[row._estado.id]++;
-      matriculas[row._estadoMatricula]=(matriculas[row._estadoMatricula]||0)+1;
-    });
-
+    list.forEach(function(row){estados[row._estado.id]++;matriculas[row._estadoMatricula]=(matriculas[row._estadoMatricula]||0)+1;});
     var reqTotals=requirementTotals(list);
+    var notes=notasResumen(list);
     var baseForDivision=filtered({periodId:opts.periodId||"",matricula:opts.matricula||"",division:"",career:"",status:""});
     var baseForCareer=filtered({periodId:opts.periodId||"",matricula:opts.matricula||"",division:opts.division||"",career:"",status:""});
     var selected=selectedRequirementSummary(list,opts.requirementKey||opts.requisito||"");
-
-    return {
-      total:total,
-      estados:estados,
-      matriculas:matriculas,
-      avanceGeneral:reqTotals.avance,
-      requisitos:requisitos(list),
-      requisitosFinales:requisitosFinales(list),
-      requisitosFiltro:requisitosFiltro(),
-      selectedRequirement:selected,
-      periodApproval:periodApproval(list,opts),
-      carreras:byKey(list,function(row){return row._carrera;}),
-      periodos:byKey(list,function(row){return row._periodo;}),
-      divisiones:byKey(list,function(row){return row._division;}),
-      periodList:periods(),
-      divisionList:divisions(baseForDivision),
-      careerList:careers(baseForCareer),
-      rows:list,
-      estudiantes:list,
-      diagnostics:{generatedAt:new Date().toISOString(),source:source(),totalStudents:total,totalRequirements:reqTotals.total,fulfilledRequirements:reqTotals.ok,filters:opts||{},divisionList:divisions(baseForDivision)}
-    };
+    return {total:total,estados:estados,matriculas:matriculas,avanceGeneral:reqTotals.avance,notasResumen:notes,requisitos:requisitos(list),requisitosFinales:requisitosFinales(list),requisitosFiltro:requisitosFiltro(),selectedRequirement:selected,periodApproval:periodApproval(list,opts),carreras:byKey(list,function(row){return row._carrera;}),periodos:byKey(list,function(row){return row._periodo;}),divisiones:byKey(list,function(row){return row._division;}),periodList:periods(),divisionList:divisions(baseForDivision),careerList:careers(baseForCareer),rows:list,estudiantes:list,diagnostics:{generatedAt:new Date().toISOString(),source:source(),totalStudents:total,totalRequirements:reqTotals.total,fulfilledRequirements:reqTotals.ok,notes:notes,filters:opts||{},divisionList:divisions(baseForDivision)}};
   }
 
   function source(){return useBL2Rows()?"BL2/cache":"ExcelLocalRepo";}
 
-  window.StatsCore={
-    REQS:REQS,
-    BASE_REQUIREMENTS:requirementLists().base,
-    REGULAR_EXTRA_REQUIREMENTS:requirementLists().regularExtra,
-    FINAL_REQUIREMENTS:requirementLists().finals,
-    FILTER_REQUIREMENTS:requirementLists().filter,
-    periods:periods,
-    careers:careers,
-    divisions:divisions,
-    filtered:filtered,
-    resumen:resumen,
-    estadoCelda:estadoCelda,
-    estadoGeneral:estadoGeneral,
-    estadoMatricula:estadoMatricula,
-    divisionOf:divisionOf,
-    valueOf:valueOf,
-    requirementStatus:requirementStatus,
-    source:source
-  };
+  window.StatsCore={REQS:REQS,BASE_REQUIREMENTS:requirementLists().base,REGULAR_EXTRA_REQUIREMENTS:requirementLists().regularExtra,FINAL_REQUIREMENTS:requirementLists().finals,FILTER_REQUIREMENTS:requirementLists().filter,periods:periods,careers:careers,divisions:divisions,filtered:filtered,resumen:resumen,estadoCelda:estadoCelda,estadoGeneral:estadoGeneral,estadoMatricula:estadoMatricula,divisionOf:divisionOf,valueOf:valueOf,requirementStatus:requirementStatus,extractNotes:extractNotes,notasResumen:notasResumen,source:source};
 })(window);
