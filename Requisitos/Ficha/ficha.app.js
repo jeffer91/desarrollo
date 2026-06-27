@@ -9,13 +9,14 @@ Función o funciones:
 - Mantener compatibilidad aunque algunos botones visuales se oculten o retiren.
 - Pintar aprobaciones especiales y abrir Telegram con mensaje copiado.
 - Renderizar notas finales Nart, Ndef y Nfin.
+- Evitar renderizar en cada tecla y evitar refiltrar todo para mostrar el seleccionado.
 Con qué se conecta:
 - ficha.core.js
 - ficha.export.js
 ========================================================= */
 (function(window,document){
   "use strict";
-  var state={periodId:"",division:"",matricula:"ACTIVO",search:"",rows:[],selectedId:""};
+  var state={periodId:"",division:"",matricula:"ACTIVO",search:"",rows:[],selectedId:"",renderTimer:null,divisionKey:"",divisionOptions:[]};
   function el(id){return document.getElementById(id);}
   function text(v){return String(v==null?"":v).trim();}
   function esc(v){return text(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;").replace(/'/g,"&#039;");}
@@ -23,15 +24,33 @@ Con qué se conecta:
   function option(value,label,selected){return '<option value="'+esc(value)+'" '+(selected?'selected':'')+'>'+esc(label)+'</option>';}
   function bindIf(id,eventName,handler){var node=el(id);if(node){node.addEventListener(eventName,handler);}}
   function copyText(value,successMessage){return window.FichaExport.copyText(value||"").then(function(){status(successMessage||"Copiado.","ok");});}
+  function selectedFromRows(){var wanted=text(state.selectedId);return state.rows.find(function(row){return text(row._id)===wanted;})||null;}
+  function scheduleRender(reason){if(state.renderTimer){clearTimeout(state.renderTimer);}state.renderTimer=setTimeout(function(){state.renderTimer=null;render(reason||"programado");},260);}
 
-  function fillFilters(){
-    var sel=el("ficha-periodo"), div=el("ficha-division"), mat=el("ficha-matricula");
+  function fillPeriodAndMatricula(){
+    var sel=el("ficha-periodo"), mat=el("ficha-matricula");
     if(sel){var list=window.FichaCore.periods();sel.innerHTML=option("","Todos",!state.periodId)+list.map(function(p){return option(p.id,p.label||p.id,state.periodId===p.id);}).join("");}
     if(mat)mat.value=state.matricula;
-    var baseRows=window.FichaCore.filter({periodId:state.periodId,division:"",matricula:state.matricula,search:""});
-    var divisions=window.FichaCore.divisions(baseRows);
-    if(div){div.innerHTML=option("","Todas",!state.division)+divisions.map(function(x){return option(x,x,state.division===x);}).join("");if(state.division&&!divisions.some(function(x){return x===state.division;})){state.division="";div.value="";}else{div.value=state.division;}}
   }
+
+  function getDivisionOptions(){
+    var key=[state.periodId,state.matricula].join("|");
+    if(state.divisionKey===key&&Array.isArray(state.divisionOptions)){return state.divisionOptions;}
+    var baseRows=window.FichaCore.filter({periodId:state.periodId,division:"",matricula:state.matricula,search:""});
+    state.divisionOptions=window.FichaCore.divisions(baseRows);
+    state.divisionKey=key;
+    return state.divisionOptions;
+  }
+
+  function fillDivisionFilter(){
+    var div=el("ficha-division");if(!div)return;
+    var divisions=getDivisionOptions();
+    div.innerHTML=option("","Todas",!state.division)+divisions.map(function(x){return option(x,x,state.division===x);}).join("");
+    if(state.division&&!divisions.some(function(x){return x===state.division;})){state.division="";div.value="";}else{div.value=state.division;}
+  }
+
+  function fillFilters(){fillPeriodAndMatricula();fillDivisionFilter();}
+  function invalidateDivisionOptions(){state.divisionKey="";state.divisionOptions=[];}
 
   function estadoClass(e){return e&&e.id==="cumple"?"ficha-pill-ok":e&&e.id==="no_cumple"?"ficha-pill-bad":"ficha-pill-warn";}
   function renderList(){
@@ -70,21 +89,30 @@ Con qué se conecta:
     renderNotas(row);
   }
 
-  function selected(){return window.FichaCore.getById(state.selectedId,{periodId:state.periodId,division:state.division,matricula:state.matricula});}
-  function select(id){state.selectedId=id||"";renderList();renderDetail(selected());}
-  function render(){try{fillFilters();state.rows=window.FichaCore.filter({periodId:state.periodId,division:state.division,matricula:state.matricula,search:state.search});if(!state.rows.some(function(x){return x._id===state.selectedId;})){state.selectedId=state.rows[0]?state.rows[0]._id:"";}renderList();renderDetail(selected());status("Ficha cargada correctamente. Matrícula: "+(state.matricula||"Todos")+". División: "+(state.division||"Todas")+".","ok");}catch(e){console.error("[Ficha]",e);status(e.message||String(e),"warn");}}
-  function bind(){
-    bindIf("ficha-periodo","change",function(e){state.periodId=e.target.value;state.division="";state.selectedId="";render();});
-    bindIf("ficha-division","change",function(e){state.division=e.target.value;state.selectedId="";render();});
-    bindIf("ficha-matricula","change",function(e){state.matricula=e.target.value;state.division="";state.selectedId="";render();});
-    bindIf("ficha-search","input",function(e){state.search=e.target.value;render();});
-    bindIf("ficha-btn-refresh","click",render);
-    bindIf("ficha-btn-copy","click",function(){var row=selected();if(!row)return;copyText(window.FichaCore.toText(row),"Ficha copiada.");});
-    bindIf("ficha-copy-detail","click",function(){var row=selected();if(!row)return;copyText(window.FichaCore.toText(row),"Ficha copiada.");});
-    bindIf("ficha-telegram","click",function(e){var row=selected();if(!row)return;var url=window.FichaCore.telegramUrl?window.FichaCore.telegramUrl(row):"";if(!url){e.preventDefault();status("Telegram no registrado.","warn");return;}e.preventDefault();copyText(window.FichaCore.studentMessage(row),"Mensaje copiado para Telegram.").then(function(){window.open(url,"_blank","noopener");});});
-    bindIf("ficha-copy-cedula","click",function(){var row=selected();if(row)copyText(row._cedula,"Cédula copiada.");});
-    bindIf("ficha-copy-correo","click",function(){var row=selected();if(row)copyText(row._correo,"Correo copiado.");});
+  function select(id){state.selectedId=id||"";renderList();renderDetail(selectedFromRows());}
+  function render(reason){
+    try{
+      fillFilters();
+      state.rows=window.FichaCore.filter({periodId:state.periodId,division:state.division,matricula:state.matricula,search:state.search});
+      if(!state.rows.some(function(x){return x._id===state.selectedId;})){state.selectedId=state.rows[0]?state.rows[0]._id:"";}
+      renderList();
+      renderDetail(selectedFromRows());
+      status("Ficha cargada. Matrícula: "+(state.matricula||"Todos")+". División: "+(state.division||"Todas")+". Resultados: "+state.rows.length+".","ok");
+    }catch(e){console.error("[Ficha]",e);status(e.message||String(e),"warn");}
   }
-  function boot(){if(window.ExcelLocalBridge)window.ExcelLocalBridge.ensureReady();bind();render();}
+  function bind(){
+    bindIf("ficha-periodo","change",function(e){state.periodId=e.target.value;state.division="";state.selectedId="";invalidateDivisionOptions();render("periodo");});
+    bindIf("ficha-division","change",function(e){state.division=e.target.value;state.selectedId="";render("division");});
+    bindIf("ficha-matricula","change",function(e){state.matricula=e.target.value;state.division="";state.selectedId="";invalidateDivisionOptions();if(window.FichaCore&&typeof window.FichaCore.invalidate==="function")window.FichaCore.invalidate();render("matricula");});
+    bindIf("ficha-search","input",function(e){state.search=e.target.value;scheduleRender("search");});
+    bindIf("ficha-btn-refresh","click",function(){invalidateDivisionOptions();if(window.FichaCore&&typeof window.FichaCore.invalidate==="function")window.FichaCore.invalidate();render("refresh");});
+    bindIf("ficha-btn-copy","click",function(){var row=selectedFromRows();if(!row)return;copyText(window.FichaCore.toText(row),"Ficha copiada.");});
+    bindIf("ficha-copy-detail","click",function(){var row=selectedFromRows();if(!row)return;copyText(window.FichaCore.toText(row),"Ficha copiada.");});
+    bindIf("ficha-telegram","click",function(e){var row=selectedFromRows();if(!row)return;var url=window.FichaCore.telegramUrl?window.FichaCore.telegramUrl(row):"";if(!url){e.preventDefault();status("Telegram no registrado.","warn");return;}e.preventDefault();copyText(window.FichaCore.studentMessage(row),"Mensaje copiado para Telegram.").then(function(){window.open(url,"_blank","noopener");});});
+    bindIf("ficha-copy-cedula","click",function(){var row=selectedFromRows();if(row)copyText(row._cedula,"Cédula copiada.");});
+    bindIf("ficha-copy-correo","click",function(){var row=selectedFromRows();if(row)copyText(row._correo,"Correo copiado.");});
+  }
+  function boot(){if(window.ExcelLocalBridge)window.ExcelLocalBridge.ensureReady();bind();render("boot");}
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",boot);else boot();
+  window.FichaApp={render:render,scheduleRender:scheduleRender,getState:function(){return Object.assign({},state);}};
 })(window,document);
