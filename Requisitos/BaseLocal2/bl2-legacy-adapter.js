@@ -3,7 +3,7 @@ Nombre completo: bl2-legacy-adapter.js
 Ruta o ubicación: /Requisitos/BaseLocal2/bl2-legacy-adapter.js
 Función o funciones:
 - Adaptar la Base Local actual V1 a la API BL2 sin romper pantallas existentes.
-- Leer snapshot desde MAQ_BASELOCAL_SESSION, ExcelLocalStorage o ExcelLocalRepo.
+- Leer snapshot desde MAQ_BASELOCAL_SESSION, ExcelLocalStorage o ExcelLocalRepo solo cuando una consulta lo necesita.
 - Entregar consultas simples de períodos, estudiantes, búsqueda y resumen.
 - Servir como puente temporal hasta que SQLite/IndexedDB quede implementado.
 Con qué se conecta:
@@ -118,9 +118,7 @@ Con qué se conecta:
     return copy;
   }
 
-  function listPeriods(){
-    return readSnapshot({clone:false}).periods.slice();
-  }
+  function listPeriods(){return readSnapshot({clone:false}).periods.slice();}
 
   function listStudents(options){
     options = options || {};
@@ -143,11 +141,7 @@ Con qué se conecta:
     return {rows:rows, total:total, offset:offset, limit:limit || total};
   }
 
-  function searchStudents(query, options){
-    options = Object.assign({}, options || {}, {search:query || (options && options.search) || ""});
-    return listStudents(options);
-  }
-
+  function searchStudents(query, options){options = Object.assign({}, options || {}, {search:query || (options && options.search) || ""});return listStudents(options);}
   function getStudentById(id, options){
     var wanted = text(id);
     if(!wanted){return null;}
@@ -170,9 +164,13 @@ Con qué se conecta:
     return out;
   }
 
-  function status(){
-    var snap = readSnapshot({clone:false});
-    return {ok:true, mode:"legacy_bridge", source:snap.meta && snap.meta.source || "legacy", periods:snap.periods.length, students:snap.students.length, history:snap.history.length, signature:cache.signature, updatedAt:now()};
+  function status(options){
+    options = options || {};
+    if(options.deep === true){
+      var snap = readSnapshot({clone:false});
+      return {ok:true, mode:"legacy_bridge", source:snap.meta && snap.meta.source || "legacy", lazy:false, periods:snap.periods.length, students:snap.students.length, history:snap.history.length, signature:cache.signature, updatedAt:now()};
+    }
+    return {ok:true, mode:"legacy_bridge", source:"legacy", lazy:true, cacheReady:!!cache.snapshot, signature:cache.signature, updatedAt:now()};
   }
 
   window.BL2LegacyAdapter = {version:"2.0.0-alpha.1",readSnapshot:readSnapshot,invalidate:invalidate,listPeriods:listPeriods,listStudents:listStudents,searchStudents:searchStudents,getStudentById:getStudentById,resumen:resumen,status:status,helpers:{cedulaOf:cedulaOf,nombreOf:nombreOf,carreraOf:carreraOf,periodoOf:periodoOf,divisionOf:divisionOf,estadoOf:estadoOf}};
