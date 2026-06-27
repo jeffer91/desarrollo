@@ -59,8 +59,13 @@ Con qué se conecta:
     return text(periodId || periodLabel || "SIN_PERIODO");
   }
 
+  function emptyPeriodType(){
+    return {id:"", label:"Sin período", isRegular:false, isPVC:false, pattern:"SIN_PERIODO", raw:""};
+  }
+
   function classifyPeriod(value){
     var raw = text(value);
+    if(!raw){return emptyPeriodType();}
     if(window.StatsRules && typeof window.StatsRules.classifyPeriod === "function"){
       return window.StatsRules.classifyPeriod(raw);
     }
