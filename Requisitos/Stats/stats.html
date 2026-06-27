@@ -6,15 +6,17 @@ Función o funciones:
 - Mostrar estadísticas del módulo Requisitos usando Base Local / BL2.
 - Resumir estudiantes por matrícula, período, división, carrera, estado, requisito y notas.
 - Preparar navegación compacta por resumen, gráficos, notas, requisitos, carreras, períodos, aprobación final y estudiantes.
-- Conectar reglas PVC/Regular, notas de defensa y aprobación final.
+- Conectar reglas PVC/Regular, notas de defensa, analítica avanzada de notas y aprobación final.
 Con qué se conecta:
 - stats.css
+- stats.notes.analytics.css
 - stats.rules.js
 - stats.core.js
 - stats.charts.js
 - stats.tables.js
 - stats.students.js
 - stats.notes.analysis.js
+- stats.notes.analytics.js
 - stats.notes.js
 - stats.app.js
 - ../BaseLocal/services/bl-notas-defensa.service.js
@@ -27,6 +29,7 @@ Con qué se conecta:
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Stats Requisitos</title>
   <link rel="stylesheet" href="stats.css" />
+  <link rel="stylesheet" href="stats.notes.analytics.css" />
 </head>
 <body>
   <main class="stats-app stats-shell">
@@ -85,7 +88,7 @@ Con qué se conecta:
       </section>
 
       <section id="stats-notas-section" class="stats-section stats-card">
-        <div class="stats-card-head"><h2>Notas</h2><span>Artículo, defensa y nota final</span></div>
+        <div class="stats-card-head"><h2>Notas</h2><span>Artículo, defensa, nota final, tendencias y riesgo por carrera</span></div>
         <div id="stats-notes" class="stats-notes-wrap"><div class="empty">Cargando resumen de notas...</div></div>
       </section>
 
@@ -153,6 +156,7 @@ Con qué se conecta:
   <script src="stats.tables.js"></script>
   <script src="stats.students.js"></script>
   <script src="stats.notes.analysis.js"></script>
+  <script src="stats.notes.analytics.js"></script>
   <script src="stats.notes.js"></script>
   <script src="stats.app.js"></script>
 </body>
