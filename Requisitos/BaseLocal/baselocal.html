@@ -8,6 +8,7 @@ Función o funciones:
 - Crear, editar y borrar divisiones por período desde un modal de Base Local.
 - Filtrar estudiantes por división.
 - Organizar filtros y acciones en dos filas para evitar desbordes.
+- Rediseñar modal Divisiones en pasos: administrar división y mover carreras.
 - Borrar períodos con respaldo Excel obligatorio, alerta de vigencia y doble confirmación.
 - Conectar servicios base para períodos canónicos, divisiones, limpieza y borrado seguro.
 - Cargar BL2 para mostrar el panel como vista liviana.
@@ -136,40 +137,63 @@ Con qué se conecta:
   </div>
 
   <section id="bl-division-modal" class="bl-modal" aria-hidden="true">
-    <div class="bl-modal-card" role="dialog" aria-modal="true" aria-labelledby="bl-division-title">
-      <div class="bl-modal-head">
+    <div class="bl-modal-card bl-division-card" role="dialog" aria-modal="true" aria-labelledby="bl-division-title">
+      <div class="bl-modal-head bl-division-head">
         <div>
+          <p class="bl-step-kicker">Gestor de Base Local</p>
           <h2 id="bl-division-title">Divisiones</h2>
-          <p>Crea, edita o borra divisiones. Arrastra carreras entre columnas para agregar o quitar.</p>
+          <p>Crea, edita o borra divisiones. Luego mueve carreras entre columnas y guarda.</p>
         </div>
-        <button id="bl-division-close" class="bl-modal-close" type="button">×</button>
+        <button id="bl-division-close" class="bl-modal-close" type="button" aria-label="Cerrar">×</button>
       </div>
-      <div class="bl-modal-body">
-        <label>Período seleccionado<span id="bl-division-period-label" class="bl-readonly-pill">—</span></label>
 
-        <div class="bl-division-manager">
-          <label>División a editar
-            <select id="bl-division-existing">
-              <option value="">Nueva división</option>
-            </select>
-          </label>
-          <label>Nombre de la división<input id="bl-division-name" type="text" placeholder="Ejemplo: Universitarias 1" /></label>
-        </div>
+      <div class="bl-modal-body bl-division-body">
+        <section class="bl-division-step bl-step-one">
+          <div class="bl-step-title">
+            <span>1</span>
+            <div>
+              <strong>Administrar división</strong>
+              <small>Selecciona una división, cambia el nombre o crea una nueva.</small>
+            </div>
+          </div>
 
-        <div class="bl-division-inline-actions">
-          <button id="bl-division-new" type="button">Nueva división</button>
-          <button id="bl-division-delete" class="bl-btn-danger" type="button" disabled>Borrar división</button>
-        </div>
+          <div class="bl-division-period-row">
+            <span>Período seleccionado</span>
+            <strong id="bl-division-period-label" class="bl-readonly-pill">—</strong>
+          </div>
 
-        <div class="bl-modal-section">
-          <strong>Carreras por división</strong>
-          <p id="bl-division-help" class="bl-help">Arrastra una carrera para agregarla o quitarla. También puedes hacer clic sobre una carrera para moverla.</p>
+          <div class="bl-division-control-grid">
+            <label>División
+              <select id="bl-division-existing">
+                <option value="">Nueva división</option>
+              </select>
+            </label>
+            <label>Nombre
+              <input id="bl-division-name" type="text" placeholder="Ejemplo: Superior" />
+            </label>
+            <div class="bl-division-icon-actions">
+              <button id="bl-division-new" type="button" title="Crear nueva división"><span>＋</span>Nueva</button>
+              <button id="bl-division-edit" type="button" title="Editar nombre"><span>✎</span>Editar</button>
+              <button id="bl-division-delete" class="bl-btn-danger" type="button" disabled title="Borrar división"><span>🗑</span>Borrar</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="bl-division-step bl-step-two">
+          <div class="bl-step-title">
+            <span>2</span>
+            <div>
+              <strong>Agregar o quitar carreras</strong>
+              <small id="bl-division-help">Arrastra una carrera entre columnas. También puedes hacer clic sobre una carrera para moverla.</small>
+            </div>
+          </div>
           <div id="bl-division-careers" class="bl-division-drop-grid"></div>
-        </div>
+        </section>
       </div>
-      <div class="bl-modal-actions">
+
+      <div class="bl-modal-actions bl-division-footer">
         <button id="bl-division-cancel" type="button">Cancelar</button>
-        <button id="bl-division-save" class="bl-btn-primary" type="button">Guardar cambios</button>
+        <button id="bl-division-save" class="bl-btn-primary" type="button">💾 Guardar cambios</button>
       </div>
     </div>
   </section>
