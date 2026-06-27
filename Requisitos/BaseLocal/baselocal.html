@@ -7,6 +7,7 @@ Función o funciones:
 - Ver períodos, estudiantes activos, retirados, historial y diagnóstico.
 - Crear, editar y borrar divisiones por período desde un modal de Base Local.
 - Filtrar estudiantes por división.
+- Organizar filtros y acciones en dos filas para evitar desbordes.
 - Borrar períodos con respaldo Excel obligatorio, alerta de vigencia y doble confirmación.
 - Conectar servicios base para períodos canónicos, divisiones, limpieza y borrado seguro.
 - Cargar BL2 para mostrar el panel como vista liviana.
@@ -69,42 +70,52 @@ Con qué se conecta:
     </section>
 
     <section class="bl-tools">
-      <label>
-        Período
-        <select id="bl-filter-period">
-          <option value="">Todos los períodos</option>
-        </select>
-      </label>
+      <div class="bl-tools-filters" aria-label="Filtros de Base Local">
+        <label>
+          Período
+          <select id="bl-filter-period">
+            <option value="">Todos los períodos</option>
+          </select>
+        </label>
 
-      <label>
-        Estado
-        <select id="bl-filter-estado">
-          <option value="ACTIVO">Activos</option>
-          <option value="RETIRADO">Retirados</option>
-          <option value="">Todos</option>
-        </select>
-      </label>
+        <label>
+          Estado
+          <select id="bl-filter-estado">
+            <option value="ACTIVO">Activos</option>
+            <option value="RETIRADO">Retirados</option>
+            <option value="">Todos</option>
+          </select>
+        </label>
 
-      <label>
-        División
-        <select id="bl-filter-division">
-          <option value="">Todas</option>
-        </select>
-      </label>
+        <label>
+          División
+          <select id="bl-filter-division">
+            <option value="">Todas</option>
+          </select>
+        </label>
 
-      <label>
-        Buscar
-        <input id="bl-filter-search" type="search" placeholder="Cédula, nombre, carrera, sede..." />
-      </label>
+        <label class="bl-filter-search-wrap">
+          Buscar
+          <input id="bl-filter-search" type="search" placeholder="Cédula, nombre, carrera, sede..." />
+        </label>
+      </div>
 
-      <button id="bl-btn-refresh" type="button">Actualizar vista</button>
-      <button id="bl-btn-sync-now" type="button">Sincronizar ahora</button>
-      <button id="bl-btn-pull-firebase" type="button">Solo bajar Firebase</button>
-      <button id="bl-btn-create-division" class="bl-btn-primary" type="button">Divisiones</button>
-      <button id="bl-btn-clean-base" class="bl-btn-danger" type="button">Limpiar base</button>
-      <button id="bl-btn-delete-period" class="bl-btn-danger" type="button">Borrar período</button>
-      <button id="bl-btn-export" type="button">Exportar JSON</button>
-      <button id="bl-btn-copy-refs" type="button">Copiar referencias</button>
+      <div class="bl-tools-actions" aria-label="Acciones de Base Local">
+        <div class="bl-actions-primary">
+          <button id="bl-btn-refresh" type="button">Actualizar vista</button>
+          <button id="bl-btn-sync-now" type="button">Sincronizar ahora</button>
+          <button id="bl-btn-pull-firebase" type="button">Solo bajar Firebase</button>
+          <button id="bl-btn-create-division" class="bl-btn-primary" type="button">Divisiones</button>
+        </div>
+        <div class="bl-actions-danger">
+          <button id="bl-btn-clean-base" class="bl-btn-danger" type="button">Limpiar base</button>
+          <button id="bl-btn-delete-period" class="bl-btn-danger" type="button">Borrar período</button>
+        </div>
+        <div class="bl-actions-secondary">
+          <button id="bl-btn-export" type="button">Exportar JSON</button>
+          <button id="bl-btn-copy-refs" type="button">Copiar referencias</button>
+        </div>
+      </div>
     </section>
 
     <nav class="bl-tabs" aria-label="Secciones Base Local">
