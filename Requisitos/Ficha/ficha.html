@@ -8,6 +8,7 @@ Función o funciones:
 - Filtrar por período, división y matrícula.
 - Mostrar activos por defecto y permitir ver retirados.
 - Cargar capa compacta visual sin tocar la lógica de datos.
+- Mantener copia de ficha con botón compacto y retirar exportación JSON del toolbar.
 Con qué se conecta:
 - ficha.css
 - ficha.compact.css
@@ -36,8 +37,7 @@ Con qué se conecta:
       <label class="ficha-filter-matricula">Matrícula<select id="ficha-matricula"><option value="ACTIVO">Activos</option><option value="RETIRADO">Retirados</option><option value="">Todos</option></select></label>
       <label class="ficha-filter-search">Buscar estudiante<input id="ficha-search" type="search" placeholder="Cédula, nombre, carrera, división, correo o celular..." /></label>
       <button id="ficha-btn-refresh" type="button">Actualizar</button>
-      <button id="ficha-btn-copy" type="button">Copiar ficha</button>
-      <button id="ficha-btn-json" type="button">Exportar JSON</button>
+      <button id="ficha-btn-copy" class="ficha-icon-btn" type="button" title="Copiar ficha" aria-label="Copiar ficha">📋</button>
     </section>
     <section class="ficha-layout">
       <aside class="ficha-list-card"><div class="ficha-list-head"><strong>Estudiantes</strong><span id="ficha-count">0</span></div><div id="ficha-list" class="ficha-list"></div></aside>
