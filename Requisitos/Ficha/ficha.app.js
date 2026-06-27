@@ -7,6 +7,7 @@ Función o funciones:
 - Filtrar por período, división y matrícula.
 - Mostrar ACTIVO por defecto.
 - Mantener compatibilidad aunque algunos botones visuales se oculten o retiren.
+- Pintar aprobaciones especiales y abrir Telegram con mensaje copiado.
 Con qué se conecta:
 - ficha.core.js
 - ficha.export.js
@@ -40,14 +41,16 @@ Con qué se conecta:
     box.innerHTML=state.rows.slice(0,400).map(function(s){var active=s._id===state.selectedId?' is-active':'';return '<button type="button" class="ficha-item'+active+'" data-id="'+esc(s._id)+'"><strong>'+esc(s._nombres||'Sin nombre')+'</strong><span>'+esc(s._cedula)+' · '+esc(s._carrera)+' · '+esc(s._division||'Sin división')+' · '+esc(s._estadoMatricula)+'</span></button>';}).join('');
     box.querySelectorAll('[data-id]').forEach(function(btn){btn.addEventListener('click',function(){select(btn.getAttribute('data-id'));});});
   }
-  function reqClass(r){return r.estado==="cumple"?"ficha-pill-ok":r.estado==="no_cumple"?"ficha-pill-bad":"ficha-pill-warn";}
-  function renderReqs(row){var box=el("ficha-requisitos");if(!box)return;var reqs=window.FichaCore.requisitos(row);box.innerHTML=reqs.map(function(r){return '<div class="ficha-req"><span class="ficha-req-name">'+esc(r.label)+'</span><span class="ficha-req-value '+reqClass(r)+'">'+esc(r.value)+'</span></div>';}).join('');}
+  function reqClass(r){return r.estado==="cumple"?"ficha-pill-ok":"ficha-pill-bad";}
+  function renderReqs(row){var box=el("ficha-requisitos");if(!box)return;var reqs=window.FichaCore.requisitos(row);box.innerHTML=reqs.map(function(r){return '<div class="ficha-req"><span class="ficha-req-name">'+esc(r.label)+'</span><span class="ficha-req-value '+reqClass(r)+'">'+esc(r.estado==="cumple"?"CUMPLE":"NO CUMPLE")+'</span></div>';}).join('');}
+  function applySpecialBadge(id,item){var node=el(id);if(!node||!item)return;var ok=item.estado==="cumple";node.className="ficha-mini-badge "+(ok?"ficha-badge-ok":"ficha-badge-bad");node.title=item.label+": "+(ok?"CUMPLE":"NO CUMPLE");node.setAttribute("aria-label",node.title);}
+  function renderSpecials(row){var list=window.FichaCore.especiales?window.FichaCore.especiales(row):[];var titulacion=list.find(function(x){return x.key==="aprobaciontitulacion";});var complexivo=list.find(function(x){return x.key==="aprobacioncomplexivoproyecto";});applySpecialBadge("ficha-special-titulacion",titulacion);applySpecialBadge("ficha-special-complexivo",complexivo);}
 
   function renderDetail(row){
     if(!row){if(el("ficha-empty"))el("ficha-empty").classList.remove("is-hidden");if(el("ficha-detail"))el("ficha-detail").classList.add("is-hidden");return;}
     el("ficha-empty").classList.add("is-hidden");el("ficha-detail").classList.remove("is-hidden");
     el("ficha-nombre").textContent=row._nombres||"Sin nombre";
-    el("ficha-identidad").textContent="Cédula: "+(row._cedula||"—");
+    el("ficha-identidad").textContent=(row._carrera||"Sin carrera")+" · "+(row._periodo||"Sin período");
     el("ficha-estado").textContent=row._estado.label;
     el("ficha-estado").className="ficha-pill "+estadoClass(row._estado);
     el("ficha-carrera").textContent=row._carrera||"—";
@@ -58,7 +61,9 @@ Con qué se conecta:
     el("ficha-horario").textContent=row._horario||"—";
     el("ficha-correo").textContent=row._correo||"—";
     el("ficha-celular").textContent=row._celular||"—";
-    var w=window.FichaCore.whatsappUrl(row);var wa=el("ficha-whatsapp");if(wa){wa.href=w||"#";wa.classList.toggle("is-disabled",!w);}
+    var w=window.FichaCore.whatsappUrl(row);var wa=el("ficha-whatsapp");if(wa){wa.href=w||"#";wa.classList.toggle("is-disabled",!w);wa.title=w?"Enviar mensaje por WhatsApp":"Celular no registrado";}
+    var tg=el("ficha-telegram");var tgUrl=window.FichaCore.telegramUrl?window.FichaCore.telegramUrl(row):"";if(tg){tg.href=tgUrl||"#";tg.classList.toggle("is-disabled",!tgUrl);tg.title=tgUrl?"Copiar mensaje y abrir Telegram":"Telegram no registrado";}
+    renderSpecials(row);
     renderReqs(row);
     if(el("ficha-json"))el("ficha-json").textContent=JSON.stringify(row,null,2);
   }
@@ -73,6 +78,8 @@ Con qué se conecta:
     bindIf("ficha-search","input",function(e){state.search=e.target.value;render();});
     bindIf("ficha-btn-refresh","click",render);
     bindIf("ficha-btn-copy","click",function(){var row=selected();if(!row)return;copyText(window.FichaCore.toText(row),"Ficha copiada.");});
+    bindIf("ficha-copy-detail","click",function(){var row=selected();if(!row)return;copyText(window.FichaCore.toText(row),"Ficha copiada.");});
+    bindIf("ficha-telegram","click",function(e){var row=selected();if(!row)return;var url=window.FichaCore.telegramUrl?window.FichaCore.telegramUrl(row):"";if(!url){e.preventDefault();status("Telegram no registrado.","warn");return;}e.preventDefault();copyText(window.FichaCore.studentMessage(row),"Mensaje copiado para Telegram.").then(function(){window.open(url,"_blank","noopener");});});
     bindIf("ficha-copy-cedula","click",function(){var row=selected();if(row)copyText(row._cedula,"Cédula copiada.");});
     bindIf("ficha-copy-correo","click",function(){var row=selected();if(row)copyText(row._correo,"Correo copiado.");});
   }
