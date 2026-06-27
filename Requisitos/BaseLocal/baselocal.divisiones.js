@@ -6,6 +6,7 @@ Función o funciones:
 - Crear, editar y borrar divisiones por período.
 - Cargar carreras disponibles y carreras asignadas a la división seleccionada.
 - Permitir arrastrar carreras para agregar o quitar de una división.
+- Permitir botón Editar para enfocar nombre de división sin guardar automático.
 - Guardar divisiones: ["Nombre"] en estudiantes activos y retirados.
 - Evitar que el modal se congele por sincronización Firebase pesada.
 - Sincronizar Firebase en segundo plano después de guardar localmente.
@@ -57,12 +58,14 @@ Con qué se conecta:
     var cancel = el("bl-division-cancel");
     var close = el("bl-division-close");
     var del = el("bl-division-delete");
+    var edit = el("bl-division-edit");
     var existing = el("bl-division-existing");
     var name = el("bl-division-name");
-    if(save){save.disabled = !!on;save.textContent = on ? "Guardando..." : "Guardar cambios";}
+    if(save){save.disabled = !!on;save.textContent = on ? "Guardando..." : "💾 Guardar cambios";}
     if(cancel){cancel.disabled = !!on;}
     if(close){close.disabled = !!on;}
     if(del){del.disabled = !!on || !state.selectedDivision;}
+    if(edit){edit.disabled = !!on || !state.selectedDivision;}
     if(existing){existing.disabled = !!on;}
     if(name){name.disabled = !!on;}
   }
@@ -153,12 +156,14 @@ Con qué se conecta:
     var selector = el("bl-division-existing");
     var name = el("bl-division-name");
     var del = el("bl-division-delete");
+    var edit = el("bl-division-edit");
     if(selector){
       selector.innerHTML = '<option value="">Nueva división</option>' + state.divisions.map(function(division){return '<option value="' + esc(division) + '">' + esc(division) + '</option>';}).join("");
       selector.value = state.selectedDivision;
     }
     if(name){name.value = state.selectedDivision || text(name.value);}
     if(del){del.disabled = !state.selectedDivision || state.saving;}
+    if(edit){edit.disabled = !state.selectedDivision || state.saving;}
   }
 
   function careerCard(career, fromZone){
@@ -197,6 +202,15 @@ Con qué se conecta:
       state.available = addValue(state.available, career);
     }
     renderCareers();
+  }
+
+  function focusNameForEdit(){
+    var name = el("bl-division-name");
+    if(!state.selectedDivision){
+      status("Selecciona una división para editarla o presiona Nueva división.", "bl-status-warn");
+      return;
+    }
+    if(name){name.focus();name.select();}
   }
 
   function openModal(){
@@ -280,6 +294,7 @@ Con qué se conecta:
     if(el("bl-division-close")){el("bl-division-close").addEventListener("click", closeModal);}
     if(el("bl-division-save")){el("bl-division-save").addEventListener("click", saveDivision);}
     if(el("bl-division-delete")){el("bl-division-delete").addEventListener("click", deleteSelectedDivision);}
+    if(el("bl-division-edit")){el("bl-division-edit").addEventListener("click", focusNameForEdit);}
     if(el("bl-division-new")){
       el("bl-division-new").addEventListener("click", function(){
         var name = el("bl-division-name");
