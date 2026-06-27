@@ -3,12 +3,15 @@ Nombre completo: stats.notes.analytics.js
 Ruta o ubicación: /Requisitos/Stats/stats.notes.analytics.js
 Función o funciones:
 - Calcular analítica avanzada de notas para Stats.
-- Agrupar por carrera, rangos de nota, riesgos académicos, rankings y lectura ejecutiva.
-- Separar el cálculo fuerte de la capa visual stats.notes.js.
+- Agrupar Nart, Ndef y Nfin por carrera.
+- Calcular promedios, rangos, brechas, rankings, riesgos, tendencias y lectura ejecutiva.
+- Preparar datos para gráficos posteriores sin mezclar cálculos dentro de la vista.
 Con qué se conecta:
+- stats.html
 - stats.core.js
 - stats.notes.js
-- stats.notes.charts.js
+- stats.notes.analytics.css
+- ../BaseLocal/services/bl-notas-defensa.service.js
 ========================================================= */
 (function(window){
   "use strict";
@@ -19,20 +22,43 @@ Con qué se conecta:
   function round2(value){return Number.isFinite(value)?Math.round((value+Number.EPSILON)*100)/100:null;}
   function pct(n,d){return d?round2((Number(n||0)*100)/Number(d||0)):0;}
   function avg(values){values=(values||[]).filter(function(v){return Number.isFinite(v);});if(!values.length)return null;return round2(values.reduce(function(a,b){return a+b;},0)/values.length);}
-  function byDesc(field){return function(a,b){return Number(b[field]||0)-Number(a[field]||0)||text(a.carrera).localeCompare(text(b.carrera),"es");};}
-  function byAsc(field){return function(a,b){return Number(a[field]||0)-Number(b[field]||0)||text(a.carrera).localeCompare(text(b.carrera),"es");};}
+  function byDesc(field){return function(a,b){return Number(b[field]||0)-Number(a[field]||0)||text(a.carrera||a.label).localeCompare(text(b.carrera||b.label),"es");};}
+  function byAsc(field){return function(a,b){return Number(a[field]===null?999:a[field])-Number(b[field]===null?999:b[field])||text(a.carrera||a.label).localeCompare(text(b.carrera||b.label),"es");};}
 
   function getNotes(row){
     if(row&&row._notas)return row._notas;
     if(window.StatsCore&&typeof window.StatsCore.extractNotes==="function")return window.StatsCore.extractNotes(row||{});
+    if(window.BLNotasDefensa&&typeof window.BLNotasDefensa.extraerNotas==="function")return window.BLNotasDefensa.extraerNotas(row||{});
     return {nart:null,ndef:null,nfin:null};
   }
 
-  function careerOf(row){return text(row&&row._carrera)||text(row&&row.nombrecarrera)||text(row&&row.nombreCarrera)||text(row&&row.carrera)||"SIN CARRERA";}
+  function careerOf(row){return text(row&&row._carrera)||text(row&&row.nombrecarrera)||text(row&&row.nombreCarrera)||text(row&&row.NombreCarrera)||text(row&&row.carrera)||text(row&&row.Carrera)||"SIN CARRERA";}
+  function nameOf(row){return text(row&&row._nombres)||text(row&&row.nombres)||text(row&&row.Nombres)||text(row&&row.nombre)||text(row&&row.Nombre)||text(row&&row.estudiante)||"Sin nombre";}
+  function idOf(row){return text(row&&row._cedula)||text(row&&row.cedula)||text(row&&row.Cedula)||text(row&&row.identificacion)||"";}
+
+  function dateOf(row){
+    row=row||{};
+    var fields=["notasDefensaActualizadasEn","updatedAt","ultimaEdicionLocal","fechaActualizacion","fechaRegistroNotas","fechaRegistro","createdAt"];
+    for(var i=0;i<fields.length;i++){
+      var value=text(row[fields[i]]);
+      if(value){
+        var d=new Date(value);
+        if(!Number.isNaN(d.getTime()))return d;
+      }
+    }
+    return null;
+  }
+
+  function trendKey(row){
+    var d=dateOf(row);
+    if(!d)return "SIN FECHA";
+    return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+  }
 
   function riskOf(notes){
     var nart=num(notes&&notes.nart), ndef=num(notes&&notes.ndef), nfin=num(notes&&notes.nfin);
     var completo=nart!==null&&ndef!==null&&nfin!==null;
+    if(nart===null&&ndef===null&&nfin===null)return {nivel:"sinDatos",label:"Sin datos",motivo:"No tiene notas registradas"};
     if(nfin!==null&&nfin<7)return {nivel:"alto",label:"Riesgo alto",motivo:"Nota final menor a 7"};
     if(nart!==null&&nart<7)return {nivel:"alto",label:"Riesgo alto",motivo:"Artículo menor a 7"};
     if(ndef!==null&&ndef<7)return {nivel:"alto",label:"Riesgo alto",motivo:"Defensa menor a 7"};
@@ -40,7 +66,7 @@ Con qué se conecta:
     if(nfin!==null&&nfin<7.5)return {nivel:"medio",label:"Riesgo medio",motivo:"Nota final cercana al mínimo"};
     if(!completo&&(nart!==null||ndef!==null||nfin!==null))return {nivel:"medio",label:"Riesgo medio",motivo:"Notas incompletas"};
     if(nart!==null&&ndef!==null&&(ndef-nart)<=-1)return {nivel:"medio",label:"Riesgo medio",motivo:"La defensa baja más de 1 punto"};
-    return {nivel:"bajo",label:"Riesgo bajo",motivo:completo?"Notas completas":"Sin información suficiente"};
+    return {nivel:"bajo",label:"Riesgo bajo",motivo:"Notas completas o desempeño estable"};
   }
 
   function rangeOf(nfin){
@@ -53,81 +79,73 @@ Con qué se conecta:
     return "9.00 - 10";
   }
 
-  function emptyCareer(carrera){
-    return {carrera:carrera,total:0,conNart:0,conNdef:0,conNfin:0,sinNart:0,sinNdef:0,sinNfin:0,nartValues:[],ndefValues:[],nfinValues:[],promNart:null,promNdef:null,promNfin:null,diferenciaNdefNart:null,aprobados:0,reprobados:0,riesgoAlto:0,riesgoMedio:0,riesgoBajo:0,pendientesCriticos:0,porcentajeAprobacion:0,porcentajeRiesgoAlto:0,porcentajePendienteFinal:0,semaforo:"gris",diagnostico:"Sin datos"};
+  function emptyGroup(label){
+    return {label:label,total:0,conNart:0,conNdef:0,conNfin:0,sinNart:0,sinNdef:0,sinNfin:0,nartValues:[],ndefValues:[],nfinValues:[],promNart:null,promNdef:null,promNfin:null,diferenciaNdefNart:null,aprobados:0,reprobados:0,riesgoAlto:0,riesgoMedio:0,riesgoBajo:0,sinDatos:0,pendientesCriticos:0,porcentajeAprobacion:0,porcentajeRiesgoAlto:0,porcentajePendienteFinal:0,semaforo:"gris",diagnostico:"Sin datos"};
   }
 
-  function finalizeCareer(item){
-    item.sinNart=item.total-item.conNart;
-    item.sinNdef=item.total-item.conNdef;
-    item.sinNfin=item.total-item.conNfin;
-    item.promNart=avg(item.nartValues);
-    item.promNdef=avg(item.ndefValues);
-    item.promNfin=avg(item.nfinValues);
-    item.diferenciaNdefNart=(item.promNart!==null&&item.promNdef!==null)?round2(item.promNdef-item.promNart):null;
-    item.porcentajeAprobacion=pct(item.aprobados,item.conNfin);
-    item.porcentajeRiesgoAlto=pct(item.riesgoAlto,item.total);
-    item.porcentajePendienteFinal=pct(item.sinNfin,item.total);
-    if(!item.total)item.semaforo="gris";
-    else if(item.porcentajeRiesgoAlto>=25||item.porcentajePendienteFinal>=35||(item.promNfin!==null&&item.promNfin<7))item.semaforo="rojo";
-    else if(item.porcentajeRiesgoAlto>=12||item.porcentajePendienteFinal>=18||(item.promNfin!==null&&item.promNfin<7.5))item.semaforo="amarillo";
-    else item.semaforo="verde";
-    if(item.semaforo==="rojo")item.diagnostico="Atención prioritaria: revisar riesgo, defensas o notas pendientes.";
-    else if(item.semaforo==="amarillo")item.diagnostico="Revisión recomendada: hay pendientes o notas cercanas al mínimo.";
-    else if(item.semaforo==="verde")item.diagnostico="Avance estable: notas completas o rendimiento adecuado.";
-    delete item.nartValues;delete item.ndefValues;delete item.nfinValues;
-    return item;
+  function addToGroup(group,row){
+    var notes=getNotes(row);
+    var nart=num(notes.nart), ndef=num(notes.ndef), nfin=num(notes.nfin);
+    var risk=riskOf(notes);
+    group.total++;
+    if(nart!==null){group.conNart++;group.nartValues.push(nart);}
+    if(ndef!==null){group.conNdef++;group.ndefValues.push(ndef);}
+    if(nfin!==null){group.conNfin++;group.nfinValues.push(nfin);if(nfin>=7)group.aprobados++;else group.reprobados++;}
+    if(nfin===null||ndef===null)group.pendientesCriticos++;
+    if(risk.nivel==="alto")group.riesgoAlto++;
+    else if(risk.nivel==="medio")group.riesgoMedio++;
+    else if(risk.nivel==="bajo")group.riesgoBajo++;
+    else group.sinDatos++;
+  }
+
+  function finalizeGroup(group){
+    group.sinNart=group.total-group.conNart;
+    group.sinNdef=group.total-group.conNdef;
+    group.sinNfin=group.total-group.conNfin;
+    group.promNart=avg(group.nartValues);
+    group.promNdef=avg(group.ndefValues);
+    group.promNfin=avg(group.nfinValues);
+    group.diferenciaNdefNart=(group.promNart!==null&&group.promNdef!==null)?round2(group.promNdef-group.promNart):null;
+    group.porcentajeAprobacion=pct(group.aprobados,group.conNfin);
+    group.porcentajeRiesgoAlto=pct(group.riesgoAlto,group.total);
+    group.porcentajePendienteFinal=pct(group.sinNfin,group.total);
+    if(!group.total)group.semaforo="gris";
+    else if(group.porcentajeRiesgoAlto>=25||group.porcentajePendienteFinal>=35||(group.promNfin!==null&&group.promNfin<7))group.semaforo="rojo";
+    else if(group.porcentajeRiesgoAlto>=12||group.porcentajePendienteFinal>=18||(group.promNfin!==null&&group.promNfin<7.5))group.semaforo="amarillo";
+    else group.semaforo="verde";
+    if(group.semaforo==="rojo")group.diagnostico="Atención prioritaria: revisar riesgo, defensas o notas pendientes.";
+    else if(group.semaforo==="amarillo")group.diagnostico="Revisión recomendada: hay pendientes o notas cercanas al mínimo.";
+    else if(group.semaforo==="verde")group.diagnostico="Avance estable: notas completas o rendimiento adecuado.";
+    delete group.nartValues;delete group.ndefValues;delete group.nfinValues;
+    return group;
   }
 
   function analizar(data){
     data=data||{};
-    var rows=data.rows||data.estudiantes||[];
-    var carrerasMap={},rangosMap={"Sin nota final":0,"Menor a 7":0,"7.00 - 7.49":0,"7.50 - 7.99":0,"8.00 - 8.99":0,"9.00 - 10":0};
-    var total=rows.length,nartValues=[],ndefValues=[],nfinValues=[];
-    var riesgos={alto:0,medio:0,bajo:0};
+    var rows=Array.isArray(data)?data:(data.rows||data.estudiantes||[]);
+    var carrerasMap={},tendenciasMap={},rangosMap={"Sin nota final":0,"Menor a 7":0,"7.00 - 7.49":0,"7.50 - 7.99":0,"8.00 - 8.99":0,"9.00 - 10":0};
+    var general=emptyGroup("General");
     var estudiantesRiesgo=[];
 
     rows.forEach(function(row){
       var carrera=careerOf(row);
-      if(!carrerasMap[carrera])carrerasMap[carrera]=emptyCareer(carrera);
-      var c=carrerasMap[carrera];
+      var tendencia=trendKey(row);
       var notes=getNotes(row);
-      var nart=num(notes.nart),ndef=num(notes.ndef),nfin=num(notes.nfin);
+      var nfin=num(notes.nfin);
       var risk=riskOf(notes);
-      c.total++;
-      if(nart!==null){c.conNart++;c.nartValues.push(nart);nartValues.push(nart);}
-      if(ndef!==null){c.conNdef++;c.ndefValues.push(ndef);ndefValues.push(ndef);}
-      if(nfin!==null){c.conNfin++;c.nfinValues.push(nfin);nfinValues.push(nfin);if(nfin>=7)c.aprobados++;else c.reprobados++;}
-      if(nfin===null||ndef===null)c.pendientesCriticos++;
-      c["riesgo"+risk.nivel.charAt(0).toUpperCase()+risk.nivel.slice(1)]++;
-      riesgos[risk.nivel]++;
+      if(!carrerasMap[carrera])carrerasMap[carrera]=emptyGroup(carrera);
+      if(!tendenciasMap[tendencia])tendenciasMap[tendencia]=emptyGroup(tendencia);
+      addToGroup(general,row);
+      addToGroup(carrerasMap[carrera],row);
+      addToGroup(tendenciasMap[tendencia],row);
       rangosMap[rangeOf(nfin)]++;
-      if(risk.nivel!=="bajo")estudiantesRiesgo.push({nombre:text(row._nombres)||"Sin nombre",cedula:text(row._cedula),carrera:carrera,nart:nart,ndef:ndef,nfin:nfin,nivel:risk.nivel,motivo:risk.motivo});
+      if(risk.nivel==="alto"||risk.nivel==="medio")estudiantesRiesgo.push({nombre:nameOf(row),cedula:idOf(row),carrera:carrera,nart:num(notes.nart),ndef:num(notes.ndef),nfin:nfin,nivel:risk.nivel,motivo:risk.motivo});
     });
 
-    var carreras=Object.keys(carrerasMap).map(function(key){return finalizeCareer(carrerasMap[key]);}).sort(byDesc("total"));
-    var resumen={
-      total:total,
-      conNart:nartValues.length,
-      conNdef:ndefValues.length,
-      conNfin:nfinValues.length,
-      sinNart:total-nartValues.length,
-      sinNdef:total-ndefValues.length,
-      sinNfin:total-nfinValues.length,
-      promNart:avg(nartValues),
-      promNdef:avg(ndefValues),
-      promNfin:avg(nfinValues),
-      diferenciaNdefNart:(avg(nartValues)!==null&&avg(ndefValues)!==null)?round2(avg(ndefValues)-avg(nartValues)):null,
-      aprobados:nfinValues.filter(function(n){return n>=7;}).length,
-      reprobados:nfinValues.filter(function(n){return n<7;}).length,
-      porcentajeAprobacion:pct(nfinValues.filter(function(n){return n>=7;}).length,nfinValues.length),
-      riesgoAlto:riesgos.alto,
-      riesgoMedio:riesgos.medio,
-      riesgoBajo:riesgos.bajo,
-      porcentajeRiesgoAlto:pct(riesgos.alto,total)
-    };
-
-    var rangos=Object.keys(rangosMap).map(function(key){return {rango:key,total:rangosMap[key],porcentaje:pct(rangosMap[key],total)};});
+    finalizeGroup(general);
+    var carreras=Object.keys(carrerasMap).map(function(key){var item=finalizeGroup(carrerasMap[key]);item.carrera=item.label;return item;}).sort(byDesc("total"));
+    var tendencias=Object.keys(tendenciasMap).map(function(key){var item=finalizeGroup(tendenciasMap[key]);item.periodo=key;return item;}).sort(function(a,b){return a.periodo.localeCompare(b.periodo,"es");});
+    var rangos=Object.keys(rangosMap).map(function(key){return {rango:key,total:rangosMap[key],porcentaje:pct(rangosMap[key],general.total)};});
     var rankings={
       mejoresPromedios:carreras.filter(function(c){return c.promNfin!==null;}).slice().sort(byDesc("promNfin")).slice(0,5),
       menoresPromedios:carreras.filter(function(c){return c.promNfin!==null;}).slice().sort(byAsc("promNfin")).slice(0,5),
@@ -135,9 +153,9 @@ Con qué se conecta:
       masPendientes:carreras.slice().sort(byDesc("sinNfin")).slice(0,5),
       defensaMasBaja:carreras.filter(function(c){return c.diferenciaNdefNart!==null;}).slice().sort(byAsc("diferenciaNdefNart")).slice(0,5)
     };
-
-    var lectura=crearLectura(resumen,carreras,rankings);
-    return {resumen:resumen,carreras:carreras,rangos:rangos,rankings:rankings,estudiantesRiesgo:estudiantesRiesgo.slice(0,40),lectura:lectura,creadoEn:new Date().toISOString()};
+    var analisis={resumen:general,carreras:carreras,tendencias:tendencias,rangos:rangos,rankings:rankings,estudiantesRiesgo:estudiantesRiesgo.slice(0,50),campos:{formula:"Nfin = (Nart * 0.70) + (Ndef * 0.30)",aprobadoDesde:7,alertaDesde:7.5},creadoEn:new Date().toISOString()};
+    analisis.lectura=crearLectura(analisis.resumen,analisis.carreras,analisis.rankings);
+    return analisis;
   }
 
   function crearLectura(resumen,carreras,rankings){
@@ -155,5 +173,5 @@ Con qué se conecta:
     return out;
   }
 
-  window.StatsNotesAnalytics={analizar:analizar,riskOf:riskOf,rangeOf:rangeOf};
+  window.StatsNotesAnalytics={version:"1.1.0",analizar:analizar,crearAnalisis:analizar,build:analizar,riskOf:riskOf,rangeOf:rangeOf};
 })(window);
