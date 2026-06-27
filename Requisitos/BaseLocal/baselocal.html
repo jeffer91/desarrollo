@@ -8,6 +8,7 @@ Función o funciones:
 - Crear divisiones por período desde un modal de Base Local.
 - Borrar períodos con respaldo Excel obligatorio, alerta de vigencia y doble confirmación.
 - Conectar servicios base para períodos canónicos, divisiones, limpieza y borrado seguro.
+- Cargar BL2 para mostrar el panel como vista liviana.
 - No mostrar título propio porque Maqueta controla el menú superior.
 Con qué se conecta:
 - baselocal.css
@@ -26,6 +27,9 @@ Con qué se conecta:
 - services/bl-borrar-periodo.service.js
 - services/bl-healthcheck.js
 - services/bl-selftest.js
+- ../BaseLocal2/bl2-config.js
+- ../BaseLocal2/repositories/bl2-periodos.repo.js
+- ../BaseLocal2/repositories/bl2-dashboard.repo.js
 - baselocal.connector.js
 - baselocal.core.js
 - baselocal.firebase.js
@@ -48,10 +52,10 @@ Con qué se conecta:
     <section class="bl-grid-kpis">
       <article class="bl-kpi"><span>Períodos</span><strong id="bl-kpi-periodos">0</strong></article>
       <article class="bl-kpi"><span>Estudiantes</span><strong id="bl-kpi-estudiantes">0</strong></article>
-      <article class="bl-kpi"><span>Activos</span><strong id="bl-kpi-activos">0</strong></article>
-      <article class="bl-kpi"><span>Retirados</span><strong id="bl-kpi-retirados">0</strong></article>
+      <article class="bl-kpi"><span>Activos</span><strong id="bl-kpi-activos">—</strong></article>
+      <article class="bl-kpi"><span>Retirados</span><strong id="bl-kpi-retirados">—</strong></article>
       <article class="bl-kpi"><span>Historial</span><strong id="bl-kpi-historial">0</strong></article>
-      <article class="bl-kpi"><span>Carreras</span><strong id="bl-kpi-carreras">0</strong></article>
+      <article class="bl-kpi"><span>Carreras</span><strong id="bl-kpi-carreras">—</strong></article>
       <article class="bl-kpi"><span>Estado</span><strong id="bl-kpi-estado">Local</strong></article>
     </section>
 
@@ -97,8 +101,8 @@ Con qué se conecta:
 
     <main class="bl-main">
       <section id="bl-tab-periodos" class="bl-panel is-active"><div id="bl-periodos-table" class="bl-table-wrap"></div></section>
-      <section id="bl-tab-estudiantes" class="bl-panel"><p class="bl-help">Se muestran máximo 300 registros para mantener la vista rápida. Por defecto se muestran solo estudiantes activos.</p><div id="bl-estudiantes-table" class="bl-table-wrap"></div></section>
-      <section id="bl-tab-historial" class="bl-panel"><div id="bl-history-table" class="bl-table-wrap"></div></section>
+      <section id="bl-tab-estudiantes" class="bl-panel"><p class="bl-help">Vista paginada para mantener la pantalla rápida. Por defecto se muestran estudiantes activos.</p><div id="bl-estudiantes-table" class="bl-table-wrap"></div><div class="bl-pagination"><button id="bl-students-first" type="button">Primera</button><button id="bl-students-prev" type="button">Anterior</button><span id="bl-students-page-label">0 registros</span><button id="bl-students-next" type="button">Siguiente</button><button id="bl-students-last" type="button">Última</button></div></section>
+      <section id="bl-tab-historial" class="bl-panel"><p class="bl-help">Se muestran los últimos movimientos para no cargar todo el historial completo.</p><div id="bl-history-table" class="bl-table-wrap"></div></section>
       <section id="bl-tab-diagnostico" class="bl-panel"><pre id="bl-diagnostics-box" class="bl-diagnostics"></pre></section>
       <section id="bl-tab-manual" class="bl-panel"><textarea id="bl-manual-text" readonly></textarea></section>
     </main>
@@ -194,6 +198,12 @@ Con qué se conecta:
   <script src="services/bl-borrar-periodo.service.js"></script>
   <script src="services/bl-healthcheck.js"></script>
   <script src="services/bl-selftest.js"></script>
+  <script src="../BaseLocal2/bl2-config.js"></script>
+  <script src="../BaseLocal2/bl2-detect-runtime.js"></script>
+  <script src="../BaseLocal2/bl2-legacy-adapter.js"></script>
+  <script src="../BaseLocal2/bl2-api.js"></script>
+  <script src="../BaseLocal2/repositories/bl2-periodos.repo.js"></script>
+  <script src="../BaseLocal2/repositories/bl2-dashboard.repo.js"></script>
   <script src="baselocal.connector.js"></script>
   <script src="baselocal.core.js"></script>
   <script src="baselocal.firebase.js"></script>
