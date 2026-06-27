@@ -8,11 +8,14 @@ Función o funciones:
 - Mantener entrada del módulo sin romper la ruta registrada en Maqueta.
 - Cargar estado interno modular de Infor.
 - Conectar gestor de períodos Regular/PVC del Bloque 2.
+- Conectar lectura de Excel y parser de cronogramas del Bloque 3.
 Con qué se conecta:
 - titulacion.css
 - titulacion.app.js
 - ../core/infor.periodo.js
+- ../core/infor.excel.js
 - ../core/infor.state.js
+- ../sections/cronograma/cronograma.parser.js
 - ../../Stats/stats.rules.js
 - ../../BaseLocal2/*
 - ../../Gestion/Excel/excel-local/*
@@ -46,7 +49,7 @@ Con qué se conecta:
         <strong>Período</strong>
         <small>Regular o PVC automático</small>
       </article>
-      <article class="infor-step">
+      <article class="infor-step is-active">
         <span>2</span>
         <strong>Excel / pegar</strong>
         <small>Cronogramas y anexos</small>
@@ -86,17 +89,20 @@ Con qué se conecta:
         <div class="infor-card-head">
           <div>
             <h2>2. Excel</h2>
-            <p>Bloque 1 registra el archivo; la lectura inteligente entra en bloques siguientes.</p>
+            <p>Infor lee varias hojas, ignora hojas vacías y conserva las filas de estudiantes detectadas.</p>
           </div>
           <span id="infor-excel-state" class="infor-chip warn">Sin Excel</span>
         </div>
         <label class="infor-field">Archivo Excel
           <input id="infor-excel-file" type="file" accept=".xlsx,.xls,.csv" />
         </label>
-        <div class="infor-mini-grid">
+        <div class="infor-mini-grid infor-mini-grid-4">
           <article><span>Archivo</span><strong id="infor-excel-name">—</strong></article>
-          <article><span>Hojas útiles</span><strong id="infor-excel-sheets">Pendiente</strong></article>
+          <article><span>Hojas útiles</span><strong id="infor-excel-sheets">0</strong></article>
+          <article><span>Hojas ignoradas</span><strong id="infor-excel-ignored">0</strong></article>
+          <article><span>Filas detectadas</span><strong id="infor-excel-rows">0</strong></article>
         </div>
+        <div id="infor-excel-preview" class="infor-preview-box"><div class="infor-empty">Sin Excel leído.</div></div>
       </article>
     </section>
 
@@ -104,7 +110,7 @@ Con qué se conecta:
       <div class="infor-card-head">
         <div>
           <h2>3. Cronogramas</h2>
-          <p>El texto se guarda por período y luego se transformará en tabla institucional.</p>
+          <p>El texto se guarda por período y se interpreta como tabla: fecha, actividad, responsable y observación.</p>
         </div>
         <span id="infor-cronograma-mode" class="infor-chip">Automático</span>
       </div>
@@ -123,6 +129,7 @@ Con qué se conecta:
           <textarea id="infor-cronograma-pvc" placeholder="Pega aquí el cronograma PVC / Artículo Académico..."></textarea>
         </label>
       </div>
+      <div id="infor-cronograma-preview" class="infor-preview-grid"><div class="infor-empty">Pega un cronograma para ver la tabla interpretada.</div></div>
     </section>
 
     <section class="infor-card">
@@ -144,7 +151,7 @@ Con qué se conecta:
     <section class="infor-card infor-process-card">
       <div>
         <h2>5. Procesar</h2>
-        <p>En este bloque se guarda el estado y se deja preparada la base de la pantalla. La generación Word/PDF se conecta en los siguientes bloques.</p>
+        <p>Guarda los insumos del informe: período, Excel interpretado, cronogramas interpretados y anexos.</p>
       </div>
       <button id="infor-process" class="infor-primary" type="button">Procesar</button>
     </section>
@@ -153,7 +160,7 @@ Con qué se conecta:
       <div class="infor-card-head">
         <div>
           <h2>Diagnóstico interno</h2>
-          <p>Estado vivo del Bloque 2.</p>
+          <p>Estado vivo del Bloque 3.</p>
         </div>
         <span>BaseLocal Infor</span>
       </div>
@@ -180,6 +187,7 @@ Con qué se conecta:
     </div>
   </div>
 
+  <script src="../../Gestion/Excel/excel-xlsx-loader.js"></script>
   <script src="../../Gestion/Excel/excel-local/excel-local.config.js"></script>
   <script src="../../Gestion/Excel/excel-local/excel-local.storage.js"></script>
   <script src="../../Gestion/Excel/excel-local/excel-local.bridge.js"></script>
@@ -193,6 +201,8 @@ Con qué se conecta:
   <script src="../../BaseLocal2/repositories/bl2-estudiantes.repo.js"></script>
   <script src="../../Stats/stats.rules.js"></script>
   <script src="../core/infor.periodo.js"></script>
+  <script src="../core/infor.excel.js"></script>
+  <script src="../sections/cronograma/cronograma.parser.js"></script>
   <script src="../core/infor.state.js"></script>
   <script src="titulacion.app.js"></script>
 </body>
