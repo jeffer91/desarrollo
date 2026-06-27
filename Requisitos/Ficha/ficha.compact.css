@@ -7,6 +7,7 @@ Función o funciones:
 - Reordenar proporciones de filtros: búsqueda más amplia y división menos dominante.
 - Reducir espacios generales de la pantalla Ficha.
 - Compactar botones del toolbar y mantener copiar ficha como icono.
+- Compactar la ficha del estudiante, sus datos y requisitos.
 Con qué se conecta:
 - ficha.html
 - ficha.css
@@ -79,20 +80,151 @@ Con qué se conecta:
 }
 
 .ficha-list-head{
-  padding:10px 12px;
+  padding:9px 12px;
 }
 
 .ficha-list{
-  max-height:calc(100vh - 210px);
+  max-height:calc(100vh - 185px);
 }
 
 .ficha-item{
   min-height:auto;
-  padding:9px 12px;
+  padding:8px 12px;
+}
+
+.ficha-item strong{
+  font-size:12.5px;
+  line-height:1.2;
+}
+
+.ficha-item span{
+  font-size:11.5px;
+  line-height:1.25;
 }
 
 .ficha-detail-card{
   padding:12px;
+}
+
+.ficha-top{
+  padding-bottom:10px;
+  margin-bottom:10px;
+  gap:10px;
+}
+
+.ficha-label{
+  font-size:10.5px;
+  letter-spacing:.035em;
+}
+
+.ficha-top h2,
+h2#ficha-nombre{
+  margin:2px 0;
+  font-size:21px;
+  line-height:1.1;
+}
+
+.ficha-subtitle{
+  font-size:12.5px;
+}
+
+.ficha-pill{
+  padding:5px 10px;
+  font-size:11px;
+}
+
+.ficha-grid-info{
+  grid-template-columns:1.45fr .85fr 1fr .75fr .75fr .85fr 1.25fr .85fr;
+  gap:7px;
+  margin-bottom:8px;
+}
+
+.ficha-grid-info article{
+  padding:8px 9px;
+  border-radius:11px;
+  min-height:58px;
+}
+
+.ficha-grid-info span{
+  font-size:10.5px;
+  line-height:1.1;
+}
+
+.ficha-grid-info strong{
+  margin-top:3px;
+  font-size:12.5px;
+  line-height:1.2;
+  overflow-wrap:anywhere;
+}
+
+.ficha-actions{
+  gap:6px;
+  margin-bottom:8px;
+}
+
+.ficha-action{
+  min-height:32px;
+  padding:0 12px;
+  font-size:12px;
+}
+
+.ficha-req-card,
+.ficha-raw-card{
+  border-radius:13px;
+  padding:9px;
+  margin-top:8px;
+}
+
+.ficha-section-title{
+  margin-bottom:7px;
+  font-size:13px;
+}
+
+.ficha-requisitos{
+  grid-template-columns:repeat(3,minmax(190px,1fr));
+  gap:6px;
+}
+
+.ficha-req{
+  border-radius:10px;
+  padding:7px 8px;
+  gap:7px;
+}
+
+.ficha-req-name{
+  font-size:11.5px;
+  line-height:1.15;
+}
+
+.ficha-req-value{
+  font-size:10px;
+  padding:3px 7px;
+}
+
+.ficha-raw-card{
+  margin-top:8px;
+}
+
+.ficha-raw-card pre{
+  min-height:120px;
+  max-height:190px;
+  margin:0;
+  padding:9px;
+  font-size:11px;
+}
+
+.ficha-empty{
+  min-height:360px;
+}
+
+@media(max-width:1450px){
+  .ficha-grid-info{
+    grid-template-columns:repeat(4,minmax(150px,1fr));
+  }
+
+  .ficha-requisitos{
+    grid-template-columns:repeat(2,minmax(210px,1fr));
+  }
 }
 
 @media(max-width:1200px){
@@ -103,11 +235,17 @@ Con qué se conecta:
   .ficha-toolbar button:not(.ficha-icon-btn){
     width:100%;
   }
+
+  .ficha-layout{
+    grid-template-columns:340px minmax(0,1fr);
+  }
 }
 
 @media(max-width:900px){
   .ficha-toolbar,
-  .ficha-layout{
+  .ficha-layout,
+  .ficha-grid-info,
+  .ficha-requisitos{
     grid-template-columns:1fr;
   }
 
