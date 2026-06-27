@@ -18,7 +18,7 @@ Con qué se conecta:
   var SNAPSHOT_KEY = "REQ_EXCEL_LOCAL_V1:snapshot";
   var SIGNAL_KEY = "REQ_BL_SIGNAL_V1";
   var STATUS_KEY = "REQ_MAQ_BASELOCAL_SESSION_STATUS_V1";
-  var VERSION = "1.0.0";
+  var VERSION = "1.0.1";
 
   var cache = {
     ready:false,
@@ -79,11 +79,12 @@ Con qué se conecta:
   function ensureReady(options){
     options = options || {};
     var force = options.force === true;
-    var raw = readRawLocal();
 
-    if(cache.ready && !force && raw === cache.raw){
+    if(cache.ready && !force){
       return getStatus();
     }
+
+    var raw = readRawLocal();
 
     try{
       var snapshot = normalizeSnapshot(safeParse(raw, emptySnapshot()));
