@@ -6,6 +6,8 @@ Función o funciones:
 - Mostrar la tabla principal de estudiantes cargados desde Base Local.
 - Filtrar por período, división, matrícula, carrera, estado académico y búsqueda general.
 - Mostrar ACTIVO por defecto y permitir ver RETIRADO cuando se seleccione.
+- Usar BL2 cuando esté disponible y ExcelLocalRepo como respaldo.
+- Paginar la tabla para evitar renderizar demasiadas filas.
 Con qué se conecta:
 - tabla.css
 - tabla.core.js
@@ -15,6 +17,13 @@ Con qué se conecta:
 - ../Excel/excel-local.repo.js
 - ../../BaseLocal/services/bl-periodos-canon.service.js
 - ../../BaseLocal/services/bl-divisiones.service.js
+- ../../BaseLocal2/bl2-config.js
+- ../../BaseLocal2/bl2-detect-runtime.js
+- ../../BaseLocal2/bl2-legacy-adapter.js
+- ../../BaseLocal2/bl2-api.js
+- ../../BaseLocal2/services/bl2-search.service.js
+- ../../BaseLocal2/services/bl2-pagination.service.js
+- ../../BaseLocal2/repositories/bl2-estudiantes.repo.js
 ========================================================= -->
 <html lang="es">
 <head>
@@ -27,7 +36,7 @@ Con qué se conecta:
   <main class="tabla-app">
     <section id="tabla-status" class="tabla-status">Cargando tabla...</section>
     <section class="tabla-kpis">
-      <article><span>Total visible</span><strong id="tabla-kpi-total">0</strong></article>
+      <article><span>Total filtrado</span><strong id="tabla-kpi-total">0</strong></article>
       <article><span>Cumplen todo</span><strong id="tabla-kpi-ok">0</strong></article>
       <article><span>Con pendientes</span><strong id="tabla-kpi-pend">0</strong></article>
       <article><span>No cumplen</span><strong id="tabla-kpi-no">0</strong></article>
@@ -40,13 +49,21 @@ Con qué se conecta:
       <label>Carrera<select id="tabla-carrera"><option value="">Todas</option></select></label>
       <label>Estado<select id="tabla-estado"><option value="">Todos</option><option value="cumple">Cumple todo</option><option value="pendiente">Con pendientes</option><option value="no_cumple">No cumple</option></select></label>
       <label>Buscar<input id="tabla-search" type="search" placeholder="Cédula, nombre, carrera, división, correo..." /></label>
+      <label>Filas<select id="tabla-page-size"><option value="50">50</option><option value="100" selected>100</option><option value="200">200</option><option value="300">300</option></select></label>
       <button id="tabla-refresh" type="button">Actualizar</button>
       <button id="tabla-export-csv" type="button">Exportar CSV</button>
       <button id="tabla-export-json" type="button">Exportar JSON</button>
     </section>
     <section class="tabla-table-card">
-      <div class="tabla-table-info"><span id="tabla-count-text">0 registros</span><span>Máximo visual rápido: 500 filas</span></div>
+      <div class="tabla-table-info"><span id="tabla-count-text">0 registros</span><span id="tabla-page-text">Página 1 de 1</span></div>
       <div id="tabla-table-wrap" class="tabla-table-wrap"></div>
+      <div class="tabla-pagination" aria-label="Paginación de tabla">
+        <button id="tabla-page-first" type="button">Primera</button>
+        <button id="tabla-page-prev" type="button">Anterior</button>
+        <span id="tabla-page-label">0 registros</span>
+        <button id="tabla-page-next" type="button">Siguiente</button>
+        <button id="tabla-page-last" type="button">Última</button>
+      </div>
     </section>
   </main>
   <script src="../Excel/excel-local/excel-local.config.js"></script>
@@ -55,6 +72,13 @@ Con qué se conecta:
   <script src="../Excel/excel-local.repo.js"></script>
   <script src="../../BaseLocal/services/bl-periodos-canon.service.js"></script>
   <script src="../../BaseLocal/services/bl-divisiones.service.js"></script>
+  <script src="../../BaseLocal2/bl2-config.js"></script>
+  <script src="../../BaseLocal2/bl2-detect-runtime.js"></script>
+  <script src="../../BaseLocal2/bl2-legacy-adapter.js"></script>
+  <script src="../../BaseLocal2/bl2-api.js"></script>
+  <script src="../../BaseLocal2/services/bl2-search.service.js"></script>
+  <script src="../../BaseLocal2/services/bl2-pagination.service.js"></script>
+  <script src="../../BaseLocal2/repositories/bl2-estudiantes.repo.js"></script>
   <script src="tabla.core.js"></script>
   <script src="tabla.export.js"></script>
   <script src="tabla.app.js"></script>
