@@ -2,16 +2,16 @@
 Nombre completo: stats.notes.js
 Ruta o ubicación: /Requisitos/Stats/stats.notes.js
 Función o funciones:
-- Renderizar análisis avanzado de notas en Stats.
-- Mostrar tarjetas, ranking, distribución, promedio por carrera, faltantes por carrera y estudiantes con notas incompletas.
-- Usar StatsNotesAnalysis cuando esté disponible.
+- Renderizar dashboard analítico de notas en Stats.
+- Mostrar KPIs, lectura automática, distribución, ranking, tendencia y resumen por carrera.
+- Usar stats.notes.analytics.js para mantener los cálculos fuertes fuera de la vista.
 Con qué se conecta:
 - stats.html
 - stats.css
-- stats.notes.analysis.js
+- stats.notes.analytics.css
+- stats.notes.analytics.js
 - stats.core.js
 - stats.app.js
-- stats.tables.js
 ========================================================= */
 (function(window,document){
   "use strict";
@@ -20,144 +20,128 @@ Con qué se conecta:
   function el(id){return document.getElementById(id);}
   function esc(value){return text(value).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;").replace(/'/g,"&#039;");}
   function fmt(value){return value===null||value===undefined||value===""?"—":esc(value);}
-  function pct(value){return value===null||value===undefined?"—":esc(value)+"%";}
+  function num(value){value=Number(value);return Number.isFinite(value)?value:0;}
+  function pct(value,total){return total?Math.round((num(value)*10000)/num(total))/100:0;}
 
   function card(label,value,sub,type){
-    return '<article class="stats-note-card '+esc(type||"")+'"><span>'+esc(label)+'</span><strong>'+fmt(value)+'</strong>'+(sub?'<small>'+esc(sub)+'</small>':'')+'</article>';
+    return '<article class="stats-note-card '+esc(type||"")+'">'
+      + '<span>'+esc(label)+'</span>'
+      + '<strong>'+fmt(value)+'</strong>'
+      + (sub?'<small>'+esc(sub)+'</small>':'')
+      + '</article>';
   }
 
-  function section(title,subtitle,body,extraClass){
-    return '<article class="stats-note-block '+esc(extraClass||"")+'"><div class="stats-note-block-head"><h3>'+esc(title)+'</h3>'+(subtitle?'<span>'+esc(subtitle)+'</span>':'')+'</div>'+body+'</article>';
+  function bar(label,value,total,type){
+    var percent=pct(value,total);
+    return '<div class="notes-analytics-bar '+esc(type||"")+'">'
+      + '<div class="notes-analytics-bar-head"><strong>'+esc(label)+'</strong><span>'+esc(value)+' · '+esc(percent)+'%</span></div>'
+      + '<div class="notes-analytics-track"><i style="width:'+Math.max(0,Math.min(100,percent))+'%"></i></div>'
+      + '</div>';
   }
 
-  function rankingCard(label,item,value,sub,type){
-    return '<article class="stats-note-ranking-card '+esc(type||"")+'"><span>'+esc(label)+'</span><strong>'+esc(item&&item.carrera?item.carrera:'—')+'</strong><small>'+esc(value==null?'—':value)+(sub?" · "+esc(sub):"")+'</small></article>';
+  function renderLectura(lectura){
+    lectura=Array.isArray(lectura)?lectura:[];
+    return '<section class="notes-analytics-panel notes-analytics-reading">'
+      + '<div class="notes-analytics-panel-head"><h3>Lectura automática</h3><span>Análisis ejecutivo</span></div>'
+      + (lectura.length?'<ul>'+lectura.map(function(item){return '<li>'+esc(item)+'</li>';}).join('')+'</ul>':'<div class="empty">Sin lectura automática todavía.</div>')
+      + '</section>';
   }
 
-  function buildFallback(data){
-    var rows=(data&&data.estudiantes)||[];
-    if(window.StatsNotesAnalysis&&typeof window.StatsNotesAnalysis.build==="function")return window.StatsNotesAnalysis.build(rows);
+  function renderRangos(rangos,total){
+    rangos=Array.isArray(rangos)?rangos:[];
+    return '<section class="notes-analytics-panel">'
+      + '<div class="notes-analytics-panel-head"><h3>Distribución de notas finales</h3><span>Rangos de Nfin</span></div>'
+      + '<div class="notes-analytics-bars">'+rangos.map(function(item){
+        var tipo=item.rango==="Menor a 7"?'bad':(item.rango==="Sin nota final"?'warn':'ok');
+        return bar(item.rango,item.total,total,tipo);
+      }).join('')+'</div>'
+      + '</section>';
+  }
+
+  function renderRankings(rankings){
+    rankings=rankings||{};
+    var mejor=(rankings.mejoresPromedios||[])[0];
+    var riesgo=(rankings.masRiesgo||[])[0];
+    var pendientes=(rankings.masPendientes||[])[0];
+    var defensa=(rankings.defensaMasBaja||[])[0];
+    return '<section class="notes-analytics-panel notes-analytics-ranking">'
+      + '<div class="notes-analytics-panel-head"><h3>Prioridades rápidas</h3><span>Ranking</span></div>'
+      + '<div class="notes-ranking-grid">'
+      + '<article><span>Mejor carrera</span><strong>'+fmt(mejor&&mejor.carrera)+'</strong><small>Promedio: '+fmt(mejor&&mejor.promNfin)+'</small></article>'
+      + '<article><span>Mayor riesgo</span><strong>'+fmt(riesgo&&riesgo.carrera)+'</strong><small>Riesgo alto: '+fmt(riesgo&&riesgo.riesgoAlto)+'</small></article>'
+      + '<article><span>Más pendientes</span><strong>'+fmt(pendientes&&pendientes.carrera)+'</strong><small>Nfin pendiente: '+fmt(pendientes&&pendientes.sinNfin)+'</small></article>'
+      + '<article><span>Defensa más baja</span><strong>'+fmt(defensa&&defensa.carrera)+'</strong><small>Brecha: '+fmt(defensa&&defensa.diferenciaNdefNart)+'</small></article>'
+      + '</div></section>';
+  }
+
+  function renderCarreras(carreras){
+    carreras=Array.isArray(carreras)?carreras:[];
+    if(!carreras.length)return '<section class="notes-analytics-panel"><div class="empty">Sin carreras para analizar.</div></section>';
+    var rows=carreras.slice(0,16).map(function(c){
+      return '<tr>'
+        + '<td><strong>'+esc(c.carrera)+'</strong><small>'+esc(c.diagnostico||'')+'</small></td>'
+        + '<td>'+esc(c.total)+'</td>'
+        + '<td>'+fmt(c.promNart)+'</td>'
+        + '<td>'+fmt(c.promNdef)+'</td>'
+        + '<td><strong>'+fmt(c.promNfin)+'</strong></td>'
+        + '<td>'+fmt(c.sinNfin)+'</td>'
+        + '<td>'+fmt(c.riesgoAlto)+'</td>'
+        + '<td><span class="notes-semaforo is-'+esc(c.semaforo||'gris')+'">'+esc(c.semaforo||'gris')+'</span></td>'
+        + '</tr>';
+    }).join('');
+    return '<section class="notes-analytics-panel notes-analytics-careers">'
+      + '<div class="notes-analytics-panel-head"><h3>Resumen por carrera</h3><span>'+esc(carreras.length)+' carreras</span></div>'
+      + '<div class="notes-analytics-table-wrap"><table class="notes-analytics-table"><thead><tr><th>Carrera</th><th>Total</th><th>Nart</th><th>Ndef</th><th>Nfin</th><th>Pend.</th><th>Riesgo</th><th>Semáforo</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+      + '</section>';
+  }
+
+  function renderTendencias(tendencias){
+    tendencias=Array.isArray(tendencias)?tendencias.filter(function(item){return item.periodo!=="SIN FECHA";}):[];
+    if(!tendencias.length)return '';
+    return '<section class="notes-analytics-panel notes-analytics-trends">'
+      + '<div class="notes-analytics-panel-head"><h3>Tendencia de registro</h3><span>Notas finales por mes</span></div>'
+      + '<div class="notes-analytics-bars">'+tendencias.slice(-8).map(function(item){return bar(item.periodo,item.conNfin,item.total,'');}).join('')+'</div>'
+      + '</section>';
+  }
+
+  function fallback(data,target){
     var n=(data&&data.notasResumen)||{};
-    return {resumen:{total:n.total||0,conNota:n.conNota||0,sinNota:n.sinNota||0,promedio:n.promedio,minima:n.minima,maxima:n.maxima,conNart:n.conNart||0,conNdef:n.conNdef||0,completas:n.conNota||0,incompletas:n.sinNota||0,coberturaNfin:0},carreras:[],ranking:{},distribucion:{r9_10:0,r8_899:0,r7_799:0,menor7:0,sinNota:n.sinNota||0},estudiantesIncompletos:[]};
-  }
-
-  function renderSummary(analysis){
-    var n=analysis.resumen||{};
-    return '<section class="stats-notes-grid stats-notes-grid-extended">'
-      + card("Total",n.total||0,"estudiantes evaluados","")
-      + card("Con N-ART",n.conNart||0,"nota de artículo","")
-      + card("Con N-DEF",n.conNdef||0,"nota de defensa","")
-      + card("Con N-FIN",n.conNota||0,"nota final","ok")
-      + card("Sin N-FIN",n.sinNota||0,"pendientes","bad")
-      + card("Completas",n.completas||0,"N-ART + N-DEF + N-FIN","ok")
-      + card("Incompletas",n.incompletas||0,"requieren revisión","bad")
-      + card("Cobertura",pct(n.coberturaNfin),"con nota final","")
-      + card("Promedio N-ART",n.promedioNart,"artículo","")
-      + card("Promedio N-DEF",n.promedioNdef,"defensa","")
-      + card("Promedio N-FIN",n.promedio,"final","")
-      + card("Mín / Máx",(fmt(n.minima)+" / "+fmt(n.maxima)),"nota final","")
+    var total=n.total||0;
+    target.innerHTML='<section class="stats-notes-grid">'
+      + card("Total",total,"estudiantes evaluados","")
+      + card("Con nota",n.conNota||0,"con nota final","ok")
+      + card("Sin nota",n.sinNota||0,"pendientes de registro","bad")
+      + card("Promedio",n.promedio,"nota final","")
+      + card("Mínima",n.minima,"nota final","")
+      + card("Máxima",n.maxima,"nota final","")
       + '</section>';
-  }
-
-  function renderRanking(analysis){
-    var r=analysis.ranking||{};
-    return '<section class="stats-note-ranking">'
-      + rankingCard("Mejor promedio",r.bestAvg,r.bestAvg?"Prom. "+r.bestAvg.promedioNfin:"—",r.bestAvg?"cobertura "+r.bestAvg.coberturaNfin+"%":"","ok")
-      + rankingCard("Menor promedio",r.worstAvg,r.worstAvg?"Prom. "+r.worstAvg.promedioNfin:"—",r.worstAvg?"cobertura "+r.worstAvg.coberturaNfin+"%":"","bad")
-      + rankingCard("Más sin nota",r.missingMost,r.missingMost?r.missingMost.sinNfin+" sin N-FIN":"—",r.missingMost?r.missingMost.total+" total":"","bad")
-      + rankingCard("Mayor cobertura",r.coverageBest,r.coverageBest?r.coverageBest.coberturaNfin+"%":"—",r.coverageBest?r.coverageBest.conNfin+" con nota":"","ok")
-      + '</section>';
-  }
-
-  function renderDistribution(analysis){
-    var d=analysis.distribucion||{};
-    var rows=[
-      ["9.00 - 10.00",d.r9_10||0,"ok"],
-      ["8.00 - 8.99",d.r8_899||0,"ok"],
-      ["7.00 - 7.99",d.r7_799||0,"warn"],
-      ["Menor a 7.00",d.menor7||0,"bad"],
-      ["Sin nota",d.sinNota||0,"na"]
-    ];
-    var total=rows.reduce(function(a,b){return a+Number(b[1]||0);},0);
-    var body='<div class="stats-note-distribution">'+rows.map(function(row){
-      var percent=total?Math.round((row[1]*10000)/total)/100:0;
-      return '<div class="stats-note-dist-row '+esc(row[2])+'"><strong>'+esc(row[0])+'</strong><div class="stats-note-dist-track"><i style="width:'+percent+'%"></i></div><span>'+esc(row[1])+' · '+esc(percent)+'%</span></div>';
-    }).join("")+'</div>';
-    return section("Distribución de notas finales","Rangos de N-FIN",body,"distribution");
-  }
-
-  function renderCareerAverageTable(analysis){
-    var rows=analysis.carreras||[];
-    if(!rows.length)return section("Promedio por carrera","Sin datos suficientes",'<div class="empty">Sin carreras para mostrar.</div>');
-    var html='<div class="stats-table-wrap stats-notes-table"><table class="stats-sortable-table" data-sortable="true"><thead><tr>'
-      + '<th data-sort-type="text">Carrera</th><th data-sort-type="number">Total</th><th data-sort-type="number">Con N-FIN</th><th data-sort-type="number">Sin N-FIN</th><th data-sort-type="percent">Cobertura</th><th data-sort-type="number">Prom. N-ART</th><th data-sort-type="number">Prom. N-DEF</th><th data-sort-type="number">Prom. N-FIN</th><th data-sort-type="number">Mín</th><th data-sort-type="number">Máx</th>'
-      + '</tr></thead><tbody>';
-    html+=rows.map(function(r){return '<tr>'
-      + '<td data-sort="'+esc(r.carrera)+'"><strong>'+esc(r.carrera)+'</strong></td>'
-      + '<td data-sort="'+esc(r.total)+'">'+esc(r.total)+'</td>'
-      + '<td data-sort="'+esc(r.conNfin)+'"><span class="pill pill-ok">'+esc(r.conNfin)+'</span></td>'
-      + '<td data-sort="'+esc(r.sinNfin)+'"><span class="pill pill-bad">'+esc(r.sinNfin)+'</span></td>'
-      + '<td data-sort="'+esc(r.coberturaNfin)+'">'+esc(r.coberturaNfin)+'%</td>'
-      + '<td data-sort="'+esc(r.promedioNart||0)+'">'+fmt(r.promedioNart)+'</td>'
-      + '<td data-sort="'+esc(r.promedioNdef||0)+'">'+fmt(r.promedioNdef)+'</td>'
-      + '<td data-sort="'+esc(r.promedioNfin||0)+'"><strong>'+fmt(r.promedioNfin)+'</strong></td>'
-      + '<td data-sort="'+esc(r.minimaNfin||0)+'">'+fmt(r.minimaNfin)+'</td>'
-      + '<td data-sort="'+esc(r.maximaNfin||0)+'">'+fmt(r.maximaNfin)+'</td>'
-      + '</tr>';}).join("");
-    html+='</tbody></table></div>';
-    return section("Promedio por carrera","Ordenable por cualquier columna",html,"wide");
-  }
-
-  function renderCareerMissingTable(analysis){
-    var rows=analysis.carreras||[];
-    if(!rows.length)return "";
-    var html='<div class="stats-table-wrap stats-notes-table"><table class="stats-sortable-table" data-sortable="true"><thead><tr>'
-      + '<th data-sort-type="text">Carrera</th><th data-sort-type="number">Sin N-ART</th><th data-sort-type="number">Sin N-DEF</th><th data-sort-type="number">Sin N-FIN</th><th data-sort-type="number">Incompletas</th><th data-sort-type="number">Completas</th>'
-      + '</tr></thead><tbody>';
-    html+=rows.map(function(r){return '<tr>'
-      + '<td data-sort="'+esc(r.carrera)+'"><strong>'+esc(r.carrera)+'</strong></td>'
-      + '<td data-sort="'+esc(r.sinNart)+'"><span class="pill pill-bad">'+esc(r.sinNart)+'</span></td>'
-      + '<td data-sort="'+esc(r.sinNdef)+'"><span class="pill pill-bad">'+esc(r.sinNdef)+'</span></td>'
-      + '<td data-sort="'+esc(r.sinNfin)+'"><span class="pill pill-bad">'+esc(r.sinNfin)+'</span></td>'
-      + '<td data-sort="'+esc(r.incompletas)+'"><span class="pill pill-bad">'+esc(r.incompletas)+'</span></td>'
-      + '<td data-sort="'+esc(r.completas)+'"><span class="pill pill-ok">'+esc(r.completas)+'</span></td>'
-      + '</tr>';}).join("");
-    html+='</tbody></table></div>';
-    return section("Faltantes por carrera","Dónde falta registrar o calcular notas",html,"wide");
-  }
-
-  function renderMissingStudents(analysis){
-    var rows=(analysis.estudiantesIncompletos||[]).slice(0,150);
-    if(!rows.length)return section("Estudiantes con notas incompletas","Todo completo",'<div class="empty">No hay estudiantes con notas incompletas.</div>',"wide");
-    var html='<div class="stats-table-wrap stats-notes-table"><table class="stats-sortable-table" data-sortable="true"><thead><tr>'
-      + '<th data-sort-type="text">Nombre</th><th data-sort-type="text">Cédula</th><th data-sort-type="text">Carrera</th><th data-sort-type="number">N-ART</th><th data-sort-type="number">N-DEF</th><th data-sort-type="number">N-FIN</th><th data-sort-type="text">Estado nota</th>'
-      + '</tr></thead><tbody>';
-    html+=rows.map(function(r){return '<tr>'
-      + '<td data-sort="'+esc(r.nombre)+'"><strong>'+esc(r.nombre)+'</strong></td>'
-      + '<td data-sort="'+esc(r.cedula)+'">'+esc(r.cedula)+'</td>'
-      + '<td data-sort="'+esc(r.carrera)+'">'+esc(r.carrera)+'</td>'
-      + '<td data-sort="'+esc(r.nart||0)+'">'+fmt(r.nart)+'</td>'
-      + '<td data-sort="'+esc(r.ndef||0)+'">'+fmt(r.ndef)+'</td>'
-      + '<td data-sort="'+esc(r.nfin||0)+'">'+fmt(r.nfin)+'</td>'
-      + '<td data-sort="'+esc(r.estado)+'"><span class="note-state-bad">'+esc(r.estado)+'</span></td>'
-      + '</tr>';}).join("");
-    html+='</tbody></table></div>';
-    return section("Estudiantes con notas incompletas",rows.length+" registros mostrados",html,"wide");
   }
 
   function render(data,targetId){
     var target=el(targetId||"stats-notes");
     if(!target)return;
-    var analysis=buildFallback(data||{});
-    target.innerHTML=renderSummary(analysis)
-      + renderRanking(analysis)
-      + '<section class="stats-notes-analysis-grid">'
-      + renderDistribution(analysis)
-      + renderCareerAverageTable(analysis)
-      + renderCareerMissingTable(analysis)
-      + renderMissingStudents(analysis)
+    if(!window.StatsNotesAnalytics||typeof window.StatsNotesAnalytics.analizar!=="function"){
+      fallback(data,target);
+      return;
+    }
+    var analisis=window.StatsNotesAnalytics.analizar(data||{});
+    var r=analisis.resumen||{};
+    target.innerHTML=''
+      + '<section class="stats-notes-grid notes-analytics-kpis">'
+      + card("Total",r.total,"estudiantes analizados","")
+      + card("Prom. Nart",r.promNart,"artículo","")
+      + card("Prom. Ndef",r.promNdef,"defensa","")
+      + card("Prom. Nfin",r.promNfin,"nota final","")
+      + card("Aprobación",r.porcentajeAprobacion+"%",(r.aprobados||0)+" aprobados","ok")
+      + card("Riesgo alto",r.riesgoAlto||0,"revisión prioritaria","bad")
+      + '</section>'
+      + '<section class="notes-analytics-dashboard">'
+      + renderLectura(analisis.lectura)
+      + renderRankings(analisis.rankings)
+      + renderRangos(analisis.rangos,r.total)
+      + renderTendencias(analisis.tendencias)
+      + renderCarreras(analisis.carreras)
       + '</section>';
-    if(window.StatsTables&&typeof window.StatsTables.bindAll==="function")window.StatsTables.bindAll(target);
   }
 
   window.StatsNotes={render:render};
