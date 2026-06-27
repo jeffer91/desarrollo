@@ -25,6 +25,7 @@
     "release:auto": "npm --prefix electron run release:auto",
     "version:show": "npm --prefix electron run version:show",
     "install:electron": "npm --prefix electron install",
-    "setup": "node scripts/ensure-electron-deps.js"
+    "setup": "node scripts/ensure-electron-deps.js",
+    "check:stats-notas-analytics": "node scripts/verificar-stats-notas-analytics.js"
   }
 }
