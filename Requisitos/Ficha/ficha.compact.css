@@ -1,0 +1,104 @@
+/* =========================================================
+Nombre completo: ficha.compact.css
+Ruta o ubicación: /Requisitos/Ficha/ficha.compact.css
+Función o funciones:
+- Aplicar una capa visual compacta sobre ficha.css sin tocar la lógica.
+- Ocultar el aviso verde de éxito para recuperar espacio útil.
+- Reordenar proporciones de filtros: búsqueda más amplia y división menos dominante.
+- Reducir espacios generales de la pantalla Ficha.
+Con qué se conecta:
+- ficha.html
+- ficha.css
+========================================================= */
+
+.ficha-app{
+  max-width:none;
+  padding:8px 12px 10px;
+}
+
+.ficha-status.ok{
+  display:none;
+}
+
+.ficha-status{
+  margin-bottom:8px;
+  padding:8px 10px;
+  border-radius:12px;
+}
+
+.ficha-toolbar{
+  grid-template-columns:minmax(170px,.85fr) minmax(220px,1fr) 116px minmax(360px,2.3fr) auto auto auto;
+  gap:8px;
+  padding:10px 12px;
+  margin-bottom:10px;
+  border-radius:14px;
+  align-items:end;
+}
+
+.ficha-toolbar label{
+  gap:5px;
+  min-width:0;
+}
+
+.ficha-toolbar select,
+.ficha-toolbar input{
+  min-height:34px;
+  height:34px;
+  border-radius:11px;
+  padding:6px 10px;
+}
+
+.ficha-toolbar button{
+  min-height:34px;
+  height:34px;
+  padding:0 14px;
+}
+
+.ficha-filter-search input{
+  width:100%;
+}
+
+.ficha-layout{
+  grid-template-columns:390px minmax(0,1fr);
+  gap:10px;
+}
+
+.ficha-list-card,
+.ficha-detail-card{
+  min-height:0;
+  border-radius:14px;
+}
+
+.ficha-list-head{
+  padding:10px 12px;
+}
+
+.ficha-list{
+  max-height:calc(100vh - 210px);
+}
+
+.ficha-item{
+  min-height:auto;
+  padding:9px 12px;
+}
+
+.ficha-detail-card{
+  padding:12px;
+}
+
+@media(max-width:1200px){
+  .ficha-toolbar{
+    grid-template-columns:1fr 1fr 120px 2fr;
+  }
+
+  .ficha-toolbar button{
+    width:100%;
+  }
+}
+
+@media(max-width:900px){
+  .ficha-toolbar,
+  .ficha-layout{
+    grid-template-columns:1fr;
+  }
+}
