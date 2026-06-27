@@ -10,6 +10,7 @@ Función o funciones:
 - Usar nombres visibles normalizados sin modificar la base de datos.
 - Leer requisitos con alias inteligentes de Firestore/Base Local.
 - Generar mensajes para WhatsApp y Telegram con saludo automático.
+- Leer y evaluar notas Nart, Ndef y Nfin.
 Con qué se conecta:
 - excel-local.repo.js
 - bl-campos.js
@@ -35,6 +36,11 @@ Con qué se conecta:
     {key:"aprobaciontitulacion",field:"aprobacionTitulacion",label:label("aprobaciontitulacion","Aprobación titulación"),icon:"🎓"},
     {key:"aprobacioncomplexivoproyecto",field:"aprobacionComplexivoProyecto",label:label("aprobacioncomplexivoproyecto","Aprobación complexivo/proyecto"),icon:"🧩"}
   ];
+  var NOTE_FIELDS=[
+    {key:"nart",label:"Nart",aliases:["Notart","notart","Nart","nart","NotaArt","notaArt"]},
+    {key:"ndef",label:"Ndef",aliases:["Notdef","notdef","Ndef","ndef","NotaDef","notaDef"]},
+    {key:"nfin",label:"Nfin",aliases:["Notafinal","notafinal","NotaFinal","notaFinal","Nfin","nfin","Nota final","nota final"]}
+  ];
   var ALL_REQS=MAIN_REQS.concat(SPECIAL_REQS);
   var REQS=MAIN_REQS;
   function text(v){return String(v==null?"":v).trim();}
@@ -42,6 +48,8 @@ Con qué se conecta:
   function pick(row,aliases,fallback){var keys=Object.keys(row||{});for(var i=0;i<aliases.length;i+=1){for(var j=0;j<keys.length;j+=1){if(norm(keys[j])===norm(aliases[i])){var value=row[keys[j]];if(value!=null&&text(value)!=="")return value;}}}return fallback;}
   function fieldValue(row,field,fallback){if(!row)return fallback;try{if(window.BLCampos&&typeof window.BLCampos.getValue==="function")return window.BLCampos.getValue(row,field,fallback);}catch(error){}return pick(row,[field],fallback);}
   function reqValue(row,req){return fieldValue(row,req.field||req.key,pick(row,[req.key],""));}
+  function numberValue(value){var raw=text(value).replace(",",".");if(!raw)return null;var n=Number(raw);return Number.isFinite(n)?n:null;}
+  function estadoNota(value){var n=numberValue(value);return n!=null&&n>=7?"cumple":"no_cumple";}
   function estadoMatricula(v){return norm(v||"ACTIVO")==="retirado"?"RETIRADO":"ACTIVO";}
   function estadoCelda(v){var k=norm(v);if(!k)return "no_cumple";if(["cumple","si","s","ok","aprobado","aprobada","1","true","x","validado","completo"].indexOf(k)>=0)return "cumple";if(k.indexOf("no cumple")>=0||["no","n","reprobado","reprobada","0","false","falta","incompleto","pendiente","sin dato"].indexOf(k)>=0)return "no_cumple";return "no_cumple";}
   function repo(){if(!window.ExcelLocalRepo)throw new Error("ExcelLocalRepo no disponible. Primero carga un Excel en Carga.");return window.ExcelLocalRepo;}
@@ -63,8 +71,9 @@ Con qué se conecta:
   function requisitos(row){return REQS.map(function(req){return buildReq(row,req);});}
   function especiales(row){return SPECIAL_REQS.map(function(req){return buildReq(row,req);});}
   function pendientes(row,includeSpecial){var source=includeSpecial?ALL_REQS:REQS;return source.map(function(req){return buildReq(row,req);}).filter(function(req){return req.estado!=="cumple";});}
+  function notas(row){return NOTE_FIELDS.map(function(note){var raw=pick(row,note.aliases,"");var n=numberValue(raw);return {key:note.key,label:note.label,value:n==null?"—":String(raw),number:n,estado:estadoNota(raw)};});}
   function studentMessage(row){row=normalizeStudent(row||{});var faltantes=pendientes(row,true);var lines=[saludo()+", "+(row._nombres||"estudiante")+".","","Le escribimos desde el área de Titulación.","Carrera: "+(row._carrera||"—"),"Período: "+(row._periodo||"—"),""];if(faltantes.length){lines.push("Requisitos pendientes:");faltantes.forEach(function(req){lines.push("- "+req.label);});}else{lines.push("No registra requisitos pendientes.");}lines.push("","Por favor revisar y regularizar la información pendiente.");return lines.join("\n");}
   function whatsappUrl(row){row=normalizeStudent(row||{});var phone=text(row&&row._celular).replace(/[^0-9]/g,"");if(!phone)return "";if(phone.length===10&&phone.charAt(0)==="0")phone="593"+phone.slice(1);return "https://wa.me/"+phone+"?text="+encodeURIComponent(studentMessage(row));}
-  function toText(row){if(!row)return "";row=normalizeStudent(row);var faltantes=pendientes(row,true);var tg=telegramInfo(row);var lines=["FICHA DEL ESTUDIANTE","Nombre: "+row._nombres,"Cédula: "+row._cedula,"Carrera: "+row._carrera,"Período: "+row._periodo,"Matrícula: "+row._estadoMatricula,"Estado: "+(row._estado&&row._estado.label),"Correo: "+row._correo,"Celular: "+row._celular,"Telegram: "+(tg.user||tg.chatId||"—"),"","REQUISITOS PENDIENTES"];if(faltantes.length){faltantes.forEach(function(req){lines.push("- "+req.label);});}else{lines.push("Sin requisitos pendientes.");}return lines.join("\n");}
-  window.FichaCore={REQS:REQS,SPECIAL_REQS:SPECIAL_REQS,ALL_REQS:ALL_REQS,periods:periods,students:students,divisions:divisions,filter:filter,getById:getById,requisitos:requisitos,especiales:especiales,pendientes:pendientes,whatsappUrl:whatsappUrl,telegramUrl:telegramUrl,telegramInfo:telegramInfo,studentMessage:studentMessage,toText:toText,estadoCelda:estadoCelda,estadoMatricula:estadoMatricula,divisionOf:divisionOf,fieldValue:fieldValue,reqValue:reqValue};
+  function toText(row){if(!row)return "";row=normalizeStudent(row);var faltantes=pendientes(row,true);var tg=telegramInfo(row);var ns=notas(row);var lines=["FICHA DEL ESTUDIANTE","Nombre: "+row._nombres,"Cédula: "+row._cedula,"Carrera: "+row._carrera,"Período: "+row._periodo,"Matrícula: "+row._estadoMatricula,"Estado: "+(row._estado&&row._estado.label),"Correo: "+row._correo,"Celular: "+row._celular,"Telegram: "+(tg.user||tg.chatId||"—"),"","REQUISITOS PENDIENTES"];if(faltantes.length){faltantes.forEach(function(req){lines.push("- "+req.label);});}else{lines.push("Sin requisitos pendientes.");}lines.push("","NOTAS");ns.forEach(function(n){lines.push(n.label+": "+n.value);});return lines.join("\n");}
+  window.FichaCore={REQS:REQS,SPECIAL_REQS:SPECIAL_REQS,ALL_REQS:ALL_REQS,NOTE_FIELDS:NOTE_FIELDS,periods:periods,students:students,divisions:divisions,filter:filter,getById:getById,requisitos:requisitos,especiales:especiales,pendientes:pendientes,notas:notas,whatsappUrl:whatsappUrl,telegramUrl:telegramUrl,telegramInfo:telegramInfo,studentMessage:studentMessage,toText:toText,estadoCelda:estadoCelda,estadoNota:estadoNota,estadoMatricula:estadoMatricula,divisionOf:divisionOf,fieldValue:fieldValue,reqValue:reqValue};
 })(window);
