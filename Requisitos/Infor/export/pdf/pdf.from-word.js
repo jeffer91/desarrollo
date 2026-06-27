@@ -2,14 +2,33 @@
 Nombre completo: pdf.from-word.js
 Ruta o ubicación: /Requisitos/Infor/export/pdf/pdf.from-word.js
 Función o funciones:
-- Mantener la entrada local de exportación PDF de Infor.
-- Cargar temporalmente la implementación vigente desde /Requisitos/Titulacion/export/pdf.
-- Permitir que la pantalla Infor dependa de /Requisitos/Infor/export.
+- Generar una vista imprimible del informe usando el mismo HTML del Word desde la carpeta definitiva /Requisitos/Infor.
+- Abrir diálogo de impresión para guardar como PDF.
+- Mantener una sola fuente de documento para Word/PDF.
 Con qué se conecta:
-- ../../frontend/titulacion.html
-- ../../../Titulacion/export/pdf/pdf.from-word.js
+- ../word/word.export.js
+- ../../frontend/titulacion.app.js
 ========================================================= */
-(function(document){
+(function(window){
   "use strict";
-  document.write('<script src="../../../Titulacion/export/pdf/pdf.from-word.js"><\/script>');
-})(document);
+
+  function print(report, anexosList){
+    if(!report || !report.ok){throw new Error("No hay informe listo para exportar a PDF.");}
+    if(!(window.InforWordExport && typeof window.InforWordExport.buildHtml === "function")){
+      throw new Error("InforWordExport no está disponible.");
+    }
+    var html = window.InforWordExport.buildHtml(report, anexosList);
+    var win = window.open("", "_blank");
+    if(!win){throw new Error("El navegador bloqueó la ventana de impresión PDF.");}
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+    win.onload = function(){
+      try{win.focus();win.print();}catch(error){console.warn("[Infor PDF]", error);}
+    };
+    setTimeout(function(){try{win.focus();win.print();}catch(error){}}, 900);
+    return {ok:true, message:"Vista PDF abierta. Usa Guardar como PDF."};
+  }
+
+  window.InforPdfExport = {print:print};
+})(window);
