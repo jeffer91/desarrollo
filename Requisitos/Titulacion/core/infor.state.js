@@ -4,9 +4,10 @@ Ruta o ubicación: /Requisitos/Titulacion/core/infor.state.js
 Función o funciones:
 - Mantener el estado interno del nuevo módulo Infor.
 - Guardar configuración mínima por período en almacenamiento local.
-- Clasificar períodos como REGULAR o PVC usando StatsRules cuando esté disponible.
+- Clasificar períodos como REGULAR o PVC usando InforPeriodo/StatsRules cuando esté disponible.
 - Guardar la clave de Gemini en BaseLocal local de Infor.
 Con qué se conecta:
+- core/infor.periodo.js
 - frontend/titulacion.app.js
 - Stats/stats.rules.js
 ========================================================= */
@@ -66,6 +67,9 @@ Con qué se conecta:
   function classifyPeriod(value){
     var raw = text(value);
     if(!raw){return emptyPeriodType();}
+    if(window.InforPeriodo && typeof window.InforPeriodo.classify === "function"){
+      return window.InforPeriodo.classify(raw);
+    }
     if(window.StatsRules && typeof window.StatsRules.classifyPeriod === "function"){
       return window.StatsRules.classifyPeriod(raw);
     }
@@ -148,7 +152,7 @@ Con qué se conecta:
       anexosCount:state.anexos.length,
       readyForNextBlock:true
     };
-    pushDiagnostic("procesar", "Bloque 1 guardó insumos y estado. La generación Word/PDF se implementa en los siguientes bloques.");
+    pushDiagnostic("procesar", "Bloque 2 guardó período, tipo, modalidad automática e insumos del informe.");
     return savePeriod();
   }
 
