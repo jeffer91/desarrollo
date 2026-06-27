@@ -3,9 +3,10 @@ Nombre completo: baselocal.connector.js
 Ruta o ubicación: /Requisitos/BaseLocal/baselocal.connector.js
 Función o funciones:
 - Conectar todos los módulos de Requisitos con una misma Base Local.
+- Usar la sesión rápida de Maqueta cuando Requisitos ya cargó la Base Local.
 - Compartir datos entre pantallas, iframes y la pantalla BL usando localStorage.
 - Exponer APIs simples: RequisitosBL, BaseLocalBridge.
-- Reconstruir colecciones espejo para eliminar residuos de periodos o estudiantes antiguos.
+- Reconstruir colecciones espejo solo cuando la foto local cambió.
 - Reflejar estudiantes también en tabla, fichas, stats, coordi, reportes y defensas.
 ========================================================= */
 (function(window){
@@ -15,6 +16,7 @@ Función o funciones:
   var SIGNAL_KEY = "REQ_BL_SIGNAL_V1";
   var SNAPSHOT_KEY = "REQ_EXCEL_LOCAL_V1:snapshot";
   var STATUS_KEY = "REQ_BL_CONNECTOR_STATUS_V1";
+  var MIRROR_SIGNATURE_KEY = "REQ_BL_MIRROR_SIGNATURE_V1";
 
   var COLLECTIONS = ["periodos","estudiantes","requisitos","observaciones","fichas","tabla","stats","coordi","reportes","defensas","archivos_referencias","metadata"];
   var MIRROR_COLLECTIONS = ["periodos","estudiantes","requisitos","fichas","tabla","stats","coordi","reportes","defensas"];
@@ -27,6 +29,16 @@ Función o funciones:
   function text(value){return String(value == null ? "" : value).trim();}
   function safeParse(value, fallback){try{return value ? JSON.parse(value) : fallback;}catch(error){return fallback;}}
   function clone(value){try{return JSON.parse(JSON.stringify(value == null ? null : value));}catch(error){return value;}}
+
+  function getSession(){
+    try{if(window.parent && window.parent !== window && window.parent.MAQ_BASELOCAL_SESSION){return window.parent.MAQ_BASELOCAL_SESSION;}}catch(error){}
+    try{if(window.top && window.top !== window && window.top.MAQ_BASELOCAL_SESSION){return window.top.MAQ_BASELOCAL_SESSION;}}catch(error){}
+    try{if(window.MAQ_BASELOCAL_SESSION){return window.MAQ_BASELOCAL_SESSION;}}catch(error){}
+    return null;
+  }
+
+  function getSavedMirrorSignature(){try{return window.sessionStorage.getItem(MIRROR_SIGNATURE_KEY) || "";}catch(error){return "";}}
+  function saveMirrorSignature(signature){try{window.sessionStorage.setItem(MIRROR_SIGNATURE_KEY, signature || "");}catch(error){}}
 
   function normalizeId(value, fallback){
     var raw = text(value || fallback || "");
@@ -52,6 +64,15 @@ Función o funciones:
   }
 
   function readRawSnapshot(){
+    var session = getSession();
+    if(session && typeof session.getSnapshot === "function"){
+      try{
+        var sessionSnap = session.getSnapshot({clone:false});
+        if(sessionSnap && typeof sessionSnap === "object"){
+          return canonicalizeSnapshot(clone(sessionSnap));
+        }
+      }catch(error){}
+    }
     var storage = getStorage();
     var snap = storage ? storage.readSnapshot() : safeParse(window.localStorage.getItem(SNAPSHOT_KEY), {meta:{app:"Requisitos", module:"BaseLocal", source:"fallback", updatedAt:now()}, periods:[], students:[], history:[], diagnostics:[]});
     return canonicalizeSnapshot(snap);
@@ -62,6 +83,10 @@ Función o funciones:
     var clean = canonicalizeSnapshot(snapshot || {});
     if(storage && typeof storage.writeSnapshot === "function"){storage.writeSnapshot(clean);}
     else{window.localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(clean));}
+    try{
+      var session = getSession();
+      if(session && typeof session.setSnapshot === "function"){session.setSnapshot(clean,{source:"RequisitosBL.writeSnapshot",alreadyStored:true,clone:false});}
+    }catch(error){}
     signal("snapshot-changed", {updatedAt:now()});
     return clean;
   }
@@ -150,7 +175,11 @@ Función o funciones:
     var periods = Array.isArray(snapshot.periods) ? snapshot.periods : [];
     var students = Array.isArray(snapshot.students) ? snapshot.students : [];
     var signature = snapshotSignature(snapshot);
-    if(options.force !== true && options.rebuild !== true && signature && signature === mirrorState.lastSignature){return {periods:periods.length, students:students.length, defensas:students.length, skipped:true, reason:"same_snapshot"};}
+    var savedSignature = getSavedMirrorSignature();
+    if(options.force !== true && options.rebuild !== true && signature && (signature === mirrorState.lastSignature || signature === savedSignature)){
+      mirrorState.lastSignature = signature;
+      return {periods:periods.length, students:students.length, defensas:students.length, skipped:true, reason:"same_snapshot_session"};
+    }
     mirrorState.running = true;
     try{
       var replace = options.rebuild === true || options.replace === true || options.force === true;
@@ -159,6 +188,7 @@ Función o funciones:
       guardar("metadata", {id:"snapshot_mirror_status", totalPeriods:periods.length, totalStudents:students.length, totalDefensas:students.length, updatedAt:now(), signature:signature, rebuild:replace}, "snapshot_mirror", {silent:true});
       mirrorState.lastSignature = signature;
       mirrorState.lastAt = now();
+      saveMirrorSignature(signature);
       if(options.silent !== true){signal("mirror-complete", {periods:periods.length, students:students.length, defensas:students.length, updatedAt:mirrorState.lastAt, rebuild:replace});}
       return {periods:periods.length, students:students.length, defensas:students.length, skipped:false, rebuild:replace};
     }finally{mirrorState.running = false;}
@@ -216,9 +246,9 @@ Función o funciones:
   function getStatus(){return safeParse(window.localStorage.getItem(STATUS_KEY), {ok:true, mode:"local", updatedAt:now()});}
   function saveStatus(status){var next = Object.assign({}, getStatus(), status || {}, {updatedAt:now(), today:today()});window.localStorage.setItem(STATUS_KEY, JSON.stringify(next));return next;}
 
-  window.RequisitosBL = {version:"1.1.0",collections:COLLECTIONS.slice(),mirrorCollections:MIRROR_COLLECTIONS.slice(),today:today,collectionFor:collectionFor,readSnapshot:readRawSnapshot,writeSnapshot:writeRawSnapshot,mirrorSnapshotToCollections:mirrorSnapshotToCollections,rebuildSnapshotToCollections:rebuildSnapshotToCollections,replaceCollection:replaceCollection,guardar:guardar,guardarMuchos:guardarMuchos,listar:listar,buscarPorId:buscarPorId,marcarEliminado:marcarEliminado,conteos:conteos,capturarGlobales:capturarGlobales,conectarModulo:conectarModulo,notificar:signal,getStatus:getStatus,saveStatus:saveStatus};
-  window.BaseLocalBridge = {version:"1.1.0",counts:conteos,getSnapshot:readRawSnapshot,writeSnapshot:writeRawSnapshot,mirrorSnapshotToCollections:mirrorSnapshotToCollections,rebuildSnapshotToCollections:rebuildSnapshotToCollections,list:listar,upsert:guardar,upsertMany:guardarMuchos,replace:replaceCollection,status:getStatus};
+  window.RequisitosBL = {version:"1.2.0",collections:COLLECTIONS.slice(),mirrorCollections:MIRROR_COLLECTIONS.slice(),today:today,collectionFor:collectionFor,readSnapshot:readRawSnapshot,writeSnapshot:writeRawSnapshot,mirrorSnapshotToCollections:mirrorSnapshotToCollections,rebuildSnapshotToCollections:rebuildSnapshotToCollections,replaceCollection:replaceCollection,guardar:guardar,guardarMuchos:guardarMuchos,listar:listar,buscarPorId:buscarPorId,marcarEliminado:marcarEliminado,conteos:conteos,capturarGlobales:capturarGlobales,conectarModulo:conectarModulo,notificar:signal,getStatus:getStatus,saveStatus:saveStatus};
+  window.BaseLocalBridge = {version:"1.2.0",counts:conteos,getSnapshot:readRawSnapshot,writeSnapshot:writeRawSnapshot,mirrorSnapshotToCollections:mirrorSnapshotToCollections,rebuildSnapshotToCollections:rebuildSnapshotToCollections,list:listar,upsert:guardar,upsertMany:guardarMuchos,replace:replaceCollection,status:getStatus};
 
-  try{mirrorSnapshotToCollections({silent:true});saveStatus({ok:true, mode:"connector_ready", optimized:true, defensasMirror:true, rebuildReady:true});}
+  try{var mirrorResult = mirrorSnapshotToCollections({silent:true});saveStatus({ok:true, mode:"connector_ready", optimized:true, sessionReady:!!getSession(), defensasMirror:true, rebuildReady:true, mirrorSkipped:mirrorResult.skipped === true, mirrorReason:mirrorResult.reason || "updated"});}
   catch(error){saveStatus({ok:false, mode:"connector_error", errorMessage:error.message || String(error)});}
 })(window);
