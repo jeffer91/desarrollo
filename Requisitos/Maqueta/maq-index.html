@@ -11,6 +11,7 @@ Función o funciones:
 - Mantener pantallas en memoria mediante iframes para no recargar desde cero.
 - Cargar el puente BL2 para migración segura hacia SQLite/IndexedDB.
 - Cargar el motor local BL2 sin usarlo todavía como fuente principal síncrona.
+- Cargar migrador V1 a BL2 sin ejecutarlo automáticamente.
 - Volver a Desarrollo sin usar la palabra Regresar.
 Con qué se conecta:
 - maq-ui.css
@@ -24,6 +25,8 @@ Con qué se conecta:
 - ../BaseLocal2/db/bl2-sqlite-adapter.js
 - ../BaseLocal2/db/bl2-storage.js
 - ../BaseLocal2/bl2-legacy-adapter.js
+- ../BaseLocal2/migration/bl2-migration-report.js
+- ../BaseLocal2/migration/bl2-migrate-from-v1.js
 - ../BaseLocal2/bl2-api.js
 - maq-baselocal-background-sync.js
 - maq-modulos-registry.js
@@ -72,6 +75,8 @@ Con qué se conecta:
   <script src="../BaseLocal2/db/bl2-sqlite-adapter.js"></script>
   <script src="../BaseLocal2/db/bl2-storage.js"></script>
   <script src="../BaseLocal2/bl2-legacy-adapter.js"></script>
+  <script src="../BaseLocal2/migration/bl2-migration-report.js"></script>
+  <script src="../BaseLocal2/migration/bl2-migrate-from-v1.js"></script>
   <script src="../BaseLocal2/bl2-api.js"></script>
   <script src="maq-modulos-registry.js"></script>
   <script src="maq-config-service.js"></script>
