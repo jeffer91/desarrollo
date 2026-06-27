@@ -6,6 +6,7 @@ Función o funciones:
 - Activar todos los módulos internos recuperados.
 - Mantener rutas internas sin renombrar carpetas para no romper enlaces.
 - Integrar el módulo Títulos desde la carpeta /Requisitos/Titulos.
+- Mostrar el módulo de informes de titulación como Infor.
 Con qué se conecta:
 - maq-config-service.js
 - maq-core.js
@@ -25,7 +26,7 @@ Con qué se conecta:
     titulos_estudiante:{id:"titulos_estudiante",nombre:"Títulos - Estudiante",ruta:base+"/Titulos/public/ta-titulo-articulo-estudiante.html",estado:"activo"},
     titulos_admin:{id:"titulos_admin",nombre:"Títulos - Administrador",ruta:base+"/Titulos/electron/admin/ta-titulo-articulo-administrador.html",estado:"activo"},
     titulos_coordinador:{id:"titulos_coordinador",nombre:"Títulos - Coordinador",ruta:base+"/Titulos/public/ta-titulo-articulo-coordinador.html",estado:"activo"},
-    titulacion:{id:"titulacion",nombre:"Información",ruta:base+"/Titulacion/frontend/titulacion.html",estado:"activo"}
+    titulacion:{id:"titulacion",nombre:"Infor",ruta:base+"/Titulacion/frontend/titulacion.html",estado:"activo"}
   };
   function buscarPorId(id){return modules[String(id||"").trim()]||null;}
   function listar(){return Object.keys(modules).map(function(k){return modules[k];});}
