@@ -4,9 +4,9 @@ Ruta o ubicación: /Requisitos/Maqueta/maq-modulos-registry.js
 Función o funciones:
 - Definir rutas internas reales del menú de Carga.
 - Activar todos los módulos internos recuperados.
-- Mantener rutas internas sin renombrar carpetas para no romper enlaces.
+- Mantener rutas internas estables para no romper enlaces durante cambios de carpeta.
 - Integrar el módulo Títulos desde la carpeta /Requisitos/Titulos.
-- Mostrar el módulo de informes de titulación como Infor.
+- Mostrar el módulo de informes de titulación como Infor desde /Requisitos/Infor.
 Con qué se conecta:
 - maq-config-service.js
 - maq-core.js
@@ -26,7 +26,7 @@ Con qué se conecta:
     titulos_estudiante:{id:"titulos_estudiante",nombre:"Títulos - Estudiante",ruta:base+"/Titulos/public/ta-titulo-articulo-estudiante.html",estado:"activo"},
     titulos_admin:{id:"titulos_admin",nombre:"Títulos - Administrador",ruta:base+"/Titulos/electron/admin/ta-titulo-articulo-administrador.html",estado:"activo"},
     titulos_coordinador:{id:"titulos_coordinador",nombre:"Títulos - Coordinador",ruta:base+"/Titulos/public/ta-titulo-articulo-coordinador.html",estado:"activo"},
-    titulacion:{id:"titulacion",nombre:"Infor",ruta:base+"/Titulacion/frontend/titulacion.html",estado:"activo"}
+    titulacion:{id:"titulacion",nombre:"Infor",ruta:base+"/Infor/frontend/titulacion.html",estado:"activo"}
   };
   function buscarPorId(id){return modules[String(id||"").trim()]||null;}
   function listar(){return Object.keys(modules).map(function(k){return modules[k];});}
