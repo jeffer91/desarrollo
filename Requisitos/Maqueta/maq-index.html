@@ -6,14 +6,19 @@ Función o funciones:
 - Ser la entrada interna del módulo Requisitos.
 - Mostrar menú superior fijo, claro y rápido.
 - Abrir Excel/Requisito por defecto.
-- Preparar Base Local una sola vez al abrir Requisitos.
-- Lanzar Firebase en segundo plano sin bloquear pantallas.
+- Preparar Base Local solo cuando una pantalla la necesita.
+- Mantener Firebase automático pausado para no bloquear pantallas.
 - Mantener pantallas en memoria mediante iframes para no recargar desde cero.
+- Cargar el puente BL2 para migración segura hacia SQLite/IndexedDB.
 - Volver a Desarrollo sin usar la palabra Regresar.
 Con qué se conecta:
 - maq-ui.css
 - maq-utils.js
 - maq-baselocal-session.js
+- ../BaseLocal2/bl2-config.js
+- ../BaseLocal2/bl2-detect-runtime.js
+- ../BaseLocal2/bl2-legacy-adapter.js
+- ../BaseLocal2/bl2-api.js
 - maq-baselocal-background-sync.js
 - maq-modulos-registry.js
 - maq-config-service.js
@@ -53,6 +58,10 @@ Con qué se conecta:
   </div>
   <script src="maq-utils.js"></script>
   <script src="maq-baselocal-session.js"></script>
+  <script src="../BaseLocal2/bl2-config.js"></script>
+  <script src="../BaseLocal2/bl2-detect-runtime.js"></script>
+  <script src="../BaseLocal2/bl2-legacy-adapter.js"></script>
+  <script src="../BaseLocal2/bl2-api.js"></script>
   <script src="maq-modulos-registry.js"></script>
   <script src="maq-config-service.js"></script>
   <script src="maq-core.js"></script>
