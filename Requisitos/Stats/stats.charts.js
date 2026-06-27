@@ -56,7 +56,7 @@ Con qué se conecta:
 
   function donut(percent,label){
     percent=clamp(percent,0,100);
-    return '<div class="stats-donut" style="--stats-donut:'+percent+'">'
+    return '<div class="stats-donut" style="--stats-donut:'+percent+';background:conic-gradient(var(--primary) '+percent+'%, #e2e8f0 0)">'
       + '<div><strong>'+formatPercent(percent)+'</strong><span>'+esc(label||"avance")+'</span></div>'
       + '</div>';
   }
