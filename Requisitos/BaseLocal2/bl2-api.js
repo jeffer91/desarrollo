@@ -7,10 +7,12 @@ Función o funciones:
 - Preparar la ruta para SQLite en Electron e IndexedDB en navegador.
 - Entregar consultas rápidas de estudiantes, períodos, resumen y diagnóstico.
 - No leer el snapshot pesado durante el arranque de Maqueta.
+- Mantener SQLite/IndexedDB como motor asíncrono hasta migrar pantallas en bloques siguientes.
 Con qué se conecta:
 - bl2-config.js
 - bl2-detect-runtime.js
 - bl2-legacy-adapter.js
+- db/bl2-storage.js
 - futuras capas SQLite/IndexedDB
 ========================================================= */
 (function(window){
@@ -27,6 +29,8 @@ Con qué se conecta:
   function config(){return window.BL2Config || null;}
   function runtime(){return window.BL2Runtime || null;}
   function legacy(){return window.BL2LegacyAdapter || null;}
+  function storage(){return window.BL2Storage || null;}
+  function canServeSync(ad){return !!(ad && typeof ad.canServeSync === "function" && ad.canServeSync());}
 
   function resolveAdapter(){
     var rt = runtime() && typeof runtime().detect === "function" ? runtime().detect(true) : {preferredStorage:"legacy"};
@@ -34,8 +38,8 @@ Con qué se conecta:
     state.runtime = rt;
     state.storage = preferred;
 
-    if(preferred === "sqlite" && window.BL2SQLiteAdapter){state.mode="sqlite";state.adapterName="sqlite";return window.BL2SQLiteAdapter;}
-    if(preferred === "indexeddb" && window.BL2IndexedDBAdapter){state.mode="indexeddb";state.adapterName="indexeddb";return window.BL2IndexedDBAdapter;}
+    if(preferred === "sqlite" && canServeSync(window.BL2SQLiteAdapter)){state.mode="sqlite";state.adapterName="sqlite";return window.BL2SQLiteAdapter;}
+    if(preferred === "indexeddb" && canServeSync(window.BL2IndexedDBAdapter)){state.mode="indexeddb";state.adapterName="indexeddb";return window.BL2IndexedDBAdapter;}
     if(legacy()){state.mode="legacy_bridge";state.adapterName="legacy";return legacy();}
     state.mode="unavailable";state.adapterName="none";
     return null;
@@ -50,7 +54,8 @@ Con qué se conecta:
   function status(options){
     options = options || {};
     var adStatus = safe("adapter.status", function(){return adapter().status ? adapter().status({deep:options.deep === true}) : {ok:true};}, {ok:false, mode:"sin_adapter"});
-    var data = {ok:adStatus.ok !== false && !state.lastError, version:VERSION, ready:state.ready, mode:state.mode, storage:state.storage, adapter:state.adapterName, bootedAt:bootedAt, runtime:state.runtime, lastError:state.lastError, adapterStatus:adStatus, updatedAt:now()};
+    var storageStatus = safe("storage.status", function(){return storage() && typeof storage().status === "function" ? storage().status() : {ok:false, mode:"sin_storage"};}, {ok:false, mode:"sin_storage"});
+    var data = {ok:adStatus.ok !== false && !state.lastError, version:VERSION, ready:state.ready, mode:state.mode, storage:state.storage, adapter:state.adapterName, bootedAt:bootedAt, runtime:state.runtime, lastError:state.lastError, adapterStatus:adStatus, storageStatus:storageStatus, updatedAt:now()};
     if(config() && typeof config().saveStatus === "function"){config().saveStatus(data);}
     return data;
   }
@@ -93,6 +98,11 @@ Con qué se conecta:
     },
     stats:{
       resumen:function(options){return safe("stats.resumen", function(){return adapter().resumen ? adapter().resumen(options || {}) : {total:0, activos:0, retirados:0, carreras:{}, periodos:{}};}, {total:0, activos:0, retirados:0, carreras:{}, periodos:{}});}
+    },
+    storage:{
+      estado:function(){return safe("storage.estado", function(){return storage() && typeof storage().status === "function" ? storage().status() : {ok:false, mode:"sin_storage"};}, {ok:false, mode:"sin_storage"});},
+      inicializar:function(options){return storage() && typeof storage().initialize === "function" ? storage().initialize(options || {}) : Promise.resolve({ok:false, mode:"sin_storage"});},
+      copiarDesdeLegacy:function(options){return storage() && typeof storage().copyFromLegacy === "function" ? storage().copyFromLegacy(options || {}) : Promise.resolve({ok:false, mode:"sin_storage"});}
     },
     sync:{
       estado:function(){return {ok:true, mode:"pendiente_bloque_10", message:"Firebase incremental se implementará en el bloque 10.", updatedAt:now()};}
