@@ -2,10 +2,11 @@
 Nombre completo: maq-baselocal-background-sync.js
 Ruta o ubicación: /Requisitos/Maqueta/maq-baselocal-background-sync.js
 Función o funciones:
-- Ejecutar la sincronización Base Local ↔ Firebase en segundo plano.
+- Mantener disponible la sincronización Base Local ↔ Firebase en segundo plano.
 - Respetar regla central: una sola sincronización automática por día.
 - No bloquear el menú ni las pantallas internas de Requisitos.
-- Si no hay internet, dejar pendiente para intentar después.
+- Dejar la sincronización automática pausada por defecto para acelerar el arranque.
+- Si no hay internet, dejar pendiente para intentar después cuando se ejecute manualmente.
 Con qué se conecta:
 - maq-index.html
 - maq-baselocal-session.js
@@ -18,7 +19,8 @@ Con qué se conecta:
   var DAILY_KEY = "REQ_BL_LAST_DAILY_SYNC";
   var BG_STATUS_KEY = "REQ_MAQ_BL_BACKGROUND_SYNC_STATUS_V1";
   var RUN_LOCK_KEY = "REQ_MAQ_BL_BACKGROUND_SYNC_LOCK_V1";
-  var VERSION = "1.0.0";
+  var AUTO_SYNC_KEY = "REQ_BL_AUTO_SYNC_ENABLED_V1";
+  var VERSION = "1.1.0";
   var MAX_LOCK_MINUTES = 12;
   var started = false;
 
@@ -27,9 +29,10 @@ Con qué se conecta:
   function readJson(key, fallback){try{var raw = window.localStorage.getItem(key);return raw ? JSON.parse(raw) : fallback;}catch(error){return fallback;}}
   function saveJson(key, value){try{window.localStorage.setItem(key, JSON.stringify(value));}catch(error){}return value;}
   function minutesSince(value){var time = Date.parse(String(value || ""));return Number.isFinite(time) ? ((Date.now() - time) / 60000) : 9999;}
+  function autoSyncAllowed(){try{return window.localStorage.getItem(AUTO_SYNC_KEY)==="true";}catch(error){return false;}}
 
   function saveStatus(payload){
-    return saveJson(BG_STATUS_KEY, Object.assign({version:VERSION, updatedAt:now()}, payload || {}));
+    return saveJson(BG_STATUS_KEY, Object.assign({version:VERSION, updatedAt:now(), autoSyncEnabled:autoSyncAllowed()}, payload || {}));
   }
 
   function dailyAlreadyDone(){
@@ -98,9 +101,15 @@ Con qué se conecta:
     await loadScriptOnce(scriptUrl("../BaseLocal/baselocal.firebase.js"), "__REQ_BG_BL_FIREBASE_SERVICE__");
   }
 
-  async function run(){
-    if(started){return;}
+  async function run(options){
+    options = options || {};
+    if(started && options.force !== true){return;}
     started = true;
+
+    if(options.force !== true && !autoSyncAllowed()){
+      saveStatus({ok:true, mode:"paused", skipped:true, message:"Sincronización automática pausada para que Requisitos abra más rápido."});
+      return;
+    }
 
     if(dailyAlreadyDone()){
       saveStatus({ok:true, mode:"skipped", skipped:true, message:"La sincronización diaria ya está resuelta o en ejecución."});
@@ -126,7 +135,7 @@ Con qué se conecta:
       if(!window.BaseLocalFirebase || typeof window.BaseLocalFirebase.runDailyIfNeeded !== "function"){
         throw new Error("BaseLocalFirebase no quedó disponible para segundo plano.");
       }
-      var result = await window.BaseLocalFirebase.runDailyIfNeeded(false, {mode:"daily_background", background:true});
+      var result = await window.BaseLocalFirebase.runDailyIfNeeded(!!options.force, {mode:options.mode || "daily_background", background:true});
       if(window.MAQ_BASELOCAL_SESSION && typeof window.MAQ_BASELOCAL_SESSION.ensureReady === "function"){
         window.MAQ_BASELOCAL_SESSION.ensureReady({force:true});
       }
@@ -142,14 +151,18 @@ Con qué se conecta:
   }
 
   function schedule(){
+    if(!autoSyncAllowed()){
+      saveStatus({ok:true, mode:"paused", skipped:true, message:"Sincronización automática pausada. Usa Base Local > Sincronizar ahora cuando la necesites."});
+      return;
+    }
     if(dailyAlreadyDone()){
       saveStatus({ok:true, mode:"skipped", skipped:true, message:"La sincronización diaria ya se ejecutó hoy."});
       return;
     }
     if("requestIdleCallback" in window){
-      window.requestIdleCallback(function(){setTimeout(run, 1200);}, {timeout:4500});
+      window.requestIdleCallback(function(){setTimeout(run, 1800);}, {timeout:6500});
     }else{
-      setTimeout(run, 3200);
+      setTimeout(run, 5000);
     }
   }
 
@@ -159,5 +172,5 @@ Con qué se conecta:
     schedule();
   }
 
-  window.MAQ_BASELOCAL_BACKGROUND_SYNC = {version:VERSION, run:run, status:function(){return readJson(BG_STATUS_KEY, {mode:"sin_estado"});}};
+  window.MAQ_BASELOCAL_BACKGROUND_SYNC = {version:VERSION, run:run, status:function(){return readJson(BG_STATUS_KEY, {mode:"sin_estado"});}, autoSyncAllowed:autoSyncAllowed, autoSyncKey:AUTO_SYNC_KEY};
 })(window, document);
