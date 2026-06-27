@@ -2,20 +2,21 @@
 Nombre completo: baselocal.app.js
 Ruta o ubicación: /Requisitos/BaseLocal/baselocal.app.js
 Función o funciones:
-- Renderizar la pantalla Base Local.
-- Mostrar períodos, estudiantes, historial y diagnóstico local.
+- Renderizar la pantalla Base Local como panel liviano.
+- Mostrar períodos, estudiantes, historial y diagnóstico local solo cuando corresponda.
 - Aplicar filtro por estado de matrícula: ACTIVO, RETIRADO o todos.
 - Permitir sincronización manual, bajada manual desde Firebase, limpieza de base y borrado seguro de período.
 - Mantener la sincronización automática pausada por defecto para acelerar la pantalla.
 - Evitar doble sincronización diaria cuando Maqueta ya controla Firebase en segundo plano.
 - Evitar pantalla blanca por eventos repetidos durante la sincronización.
-- Renderizar solo la pestaña activa para evitar trabajo innecesario.
+- Renderizar solo la pestaña activa y paginar estudiantes.
 Con qué se conecta:
 - services/bl-campos.js
 - services/bl-normalizador.js
 - services/bl-filtros.js
 - services/bl-limpiar-base.service.js
 - services/bl-borrar-periodo.service.js
+- ../BaseLocal2/repositories/bl2-dashboard.repo.js
 - baselocal.core.js
 - baselocal.firebase.js
 - baselocal.connector.js
@@ -27,7 +28,7 @@ Con qué se conecta:
   "use strict";
 
   var AUTO_SYNC_KEY = "REQ_BL_AUTO_SYNC_ENABLED_V1";
-  var state = {tab:"periodos",periodId:"",search:"",statusFilter:"ACTIVO",loading:false,dailyStarted:false,renderPending:false,renderTimer:null,lastRenderError:null,lastView:null};
+  var state = {tab:"periodos",periodId:"",search:"",statusFilter:"ACTIVO",loading:false,dailyStarted:false,renderPending:false,renderTimer:null,lastRenderError:null,lastView:null,studentPage:1,studentPageSize:100,lastDashboard:null};
 
   function el(id){return document.getElementById(id);}
   function text(value){return String(value == null ? "" : value).trim();}
@@ -46,10 +47,13 @@ Con qué se conecta:
   }
 
   function status(message, className){var box = el("bl-status");if(box){box.textContent = message;box.className = "bl-status " + (className || "bl-status-info");}}
-
-  function safeCall(label, fn, fallback){
-    try{return typeof fn === "function" ? fn() : fallback;}
-    catch(error){console.warn("[BaseLocal " + label + "]", error);state.lastRenderError = error && error.message ? error.message : String(error);return fallback;}
+  function safeCall(label, fn, fallback){try{return typeof fn === "function" ? fn() : fallback;}catch(error){console.warn("[BaseLocal " + label + "]", error);state.lastRenderError = error && error.message ? error.message : String(error);return fallback;}}
+  function dashboard(deep){
+    return safeCall("BL2DashboardRepo.summary", function(){return window.BL2DashboardRepo && typeof window.BL2DashboardRepo.summary === "function" ? window.BL2DashboardRepo.summary({periodId:state.periodId, deep:!!deep}) : null;}, null);
+  }
+  function invalidateCaches(){
+    if(window.BL2DashboardRepo && typeof window.BL2DashboardRepo.invalidate === "function"){window.BL2DashboardRepo.invalidate();}
+    if(window.BaseLocalAPI && typeof window.BaseLocalAPI.clearSnapshotCache === "function"){window.BaseLocalAPI.clearSnapshotCache();}
   }
 
   function setBusy(isBusy, message, mode){
@@ -77,9 +81,25 @@ Con qué se conecta:
     target.innerHTML = table([{label:"Período", key:"label"},{label:"ID", key:"id"},{label:"Actualizado", key:"updatedAt"}], view.periods || []);
   }
 
+  function pageInfo(total){
+    var pages = Math.max(1, Math.ceil((total || 0) / state.studentPageSize));
+    state.studentPage = Math.max(1, Math.min(state.studentPage, pages));
+    var from = total ? ((state.studentPage - 1) * state.studentPageSize) + 1 : 0;
+    var to = Math.min(state.studentPage * state.studentPageSize, total || 0);
+    return {page:state.studentPage,pages:pages,from:from,to:to,total:total || 0,offset:(state.studentPage - 1) * state.studentPageSize,hasPrev:state.studentPage>1,hasNext:state.studentPage<pages,label:total ? (from + "-" + to + " de " + total) : "0 registros"};
+  }
+
+  function renderStudentPagination(info){
+    var label = el("bl-students-page-label");if(label){label.textContent = info.label + " · Página " + info.page + " de " + info.pages;}
+    [["bl-students-first",!info.hasPrev],["bl-students-prev",!info.hasPrev],["bl-students-next",!info.hasNext],["bl-students-last",!info.hasNext]].forEach(function(pair){var btn=el(pair[0]);if(btn){btn.disabled=!!pair[1];}});
+  }
+
   function renderStudents(view){
     var target = el("bl-estudiantes-table");if(!target) return;
-    var rows = (view.students || []).slice(0, 300);
+    var all = view.students || [];
+    var info = pageInfo(all.length);
+    var rows = all.slice(info.offset, info.offset + state.studentPageSize);
+    renderStudentPagination(info);
     target.innerHTML = table([
       {label:"Cédula", value:function(row){return row.cedula || getField(row, "cedula", "");}},
       {label:"Nombre", value:function(row){return row.nombres || getField(row, "nombres", row.Nombres || "");}},
@@ -93,7 +113,8 @@ Con qué se conecta:
 
   function renderHistory(view){
     var target = el("bl-history-table");if(!target) return;
-    target.innerHTML = table([{label:"Fecha", key:"createdAt"},{label:"Acción", value:function(row){return row.action || "análisis";}},{label:"Período", key:"periodoLabel"},{label:"Origen", key:"fileName"},{label:"Filas", key:"totalRows"}], view.history || []);
+    var rows = (view.history || []).slice(0, 50);
+    target.innerHTML = table([{label:"Fecha", key:"createdAt"},{label:"Acción", value:function(row){return row.action || "análisis";}},{label:"Período", key:"periodoLabel"},{label:"Origen", key:"fileName"},{label:"Filas", key:"totalRows"}], rows);
   }
 
   function renderDiagnostics(view){
@@ -103,7 +124,7 @@ Con qué se conecta:
     var syncStatus = safeCall("syncStatus", function(){return window.BaseLocalFirebase && typeof window.BaseLocalFirebase.getSyncStatus === "function" ? window.BaseLocalFirebase.getSyncStatus() : {ok:false, mode:"sin_sync"};}, {ok:false, mode:"sin_sync"});
     var bridgeCounts = safeCall("bridgeCounts", function(){return window.BaseLocalBridge && typeof window.BaseLocalBridge.counts === "function" ? window.BaseLocalBridge.counts() : null;}, null);
     var cleanLogs = safeCall("cleanLogs", function(){return window.BLLimpiarBaseService && typeof window.BLLimpiarBaseService.getLogs === "function" ? window.BLLimpiarBaseService.getLogs().slice(0,3) : [];}, []);
-    box.textContent = JSON.stringify({local:diagnostics,vista:{periodoId:state.periodId,estadoMatricula:state.statusFilter,busqueda:state.search,estudiantesVisibles:(view.students || []).length,estudiantesDelPeriodo:view.totalStudentsPeriod || 0,conteoEstados:view.statusCounts || {}},firebase:firebaseStatus,sync:syncStatus,bridge:bridgeCounts,limpiezaBase:cleanLogs,ultimoErrorVista:state.lastRenderError || "",rendimiento:{tab:state.tab,autoSyncEnabled:autoSyncAllowed()}}, null, 2);
+    box.textContent = JSON.stringify({dashboard:state.lastDashboard,local:diagnostics,vista:{periodoId:state.periodId,estadoMatricula:state.statusFilter,busqueda:state.search,estudiantesVisibles:(view.students || []).length,estudiantesDelPeriodo:view.totalStudentsPeriod || 0,conteoEstados:view.statusCounts || {}},firebase:firebaseStatus,sync:syncStatus,bridge:bridgeCounts,limpiezaBase:cleanLogs,ultimoErrorVista:state.lastRenderError || "",rendimiento:{tab:state.tab,autoSyncEnabled:autoSyncAllowed(),panelLiviano:true}}, null, 2);
   }
 
   function renderSelectors(view){
@@ -115,14 +136,8 @@ Con qué se conecta:
   function emptyView(message){return {periods:[],students:[],allStudentsForPeriod:[],statusCounts:{ACTIVO:0, RETIRADO:0, TOTAL:0},totalStudentsPeriod:0,history:[{createdAt:new Date().toISOString(), action:"error", periodoLabel:"Base Local", fileName:message || "Error", totalRows:0}],historyCount:1,diagnostics:{ok:false, error:message || "Base Local no disponible"},careersCount:0,snapshot:null};}
 
   function viewOptions(){
-    return {
-      includeHistory:state.tab === "historial",
-      includeDiagnostics:state.tab === "diagnostico",
-      includeDivisions:state.tab === "periodos" || state.tab === "estudiantes",
-      includeDivisionsSummary:state.tab === "diagnostico",
-      includeSnapshot:false,
-      includeAllStudentsForPeriod:false
-    };
+    var isStudents = state.tab === "estudiantes";
+    return {includeHistory:state.tab === "historial",includeDiagnostics:state.tab === "diagnostico",includeDivisions:isStudents,includeDivisionsSummary:state.tab === "diagnostico",includeSnapshot:false,includeAllStudentsForPeriod:false,includeStatusCounts:isStudents,skipStudents:!isStudents};
   }
 
   function renderActiveTab(view){
@@ -133,25 +148,33 @@ Con qué se conecta:
     if(state.tab === "manual"){var manual = el("bl-manual-text");if(manual && window.BaseLocalManual){manual.value = window.BaseLocalManual.getManual();}}
   }
 
+  function renderKpis(view, dash, firebaseStatus, syncStatus){
+    var counts = view.statusCounts || {ACTIVO:null, RETIRADO:null, TOTAL:null};
+    var dashCounts = dash && dash.statusCounts ? dash.statusCounts : {};
+    var total = counts.TOTAL != null && counts.TOTAL !== 0 ? counts.TOTAL : (dash && dash.students != null ? dash.students : 0);
+    if(el("bl-kpi-periodos")) el("bl-kpi-periodos").textContent = dash && dash.periods != null ? dash.periods : (view.periods || []).length;
+    if(el("bl-kpi-estudiantes")) el("bl-kpi-estudiantes").textContent = total || 0;
+    if(el("bl-kpi-activos")) el("bl-kpi-activos").textContent = counts.ACTIVO != null && counts.ACTIVO !== 0 ? counts.ACTIVO : (dashCounts.ACTIVO == null ? "—" : dashCounts.ACTIVO);
+    if(el("bl-kpi-retirados")) el("bl-kpi-retirados").textContent = counts.RETIRADO != null && counts.RETIRADO !== 0 ? counts.RETIRADO : (dashCounts.RETIRADO == null ? "—" : dashCounts.RETIRADO);
+    if(el("bl-kpi-historial")) el("bl-kpi-historial").textContent = dash && dash.history != null ? dash.history : (view.historyCount || (view.history || []).length);
+    if(el("bl-kpi-carreras")) el("bl-kpi-carreras").textContent = view.careersCount || (dash && dash.careers != null ? dash.careers : "—");
+    if(el("bl-kpi-estado")) el("bl-kpi-estado").textContent = syncStatus && syncStatus.ok ? "Sincronizada" : (firebaseStatus && firebaseStatus.ok ? "Firebase" : "Local");
+  }
+
   function render(){
     state.renderPending = false;
     try{
       if(!window.BaseLocalAPI || typeof window.BaseLocalAPI.buildView !== "function"){throw new Error("BaseLocalAPI no está disponible. Revisa que baselocal.core.js haya cargado correctamente.");}
+      var deepDash = state.tab === "estudiantes" || state.tab === "diagnostico";
       var view = window.BaseLocalAPI.buildView(state.periodId, state.search, state.statusFilter, viewOptions());
       state.lastView = view;
+      state.lastDashboard = dashboard(deepDash);
       var firebaseStatus = safeCall("firebaseStatus", function(){return window.BaseLocalFirebase && typeof window.BaseLocalFirebase.getLastStatus === "function" ? window.BaseLocalFirebase.getLastStatus() : null;}, null);
       var syncStatus = safeCall("syncStatus", function(){return window.BaseLocalFirebase && typeof window.BaseLocalFirebase.getSyncStatus === "function" ? window.BaseLocalFirebase.getSyncStatus() : null;}, null);
-      var counts = view.statusCounts || {ACTIVO:0, RETIRADO:0, TOTAL:0};
       renderSelectors(view);
-      if(el("bl-kpi-periodos")) el("bl-kpi-periodos").textContent = (view.periods || []).length;
-      if(el("bl-kpi-estudiantes")) el("bl-kpi-estudiantes").textContent = view.totalStudentsPeriod || counts.TOTAL || 0;
-      if(el("bl-kpi-activos")) el("bl-kpi-activos").textContent = counts.ACTIVO || 0;
-      if(el("bl-kpi-retirados")) el("bl-kpi-retirados").textContent = counts.RETIRADO || 0;
-      if(el("bl-kpi-historial")) el("bl-kpi-historial").textContent = view.historyCount || (view.history || []).length;
-      if(el("bl-kpi-carreras")) el("bl-kpi-carreras").textContent = view.careersCount || 0;
-      if(el("bl-kpi-estado")) el("bl-kpi-estado").textContent = syncStatus && syncStatus.ok ? "Sincronizada" : (firebaseStatus && firebaseStatus.ok ? "Firebase" : "Local");
+      renderKpis(view, state.lastDashboard, firebaseStatus, syncStatus);
       renderActiveTab(view);
-      if(!state.loading){status("Base Local cargada. Pestaña: " + state.tab + ". Registros visibles: " + ((view.students || []).length) + ".", "bl-status-ok");}
+      if(!state.loading){status("Base Local cargada en modo panel liviano. Pestaña: " + state.tab + ". Registros visibles: " + ((view.students || []).length) + ".", "bl-status-ok");}
     }catch(error){
       console.error("[BaseLocal Render]", error);state.lastRenderError = error.message || String(error);
       var fallback = emptyView(state.lastRenderError);renderSelectors(fallback);renderActiveTab(fallback);
@@ -160,7 +183,7 @@ Con qué se conecta:
   }
 
   function scheduleRender(reason){if(state.renderTimer){clearTimeout(state.renderTimer);}state.renderPending = true;state.renderTimer = setTimeout(function(){state.renderTimer = null;render(reason || "programado");}, 220);}
-  function setTab(tab){state.tab = tab;document.querySelectorAll(".bl-tabs button").forEach(function(button){button.classList.toggle("is-active", button.dataset.tab === tab);});document.querySelectorAll(".bl-panel").forEach(function(panel){panel.classList.toggle("is-active", panel.id === "bl-tab-" + tab);});scheduleRender("tab-" + tab);}
+  function setTab(tab){state.tab = tab;if(tab !== "estudiantes"){state.studentPage = 1;}document.querySelectorAll(".bl-tabs button").forEach(function(button){button.classList.toggle("is-active", button.dataset.tab === tab);});document.querySelectorAll(".bl-panel").forEach(function(panel){panel.classList.toggle("is-active", panel.id === "bl-tab-" + tab);});scheduleRender("tab-" + tab);}
 
   function exportJson(){
     try{var data = window.BaseLocalAPI.getSnapshot();var blob = new Blob([JSON.stringify(data, null, 2)], {type:"application/json"});var link = document.createElement("a");link.href = URL.createObjectURL(blob);link.download = "carga-base-local.json";link.click();setTimeout(function(){URL.revokeObjectURL(link.href);}, 1000);}
@@ -179,11 +202,10 @@ Con qué se conecta:
       if(!window.BaseLocalFirebase || typeof window.BaseLocalFirebase.pull !== "function"){throw new Error("BaseLocalFirebase no está disponible.");}
       setBusy(true, "Bajando datos desde Firebase hacia la base local...", "pull");
       var result = await window.BaseLocalFirebase.pull();
-      state.periodId = "";state.search = "";state.statusFilter = "ACTIVO";
+      state.periodId = "";state.search = "";state.statusFilter = "ACTIVO";state.studentPage = 1;
       if(el("bl-filter-search")){el("bl-filter-search").value = "";}if(el("bl-filter-estado")){el("bl-filter-estado").value = "ACTIVO";}
       if(window.RequisitosBL && typeof window.RequisitosBL.rebuildSnapshotToCollections === "function"){window.RequisitosBL.rebuildSnapshotToCollections({force:true});}
-      if(window.BaseLocalAPI && typeof window.BaseLocalAPI.clearSnapshotCache === "function"){window.BaseLocalAPI.clearSnapshotCache();}
-      render();
+      invalidateCaches();render();
       status("Datos bajados correctamente desde Firebase. Estudiantes: " + (result.totalStudents || 0) + ". Períodos: " + (result.totalPeriods || 0) + ".", "bl-status-ok");
     }catch(error){console.error("[BaseLocal Firebase Pull]", error);status("Base Local sigue activa. Error al bajar Firebase: " + (error.message || String(error)), "bl-status-warn");}
     finally{setBusy(false);}
@@ -196,8 +218,7 @@ Con qué se conecta:
       setBusy(true, "Sincronizando Base Local con Firebase...", "sync");
       var result = await window.BaseLocalFirebase.sync({mode:mode || "manual"});
       if(window.RequisitosBL && typeof window.RequisitosBL.rebuildSnapshotToCollections === "function"){window.RequisitosBL.rebuildSnapshotToCollections({force:true});}
-      if(window.BaseLocalAPI && typeof window.BaseLocalAPI.clearSnapshotCache === "function"){window.BaseLocalAPI.clearSnapshotCache();}
-      render();
+      invalidateCaches();render();
       if(result && result.ok){status(result.message || "Sincronización finalizada correctamente.", "bl-status-ok");}
       else{status((result && result.message) || "No se pudo sincronizar. Base Local sigue funcionando.", "bl-status-warn");}
     }catch(error){console.error("[BaseLocal Sync]", error);status("Base Local sigue activa. Error de sincronización: " + (error.message || String(error)), "bl-status-warn");}
@@ -210,20 +231,15 @@ Con qué se conecta:
       if(!window.BaseLocalLimpiar || typeof window.BaseLocalLimpiar.ejecutar !== "function"){throw new Error("BaseLocalLimpiar no está disponible.");}
       setBusy(true, "Limpiando Firebase y reconstruyendo Base Local...", "clean");
       var result = await window.BaseLocalLimpiar.ejecutar();
-      state.periodId = "";state.search = "";state.statusFilter = "ACTIVO";
+      state.periodId = "";state.search = "";state.statusFilter = "ACTIVO";state.studentPage = 1;
       if(el("bl-filter-search")){el("bl-filter-search").value = "";}if(el("bl-filter-estado")){el("bl-filter-estado").value = "ACTIVO";}
-      if(window.BaseLocalAPI && typeof window.BaseLocalAPI.clearSnapshotCache === "function"){window.BaseLocalAPI.clearSnapshotCache();}
-      render();
+      invalidateCaches();render();
       status((result && result.mensaje) || "Firebase y Base Local reparados.", result && result.errores && result.errores.length ? "bl-status-warn" : "bl-status-ok");
     }catch(error){console.error("[BaseLocal Limpiar]", error);status("Base Local sigue activa. Error al limpiar base: " + (error.message || String(error)), "bl-status-warn");}
     finally{setBusy(false);}
   }
 
-  function parentOwnsDailySync(){
-    try{return !!(window.parent && window.parent !== window && window.parent.MAQ_BASELOCAL_BACKGROUND_SYNC);}
-    catch(error){return false;}
-  }
-
+  function parentOwnsDailySync(){try{return !!(window.parent && window.parent !== window && window.parent.MAQ_BASELOCAL_BACKGROUND_SYNC);}catch(error){return false;}}
   function runDailySync(){
     if(parentOwnsDailySync()){state.dailyStarted = true;return;}
     if(state.dailyStarted){return;}state.dailyStarted = true;
@@ -232,20 +248,10 @@ Con qué se conecta:
       try{
         if(!window.BaseLocalFirebase || typeof window.BaseLocalFirebase.runDailyIfNeeded !== "function"){return;}
         var result = await window.BaseLocalFirebase.runDailyIfNeeded(false, {mode:"daily_from_bl", background:true});
-        if(result && result.ok){
-          if(window.RequisitosBL && typeof window.RequisitosBL.mirrorSnapshotToCollections === "function"){window.RequisitosBL.mirrorSnapshotToCollections({silent:true});}
-          if(window.BaseLocalAPI && typeof window.BaseLocalAPI.clearSnapshotCache === "function"){window.BaseLocalAPI.clearSnapshotCache();}
-          render();
-          status(result.message || "Sincronización diaria completada en segundo plano.", "bl-status-ok");
-        }else if(result && result.skipped){
-          return;
-        }else if(result && result.message){
-          status("Base Local activa. Firebase queda pendiente: " + result.message, "bl-status-warn");
-        }
-      }catch(error){
-        console.warn("[BaseLocal Daily Sync]", error);
-        status("Base Local activa. Firebase queda pendiente: " + (error.message || error), "bl-status-warn");
-      }
+        if(result && result.ok){if(window.RequisitosBL && typeof window.RequisitosBL.mirrorSnapshotToCollections === "function"){window.RequisitosBL.mirrorSnapshotToCollections({silent:true});}invalidateCaches();render();status(result.message || "Sincronización diaria completada en segundo plano.", "bl-status-ok");}
+        else if(result && result.skipped){return;}
+        else if(result && result.message){status("Base Local activa. Firebase queda pendiente: " + result.message, "bl-status-warn");}
+      }catch(error){console.warn("[BaseLocal Daily Sync]", error);status("Base Local activa. Firebase queda pendiente: " + (error.message || error), "bl-status-warn");}
     }, 3200);
   }
 
@@ -255,9 +261,9 @@ Con qué se conecta:
   }
 
   function bindCrossWindowEvents(){
-    window.addEventListener("storage", function(event){if(event.key === "REQ_BL_SIGNAL_V1"){scheduleRender("storage");}});
-    window.addEventListener("message", function(event){var data = event.data || {};var type = String(data.type || "");if(type.indexOf("requisitos:bl:") === 0){scheduleRender(type);}});
-    ["requisitos:bl:changed","requisitos:bl:snapshot-changed","requisitos:bl:sync-complete","baselocal:sync-complete","baselocal:firebase-pull-finished","requisitos:bl:mirror-complete","requisitos:bl:limpieza-complete","requisitos:bl:periodo-borrado","baselocal:periodo-borrado","requisitos:bl:periodo-borrado-historial-purgado"].forEach(function(name){window.addEventListener(name, function(){scheduleRender(name);});});
+    window.addEventListener("storage", function(event){if(event.key === "REQ_BL_SIGNAL_V1"){invalidateCaches();scheduleRender("storage");}});
+    window.addEventListener("message", function(event){var data = event.data || {};var type = String(data.type || "");if(type.indexOf("requisitos:bl:") === 0){invalidateCaches();scheduleRender(type);}});
+    ["requisitos:bl:changed","requisitos:bl:snapshot-changed","requisitos:bl:sync-complete","baselocal:sync-complete","baselocal:firebase-pull-finished","requisitos:bl:mirror-complete","requisitos:bl:limpieza-complete","requisitos:bl:periodo-borrado","baselocal:periodo-borrado","requisitos:bl:periodo-borrado-historial-purgado"].forEach(function(name){window.addEventListener(name, function(){invalidateCaches();scheduleRender(name);});});
   }
 
   window.BaseLocalApp = {render:render,scheduleRender:scheduleRender,status:status,setBusy:setBusy,getState:function(){return Object.assign({}, state);}};
@@ -266,15 +272,19 @@ Con qué se conecta:
     bindGlobalErrors();
     safeCall("ExcelLocalBridge.ensureReady", function(){if(window.ExcelLocalBridge && typeof window.ExcelLocalBridge.ensureReady === "function"){window.ExcelLocalBridge.ensureReady();}}, null);
     document.querySelectorAll(".bl-tabs button").forEach(function(button){button.addEventListener("click", function(){setTab(button.dataset.tab);});});
-    if(el("bl-filter-period")){el("bl-filter-period").addEventListener("change", function(event){state.periodId = event.target.value;scheduleRender("period-filter");});}
-    if(el("bl-filter-estado")){el("bl-filter-estado").addEventListener("change", function(event){state.statusFilter = event.target.value;scheduleRender("estado-filter");});}
-    if(el("bl-filter-search")){el("bl-filter-search").addEventListener("input", function(event){state.search = event.target.value;scheduleRender("search");});}
-    if(el("bl-btn-refresh")){el("bl-btn-refresh").addEventListener("click", render);}
+    if(el("bl-filter-period")){el("bl-filter-period").addEventListener("change", function(event){state.periodId = event.target.value;state.studentPage = 1;scheduleRender("period-filter");});}
+    if(el("bl-filter-estado")){el("bl-filter-estado").addEventListener("change", function(event){state.statusFilter = event.target.value;state.studentPage = 1;scheduleRender("estado-filter");});}
+    if(el("bl-filter-search")){el("bl-filter-search").addEventListener("input", function(event){state.search = event.target.value;state.studentPage = 1;scheduleRender("search");});}
+    if(el("bl-btn-refresh")){el("bl-btn-refresh").addEventListener("click", function(){invalidateCaches();render();});}
     if(el("bl-btn-pull-firebase")){el("bl-btn-pull-firebase").addEventListener("click", pullFromFirebase);}
     if(el("bl-btn-sync-now")){el("bl-btn-sync-now").addEventListener("click", function(){syncNow("manual");});}
     if(el("bl-btn-clean-base")){el("bl-btn-clean-base").addEventListener("click", limpiarBase);}
     if(el("bl-btn-export")){el("bl-btn-export").addEventListener("click", exportJson);}
     if(el("bl-btn-copy-refs")){el("bl-btn-copy-refs").addEventListener("click", copyRefs);}
+    if(el("bl-students-first")){el("bl-students-first").addEventListener("click", function(){state.studentPage=1;render();});}
+    if(el("bl-students-prev")){el("bl-students-prev").addEventListener("click", function(){state.studentPage=Math.max(1,state.studentPage-1);render();});}
+    if(el("bl-students-next")){el("bl-students-next").addEventListener("click", function(){state.studentPage+=1;render();});}
+    if(el("bl-students-last")){el("bl-students-last").addEventListener("click", function(){var total=(state.lastView&&state.lastView.students?state.lastView.students.length:0);state.studentPage=Math.max(1,Math.ceil(total/state.studentPageSize));render();});}
     bindCrossWindowEvents();render();
     try{window.dispatchEvent(new CustomEvent("bl:ready", {detail:{module:"BaseLocal", ready:true, at:new Date().toISOString()}}));if(window.parent && window.parent !== window){window.parent.postMessage({type:"requisitos:bl:ready", payload:{module:"BaseLocal", ready:true, at:new Date().toISOString()}}, "*");}}catch(error){}
     runDailySync();
