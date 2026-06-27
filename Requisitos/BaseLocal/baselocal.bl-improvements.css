@@ -2,20 +2,92 @@
 Nombre completo: baselocal.bl-improvements.css
 Ruta o ubicación: /Requisitos/BaseLocal/baselocal.bl-improvements.css
 Función o funciones:
-- Ocultar anuncios verdes de Base Local para recuperar espacio.
+- Ocultar avisos verdes de Base Local para recuperar espacio.
+- Organizar filtros y acciones en dos filas compactas sin desbordes.
 - Agregar estilos del filtro División.
 - Agregar estilos del gestor de divisiones con arrastrar y soltar.
 Con qué se conecta:
 - baselocal.html
+- baselocal.app.js
 - baselocal.divisiones.js
 ========================================================= */
 
 .bl-status.bl-status-ok{
-  display:none;
+  display:none !important;
+}
+
+.bl-status:empty{
+  display:none !important;
 }
 
 .bl-tools{
+  display:grid !important;
+  grid-template-columns:1fr !important;
+  gap:10px !important;
+  align-items:stretch !important;
+  overflow:hidden;
+}
+
+.bl-tools-filters{
+  display:grid;
+  grid-template-columns:minmax(200px,1.05fr) minmax(130px,.65fr) minmax(210px,.95fr) minmax(320px,1.55fr);
+  gap:10px;
   align-items:end;
+  min-width:0;
+}
+
+.bl-tools-filters label,
+.bl-tools label{
+  min-width:0;
+}
+
+.bl-tools-filters select,
+.bl-tools-filters input{
+  width:100%;
+  min-width:0;
+}
+
+.bl-filter-search-wrap{
+  min-width:0;
+}
+
+.bl-tools-actions{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto auto;
+  gap:10px;
+  align-items:center;
+  min-width:0;
+}
+
+.bl-actions-primary,
+.bl-actions-danger,
+.bl-actions-secondary{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  flex-wrap:wrap;
+  min-width:0;
+}
+
+.bl-actions-primary{
+  justify-content:flex-start;
+}
+
+.bl-actions-danger,
+.bl-actions-secondary{
+  justify-content:flex-end;
+}
+
+.bl-tools-actions button{
+  min-height:34px;
+  height:34px;
+  padding:0 14px;
+  white-space:nowrap;
+  flex:0 0 auto;
+}
+
+.bl-actions-secondary button{
+  padding:0 12px;
 }
 
 .bl-division-manager{
@@ -114,9 +186,40 @@ Con qué se conecta:
   text-align:center;
 }
 
+@media(max-width:1550px){
+  .bl-tools-actions{
+    grid-template-columns:1fr;
+  }
+
+  .bl-actions-primary,
+  .bl-actions-danger,
+  .bl-actions-secondary{
+    justify-content:flex-start;
+  }
+}
+
+@media(max-width:1200px){
+  .bl-tools-filters{
+    grid-template-columns:1fr 1fr;
+  }
+}
+
 @media(max-width:980px){
+  .bl-tools-filters,
   .bl-division-manager,
   .bl-division-drop-grid{
     grid-template-columns:1fr;
+  }
+
+  .bl-tools-actions button{
+    width:100%;
+  }
+
+  .bl-actions-primary,
+  .bl-actions-danger,
+  .bl-actions-secondary{
+    display:grid;
+    grid-template-columns:1fr;
+    width:100%;
   }
 }
