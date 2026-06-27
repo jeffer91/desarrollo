@@ -3,18 +3,16 @@
 Nombre completo: titulacion.html
 Ruta o ubicación: /Requisitos/Titulacion/frontend/titulacion.html
 Función o funciones:
-- Mostrar el módulo Infor del bloque Requisitos.
-- Presentar información rápida de titulación basada en BaseLocal.
-- Resumir estudiantes listos, pendientes y no habilitados.
-- Generar textos informativos y exportar resumen.
+- Mostrar la nueva pantalla Infor para generar el Informe de Titulación por período.
+- Preparar flujo Periodo -> Excel/cronogramas/anexos -> Procesar.
+- Mantener entrada del módulo sin romper la ruta registrada en Maqueta.
+- Cargar estado interno modular de Infor.
 Con qué se conecta:
 - titulacion.css
-- titulacion.core.js
-- titulacion.export.js
 - titulacion.app.js
-- ../../Gestion/Excel/excel-local/excel-local.config.js
-- ../../Gestion/Excel/excel-local/excel-local.storage.js
-- ../../Gestion/Excel/excel-local.repo.js
+- ../core/infor.state.js
+- ../../Stats/stats.rules.js
+- ../../Gestion/Excel/excel-local/*
 ========================================================= -->
 <html lang="es">
 <head>
@@ -25,60 +23,161 @@ Con qué se conecta:
 </head>
 <body>
   <main class="infor-app">
+    <section class="infor-hero">
+      <div>
+        <p class="infor-eyebrow">Unidad Titulación y Eficiencia Terminal</p>
+        <h1>Infor · Informe de Titulación</h1>
+        <p class="infor-lead">Selecciona el período, carga el Excel, pega los cronogramas y procesa los insumos del informe.</p>
+      </div>
+      <div class="infor-hero-actions">
+        <button id="infor-gemini-open" class="infor-icon-btn" type="button" title="Configurar Gemini" aria-label="Configurar Gemini">IA</button>
+        <span id="infor-gemini-state" class="infor-chip warn">Gemini sin clave</span>
+      </div>
+    </section>
+
     <section id="infor-status" class="infor-status">Cargando Infor...</section>
 
-    <section class="infor-tools">
-      <label>Período<select id="infor-periodo"><option value="">Todos</option></select></label>
-      <label>Carrera<select id="infor-carrera"><option value="">Todas</option></select></label>
-      <label>Vista<select id="infor-vista"><option value="resumen">Resumen</option><option value="guia">Guía rápida</option><option value="comunicado">Comunicado</option></select></label>
-      <button id="infor-refresh" type="button">Actualizar</button>
-      <button id="infor-copy" type="button">Copiar texto</button>
-      <button id="infor-export-json" type="button">Exportar JSON</button>
-    </section>
-
-    <section class="infor-kpis">
-      <article><span>Total estudiantes</span><strong id="infor-total">0</strong></article>
-      <article><span>Listos</span><strong id="infor-listos">0</strong></article>
-      <article><span>Con pendientes</span><strong id="infor-pendientes">0</strong></article>
-      <article><span>No habilitados</span><strong id="infor-no">0</strong></article>
-      <article><span>Avance</span><strong id="infor-avance">0%</strong></article>
-    </section>
-
-    <section class="infor-grid">
-      <article class="infor-card">
-        <div class="infor-card-head"><h2>Información principal</h2><span id="infor-generated-at">—</span></div>
-        <textarea id="infor-text" readonly></textarea>
+    <section class="infor-flow">
+      <article class="infor-step is-active">
+        <span>1</span>
+        <strong>Período</strong>
+        <small>Regular o PVC automático</small>
       </article>
-
-      <article class="infor-card">
-        <div class="infor-card-head"><h2>Guía de uso</h2><span>Bloque Requisitos</span></div>
-        <div id="infor-guide" class="infor-guide"></div>
+      <article class="infor-step">
+        <span>2</span>
+        <strong>Excel / pegar</strong>
+        <small>Cronogramas y anexos</small>
+      </article>
+      <article class="infor-step">
+        <span>3</span>
+        <strong>Procesar</strong>
+        <small>Preparar Word/PDF</small>
       </article>
     </section>
 
-    <section class="infor-grid">
+    <section class="infor-grid infor-grid-main">
       <article class="infor-card">
-        <div class="infor-card-head"><h2>Resumen por carrera</h2><span id="infor-carreras-meta">0 carreras</span></div>
-        <div id="infor-carreras" class="infor-table-wrap"></div>
+        <div class="infor-card-head">
+          <div>
+            <h2>1. Período</h2>
+            <p>La lógica Regular/PVC se toma de Stats.</p>
+          </div>
+          <span id="infor-period-type" class="infor-chip">Sin período</span>
+        </div>
+        <label class="infor-field">Período
+          <select id="infor-periodo"><option value="">Selecciona un período</option></select>
+        </label>
+        <div class="infor-mini-grid">
+          <article><span>Tipo detectado</span><strong id="infor-type-label">—</strong></article>
+          <article><span>Nombre del informe</span><strong id="infor-report-name">—</strong></article>
+        </div>
       </article>
+
       <article class="infor-card">
-        <div class="infor-card-head"><h2>Requisitos con mayor atención</h2><span>Ordenado por prioridad</span></div>
-        <div id="infor-requisitos" class="infor-table-wrap"></div>
+        <div class="infor-card-head">
+          <div>
+            <h2>2. Excel</h2>
+            <p>Bloque 1 registra el archivo; la lectura inteligente entra en bloques siguientes.</p>
+          </div>
+          <span id="infor-excel-state" class="infor-chip warn">Sin Excel</span>
+        </div>
+        <label class="infor-field">Archivo Excel
+          <input id="infor-excel-file" type="file" accept=".xlsx,.xls,.csv" />
+        </label>
+        <div class="infor-mini-grid">
+          <article><span>Archivo</span><strong id="infor-excel-name">—</strong></article>
+          <article><span>Hojas útiles</span><strong id="infor-excel-sheets">Pendiente</strong></article>
+        </div>
       </article>
     </section>
 
     <section class="infor-card">
-      <div class="infor-card-head"><h2>Diagnóstico de Infor</h2><span>BaseLocal</span></div>
-      <pre id="infor-diagnostics"></pre>
+      <div class="infor-card-head">
+        <div>
+          <h2>3. Cronogramas</h2>
+          <p>El texto se guarda por período y luego se transformará en tabla institucional.</p>
+        </div>
+        <span id="infor-cronograma-mode" class="infor-chip">Automático</span>
+      </div>
+
+      <div id="infor-cronogramas-regular" class="infor-cronograma-grid">
+        <label class="infor-field">Cronograma Examen Complexivo
+          <textarea id="infor-cronograma-complexivo" placeholder="Pega aquí el cronograma de Examen Complexivo..."></textarea>
+        </label>
+        <label class="infor-field">Cronograma Trabajo de Titulación
+          <textarea id="infor-cronograma-trabajo" placeholder="Pega aquí el cronograma de Trabajo de Titulación..."></textarea>
+        </label>
+      </div>
+
+      <div id="infor-cronogramas-pvc" class="infor-cronograma-grid is-hidden">
+        <label class="infor-field">Cronograma Artículo Académico PVC
+          <textarea id="infor-cronograma-pvc" placeholder="Pega aquí el cronograma PVC / Artículo Académico..."></textarea>
+        </label>
+      </div>
+    </section>
+
+    <section class="infor-card">
+      <div class="infor-card-head">
+        <div>
+          <h2>4. Anexos</h2>
+          <p>Solo imágenes subidas por ti. Si no subes anexos, no se mostrará esa sección en el informe.</p>
+        </div>
+        <span id="infor-anexos-count" class="infor-chip">0 anexos</span>
+      </div>
+      <div class="infor-upload-row">
+        <label class="infor-field">Imágenes de anexos
+          <input id="infor-anexos-input" type="file" accept="image/*" multiple />
+        </label>
+      </div>
+      <div id="infor-anexos-list" class="infor-anexos-list"><div class="infor-empty">Sin anexos cargados.</div></div>
+    </section>
+
+    <section class="infor-card infor-process-card">
+      <div>
+        <h2>5. Procesar</h2>
+        <p>En este bloque se guarda el estado y se deja preparada la base de la pantalla. La generación Word/PDF se conecta en los siguientes bloques.</p>
+      </div>
+      <button id="infor-process" class="infor-primary" type="button">Procesar</button>
+    </section>
+
+    <section class="infor-card">
+      <div class="infor-card-head">
+        <div>
+          <h2>Diagnóstico interno</h2>
+          <p>Estado vivo del Bloque 1.</p>
+        </div>
+        <span>BaseLocal Infor</span>
+      </div>
+      <pre id="infor-diagnostics">Sin diagnóstico.</pre>
     </section>
   </main>
+
+  <div id="infor-gemini-modal" class="infor-modal is-hidden" role="dialog" aria-modal="true" aria-label="Configurar Gemini">
+    <div class="infor-modal-card">
+      <div class="infor-card-head">
+        <div>
+          <h2>Clave Gemini</h2>
+          <p>Se guarda localmente en BaseLocal de Infor.</p>
+        </div>
+        <button id="infor-gemini-close" class="infor-icon-btn" type="button" aria-label="Cerrar">×</button>
+      </div>
+      <label class="infor-field">API Key
+        <input id="infor-gemini-key" type="password" placeholder="Pega aquí tu clave de Gemini" autocomplete="off" />
+      </label>
+      <div class="infor-modal-actions">
+        <button id="infor-gemini-clear" type="button">Quitar clave</button>
+        <button id="infor-gemini-save" class="infor-primary" type="button">Guardar</button>
+      </div>
+    </div>
+  </div>
 
   <script src="../../Gestion/Excel/excel-local/excel-local.config.js"></script>
   <script src="../../Gestion/Excel/excel-local/excel-local.storage.js"></script>
   <script src="../../Gestion/Excel/excel-local/excel-local.bridge.js"></script>
   <script src="../../Gestion/Excel/excel-local.repo.js"></script>
-  <script src="titulacion.core.js"></script>
-  <script src="titulacion.export.js"></script>
+  <script src="../../BaseLocal/services/bl-periodos-canon.service.js"></script>
+  <script src="../../Stats/stats.rules.js"></script>
+  <script src="../core/infor.state.js"></script>
   <script src="titulacion.app.js"></script>
 </body>
 </html>
