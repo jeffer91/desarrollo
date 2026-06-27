@@ -6,16 +6,19 @@ Función o funciones:
 - Calcular prioridades de coordinación.
 - Generar resúmenes por carrera, requisito y estudiante.
 - Filtrar por período, división, carrera y prioridad.
+- Usar nombres visibles normalizados sin modificar la base de datos.
 Con qué se conecta:
 - excel-local.repo.js
 - bl-periodos-canon.service.js
 - bl-divisiones.service.js
+- bl-campos.js
 - coordi.app.js
 ========================================================= */
 (function(window){
   "use strict";
+  function label(key,fallback){try{if(window.BLCampos&&typeof window.BLCampos.requirementLabel==="function")return window.BLCampos.requirementLabel(key,fallback);}catch(error){}return fallback||key;}
   var REQS=[
-    {key:"academico",label:"Académico"},{key:"documentacion",label:"Documentación"},{key:"financiero",label:"Financiero"},{key:"titulacion",label:"Titulación"},{key:"practicasvinculacion",label:"Prácticas/Vinculación"},{key:"vinculacion",label:"Vinculación"},{key:"seguimientograduados",label:"Seguimiento graduados"},{key:"ingles",label:"Inglés"},{key:"actualizaciondatos",label:"Actualización datos"},{key:"aprobaciontitulacion",label:"Aprobación titulación"},{key:"aprobacioncomplexivoproyecto",label:"Aprobación complexivo/proyecto"}
+    {key:"academico",label:label("academico","Académico")},{key:"documentacion",label:label("documentacion","Documentación")},{key:"financiero",label:label("financiero","Financiero")},{key:"titulacion",label:label("titulacion","Titulación")},{key:"practicasvinculacion",label:label("practicasvinculacion","Prácticas")},{key:"vinculacion",label:label("vinculacion","Vinculación")},{key:"seguimientograduados",label:label("seguimientograduados","Seguimiento graduados")},{key:"ingles",label:label("ingles","Inglés")},{key:"actualizaciondatos",label:label("actualizaciondatos","Actualización de datos")},{key:"aprobaciontitulacion",label:label("aprobaciontitulacion","Aprobación titulación")},{key:"aprobacioncomplexivoproyecto",label:label("aprobacioncomplexivoproyecto","Aprobación complexivo/proyecto")}
   ];
   function text(v){return String(v==null?"":v).trim();}
   function norm(v){return text(v).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();}
