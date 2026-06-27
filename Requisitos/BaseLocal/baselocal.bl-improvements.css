@@ -24,7 +24,7 @@ Con qué se conecta:
 .bl-tools{
   display:grid !important;
   grid-template-columns:1fr !important;
-  gap:10px !important;
+  gap:8px !important;
   align-items:stretch !important;
   overflow:hidden;
 }
@@ -32,7 +32,7 @@ Con qué se conecta:
 .bl-tools-filters{
   display:grid;
   grid-template-columns:minmax(200px,1.05fr) minmax(130px,.65fr) minmax(210px,.95fr) minmax(320px,1.55fr);
-  gap:10px;
+  gap:8px;
   align-items:end;
   min-width:0;
 }
@@ -54,41 +54,31 @@ Con qué se conecta:
 
 .bl-tools-actions{
   display:grid;
-  grid-template-columns:minmax(0,1fr) auto auto;
-  gap:10px;
+  grid-template-columns:repeat(4,max-content);
+  gap:6px 8px;
   align-items:center;
+  justify-content:start;
   min-width:0;
 }
 
 .bl-actions-primary,
 .bl-actions-danger,
 .bl-actions-secondary{
-  display:flex;
-  gap:8px;
-  align-items:center;
-  flex-wrap:wrap;
-  min-width:0;
-}
-
-.bl-actions-primary{
-  justify-content:flex-start;
-}
-
-.bl-actions-danger,
-.bl-actions-secondary{
-  justify-content:flex-end;
+  display:contents;
 }
 
 .bl-tools-actions button{
-  min-height:34px;
-  height:34px;
-  padding:0 14px;
+  min-height:30px;
+  height:30px;
+  padding:0 10px;
   white-space:nowrap;
-  flex:0 0 auto;
+  font-size:13px;
+  line-height:1;
+  border-radius:999px;
 }
 
 .bl-actions-secondary button{
-  padding:0 12px;
+  padding:0 10px;
 }
 
 #bl-division-modal{
@@ -357,21 +347,13 @@ Con qué se conecta:
   padding:0 16px;
 }
 
-@media(max-width:1550px){
-  .bl-tools-actions{
-    grid-template-columns:1fr;
-  }
-
-  .bl-actions-primary,
-  .bl-actions-danger,
-  .bl-actions-secondary{
-    justify-content:flex-start;
-  }
-}
-
 @media(max-width:1200px){
   .bl-tools-filters{
     grid-template-columns:1fr 1fr;
+  }
+
+  .bl-tools-actions{
+    grid-template-columns:repeat(4,max-content);
   }
 
   .bl-division-control-grid{
@@ -393,16 +375,13 @@ Con qué se conecta:
     grid-template-columns:1fr;
   }
 
-  .bl-tools-actions button{
-    width:100%;
+  .bl-tools-actions{
+    grid-template-columns:repeat(2,minmax(0,1fr));
   }
 
-  .bl-actions-primary,
-  .bl-actions-danger,
-  .bl-actions-secondary{
-    display:grid;
-    grid-template-columns:1fr;
+  .bl-tools-actions button{
     width:100%;
+    padding:0 8px;
   }
 
   #bl-division-modal .bl-division-card{
