@@ -3,14 +3,14 @@
 Nombre completo: stats.html
 Ruta o ubicación: /Requisitos/Stats/stats.html
 Función o funciones:
-- Mostrar estadísticas del módulo Carga usando Base Local.
-- Resumir estudiantes por matrícula, estado, carrera, división, período y requisito.
-- Mostrar activos por defecto y permitir ver retirados.
-- Consultar BL2/cache cuando esté disponible y ExcelLocalRepo como respaldo.
+- Mostrar estadísticas del módulo Requisitos usando Base Local / BL2.
+- Resumir estudiantes por matrícula, período, división, carrera, estado y requisito.
+- Preparar navegación compacta por resumen, gráficos, requisitos, carreras, períodos, aprobación final y estudiantes.
+- Conectar reglas PVC/Regular y separar aprobación final de requisitos normales.
 Con qué se conecta:
 - stats.css
+- stats.rules.js
 - stats.core.js
-- stats.export.js
 - stats.app.js
 - ../BaseLocal2/services/bl2-cache-resumen.service.js
 - ../BaseLocal2/repositories/bl2-stats.repo.js
@@ -19,39 +19,105 @@ Con qué se conecta:
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title></title>
+  <title>Stats Requisitos</title>
   <link rel="stylesheet" href="stats.css" />
 </head>
 <body>
-  <main class="stats-app">
-    <section id="stats-status" class="stats-status">Cargando estadísticas...</section>
-    <section class="stats-tools">
-      <label>Período<select id="stats-periodo"><option value="">Todos</option></select></label>
-      <label>División<select id="stats-division"><option value="">Todas</option></select></label>
-      <label>Matrícula<select id="stats-matricula"><option value="ACTIVO">Activos</option><option value="RETIRADO">Retirados</option><option value="">Todos</option></select></label>
-      <label>Carrera<select id="stats-carrera"><option value="">Todas</option></select></label>
-      <label>Estado<select id="stats-estado"><option value="">Todos</option><option value="cumple">Cumple todo</option><option value="pendiente">Con pendientes</option><option value="no_cumple">No cumple</option></select></label>
-      <button id="stats-refresh" type="button">Actualizar</button>
-      <button id="stats-export-json" type="button">Exportar JSON</button>
-      <button id="stats-export-csv" type="button">Exportar CSV</button>
+  <main class="stats-app stats-shell">
+    <aside class="stats-side" aria-label="Navegación de estadísticas">
+      <div class="stats-side-title">Stats</div>
+      <a href="#stats-resumen-section">Resumen</a>
+      <a href="#stats-graficos-section">Gráficos</a>
+      <a href="#stats-requisitos-section">Requisitos</a>
+      <a href="#stats-carreras-section">Carreras</a>
+      <a href="#stats-periodos-section">Períodos</a>
+      <a href="#stats-final-section">Aprobación final</a>
+      <a href="#stats-estudiantes-section">Estudiantes</a>
+    </aside>
+
+    <section class="stats-main">
+      <section id="stats-status" class="stats-status">Cargando estadísticas...</section>
+
+      <section class="stats-tools" aria-label="Filtros de estadísticas">
+        <label>Período<select id="stats-periodo"><option value="">Selecciona un período</option></select></label>
+        <label>División<select id="stats-division"><option value="">Todas</option></select></label>
+        <label>Matrícula<select id="stats-matricula"><option value="ACTIVO">Activos</option><option value="RETIRADO">Retirados</option><option value="">Todos</option></select></label>
+        <label>Carrera<select id="stats-carrera"><option value="">Todas</option></select></label>
+        <label>Estado<select id="stats-estado"><option value="">Todos</option><option value="cumple">Aprobado</option><option value="no_cumple">No cumple</option></select></label>
+        <label>Requisito<select id="stats-requisito"><option value="">Todos los requisitos</option></select></label>
+        <button id="stats-refresh" type="button">Actualizar</button>
+      </section>
+
+      <section id="stats-resumen-section" class="stats-section">
+        <div class="stats-section-head">
+          <div>
+            <p class="stats-eyebrow">Resumen general</p>
+            <h1>Estadísticas de requisitos</h1>
+          </div>
+          <span id="stats-period-type" class="stats-period-chip">Selecciona un período</span>
+        </div>
+
+        <section class="stats-kpis">
+          <article><span>Total estudiantes</span><strong id="stats-total">0</strong></article>
+          <article><span>Aprobados requisitos</span><strong id="stats-ok">0</strong></article>
+          <article><span>No aprobados requisitos</span><strong id="stats-no">0</strong></article>
+          <article><span>Avance general</span><strong id="stats-avance">0%</strong></article>
+          <article id="stats-period-approval-card" class="stats-period-card"><span>Aprobación por período</span><strong id="stats-period-approval">—</strong></article>
+        </section>
+      </section>
+
+      <section id="stats-graficos-section" class="stats-section stats-grid-main">
+        <article class="stats-card">
+          <div class="stats-card-head"><h2>Gráfico general</h2><span>Cumple / No cumple</span></div>
+          <div id="stats-chart-general" class="stats-chart-placeholder">Los gráficos se activarán en el bloque de gráficos.</div>
+        </article>
+        <article class="stats-card">
+          <div class="stats-card-head"><h2>Requisito seleccionado</h2><span id="stats-selected-requisito-meta">Todos</span></div>
+          <div id="stats-chart-selected" class="stats-chart-placeholder">Selecciona un requisito para ver su resumen.</div>
+        </article>
+      </section>
+
+      <section id="stats-requisitos-section" class="stats-section stats-grid-main">
+        <article class="stats-card">
+          <div class="stats-card-head"><h2>Estados generales</h2><span id="stats-estados-meta">0 estudiantes</span></div>
+          <div id="stats-estados" class="stats-bars"></div>
+        </article>
+        <article class="stats-card">
+          <div class="stats-card-head"><h2>Requisitos</h2><span>Cumplimiento por requisito</span></div>
+          <div id="stats-requisitos" class="stats-bars"></div>
+        </article>
+      </section>
+
+      <section id="stats-carreras-section" class="stats-section stats-grid-main">
+        <article class="stats-card">
+          <div class="stats-card-head"><h2>Carreras</h2><span id="stats-carreras-meta">0 carreras</span></div>
+          <div id="stats-carreras" class="stats-table-wrap"></div>
+        </article>
+        <article id="stats-periodos-section" class="stats-card">
+          <div class="stats-card-head"><h2>Períodos</h2><span id="stats-periodos-meta">0 períodos</span></div>
+          <div id="stats-periodos" class="stats-table-wrap"></div>
+        </article>
+      </section>
+
+      <section id="stats-final-section" class="stats-section stats-card">
+        <div class="stats-card-head"><h2>Aprobación final</h2><span>Titulación y complexivo/proyecto</span></div>
+        <div id="stats-finales" class="stats-table-wrap"><div class="empty">Se activará en el bloque de renderizado.</div></div>
+      </section>
+
+      <section id="stats-estudiantes-section" class="stats-section stats-card">
+        <div class="stats-card-head"><h2>Estudiantes</h2><span id="stats-estudiantes-meta">0 estudiantes</span></div>
+        <div id="stats-estudiantes" class="stats-table-wrap"><div class="empty">La tabla de estudiantes se activará en su bloque.</div></div>
+      </section>
+
+      <section class="stats-compat" aria-hidden="true">
+        <strong id="stats-pend">0</strong>
+        <button id="stats-export-json" type="button" tabindex="-1">Exportar JSON</button>
+        <button id="stats-export-csv" type="button" tabindex="-1">Exportar CSV</button>
+        <pre id="stats-diagnostics"></pre>
+      </section>
     </section>
-    <section class="stats-kpis">
-      <article><span>Total estudiantes</span><strong id="stats-total">0</strong></article>
-      <article><span>Cumplen todo</span><strong id="stats-ok">0</strong></article>
-      <article><span>Con pendientes</span><strong id="stats-pend">0</strong></article>
-      <article><span>No cumplen</span><strong id="stats-no">0</strong></article>
-      <article><span>Avance general</span><strong id="stats-avance">0%</strong></article>
-    </section>
-    <section class="stats-grid-main">
-      <article class="stats-card"><div class="stats-card-head"><h2>Estados generales</h2><span id="stats-estados-meta">0 estudiantes</span></div><div id="stats-estados" class="stats-bars"></div></article>
-      <article class="stats-card"><div class="stats-card-head"><h2>Requisitos</h2><span>Cumplimiento por requisito</span></div><div id="stats-requisitos" class="stats-bars"></div></article>
-    </section>
-    <section class="stats-grid-main">
-      <article class="stats-card"><div class="stats-card-head"><h2>Carreras</h2><span id="stats-carreras-meta">0 carreras</span></div><div id="stats-carreras" class="stats-table-wrap"></div></article>
-      <article class="stats-card"><div class="stats-card-head"><h2>Períodos</h2><span id="stats-periodos-meta">0 períodos</span></div><div id="stats-periodos" class="stats-table-wrap"></div></article>
-    </section>
-    <section class="stats-card"><div class="stats-card-head"><h2>Diagnóstico estadístico</h2><span>Base Local</span></div><pre id="stats-diagnostics"></pre></section>
   </main>
+
   <script src="../Gestion/Excel/excel-local/excel-local.config.js"></script>
   <script src="../Gestion/Excel/excel-local/excel-local.storage.js"></script>
   <script src="../Gestion/Excel/excel-local/excel-local.bridge.js"></script>
@@ -67,8 +133,8 @@ Con qué se conecta:
   <script src="../BaseLocal2/repositories/bl2-estudiantes.repo.js"></script>
   <script src="../BaseLocal2/services/bl2-cache-resumen.service.js"></script>
   <script src="../BaseLocal2/repositories/bl2-stats.repo.js"></script>
+  <script src="stats.rules.js"></script>
   <script src="stats.core.js"></script>
-  <script src="stats.export.js"></script>
   <script src="stats.app.js"></script>
 </body>
 </html>
