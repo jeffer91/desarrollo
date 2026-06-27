@@ -7,10 +7,12 @@ Función o funciones:
 - Clasificar períodos como REGULAR o PVC usando InforPeriodo/StatsRules cuando esté disponible.
 - Guardar cronogramas crudos e interpretados.
 - Guardar análisis del Excel cargado desde Infor.
+- Guardar unión Excel/BaseLocal y separación por modalidad.
 - Guardar la clave de Gemini en BaseLocal local de Infor.
 Con qué se conecta:
 - core/infor.periodo.js
 - core/infor.excel.js
+- core/infor.match.js
 - sections/cronograma/cronograma.parser.js
 - frontend/titulacion.app.js
 - Stats/stats.rules.js
@@ -28,6 +30,7 @@ Con qué se conecta:
     periodType:null,
     excel:{fileName:"",sheetCount:0,ignoredSheets:0,usefulSheets:0,totalRows:0,loaded:false},
     excelData:{sheets:[],rows:[],generatedAt:null},
+    matchResult:null,
     cronogramas:{complexivo:"",trabajoTitulacion:"",pvc:""},
     cronogramasParsed:Object.assign({}, emptyParsed),
     anexos:[],
@@ -42,7 +45,6 @@ Con qué se conecta:
   function safeParse(raw, fallback){try{return raw ? JSON.parse(raw) : fallback;}catch(error){return fallback;}}
   function loadRoot(){return safeParse(localStorage.getItem(STORAGE_KEY), {periods:{}, updatedAt:null});}
   function saveRoot(root){root.updatedAt = now();localStorage.setItem(STORAGE_KEY, JSON.stringify(root));return root;}
-
   function emptyExcel(){return {fileName:"",sheetCount:0,ignoredSheets:0,usefulSheets:0,totalRows:0,loaded:false};}
   function emptyExcelData(){return {sheets:[],rows:[],generatedAt:null};}
 
@@ -50,6 +52,7 @@ Con qué se conecta:
     return {
       excel:emptyExcel(),
       excelData:emptyExcelData(),
+      matchResult:null,
       cronogramas:{complexivo:"",trabajoTitulacion:"",pvc:""},
       cronogramasParsed:Object.assign({}, emptyParsed),
       anexos:[],
@@ -84,6 +87,7 @@ Con qué se conecta:
     state.periodType = classifyPeriod(state.periodLabel || state.periodId);
     state.excel = Object.assign(emptyExcel(), saved.excel || {});
     state.excelData = Object.assign(emptyExcelData(), saved.excelData || {});
+    state.matchResult = saved.matchResult || null;
     state.cronogramas = Object.assign({complexivo:"",trabajoTitulacion:"",pvc:""}, saved.cronogramas || {});
     state.cronogramasParsed = Object.assign({}, emptyParsed, saved.cronogramasParsed || {});
     state.anexos = Array.isArray(saved.anexos) ? saved.anexos.slice() : [];
@@ -103,6 +107,7 @@ Con qué se conecta:
       periodType:state.periodType,
       excel:clone(state.excel),
       excelData:clone(state.excelData),
+      matchResult:clone(state.matchResult),
       cronogramas:clone(state.cronogramas),
       cronogramasParsed:clone(state.cronogramasParsed),
       anexos:clone(state.anexos),
@@ -115,6 +120,7 @@ Con qué se conecta:
 
   function setExcelInfo(info){
     state.excel = Object.assign(emptyExcel(), info || {});
+    state.matchResult = null;
     pushDiagnostic("excel", "Excel registrado en estado interno.");
     return savePeriod();
   }
@@ -136,7 +142,14 @@ Con qué se conecta:
       rows:Array.isArray(analysis.rows) ? analysis.rows : [],
       generatedAt:analysis.generatedAt || now()
     };
+    state.matchResult = null;
     pushDiagnostic("excel", "Excel leído e interpretado desde Infor.");
+    return savePeriod();
+  }
+
+  function setMatchResult(result){
+    state.matchResult = result || null;
+    pushDiagnostic("match", "Unión Excel/BaseLocal actualizada.");
     return savePeriod();
   }
 
@@ -170,12 +183,13 @@ Con qué se conecta:
       periodType:state.periodType,
       excel:clone(state.excel),
       excelData:{sheets:clone(state.excelData.sheets || []),totalRows:(state.excelData.rows || []).length},
+      matchResult:clone(state.matchResult),
       cronogramas:clone(state.cronogramas),
       cronogramasParsed:clone(state.cronogramasParsed),
       anexosCount:state.anexos.length,
       readyForNextBlock:true
     };
-    pushDiagnostic("procesar", "Bloque 3 guardó insumos del informe: Excel y cronogramas.");
+    pushDiagnostic("procesar", "Bloque 4 guardó unión Excel/BaseLocal y modalidad por estudiante.");
     return savePeriod();
   }
 
@@ -188,6 +202,7 @@ Con qué se conecta:
     getState:getState,
     setExcelInfo:setExcelInfo,
     setExcelAnalysis:setExcelAnalysis,
+    setMatchResult:setMatchResult,
     setCronograma:setCronograma,
     setCronogramaParsed:setCronogramaParsed,
     setCronogramasParsed:setCronogramasParsed,
