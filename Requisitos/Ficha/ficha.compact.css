@@ -9,6 +9,7 @@ Función o funciones:
 - Compactar botones del toolbar y mantener copiar ficha como icono.
 - Compactar la ficha del estudiante, sus datos y requisitos.
 - Mostrar acciones rápidas visuales: aprobaciones, copiar ficha y Telegram.
+- Mostrar notas finales en tarjetas visuales.
 Con qué se conecta:
 - ficha.html
 - ficha.css
@@ -55,14 +56,6 @@ Con qué se conecta:
   min-height:34px;
   height:34px;
   padding:0 14px;
-}
-
-.ficha-toolbar .ficha-icon-btn{
-  width:38px;
-  min-width:38px;
-  padding:0;
-  font-size:17px;
-  line-height:1;
 }
 
 .ficha-filter-search input{
@@ -231,10 +224,12 @@ h2#ficha-nombre{
 }
 
 .ficha-req-card,
-.ficha-raw-card{
+.ficha-notes-card{
+  border:1px solid var(--line);
   border-radius:13px;
   padding:9px;
   margin-top:8px;
+  background:#fff;
 }
 
 .ficha-section-title{
@@ -263,16 +258,44 @@ h2#ficha-nombre{
   padding:3px 7px;
 }
 
-.ficha-raw-card{
-  margin-top:8px;
+.ficha-notas{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(110px,1fr));
+  gap:7px;
 }
 
-.ficha-raw-card pre{
-  min-height:120px;
-  max-height:190px;
-  margin:0;
-  padding:9px;
+.ficha-note{
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:9px 10px;
+  background:#f8fafc;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+}
+
+.ficha-note span{
   font-size:11px;
+  color:var(--muted);
+  font-weight:950;
+}
+
+.ficha-note strong{
+  font-size:15px;
+  font-weight:1000;
+}
+
+.ficha-note-ok{
+  background:#ecfdf5;
+  border-color:#bbf7d0;
+  color:#166534;
+}
+
+.ficha-note-bad{
+  background:#fef2f2;
+  border-color:#fecaca;
+  color:#991b1b;
 }
 
 .ficha-empty{
@@ -307,7 +330,8 @@ h2#ficha-nombre{
   .ficha-toolbar,
   .ficha-layout,
   .ficha-grid-info,
-  .ficha-requisitos{
+  .ficha-requisitos,
+  .ficha-notas{
     grid-template-columns:1fr;
   }
 
@@ -317,9 +341,5 @@ h2#ficha-nombre{
 
   .ficha-top-side{
     align-items:flex-start;
-  }
-
-  .ficha-toolbar .ficha-icon-btn{
-    width:100%;
   }
 }
