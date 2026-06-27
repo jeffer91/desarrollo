@@ -9,6 +9,7 @@ Función o funciones:
 - Crear divisiones por período asignando carreras a estudiantes activos y retirados.
 - Ocultar períodos borrados que siguen archivados en historial por seguridad.
 - Exponer escritura controlada para servicios internos de Base Local.
+- Permitir vistas livianas para que cada pantalla renderice solo lo necesario.
 Con qué se conecta:
 - maq-baselocal-session.js
 - excel-local.repo.js
@@ -88,7 +89,7 @@ Con qué se conecta:
     var snap = null;
     try{
       if(session && typeof session.getSnapshot === "function"){
-        snap = session.getSnapshot({clone:false});
+        snap = session.getSnapshot({clone:false, force:options.force === true});
       }
     }catch(error){snap = null;}
     if(!snap){snap = repo().getSnapshot();}
@@ -207,12 +208,28 @@ Con qué se conecta:
     return {ok:true, periodId:periodId, division:divisionName, careers:validCareers, updated:applied.updated || 0, snapshot:saved};
   }
 
-  function buildView(periodId, search, estadoMatricula){
-    var snapshot = getSnapshot({force:true});
-    var students = getStudents(periodId, search, estadoMatricula, snapshot);
-    var studentsForPeriod = getStudentsForPeriod(periodId, snapshot);
-    var statusCounts = filtros().countByStatus(studentsForPeriod);
-    return {periods:getPeriods(snapshot), students:students, allStudentsForPeriod:studentsForPeriod, statusCounts:statusCounts, totalStudentsPeriod:statusCounts.TOTAL || studentsForPeriod.length, history:getHistory(snapshot), diagnostics:getDiagnostics(snapshot), careersCount:getCareersCount(students), divisions:getDivisionsWithEmpty(periodId || "", snapshot), divisionsSummary:getDivisionsSummary(periodId || "", snapshot), snapshot:snapshot};
+  function buildView(periodId, search, estadoMatricula, options){
+    options = options || {};
+    var snapshot = getSnapshot({force:options.force === true});
+    var students = options.skipStudents === true ? [] : getStudents(periodId, search, estadoMatricula, snapshot);
+    var needsStatus = options.includeStatusCounts !== false;
+    var studentsForPeriod = needsStatus ? getStudentsForPeriod(periodId, snapshot) : [];
+    var statusCounts = needsStatus ? filtros().countByStatus(studentsForPeriod) : {ACTIVO:0, RETIRADO:0, TOTAL:0};
+    var historyCount = Array.isArray(snapshot.history) ? snapshot.history.length : 0;
+    return {
+      periods:getPeriods(snapshot),
+      students:students,
+      allStudentsForPeriod:options.includeAllStudentsForPeriod === true ? studentsForPeriod : [],
+      statusCounts:statusCounts,
+      totalStudentsPeriod:statusCounts.TOTAL || studentsForPeriod.length,
+      history:options.includeHistory === true ? getHistory(snapshot) : [],
+      historyCount:historyCount,
+      diagnostics:options.includeDiagnostics === true ? getDiagnostics(snapshot) : {ok:true, lazy:true, message:"Diagnóstico cargará al abrir la pestaña Diagnóstico."},
+      careersCount:getCareersCount(students),
+      divisions:options.includeDivisions === true ? getDivisionsWithEmpty(periodId || "", snapshot) : [],
+      divisionsSummary:options.includeDivisionsSummary === true ? getDivisionsSummary(periodId || "", snapshot) : {},
+      snapshot:options.includeSnapshot === true ? snapshot : null
+    };
   }
 
   window.BaseLocalAPI = {getSnapshot:getSnapshot,writeSnapshot:writeSnapshot,getPeriods:function(){return getPeriods(getSnapshot());},getStudents:function(periodId, search, estadoMatricula){return getStudents(periodId, search, estadoMatricula, getSnapshot());},getHistory:function(){return getHistory(getSnapshot());},getDiagnostics:function(){return getDiagnostics(getSnapshot());},buildView:buildView,getDivisions:function(periodId){return getDivisions(periodId, getSnapshot());},getDivisionsWithEmpty:function(periodId){return getDivisionsWithEmpty(periodId, getSnapshot());},getAvailableDivisionCareers:function(periodId){return getAvailableDivisionCareers(periodId, getSnapshot());},getDivisionsSummary:function(periodId){return getDivisionsSummary(periodId, getSnapshot());},applyDivisionToCareers:applyDivisionToCareers,isPeriodArchived:function(periodId){return isPeriodArchived(periodId, getSnapshot());},clearSnapshotCache:clearSnapshotCache};
