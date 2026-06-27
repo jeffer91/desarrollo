@@ -7,7 +7,7 @@ Función o funciones:
 2. Guarda título, grupo, descripción y ruta HTML real de cada módulo.
 3. Expone funciones para listar, buscar y validar visibilidad.
 4. Agrega el módulo Incorporaciones como entorno independiente.
-5. Mantiene el módulo Carga separado para evitar sobrecargarlo.
+5. Mantiene el módulo Titulación separado para evitar sobrecargarlo.
 =========================================================
 */
 
@@ -46,13 +46,6 @@ Función o funciones:
       path: "./Documentos/index.html"
     },
     {
-      id: "eventos",
-      title: "Eventos",
-      group: "Eventos",
-      description: "Entrada principal del sistema de eventos AgendaJeff.",
-      path: "./eventos/renderer.html"
-    },
-    {
       id: "incorporaciones",
       title: "Incorporaciones",
       group: "Titulación",
@@ -61,9 +54,9 @@ Función o funciones:
     },
     {
       id: "requisitos",
-      title: "Carga",
-      group: "Carga",
-      description: "Entrada principal para carga de datos, Base Local, seguimiento académico y gestión operativa.",
+      title: "Titulación",
+      group: "Titulación",
+      description: "Entrada principal para titulación, carga de datos, Base Local, seguimiento académico y gestión operativa.",
       path: "./Requisitos/Maqueta/maq-index.html"
     }
   ];
