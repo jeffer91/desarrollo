@@ -18,14 +18,17 @@ function verificarHtml() {
   const html = leer('Requisitos/Stats/stats.html');
   exigirContenido('Requisitos/Stats/stats.html', [
     'stats.notes.analytics.css',
+    'stats.notes.priorities.css',
     'stats.notes.analytics.js',
     'stats.notes.charts.js',
     'stats.notes.enhancer.js',
+    'stats.notes.priorities.js',
     'tendencias y riesgo por carrera'
   ]);
   exigir(html.indexOf('stats.notes.analytics.js') < html.indexOf('stats.notes.js'), 'La analítica debe cargarse antes de stats.notes.js.');
   exigir(html.indexOf('stats.notes.charts.js') < html.indexOf('stats.notes.enhancer.js'), 'Los gráficos deben cargarse antes del enhancer.');
   exigir(html.indexOf('stats.notes.js') < html.indexOf('stats.notes.enhancer.js'), 'El enhancer debe cargarse después de stats.notes.js.');
+  exigir(html.indexOf('stats.notes.enhancer.js') < html.indexOf('stats.notes.priorities.js'), 'Las prioridades deben cargarse después del enhancer.');
 }
 
 function verificarMotor() {
@@ -74,6 +77,24 @@ function verificarGraficos() {
   ]);
 }
 
+function verificarPrioridades() {
+  exigirContenido('Requisitos/Stats/stats.notes.priorities.js', [
+    'Prioridades académicas',
+    'construirAcciones',
+    'resumenEjecutivo',
+    'renderAcciones',
+    'renderEstudiantes',
+    'insertarPrioridades'
+  ]);
+  exigirContenido('Requisitos/Stats/stats.notes.priorities.css', [
+    'notes-priority-panel',
+    'notes-priority-kpis',
+    'notes-priority-grid',
+    'notes-priority-action',
+    'notes-priority-table'
+  ]);
+}
+
 function verificarCss() {
   exigirContenido('Requisitos/Stats/stats.notes.analytics.css', [
     'notes-analytics-dashboard',
@@ -93,8 +114,9 @@ function main() {
   verificarMotor();
   verificarVista();
   verificarGraficos();
+  verificarPrioridades();
   verificarCss();
-  console.log('OK Stats Notas Analytics: dashboard analítico, gráficos y enhancer conectados.');
+  console.log('OK Stats Notas Analytics: dashboard analítico, gráficos, enhancer y prioridades conectados.');
 }
 
 try {
