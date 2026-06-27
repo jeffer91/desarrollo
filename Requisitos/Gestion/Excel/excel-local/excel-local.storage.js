@@ -3,10 +3,13 @@ Nombre completo: excel-local.storage.js
 Ruta o ubicación: /Requisitos/Gestion/Excel/excel-local/excel-local.storage.js
 Función o funciones:
 - Persistir snapshot local en localStorage de forma rápida.
+- Reutilizar la sesión rápida de Requisitos cuando exista.
+- Evitar leer y normalizar toda la Base Local en cada pantalla.
 - Mantener estructura estable para Base Local, Tabla, Ficha, Stats y Reportes.
 - Migrar datos antiguos sin borrar campos nuevos de Firebase.
 - Asegurar soporte para estadoMatricula, historialEstadoMatricula y divisiones.
 Con qué se conecta:
+- maq-baselocal-session.js
 - excel-local.bridge.js
 - excel-local.repo.js
 - bl-periodos-canon.service.js
@@ -15,7 +18,8 @@ Con qué se conecta:
 (function(window){
   "use strict";
 
-  var VERSION = "1.4.0";
+  var VERSION = "1.4.1";
+  var memory = {loaded:false,raw:"",snapshot:null,source:"none"};
 
   function clone(value){try{return JSON.parse(JSON.stringify(value==null?null:value));}catch(e){return value;}}
   function now(){return new Date().toISOString();}
@@ -24,6 +28,19 @@ Con qué se conecta:
 
   function emptySnapshot(){return {meta:{app:"Requisitos",module:"ExcelLocal",version:VERSION,schemaVersion:4,createdAt:now(),updatedAt:now()},periods:[],students:[],history:[],diagnostics:[]};}
   function key(){return (window.ExcelLocalConfig&&window.ExcelLocalConfig.keys&&window.ExcelLocalConfig.keys.snapshot)||"REQ_EXCEL_LOCAL_V1:snapshot";}
+
+  function sessionApi(){
+    try{
+      if(window.parent&&window.parent!==window&&window.parent.MAQ_BASELOCAL_SESSION){return window.parent.MAQ_BASELOCAL_SESSION;}
+    }catch(error){}
+    try{
+      if(window.top&&window.top!==window&&window.top.MAQ_BASELOCAL_SESSION){return window.top.MAQ_BASELOCAL_SESSION;}
+    }catch(error){}
+    try{
+      if(window.MAQ_BASELOCAL_SESSION){return window.MAQ_BASELOCAL_SESSION;}
+    }catch(error){}
+    return null;
+  }
 
   function normalizeDivisiones(value){
     if(window.BLDivisionesService&&typeof window.BLDivisionesService.normalizeDivisiones==="function")return window.BLDivisionesService.normalizeDivisiones(value);
@@ -85,9 +102,49 @@ Con qué se conecta:
     return snap;
   }
 
-  function readSnapshot(){try{var raw=localStorage.getItem(key());if(!raw)return emptySnapshot();return normalizeSnapshot(JSON.parse(raw));}catch(e){console.warn("[ExcelLocalStorage] lectura fallida",e);return emptySnapshot();}}
-  function writeSnapshot(snapshot){var snap=normalizeSnapshot(snapshot);snap.meta.updatedAt=now();snap.meta.version=VERSION;snap.meta.schemaVersion=4;localStorage.setItem(key(),JSON.stringify(snap));return clone(snap);}
-  function clear(){var snap=emptySnapshot();writeSnapshot(snap);return snap;}
+  function looksLikeSnapshot(value){
+    return !!(value&&typeof value==="object"&&value.meta&&Array.isArray(value.periods)&&Array.isArray(value.students));
+  }
 
-  window.ExcelLocalStorage={emptySnapshot:emptySnapshot,normalizeSnapshot:normalizeSnapshot,readSnapshot:readSnapshot,writeSnapshot:writeSnapshot,clear:clear,clone:clone};
+  function readFromSession(){
+    var api=sessionApi();
+    if(!api||typeof api.getSnapshot!=="function")return null;
+    try{
+      var snap=api.getSnapshot({clone:false});
+      if(looksLikeSnapshot(snap)){memory.loaded=true;memory.snapshot=snap;memory.source="maq-session";return clone(snap);}
+    }catch(error){console.warn("[ExcelLocalStorage] sesión rápida no disponible",error);}
+    return null;
+  }
+
+  function readSnapshot(){
+    var fromSession=readFromSession();
+    if(fromSession){return fromSession;}
+    try{
+      var raw=localStorage.getItem(key())||"";
+      if(memory.loaded&&memory.raw===raw&&memory.snapshot){return clone(memory.snapshot);}
+      var snap=raw?normalizeSnapshot(JSON.parse(raw)):emptySnapshot();
+      memory.loaded=true;memory.raw=raw;memory.snapshot=snap;memory.source="localStorage";
+      return clone(snap);
+    }catch(e){console.warn("[ExcelLocalStorage] lectura fallida",e);var fallback=emptySnapshot();memory.loaded=true;memory.raw="";memory.snapshot=fallback;memory.source="fallback";return fallback;}
+  }
+
+  function writeSnapshot(snapshot){
+    var snap=normalizeSnapshot(snapshot);
+    snap.meta.updatedAt=now();
+    snap.meta.version=VERSION;
+    snap.meta.schemaVersion=4;
+    var raw=JSON.stringify(snap);
+    localStorage.setItem(key(),raw);
+    memory.loaded=true;memory.raw=raw;memory.snapshot=snap;memory.source="writeSnapshot";
+    try{
+      var api=sessionApi();
+      if(api&&typeof api.setSnapshot==="function"){api.setSnapshot(snap,{source:"ExcelLocalStorage.writeSnapshot",alreadyStored:true,clone:false});}
+    }catch(error){}
+    return clone(snap);
+  }
+
+  function clear(){var snap=emptySnapshot();writeSnapshot(snap);return snap;}
+  function invalidate(){memory.loaded=false;memory.raw="";memory.snapshot=null;memory.source="invalidate";}
+
+  window.ExcelLocalStorage={emptySnapshot:emptySnapshot,normalizeSnapshot:normalizeSnapshot,readSnapshot:readSnapshot,writeSnapshot:writeSnapshot,clear:clear,clone:clone,invalidate:invalidate};
 })(window);
