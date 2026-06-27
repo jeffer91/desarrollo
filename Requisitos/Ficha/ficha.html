@@ -7,8 +7,10 @@ Función o funciones:
 - Buscar por cédula, nombre, carrera, división, correo o celular.
 - Filtrar por período, división y matrícula.
 - Mostrar activos por defecto y permitir ver retirados.
+- Cargar capa compacta visual sin tocar la lógica de datos.
 Con qué se conecta:
 - ficha.css
+- ficha.compact.css
 - ficha.core.js
 - ficha.app.js
 - ../Gestion/Excel/excel-local/excel-local.config.js
@@ -23,15 +25,16 @@ Con qué se conecta:
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title></title>
   <link rel="stylesheet" href="ficha.css" />
+  <link rel="stylesheet" href="ficha.compact.css" />
 </head>
 <body>
   <main class="ficha-app">
     <section id="ficha-status" class="ficha-status">Cargando ficha...</section>
     <section class="ficha-toolbar">
-      <label>Período<select id="ficha-periodo"><option value="">Todos</option></select></label>
-      <label>División<select id="ficha-division"><option value="">Todas</option></select></label>
-      <label>Matrícula<select id="ficha-matricula"><option value="ACTIVO">Activos</option><option value="RETIRADO">Retirados</option><option value="">Todos</option></select></label>
-      <label>Buscar estudiante<input id="ficha-search" type="search" placeholder="Cédula, nombre, carrera, división, correo o celular..." /></label>
+      <label class="ficha-filter-periodo">Período<select id="ficha-periodo"><option value="">Todos</option></select></label>
+      <label class="ficha-filter-division">División<select id="ficha-division"><option value="">Todas</option></select></label>
+      <label class="ficha-filter-matricula">Matrícula<select id="ficha-matricula"><option value="ACTIVO">Activos</option><option value="RETIRADO">Retirados</option><option value="">Todos</option></select></label>
+      <label class="ficha-filter-search">Buscar estudiante<input id="ficha-search" type="search" placeholder="Cédula, nombre, carrera, división, correo o celular..." /></label>
       <button id="ficha-btn-refresh" type="button">Actualizar</button>
       <button id="ficha-btn-copy" type="button">Copiar ficha</button>
       <button id="ficha-btn-json" type="button">Exportar JSON</button>
