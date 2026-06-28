@@ -5,10 +5,11 @@ Función o funciones:
 - Construir la estructura lógica del Informe de Titulación desde la carpeta definitiva /Requisitos/Infor.
 - Separar informe Regular y PVC.
 - Organizar estudiantes por modalidad, carrera, aprobación y notas.
-- Preparar tablas, gráficos y secciones para Word/PDF.
+- Preparar tablas, gráficos, control de Excel regular y secciones para Word/PDF.
 Con qué se conecta:
 - infor.state.js
 - infor.match.js
+- infor.regular.js
 - infor.gemini.js
 - ../frontend/titulacion.app.js
 ========================================================= */
@@ -41,16 +42,35 @@ Con qué se conecta:
 
   function noteInfo(item){
     var raw = (item && item.excel && item.excel.raw) || (item && item.base && item.base.raw) || {};
-    var nart = num(pick(raw, ["Notart","Nart","NotaArt","nota articulo","nota artículo"]));
-    var ndef = num(pick(raw, ["Notdef","Ndef","NotaDef","nota defensa"]));
-    var nfin = num(pick(raw, ["Notafinal","NotaFinal","Nfin","nota final"]));
-    if(nfin == null && nart != null && ndef != null && nart >= 7){nfin = round2((nart * 0.70) + (ndef * 0.30));}
+    var modalidad = text(item && item.modalidadTitulacion);
+    var nart = num(pick(raw, ["Notart","Nart","NotaArt","nota articulo","nota artículo","nart"]));
+    var ndef = num(pick(raw, ["Notdef","Ndef","NotaDef","nota defensa","ndef"]));
+    var nfin = num(pick(raw, ["Notafinal","NotaFinal","Nfin","nota final","notaFinal","notafinal","nfin"]));
+    var practico = num(pick(raw, ["notaPractico","nota práctico","nota practico","practico","práctico"]));
+    var teorico = num(pick(raw, ["notaTeorico","nota teórico","nota teorico","teorico","teórico"]));
+    var supletorio = num(pick(raw, ["notaSupletorio","nota supletorio","supletorio"]));
+    var formula = text(raw._inforNotaFormula || "");
+    if(nfin == null && modalidad === "EXAMEN_COMPLEXIVO" && practico != null && teorico != null){
+      nfin = round2((practico * 0.60) + (teorico * 0.40));
+      formula = formula || "notaPractico*0.60 + notaTeorico*0.40";
+    }
+    if(nfin == null && nart != null && ndef != null && nart >= 7){
+      nfin = round2((nart * 0.70) + (ndef * 0.30));
+      formula = formula || "NART*0.70 + NDEF*0.30";
+    }
     var estado = nfin == null ? "SIN_NOTA" : (nfin >= 7 ? "APROBADO" : "REPROBADO");
-    return {nart:nart, ndef:ndef, nfin:nfin, estado:estado};
+    var detalle = "";
+    if(modalidad === "EXAMEN_COMPLEXIVO"){
+      detalle = "Práctico: " + (practico == null ? "—" : practico) + " · Teórico: " + (teorico == null ? "—" : teorico) + (supletorio == null ? "" : " · Supletorio: " + supletorio);
+    }else if(modalidad === "TRABAJO_TITULACION"){
+      detalle = "NART: " + (nart == null ? "—" : nart) + " · NDEF: " + (ndef == null ? "—" : ndef);
+    }
+    return {nart:nart, ndef:ndef, nfin:nfin, estado:estado, practico:practico, teorico:teorico, supletorio:supletorio, formula:formula, detalle:detalle};
   }
 
   function baseRow(item){
     var n = noteInfo(item);
+    var raw = (item && item.excel && item.excel.raw) || {};
     return {
       cedula:text(item.cedula),
       estudiante:text(item.nombres),
@@ -62,7 +82,15 @@ Con qué se conecta:
       notaFinal:n.nfin,
       estado:n.estado,
       match:item.status || "",
-      metodo:item.method || ""
+      metodo:item.method || "",
+      notaPractico:n.practico,
+      notaTeorico:n.teorico,
+      notaSupletorio:n.supletorio,
+      nart:n.nart,
+      ndef:n.ndef,
+      formulaNota:n.formula,
+      detalleNota:n.detalle,
+      hoja:text(raw._inforSheet || (item.excel && item.excel.sheet) || "")
     };
   }
 
@@ -120,6 +148,36 @@ Con qué se conecta:
     return {id:id, title:title, type:"texto", include:!!text(content), content:text(content)};
   }
 
+  function regularControlSection(snapshot){
+    var regular = snapshot.matchResult && snapshot.matchResult.regularAnalysis ? snapshot.matchResult.regularAnalysis : null;
+    if(!regular){return {include:false};}
+    var s = regular.summary || {};
+    var v = regular.validation || {};
+    var c = regular.complexivo || {};
+    var t = regular.trabajoTitulacion || {};
+    var n = regular.nucleos || {};
+    return {
+      id:"control_excel_regular",
+      title:"Control del Excel regular",
+      type:"control_regular",
+      include:true,
+      resumen:[
+        {label:"Fuente de validación del período", value:(v.source || "Sin fuente") + (v.enabled ? "" : " · validación no disponible")},
+        {label:"Cédulas activas del período", value:v.periodCedulas || 0},
+        {label:"Filas totales del Excel", value:s.totalExcel || 0},
+        {label:"Filas usadas en el informe", value:s.validForReport || 0},
+        {label:"Excluidos por no pertenecer al período", value:s.excludedByPeriod || 0},
+        {label:"Excluidos sin cédula", value:s.excludedNoCedula || 0},
+        {label:"Duplicados omitidos/reemplazados", value:s.duplicates || 0},
+        {label:"NÚCLEOS", value:(n.total || 0) + " registros informativos"},
+        {label:"Complexivo", value:(c.totalFinal || 0) + " estudiantes finales · fórmula: " + (c.formula || "notaPractico*0.60 + notaTeorico*0.40")},
+        {label:"Trabajo de Titulación", value:(t.totalFinal || 0) + " estudiantes finales"}
+      ],
+      excluded:safeList(regular.excluded).slice(0, 100),
+      duplicates:safeList(regular.duplicates).slice(0, 100)
+    };
+  }
+
   function buildRegular(snapshot, rows){
     var complexivo = rows.filter(function(r){return r.modalidad === "EXAMEN_COMPLEXIVO";});
     var trabajo = rows.filter(function(r){return r.modalidad === "TRABAJO_TITULACION";});
@@ -129,10 +187,11 @@ Con qué se conecta:
       textSection("reglamento_complexivo", "Reglamento del Examen Complexivo", "Sección institucional fija pendiente de plantilla final."),
       cronogramaSection("Cronograma Examen Complexivo", c.complexivo),
       cronogramaSection("Cronograma Trabajo de Titulación", c.trabajoTitulacion),
-      textSection("metodologia", "Metodología de Núcleos Estructurantes", "Sección metodológica base para informe regular."),
+      textSection("metodologia", "Metodología de Núcleos Estructurantes", "Sección metodológica base para informe regular. La hoja NÚCLEOS se utiliza como insumo informativo del proceso terminado, no como regla de aprobación para este informe."),
+      regularControlSection(snapshot),
       resultSection("resultados_complexivo", "Resultados de Examen Complexivo por carrera", complexivo),
       resultSection("resultados_trabajo", "Resultados de Trabajo de Titulación por carrera", trabajo),
-      textSection("informe_general", "Informe general de cohorte", "Síntesis general generada a partir de estudiantes, modalidades, notas y aprobación."),
+      textSection("informe_general", "Informe general de cohorte", "Síntesis general generada a partir de estudiantes del período seleccionado, modalidades, notas calculadas y estado académico."),
       textSection("analisis_estrategico", "Análisis estratégico", "Pendiente de redacción Gemini."),
       textSection("conclusiones", "Conclusiones", "Pendiente de redacción Gemini."),
       textSection("recomendaciones", "Recomendaciones", "Pendiente de redacción Gemini.")
@@ -184,6 +243,7 @@ Con qué se conecta:
       modalidades:countBy(rows, "modalidadLabel"),
       carreras:careerTables(rows),
       rows:rows,
+      regularAnalysis:snapshot.matchResult && snapshot.matchResult.regularAnalysis ? snapshot.matchResult.regularAnalysis : null,
       sections:kind === "PVC" ? buildPVC(snapshot, rows) : buildRegular(snapshot, rows),
       anexos:safeList(snapshot.anexos),
       analysis:null
