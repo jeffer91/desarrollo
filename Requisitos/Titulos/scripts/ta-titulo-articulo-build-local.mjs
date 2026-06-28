@@ -4,7 +4,7 @@
   Función o funciones:
   - Crear una carpeta dist-local para pruebas sin Netlify.
   - Copiar public, src y electron/admin preservando rutas relativas.
-  - Generar un manifiesto de pruebas locales.
+  - Generar un manifiesto de pruebas locales para estudiante, coordinador y administrador.
   - Facilitar doble click y Live Server sin modificar los archivos fuente.
   Se conecta con:
   - package.json
@@ -49,12 +49,14 @@ const manifest = {
   entradas: {
     estudiante: "dist-local/public/ta-titulo-articulo-estudiante.html",
     coordinador: "dist-local/public/ta-titulo-articulo-coordinador.html",
+    administradorPublico: "dist-local/public/ta-titulo-articulo-admin.html",
     administradorElectronHtml: "dist-local/electron/admin/ta-titulo-articulo-administrador.html"
   },
   notas: [
     "Abrir los HTML por doble click o con Live Server.",
     "Firebase directo usa import map con CDN, por lo que necesita internet.",
-    "Netlify no se usa en esta carpeta local."
+    "Netlify no se usa en esta carpeta local.",
+    "Gemini real requiere Netlify Functions; fuera de Netlify se usa fallback local."
   ]
 };
 
@@ -64,3 +66,5 @@ console.log("Títulos: carpeta local generada correctamente.");
 console.log("Salida: dist-local");
 console.log("Abrir estudiante: dist-local/public/ta-titulo-articulo-estudiante.html");
 console.log("Abrir coordinador: dist-local/public/ta-titulo-articulo-coordinador.html");
+console.log("Abrir administrador público: dist-local/public/ta-titulo-articulo-admin.html");
+console.log("Abrir administrador Electron HTML: dist-local/electron/admin/ta-titulo-articulo-administrador.html");
