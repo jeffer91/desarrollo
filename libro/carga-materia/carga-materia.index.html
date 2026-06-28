@@ -4,9 +4,9 @@ Ruta o ubicación: /desarrollo/libro/carga-materia/carga-materia.index.html
 Función o funciones:
 1. Mostrar la pantalla Carga de la materia.
 2. Recibir carrera y materia digitadas manualmente.
-3. Recibir tres archivos fuente: información base, contenidos y actividades.
+3. Recibir información base, contenidos y actividades por archivo o texto pegado.
 4. Mantener ocultos los elementos técnicos de revisión, validación y vista previa.
-5. Dejar la pantalla lista para agregar ingreso por texto en el siguiente bloque.
+5. Preparar la carga flexible para Excel, PDF o texto.
 ========================================================= -->
 <!doctype html>
 <html lang="es">
@@ -62,9 +62,14 @@ Función o funciones:
         </div>
 
         <label class="libro-file-zone">
-          <input id="base-file-input" type="file" accept=".xlsx,.xls,.pdf" />
+          <input id="base-file-input" type="file" accept=".xlsx,.xls,.pdf,.txt" />
           <strong>Seleccionar archivo</strong>
-          <span id="base-file-name">Excel o PDF.</span>
+          <span id="base-file-name">Excel, PDF o TXT.</span>
+        </label>
+
+        <label class="libro-text-zone">
+          <span>O pegar texto</span>
+          <textarea id="base-text-input" rows="7" placeholder="Pega aquí descripción, objetivo, unidades, competencias, resultados, bibliografía y justificación."></textarea>
         </label>
       </article>
 
@@ -77,9 +82,14 @@ Función o funciones:
         </div>
 
         <label class="libro-file-zone">
-          <input id="contenidos-file-input" type="file" accept=".xlsx,.xls" />
+          <input id="contenidos-file-input" type="file" accept=".xlsx,.xls,.pdf,.txt" />
           <strong>Seleccionar archivo</strong>
-          <span id="contenidos-file-name">Excel.</span>
+          <span id="contenidos-file-name">Excel, PDF o TXT.</span>
+        </label>
+
+        <label class="libro-text-zone">
+          <span>O pegar texto</span>
+          <textarea id="contenidos-text-input" rows="7" placeholder="Pega aquí los temas y subtemas. Ejemplo: 1.1 Tema principal, 1.1.1 Subtema."></textarea>
         </label>
       </article>
 
@@ -92,9 +102,14 @@ Función o funciones:
         </div>
 
         <label class="libro-file-zone">
-          <input id="actividades-file-input" type="file" accept=".xlsx,.xls" />
+          <input id="actividades-file-input" type="file" accept=".xlsx,.xls,.pdf,.txt" />
           <strong>Seleccionar archivo</strong>
-          <span id="actividades-file-name">Excel.</span>
+          <span id="actividades-file-name">Excel, PDF o TXT.</span>
+        </label>
+
+        <label class="libro-text-zone">
+          <span>O pegar texto</span>
+          <textarea id="actividades-text-input" rows="7" placeholder="Pega aquí las actividades. Puedes incluir unidad, tema, semana o tipo de actividad."></textarea>
         </label>
       </article>
     </section>
@@ -108,7 +123,7 @@ Función o funciones:
 
     <section class="libro-hidden-technical" aria-hidden="true">
       <ul id="checklist" class="libro-checklist"></ul>
-      <pre id="preview-box">Completa carrera, materia y selecciona los tres archivos.</pre>
+      <pre id="preview-box">Completa carrera, materia y selecciona archivo o pega texto.</pre>
     </section>
   </main>
 
