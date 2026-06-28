@@ -1,0 +1,44 @@
+/* =========================================================
+Nombre completo: carga-materia.user-messages.css
+Ruta o ubicación: /desarrollo/libro/carga-materia/carga-materia.user-messages.css
+Función o funciones:
+1. Estilizar mensajes simples para el usuario.
+2. Evitar mostrar JSON, rutas técnicas o detalles internos.
+3. Mantener la pantalla Carga de la materia limpia y comprensible.
+========================================================= */
+
+.libro-user-message {
+  display: block;
+  padding: 13px 14px;
+  border: 1px solid var(--libro-border);
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: var(--libro-shadow);
+  color: var(--libro-muted);
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.libro-user-message.is-ok {
+  border-color: #bfead6;
+  background: #f1fff8;
+  color: var(--libro-success);
+}
+
+.libro-user-message.is-warning {
+  border-color: #f0d390;
+  background: #fffaf0;
+  color: var(--libro-warning);
+}
+
+.libro-user-message.is-error {
+  border-color: #efb5b5;
+  background: #fff5f5;
+  color: var(--libro-danger);
+}
+
+.libro-user-message.is-pending {
+  border-color: var(--libro-border);
+  background: #ffffff;
+  color: var(--libro-muted);
+}
