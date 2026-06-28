@@ -5,8 +5,8 @@ Función o funciones:
 1. Mostrar la primera pantalla del módulo Libro.
 2. Recibir carrera y materia digitadas manualmente.
 3. Recibir tres archivos fuente: base, contenidos y actividades.
-4. Consolidar información base, contenidos y actividades.
-5. Validar y mostrar una vista previa legible de la materia consolidada.
+4. Consolidar, validar y mostrar una vista previa de la materia.
+5. Guardar el resultado consolidado como JSON para los siguientes bloques.
 ========================================================= -->
 <!doctype html>
 <html lang="es">
@@ -22,11 +22,11 @@ Función o funciones:
   <main class="libro-page">
     <header class="libro-topbar">
       <div>
-        <p class="libro-kicker">Libro · Bloque 7</p>
+        <p class="libro-kicker">Libro · Bloque 8</p>
         <h1>Carga inteligente de materia</h1>
         <p>
           Registra la carrera, la materia y los tres archivos fuente. Esta pantalla ya consolida,
-          valida y muestra una vista previa legible antes de guardar.
+          valida, muestra vista previa y guarda el resultado consolidado.
         </p>
       </div>
 
@@ -42,16 +42,16 @@ Función o funciones:
         <span>Carga</span>
       </article>
       <article class="libro-progress__item">
-        <strong>5</strong>
-        <span>Actividades</span>
-      </article>
-      <article class="libro-progress__item">
         <strong>6</strong>
         <span>Unión</span>
       </article>
-      <article class="libro-progress__item is-current">
+      <article class="libro-progress__item">
         <strong>7</strong>
         <span>Validación</span>
+      </article>
+      <article class="libro-progress__item is-current">
+        <strong>8</strong>
+        <span>Guardado</span>
       </article>
     </section>
 
@@ -155,6 +155,7 @@ Función o funciones:
 
         <div class="libro-actions">
           <button id="analizar-btn" class="libro-btn" type="button" disabled>Validar materia</button>
+          <button id="guardar-btn" class="libro-btn libro-btn--ghost" type="button" disabled>Guardar resultado</button>
           <button id="limpiar-btn" class="libro-btn libro-btn--ghost" type="button">Limpiar</button>
         </div>
       </article>
@@ -163,7 +164,7 @@ Función o funciones:
         <div class="libro-card__head">
           <div>
             <span class="libro-card__step">Vista previa</span>
-            <h2>Validación y materia consolidada</h2>
+            <h2>Validación y guardado</h2>
           </div>
           <span id="expediente-status" class="libro-status-pill is-pending">Sin validar</span>
         </div>
@@ -185,6 +186,7 @@ Función o funciones:
   <script src="./carga-materia.builder.js"></script>
   <script src="./carga-materia.validator.js"></script>
   <script src="./carga-materia.preview.js"></script>
+  <script src="./carga-materia.storage.js"></script>
   <script src="./carga-materia.main.js"></script>
 </body>
 </html>
