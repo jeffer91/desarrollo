@@ -2,105 +2,29 @@
 Nombre completo: generador-libro.index.html
 Ruta o ubicación: /desarrollo/libro/generador-libro/generador-libro.index.html
 Función o funciones:
-1. Mostrar la pantalla inicial del generador de libro académico.
-2. Cargar una materia consolidada guardada en Bloque 8 o desde un JSON externo.
-3. Generar una vista previa textual del libro por unidades.
-4. Exportar el libro en TXT y JSON para uso posterior.
-5. Mantener el generador separado de la pantalla de carga de materia.
+1. Mantener oculto el generador de libro académico.
+2. Redirigir temporalmente a Carga de la materia.
+3. Evitar que el generador aparezca antes de terminar correctamente la carga.
+4. Conservar los archivos del generador para activarlos en una fase posterior.
 ========================================================= -->
 <!doctype html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Libro · Generador</title>
-  <meta name="description" content="Generador de libro académico desde materia consolidada." />
+  <title>Libro · Carga de la materia</title>
+  <meta name="description" content="Generador oculto temporalmente. Se abre Carga de la materia." />
   <link rel="icon" href="data:," />
-  <link rel="stylesheet" href="./generador-libro.css" />
+  <script>
+    window.location.replace("../carga-materia/carga-materia.index.html");
+  </script>
 </head>
 <body>
-  <main class="gl-page">
-    <header class="gl-topbar">
-      <div>
-        <p class="gl-kicker">Libro · Bloque 9</p>
-        <h1>Generador de libro académico</h1>
-        <p>
-          Carga una materia consolidada, genera el contenido del libro por unidades y exporta una
-          primera versión en TXT o JSON.
-        </p>
-      </div>
-
-      <nav class="gl-actions gl-actions--top" aria-label="Navegación del módulo Libro">
-        <a class="gl-btn gl-btn--ghost" href="../index.html">Inicio Libro</a>
-        <a class="gl-btn gl-btn--ghost" href="../carga-materia/carga-materia.index.html">Carga de materia</a>
-        <a class="gl-btn gl-btn--ghost" href="../../index.html">Panel principal</a>
-      </nav>
-    </header>
-
-    <section class="gl-grid">
-      <article class="gl-card">
-        <div class="gl-card__head">
-          <div>
-            <span class="gl-step">Fuente</span>
-            <h2>Materia consolidada</h2>
-          </div>
-          <span id="gl-status" class="gl-pill is-pending">Sin cargar</span>
-        </div>
-
-        <label class="gl-field">
-          <span>Materias guardadas</span>
-          <select id="gl-saved-select">
-            <option value="">No hay materias cargadas todavía</option>
-          </select>
-        </label>
-
-        <div class="gl-actions">
-          <button id="gl-load-saved-btn" class="gl-btn" type="button">Cargar guardada</button>
-          <button id="gl-refresh-btn" class="gl-btn gl-btn--ghost" type="button">Actualizar lista</button>
-        </div>
-
-        <label class="gl-file-zone">
-          <input id="gl-json-input" type="file" accept=".json,application/json" />
-          <strong>Cargar JSON externo</strong>
-          <span id="gl-json-name">Ningún archivo seleccionado.</span>
-        </label>
-      </article>
-
-      <article class="gl-card">
-        <div class="gl-card__head">
-          <div>
-            <span class="gl-step">Generación</span>
-            <h2>Acciones</h2>
-          </div>
-        </div>
-
-        <div class="gl-actions gl-actions--stack">
-          <button id="gl-build-btn" class="gl-btn" type="button" disabled>Generar libro</button>
-          <button id="gl-export-txt-btn" class="gl-btn gl-btn--ghost" type="button" disabled>Exportar TXT</button>
-          <button id="gl-export-json-btn" class="gl-btn gl-btn--ghost" type="button" disabled>Exportar JSON</button>
-        </div>
-
-        <div id="gl-summary" class="gl-summary">
-          Carga una materia consolidada para generar el libro.
-        </div>
-      </article>
-    </section>
-
-    <section class="gl-card gl-card--preview">
-      <div class="gl-card__head">
-        <div>
-          <span class="gl-step">Vista previa</span>
-          <h2>Libro generado</h2>
-        </div>
-        <span id="gl-book-status" class="gl-pill is-pending">Sin generar</span>
-      </div>
-
-      <pre id="gl-preview">Carga una materia consolidada y presiona Generar libro.</pre>
-    </section>
+  <main>
+    <p>El generador estará disponible después. Abriendo Carga de la materia...</p>
+    <p>
+      <a href="../carga-materia/carga-materia.index.html">Abrir Carga de la materia</a>
+    </p>
   </main>
-
-  <script src="./generador-libro.builder.js"></script>
-  <script src="./generador-libro.storage.js"></script>
-  <script src="./generador-libro.main.js"></script>
 </body>
 </html>
