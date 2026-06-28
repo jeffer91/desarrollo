@@ -4,6 +4,7 @@
   Función o funciones:
   - Solicitar sugerencias de títulos académicos a una Netlify Function segura.
   - No exponer GEMINI_API_KEY en el navegador.
+  - Enviar a la función segura todos los datos necesarios para armar los prompts de IA.
   - Entregar fallback local cuando la función todavía no esté desplegada o no responda.
   - Garantizar que las dos sugerencias correspondan a fases distintas del análisis.
   Se conecta con:
@@ -23,7 +24,7 @@ function normalizar(value) {
 
 function depurarTemaBase(value) {
   const texto = clean(value || "tema seleccionado")
-    .replace(/^(mejorar|mejora\s+de|mejora\s+del|fortalecer|optimizar|diseñar|implementar)\s+/i, "")
+    .replace(/^(mejorar|mejora\s+de|mejora\s+del|fortalecer|optimizar|diseñar)\s+/i, "")
     .trim();
   return texto || clean(value || "tema seleccionado");
 }
@@ -82,7 +83,7 @@ function sugerenciasPorFases(payload = {}) {
   const propuesta = tomarPrimeroValido([
     `Propuesta de mejora ${conectorDe(tema)} en ${grupo} de ${contexto}${periodoTexto}`,
     `Diseño de una estrategia para atender ${problema} en ${grupo} de ${contexto}: enfoque desde ${carrera}`,
-    `Plan de intervención para fortalecer ${tema} en ${contexto}${periodoTexto}`
+    `Plan de mejora para fortalecer ${tema} en ${contexto}${periodoTexto}`
   ], usados);
 
   return dedupeTitulos([diagnostico, propuesta], payload.titulosYaGenerados || []);
@@ -103,12 +104,13 @@ function fallbackLocal(payload = {}) {
 async function generarSugerenciasTitulo(payload = {}) {
   const body = {
     carrera: clean(payload.carrera),
+    materia: clean(payload.materia || payload.nombreMateria || payload.asignatura || payload.nombreAsignatura),
     codigoCarrera: clean(payload.codigoCarrera),
     temaGeneral: clean(payload.temaGeneral),
     problemaNecesidad: clean(payload.problemaNecesidad),
     lugarContexto: clean(payload.lugarContexto),
     grupoEstudio: clean(payload.grupoEstudio),
-    anioPeriodoDatos: clean(payload.anioPeriodoDatos),
+    anioPeriodoDatos: clean(payload.anioPeriodoDatos || payload.anioPeriodo),
     objetivoArticulo: clean(payload.objetivoArticulo),
     resultadoEsperado: clean(payload.resultadoEsperado),
     tituloManual: clean(payload.tituloManual),
@@ -130,7 +132,7 @@ async function generarSugerenciasTitulo(payload = {}) {
 
     return {
       ok: true,
-      origen: "gemini-netlify",
+      origen: data.origen || "gemini-netlify",
       sugerencias: dedupeTitulos(data.sugerencias || [], body.titulosYaGenerados),
       advertencia: clean(data.advertencia),
       bloqueado: Boolean(data.bloqueado),
