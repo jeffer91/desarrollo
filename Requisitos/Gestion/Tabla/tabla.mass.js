@@ -7,11 +7,13 @@ Función o funciones:
 - Permitir selección manual, seleccionar con Telegram y limpiar selección.
 - Generar vista previa del primer estudiante seleccionado.
 - Preparar y enviar lote por API segura de Telegram.
+- Registrar resultados del lote en el historial local.
 Con qué se conecta:
 - tabla.core.js
 - tabla.message.js
 - tabla.selection.js
 - tabla.telegram-api.js
+- tabla.history.js
 - tabla.app.js
 - tabla.css
 ========================================================= */
@@ -153,6 +155,36 @@ Con qué se conecta:
     return state.prepared;
   }
 
+  function guardarHistorialMasivo(resultado,prepared){
+    if(!window.TablaHistory||typeof window.TablaHistory.guardarMuchos!=="function")return;
+    var loteId="lote_"+Date.now();
+    var tipo=prepared&&prepared.tipo?prepared.tipo:state.type;
+    var items=[];
+    function add(list,estado){
+      (Array.isArray(list)?list:[]).forEach(function(item){
+        items.push({
+          modo:"masivo",
+          tipoMensaje:tipo,
+          loteId:loteId,
+          cedula:item.cedula||"",
+          nombre:item.nombre||"",
+          carrera:item.carrera||"",
+          periodo:item.periodo||"",
+          telegramUser:item.telegramUser||"",
+          telegramChatId:item.telegramChatId||item.chatId||"",
+          mensaje:item.mensaje||"",
+          estado:estado,
+          error:item.error||"",
+          telegramMessageId:item.telegramMessageId||null
+        });
+      });
+    }
+    add(resultado&&resultado.enviados,"enviado");
+    add(resultado&&resultado.fallidos,"fallido");
+    add(resultado&&resultado.omitidos,"omitido");
+    if(items.length)window.TablaHistory.guardarMuchos(items);
+  }
+
   async function enviarLote(){
     if(state.sending)return;
     var prepared=state.prepared||prepararLote();
@@ -166,6 +198,7 @@ Con qué se conecta:
       status("Enviando lote de Telegram: "+prepared.total+" mensaje(s)...","warn");
       var resultado=await window.TablaTelegramApi.enviarLoteTelegram(prepared.lote);
       state.prepared.resultado=resultado;
+      guardarHistorialMasivo(resultado,prepared);
       status("Telegram masivo finalizado. Enviados: "+resultado.resumen.enviados+", fallidos: "+resultado.resumen.fallidos+", omitidos: "+resultado.resumen.omitidos+".",resultado.resumen.fallidos?"warn":"ok");
     }catch(error){
       console.error("[TablaMass]",error);
