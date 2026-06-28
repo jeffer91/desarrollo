@@ -7,13 +7,16 @@ Función o funciones:
 - Mostrar activos por defecto.
 - Paginar resultados para no renderizar toda la base.
 - Usar BL2 cuando esté disponible y mantener ExcelLocalRepo como respaldo.
+- Mostrar acciones compactas por fila: copiar, WhatsApp y Telegram individual.
 Con qué se conecta:
 - tabla.core.js
+- tabla.message.js
+- tabla.telegram.js
 - tabla.export.js
 ========================================================= */
 (function(window,document){
   "use strict";
-  var state={periodId:"",division:"",matricula:"ACTIVO",career:"",status:"",search:"",rows:[],allRows:[],page:1,pageSize:100,pagination:null,renderTimer:null,selectKey:"",divisionOptions:[],careerOptions:[],copyBound:false};
+  var state={periodId:"",division:"",matricula:"ACTIVO",career:"",status:"",search:"",rows:[],allRows:[],page:1,pageSize:100,pagination:null,renderTimer:null,selectKey:"",divisionOptions:[],careerOptions:[],actionsBound:false};
   function el(id){return document.getElementById(id);}function text(v){return String(v==null?"":v).trim();}
   function esc(v){return text(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;").replace(/'/g,"&#039;");}
   function status(msg,cls){var s=el("tabla-status");if(s){s.textContent=msg;s.className="tabla-status "+(cls||"");}}
@@ -40,9 +43,26 @@ Con qué se conecta:
 
   function pill(row){var e=row._estadoGeneral||{id:"pendiente",label:"Pendiente"};var cls=e.id==="cumple"?"pill-ok":e.id==="no_cumple"?"pill-bad":"pill-warn";return '<span class="pill '+cls+'">'+esc(e.label)+'</span>';}
   function matriculaPill(row){var e=row._estadoMatricula||"ACTIVO";var cls=e==="RETIRADO"?"pill-bad":"pill-ok";return '<span class="pill '+cls+'">'+esc(e)+'</span>';}
-  function actions(row){var w=window.TablaCore.whatsappUrl(row);var btnCopy='<button class="mini" data-copy="'+esc(row._cedula)+'" type="button">Copiar</button>';var btnWhats=w?'<a class="mini" href="'+esc(w)+'" target="_blank" rel="noopener"><button class="mini" type="button">WhatsApp</button></a>':'<button class="mini" type="button" disabled>Sin celular</button>';return '<div class="cell-actions">'+btnCopy+btnWhats+'</div>';}
-  function bindCopyOnce(){var wrap=el("tabla-table-wrap");if(!wrap||state.copyBound)return;wrap.addEventListener("click",function(event){var btn=event.target.closest?event.target.closest("[data-copy]"):null;if(!btn)return;var value=btn.getAttribute("data-copy")||"";if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(value);status("Cédula copiada: "+value,"ok");});state.copyBound=true;}
-  function renderTable(rows){var wrap=el("tabla-table-wrap");if(!wrap)return;bindCopyOnce();if(!rows.length){wrap.innerHTML='<div class="empty">Sin datos. Primero carga un Excel en Carga o cambia los filtros.</div>';return;}var html='<table><thead><tr><th>Cédula</th><th>Nombre</th><th>Carrera</th><th>División</th><th>Período</th><th>Matrícula</th><th>Estado</th><th>Correo</th><th>Celular</th><th>Acciones</th></tr></thead><tbody>';html+=rows.map(function(r){return '<tr><td class="nowrap">'+esc(r._cedula)+'</td><td>'+esc(r._nombres)+'</td><td>'+esc(r._carrera)+'</td><td>'+esc(r._division||'Sin división')+'</td><td>'+esc(r._periodo||r.periodoLabel||r.periodoId)+'</td><td>'+matriculaPill(r)+'</td><td>'+pill(r)+'</td><td>'+esc(r._correo)+'</td><td class="nowrap">'+esc(r._celular)+'</td><td>'+actions(r)+'</td></tr>';}).join('');html+='</tbody></table>';wrap.innerHTML=html;}
+  function actions(row,index){
+    var w=window.TablaCore.whatsappUrl(row);
+    var tg=window.TablaCore.telegramInfo?window.TablaCore.telegramInfo(row):{hasTelegram:false,canSendByBot:false};
+    var tgTitle=tg.canSendByBot?"Telegram listo para envío por bot":(tg.hasTelegram?"Abrir Telegram y copiar mensaje":"Sin Telegram: preparar mensaje");
+    var btnCopy='<button class="icon-btn" data-copy="'+esc(row._cedula)+'" type="button" title="Copiar cédula" aria-label="Copiar cédula">📋</button>';
+    var btnWhats=w?'<a class="icon-btn action-whats" href="'+esc(w)+'" target="_blank" rel="noopener" title="WhatsApp" aria-label="WhatsApp">🟢</a>':'<button class="icon-btn" type="button" disabled title="Sin celular" aria-label="Sin celular">🟢</button>';
+    var btnTelegram='<button class="icon-btn action-telegram '+(tg.hasTelegram?'':'is-muted')+'" data-telegram-index="'+esc(index)+'" type="button" title="'+esc(tgTitle)+'" aria-label="Telegram">✈️</button>';
+    return '<div class="cell-actions">'+btnCopy+btnWhats+btnTelegram+'</div>';
+  }
+  function bindActionsOnce(){
+    var wrap=el("tabla-table-wrap");if(!wrap||state.actionsBound)return;
+    wrap.addEventListener("click",function(event){
+      var copyBtn=event.target.closest?event.target.closest("[data-copy]"):null;
+      if(copyBtn){var value=copyBtn.getAttribute("data-copy")||"";if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(value);status("Cédula copiada: "+value,"ok");return;}
+      var tgBtn=event.target.closest?event.target.closest("[data-telegram-index]"):null;
+      if(tgBtn){var index=Number(tgBtn.getAttribute("data-telegram-index"));var row=state.rows[index];if(row&&window.TablaTelegram&&typeof window.TablaTelegram.abrir==="function"){window.TablaTelegram.abrir(row);}else{status("No se pudo abrir Telegram para este estudiante.","warn");}return;}
+    });
+    state.actionsBound=true;
+  }
+  function renderTable(rows){var wrap=el("tabla-table-wrap");if(!wrap)return;bindActionsOnce();if(!rows.length){wrap.innerHTML='<div class="empty">Sin datos. Primero carga un Excel en Carga o cambia los filtros.</div>';return;}var html='<table><thead><tr><th>Cédula</th><th>Nombre</th><th>Carrera</th><th>División</th><th>Período</th><th>Matrícula</th><th>Estado</th><th>Correo</th><th>Celular</th><th>Acciones</th></tr></thead><tbody>';html+=rows.map(function(r,index){return '<tr><td class="nowrap">'+esc(r._cedula)+'</td><td>'+esc(r._nombres)+'</td><td>'+esc(r._carrera)+'</td><td>'+esc(r._division||'Sin división')+'</td><td>'+esc(r._periodo||r.periodoLabel||r.periodoId)+'</td><td>'+matriculaPill(r)+'</td><td>'+pill(r)+'</td><td>'+esc(r._correo)+'</td><td class="nowrap">'+esc(r._celular)+'</td><td>'+actions(r,index)+'</td></tr>';}).join('');html+='</tbody></table>';wrap.innerHTML=html;}
   function updatePagination(p){
     state.pagination=p||{page:1,pages:1,total:0,label:"0 registros",hasPrev:false,hasNext:false};
     if(el("tabla-count-text"))el("tabla-count-text").textContent=state.pagination.total+" registro(s) filtrados";
