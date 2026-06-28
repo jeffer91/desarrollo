@@ -6,18 +6,19 @@ Función o funciones:
 - Usar los estudiantes filtrados actualmente.
 - Permitir selección manual, seleccionar con Telegram y limpiar selección.
 - Generar vista previa del primer estudiante seleccionado.
-- Preparar el lote para envío real en el bloque de API segura.
+- Preparar y enviar lote por API segura de Telegram.
 Con qué se conecta:
 - tabla.core.js
 - tabla.message.js
 - tabla.selection.js
+- tabla.telegram-api.js
 - tabla.app.js
 - tabla.css
 ========================================================= */
 (function(window,document){
   "use strict";
 
-  var state={rows:[],filters:null,type:"requisitos",prepared:null};
+  var state={rows:[],filters:null,type:"requisitos",prepared:null,sending:false};
 
   function el(id){return document.getElementById(id);}
   function text(value){return String(value==null?"":value).trim();}
@@ -57,7 +58,7 @@ Con qué se conecta:
       ].join("");
     }
     var meta=el("tabla-mass-meta");
-    if(meta)meta.textContent="Se usarán los estudiantes filtrados actualmente en la tabla. Revise la selección antes de preparar el lote.";
+    if(meta)meta.textContent="Se usarán los estudiantes filtrados actualmente en la tabla. Revise la selección antes de enviar.";
   }
 
   function rowTelegramLabel(row){
@@ -105,6 +106,7 @@ Con qué se conecta:
     state.filters=filters||null;
     state.type="requisitos";
     state.prepared=null;
+    state.sending=false;
     if(selection())selection().create(state.rows,{selectWithTelegram:true});
     if(el("tabla-mass-tipo"))el("tabla-mass-tipo").value="requisitos";
     if(el("tabla-mass-texto"))el("tabla-mass-texto").value="";
@@ -128,8 +130,8 @@ Con qué se conecta:
 
   function prepararLote(){
     if(!selection())return null;
-    var confirm=el("tabla-mass-confirm");
-    if(confirm&&!confirm.checked){status("Confirme la revisión antes de preparar el lote masivo.","warn");return null;}
+    var confirmBox=el("tabla-mass-confirm");
+    if(confirmBox&&!confirmBox.checked){status("Confirme la revisión antes de preparar el lote masivo.","warn");return null;}
     var selected=selection().selectedWithTelegram();
     var sin=selection().selectedWithoutTelegram();
     if(!selected.length){status("No hay estudiantes seleccionados con Telegram.","warn");return null;}
@@ -143,19 +145,41 @@ Con qué se conecta:
         telegramUser:tg.user||"",
         telegramChatId:tg.chatId||"",
         mensaje:generarMensaje(row),
-        estado:"pendiente_api"
+        estado:"pendiente"
       };
     });
     state.prepared={tipo:state.type,total:lote.length,sinTelegram:sin.length,lote:lote,creadoEn:new Date().toISOString()};
-    status("Lote preparado: "+lote.length+" mensaje(s). El envío real se conectará en el bloque 5.","ok");
+    status("Lote preparado: "+lote.length+" mensaje(s). Ya puede enviarlo por Telegram.","ok");
     return state.prepared;
+  }
+
+  async function enviarLote(){
+    if(state.sending)return;
+    var prepared=state.prepared||prepararLote();
+    if(!prepared)return;
+    if(!window.TablaTelegramApi||typeof window.TablaTelegramApi.enviarLoteTelegram!=="function"){
+      status("No está disponible la API segura de Telegram.","warn");return;
+    }
+    if(!confirm("¿Enviar " + prepared.total + " mensaje(s) por Telegram?"))return;
+    try{
+      state.sending=true;
+      status("Enviando lote de Telegram: "+prepared.total+" mensaje(s)...","warn");
+      var resultado=await window.TablaTelegramApi.enviarLoteTelegram(prepared.lote);
+      state.prepared.resultado=resultado;
+      status("Telegram masivo finalizado. Enviados: "+resultado.resumen.enviados+", fallidos: "+resultado.resumen.fallidos+", omitidos: "+resultado.resumen.omitidos+".",resultado.resumen.fallidos?"warn":"ok");
+    }catch(error){
+      console.error("[TablaMass]",error);
+      status(error&&error.message?error.message:String(error),"warn");
+    }finally{
+      state.sending=false;
+    }
   }
 
   function bind(){
     var m=modal();
-    var tipo=el("tabla-mass-tipo"), texto=el("tabla-mass-texto"), close=el("tabla-mass-close"), cancel=el("tabla-mass-cancel"), all=el("tabla-mass-select-all"), tg=el("tabla-mass-select-tg"), clear=el("tabla-mass-clear"), copy=el("tabla-mass-copy"), prepare=el("tabla-mass-prepare"), list=el("tabla-mass-list");
-    if(tipo)tipo.addEventListener("change",function(){toggleTexto();renderPreview();});
-    if(texto)texto.addEventListener("input",renderPreview);
+    var tipo=el("tabla-mass-tipo"), texto=el("tabla-mass-texto"), close=el("tabla-mass-close"), cancel=el("tabla-mass-cancel"), all=el("tabla-mass-select-all"), tg=el("tabla-mass-select-tg"), clear=el("tabla-mass-clear"), copy=el("tabla-mass-copy"), prepare=el("tabla-mass-prepare"), send=el("tabla-mass-send"), list=el("tabla-mass-list");
+    if(tipo)tipo.addEventListener("change",function(){toggleTexto();renderPreview();state.prepared=null;});
+    if(texto)texto.addEventListener("input",function(){renderPreview();state.prepared=null;});
     if(close)close.addEventListener("click",cerrar);
     if(cancel)cancel.addEventListener("click",cerrar);
     if(all)all.addEventListener("click",function(){selection().selectAll();refresh();});
@@ -163,7 +187,8 @@ Con qué se conecta:
     if(clear)clear.addEventListener("click",function(){selection().clear();refresh();});
     if(copy)copy.addEventListener("click",function(){copiarPreview();});
     if(prepare)prepare.addEventListener("click",function(){prepararLote();});
-    if(list)list.addEventListener("change",function(event){var check=event.target.closest?event.target.closest("[data-mass-key]"):null;if(!check)return;selection().toggle(check.getAttribute("data-mass-key"),check.checked);renderSummary();renderPreview();});
+    if(send)send.addEventListener("click",function(){enviarLote();});
+    if(list)list.addEventListener("change",function(event){var check=event.target.closest?event.target.closest("[data-mass-key]"):null;if(!check)return;selection().toggle(check.getAttribute("data-mass-key"),check.checked);state.prepared=null;renderSummary();renderPreview();});
     if(m)m.addEventListener("click",function(event){if(event.target===m)cerrar();});
     document.addEventListener("keydown",function(event){if(event.key==="Escape"&&m&&!m.hidden)cerrar();});
   }
@@ -171,5 +196,5 @@ Con qué se conecta:
   function boot(){bind();}
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",boot);else boot();
 
-  window.TablaMass={abrir:abrir,cerrar:cerrar,refresh:refresh,prepararLote:prepararLote,getPrepared:function(){return state.prepared;},getState:function(){return Object.assign({},state);}};
+  window.TablaMass={abrir:abrir,cerrar:cerrar,refresh:refresh,prepararLote:prepararLote,enviarLote:enviarLote,getPrepared:function(){return state.prepared;},getState:function(){return Object.assign({},state);}};
 })(window,document);
