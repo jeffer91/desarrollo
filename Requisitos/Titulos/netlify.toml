@@ -3,7 +3,7 @@
 # Función o funciones:
 # - Configurar el despliegue público de Netlify.
 # - Publicar las pantallas públicas compiladas en dist.
-# - Definir rutas limpias para estudiante y coordinador.
+# - Definir rutas limpias para estudiante, coordinador y administrador.
 # - Preparar la carpeta de funciones privadas de Netlify.
 # - Mantener Netlify como último paso después de pruebas locales.
 # Se conecta con:
@@ -11,6 +11,7 @@
 # - vite.config.js
 # - public/ta-titulo-articulo-estudiante.html
 # - public/ta-titulo-articulo-coordinador.html
+# - public/ta-titulo-articulo-admin.html
 # - netlify/functions/*
 
 [build]
@@ -49,9 +50,8 @@
 
 [[redirects]]
   from = "/admin"
-  to = "/"
-  status = 302
-  force = true
+  to = "/public/ta-titulo-articulo-admin.html"
+  status = 200
 
 [[headers]]
   for = "/*"
