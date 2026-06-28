@@ -4,8 +4,9 @@
   Función o funciones:
   - Conectar el módulo Títulos directamente con Firebase/Firestore desde el cliente.
   - Leer estudiantes, períodos y coordinadores sin depender de Netlify Functions.
-  - Escribir únicamente datos propios del proceso de títulos: envíos, revisiones e historial.
-  - Mantener el resto de la base institucional en modo solo lectura.
+  - Escribir en Firebase solo datos mínimos del proceso de títulos.
+  - Usar las colecciones reales: Estudiantes, periodos, titulos, titulos_coordinadores y titulos_logs.
+  - Mantener compatibilidad temporal con documentos viejos de prueba.
 */
 
 import {
@@ -17,7 +18,6 @@ import {
   limit,
   query,
   setDoc,
-  updateDoc,
   where
 } from "firebase/firestore";
 
@@ -26,23 +26,28 @@ import {
   TA_TITULO_ARTICULO_COLLECTIONS as COLLECTIONS,
   TA_TITULO_ARTICULO_DOCUMENTS as DOCUMENTS,
   TA_TITULO_ARTICULO_ESTADOS as ESTADOS,
-  TA_TITULO_ARTICULO_DECISIONES_COORDINADOR as DECISIONES_COORDINADOR
+  TA_TITULO_ARTICULO_DECISIONES_COORDINADOR as DECISIONES_COORDINADOR,
+  TA_TITULO_ARTICULO_LIMITES as LIMITES,
+  TA_TITULO_ARTICULO_LOG_TIPOS as LOG_TIPOS,
+  crearEnvioId,
+  crearEnvioIdLegacyCedula,
+  normalizarEstadoTitulo
 } from "../firebase/ta-titulo-articulo-collections.js";
 
 const DEFAULT_PERIODO_ACTIVO = Object.freeze({
-  id: "PRIMER_SEMESTRE_2026",
-  idNormalizado: "2026_1",
-  label: "Primer semestre de 2026"
+  id: "2026-02__2026-08",
+  idNormalizado: "2026_02_2026_08",
+  label: "Febrero 2026 a Agosto 2026"
 });
 
-const CAMPOS_CEDULA = [
+const CAMPOS_CEDULA = Object.freeze([
   "numeroIdentificacion",
   "NumeroIdentificacion",
   "cedula",
   "Cedula",
   "Identificacion",
   "identificacion"
-];
+]);
 
 function db() {
   const firestore = obtenerFirestore();
@@ -113,7 +118,11 @@ function detectarPeriodoCanonico(value) {
 function normalizarPeriodoId(value) {
   const canonico = detectarPeriodoCanonico(value);
   if (canonico) return canonico;
-  return normalizeText(value).toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_+|_+$/g, "").replace(/_+/g, "_");
+  return normalizeText(value)
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .replace(/_+/g, "_");
 }
 
 function periodoEquivalente(a, b) {
@@ -131,7 +140,7 @@ function withId(snap) {
 }
 
 function obtenerCedulaEstudiante(estudiante = {}) {
-  return clean(estudiante.numeroIdentificacion || estudiante.NumeroIdentificacion || estudiante.cedula || estudiante.Cedula || estudiante.Identificacion || estudiante.identificacion || estudiante.id);
+  return onlyDigits(estudiante.numeroIdentificacion || estudiante.NumeroIdentificacion || estudiante.cedula || estudiante.Cedula || estudiante.Identificacion || estudiante.identificacion || estudiante.id);
 }
 
 function obtenerPeriodoEstudiante(estudiante = {}) {
@@ -155,21 +164,30 @@ function estudiantePertenecePeriodo(estudiante = {}, periodoId = "") {
 
 function periodoDesdeSnap(snap) {
   const data = snap.exists() ? (snap.data() || {}) : {};
-  const texto = [snap.id, data.id, data.periodoId, data.label, data.nombre, data.periodoLabel].map(clean).join(" ");
+  const id = clean(data.id || data.periodoId || snap.id);
+  const label = clean(data.label || data.nombre || data.periodoLabel || id);
+  const texto = [id, label].join(" ");
   return {
     ...data,
-    id: snap.id,
-    idNormalizado: normalizarPeriodoId(texto || snap.id),
-    label: clean(data.label || data.nombre || data.periodoLabel || snap.id)
+    id,
+    idNormalizado: normalizarPeriodoId(texto || id),
+    label,
+    creadoEn: clean(data.creadoEn)
   };
+}
+
+function ordenarPeriodos(periodos = []) {
+  return [...periodos].sort((a, b) => {
+    const fechaA = Date.parse(a.creadoEn || "") || 0;
+    const fechaB = Date.parse(b.creadoEn || "") || 0;
+    if (fechaA !== fechaB) return fechaB - fechaA;
+    return clean(b.label || b.id).localeCompare(clean(a.label || a.id));
+  });
 }
 
 async function listarPeriodosInterno(firestore) {
   const snap = await getDocs(collection(firestore, COLLECTIONS.periodos));
-  const periodos = snap.docs
-    .map(periodoDesdeSnap)
-    .sort((a, b) => clean(a.label || a.nombre || a.id).localeCompare(clean(b.label || b.nombre || b.id)));
-
+  const periodos = ordenarPeriodos(snap.docs.map(periodoDesdeSnap));
   const existeDefault = periodos.some((periodo) => periodoEquivalente(periodo.id, DEFAULT_PERIODO_ACTIVO.id) || periodoEquivalente(periodo.label, DEFAULT_PERIODO_ACTIVO.label));
   return existeDefault ? periodos : [{ ...DEFAULT_PERIODO_ACTIVO }, ...periodos];
 }
@@ -225,62 +243,151 @@ function estudiantePublico(estudiante, periodoLabel) {
   };
 }
 
-function createEnvioId(periodoId, cedula) {
-  return `${normalizarPeriodoId(periodoId)}_${onlyDigits(cedula)}`;
+function limpiarTitulo(value) {
+  let texto = clean(value).replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
+  while (texto.length > 1 && ((texto.startsWith('"') && texto.endsWith('"')) || (texto.startsWith("'") && texto.endsWith("'")))) {
+    texto = texto.slice(1, -1).trim();
+  }
+  return texto.replace(/\s+/g, " ").trim();
+}
+
+function tituloDesdeItem(item = {}) {
+  if (typeof item === "string") return limpiarTitulo(item);
+  return limpiarTitulo(item.titulo || item.tituloFinal || item.texto || item.value || item.nombre || "");
+}
+
+function titulosDesdeData(data = {}) {
+  const fuentes = [data.titulosEnviados, data.propuestas, data.titulosFinales, data.finales].find(Array.isArray) || [];
+  let titulos = fuentes.map((item, index) => ({
+    numero: Number(item?.numero || index + 1),
+    titulo: tituloDesdeItem(item),
+    preferido: Boolean(item?.preferido)
+  })).filter((item) => item.numero && item.titulo);
+
+  if (!titulos.length) {
+    titulos = [data.titulo1, data.titulo2, data.titulo3].map((item, index) => ({
+      numero: index + 1,
+      titulo: tituloDesdeItem(item),
+      preferido: Number(data.propuestaPreferidaNumero || data.tituloPreferidoNumero) === index + 1
+    })).filter((item) => item.titulo);
+  }
+
+  const preferido = Number(data.tituloPreferidoNumero || data.propuestaPreferidaNumero || 0);
+  return titulos
+    .slice(0, LIMITES.titulosPorEnvio)
+    .map((item) => ({
+      numero: Number(item.numero),
+      titulo: limpiarTitulo(item.titulo),
+      preferido: Boolean(item.preferido || Number(item.numero) === preferido)
+    }));
+}
+
+function normalizarEnvio(id, data = {}) {
+  if (!data) return null;
+  const estado = normalizarEstadoTitulo(data.estado);
+  const titulosEnviados = titulosDesdeData(data);
+  const tituloPreferidoNumero = Number(data.tituloPreferidoNumero || data.propuestaPreferidaNumero || titulosEnviados.find((t) => t.preferido)?.numero || 0);
+  const intentosUsados = Number(data.intentosUsados || data.intento || 0);
+  const maxIntentos = Number(data.maxIntentos || LIMITES.maxIntentos);
+  const tituloCorregidoCoordinador = limpiarTitulo(data.tituloCorregidoCoordinador || data.tituloCorregido || "");
+  const observacionCoordinador = clean(data.observacionCoordinador || data.observacion || data.comentarioCoordinador || "");
+  const tituloElegidoTexto = limpiarTitulo(data.tituloElegidoTexto || data.tituloElegido || data.tituloAprobado || "");
+
+  return {
+    ...data,
+    docId: clean(data.docId || data._docId || data.envioId || id),
+    envioId: clean(data.envioId || data.docId || data._docId || id),
+    estado,
+    titulosEnviados,
+    tituloPreferidoNumero,
+    tituloElegidoNumero: data.tituloElegidoNumero || "",
+    tituloElegidoTexto,
+    tituloCorregidoCoordinador,
+    observacionCoordinador,
+    intentosUsados,
+    maxIntentos,
+    reenvioDisponible: estado === ESTADOS.devuelto && intentosUsados < maxIntentos,
+    enviadoEn: clean(data.enviadoEn || data.fechaEnvio || ""),
+    revisadoEn: clean(data.revisadoEn || data.fechaRevision || data.fechaAprobacion || ""),
+    actualizadoEn: clean(data.actualizadoEn || ""),
+    propuestas: titulosEnviados.map((titulo) => ({
+      numero: titulo.numero,
+      preferido: titulo.preferido,
+      tituloFinal: titulo.titulo,
+      titulo: titulo.titulo
+    })),
+    tituloCorregido: tituloCorregidoCoordinador,
+    observacion: observacionCoordinador
+  };
 }
 
 async function buscarEnvioEstudiante(firestore, periodoActivo, cedula) {
-  const envioId = createEnvioId(periodoActivo.id, cedula);
+  const envioId = crearEnvioId(periodoActivo.id, cedula);
   const directoRef = doc(firestore, COLLECTIONS.envios, envioId);
   const directoSnap = await getDoc(directoRef);
 
-  if (directoSnap.exists()) return { ref: directoRef, id: directoSnap.id, data: directoSnap.data() || {}, exists: true };
+  if (directoSnap.exists()) {
+    return { ref: directoRef, id: directoSnap.id, data: normalizarEnvio(directoSnap.id, directoSnap.data() || {}), exists: true };
+  }
 
-  const snap = await getDocs(query(collection(firestore, COLLECTIONS.envios), where("cedula", "==", cedula)));
+  const legacyId = crearEnvioIdLegacyCedula(cedula);
+  if (legacyId) {
+    const legacyRef = doc(firestore, COLLECTIONS.envios, legacyId);
+    const legacySnap = await getDoc(legacyRef);
+    if (legacySnap.exists()) {
+      const legacyData = normalizarEnvio(envioId, legacySnap.data() || {});
+      return { ref: directoRef, id: envioId, data: legacyData, exists: true, legacyRef, legacyId };
+    }
+  }
+
+  const snap = await getDocs(query(collection(firestore, COLLECTIONS.envios), where("cedula", "==", onlyDigits(cedula))));
   const encontrado = snap.docs.find((item) => periodoEquivalente(item.data()?.periodoId || item.data()?.periodoLabel, periodoActivo.id));
-  if (encontrado) return { ref: encontrado.ref, id: encontrado.id, data: encontrado.data() || {}, exists: true };
+  if (encontrado) {
+    return { ref: directoRef, id: envioId, data: normalizarEnvio(envioId, encontrado.data() || {}), exists: true, legacyRef: encontrado.ref, legacyId: encontrado.id };
+  }
 
   return { ref: directoRef, id: envioId, data: null, exists: false };
 }
 
-function validarPropuestasBasicas(propuestas, tituloPreferidoNumero) {
-  if (!Array.isArray(propuestas) || propuestas.length !== 3) return "Debe enviar exactamente 3 propuestas.";
-  if (![1, 2, 3].includes(Number(tituloPreferidoNumero))) return "Debe seleccionar cuál de los 3 títulos prefiere.";
+function validarTitulos(datosEnvio = {}) {
+  const tituloPreferidoNumero = Number(datosEnvio.tituloPreferidoNumero || datosEnvio.propuestaPreferidaNumero || 0);
+  if (![1, 2, 3].includes(tituloPreferidoNumero)) return { error: "Debe seleccionar cuál de los 3 títulos prefiere.", titulos: [] };
 
-  const campos = ["temaGeneral", "lugarContexto", "problemaNecesidad", "grupoEstudio", "anioPeriodoDatos", "objetivoArticulo", "resultadoEsperado", "tituloFinal"];
-  const titulos = [];
+  const titulos = titulosDesdeData({
+    titulosEnviados: datosEnvio.titulosEnviados,
+    propuestas: datosEnvio.propuestas,
+    titulosFinales: datosEnvio.titulosFinales,
+    finales: datosEnvio.finales,
+    titulo1: datosEnvio.titulo1,
+    titulo2: datosEnvio.titulo2,
+    titulo3: datosEnvio.titulo3,
+    tituloPreferidoNumero
+  });
 
-  for (let i = 0; i < propuestas.length; i += 1) {
-    const numero = i + 1;
-    const propuesta = propuestas[i] || {};
-    for (const campo of campos) {
-      if (!clean(propuesta[campo])) return `La propuesta ${numero} tiene incompleto el campo ${campo}.`;
-    }
-    const titulo = normalizeText(propuesta.tituloFinal);
-    if (titulos.includes(titulo)) return "Los 3 títulos no pueden ser iguales.";
-    titulos.push(titulo);
+  if (titulos.length !== LIMITES.titulosPorEnvio) return { error: "Debe enviar exactamente 3 títulos.", titulos: [] };
+
+  const normalizados = [];
+  for (const titulo of titulos) {
+    if (!titulo.titulo) return { error: `El título ${titulo.numero} está vacío.`, titulos: [] };
+    const normalizado = normalizeText(titulo.titulo);
+    if (normalizados.includes(normalizado)) return { error: "Los 3 títulos deben ser diferentes.", titulos: [] };
+    normalizados.push(normalizado);
   }
 
-  return "";
+  return {
+    error: "",
+    titulos: titulos.map((titulo) => ({
+      numero: titulo.numero,
+      titulo: titulo.titulo,
+      preferido: titulo.numero === tituloPreferidoNumero
+    }))
+  };
 }
 
-function limpiarPropuestas(propuestas, tituloPreferidoNumero) {
-  const preferido = Number(tituloPreferidoNumero);
-  return propuestas.map((propuesta, index) => {
-    const numero = index + 1;
-    return {
-      numero,
-      preferido: numero === preferido,
-      temaGeneral: clean(propuesta.temaGeneral),
-      lugarContexto: clean(propuesta.lugarContexto),
-      problemaNecesidad: clean(propuesta.problemaNecesidad),
-      grupoEstudio: clean(propuesta.grupoEstudio),
-      anioPeriodoDatos: clean(propuesta.anioPeriodoDatos),
-      objetivoArticulo: clean(propuesta.objetivoArticulo),
-      resultadoEsperado: clean(propuesta.resultadoEsperado),
-      tituloFinal: clean(propuesta.tituloFinal),
-      coherencia: propuesta.coherencia || { validadoEnCliente: true, actualizadoEn: nowIso() }
-    };
+async function registrarLog(firestore, data) {
+  await addDoc(collection(firestore, COLLECTIONS.historial), {
+    ...data,
+    creadoEn: data.creadoEn || nowIso()
   });
 }
 
@@ -307,7 +414,18 @@ async function guardarTelegram(cedula, telegramUser) {
 
   const periodoActivo = await getPeriodoActivo(firestore);
   const envio = await buscarEnvioEstudiante(firestore, periodoActivo, cedulaLimpia);
-  await setDoc(envio.ref, { envioId: envio.id, periodoId: periodoActivo.id, periodoLabel: periodoActivo.label, cedula: cedulaLimpia, telegramUser: usuario, actualizadoEn: nowIso() }, { merge: true });
+  const fecha = nowIso();
+  await setDoc(envio.ref, {
+    docId: envio.id,
+    envioId: envio.id,
+    periodoId: periodoActivo.id,
+    periodoLabel: periodoActivo.label,
+    cedula: cedulaLimpia,
+    estado: envio.data?.estado || ESTADOS.sinEnvio,
+    telegramUser: usuario,
+    actualizadoEn: fecha,
+    creadoEn: envio.data?.creadoEn || fecha
+  }, { merge: true });
   return { ok: true, mensaje: "Usuario de Telegram guardado correctamente." };
 }
 
@@ -323,63 +441,111 @@ async function consultarEstado(cedula) {
 async function enviarPropuestas(datosEnvio) {
   const firestore = db();
   const cedula = onlyDigits(datosEnvio.cedula);
-  const telegramUser = clean(datosEnvio.telegramUser || datosEnvio.telegramUsuario);
   if (!cedula) throw new Error("Ingrese una cédula válida.");
-  if (!telegramUser) throw new Error("Ingrese su usuario de Telegram.");
 
   const periodoActivo = await getPeriodoActivo(firestore);
   const estudiante = await buscarEstudiantePorCedula(firestore, cedula);
   if (!estudiante) throw new Error("No se encontró el estudiante.");
   if (!estudiantePertenecePeriodo(estudiante, periodoActivo.id)) throw new Error("El estudiante no pertenece al período activo.");
 
-  const errorPropuestas = validarPropuestasBasicas(datosEnvio.propuestas, datosEnvio.tituloPreferidoNumero);
-  if (errorPropuestas) throw new Error(errorPropuestas);
+  const validacion = validarTitulos(datosEnvio);
+  if (validacion.error) throw new Error(validacion.error);
 
   const envio = await buscarEnvioEstudiante(firestore, periodoActivo, cedula);
-  const envioActual = envio.exists ? envio.data : null;
-  if (envioActual && [ESTADOS.enviado, ESTADOS.enRevision, ESTADOS.aprobado, ESTADOS.aprobadoConCorrecciones].includes(envioActual.estado)) {
+  const envioActual = envio.exists ? normalizarEnvio(envio.id, envio.data || {}) : null;
+  const estadoActual = envioActual?.estado || ESTADOS.sinEnvio;
+
+  if ([ESTADOS.enviado, ESTADOS.enRevision, ESTADOS.aprobado, ESTADOS.aprobadoConCorrecciones].includes(estadoActual)) {
     throw new Error("El envío ya fue registrado y no puede editarse en este estado.");
   }
 
-  const intento = Number(envioActual?.intento || 0) + 1;
-  const propuestas = limpiarPropuestas(datosEnvio.propuestas, datosEnvio.tituloPreferidoNumero);
+  const intentosPrevios = Number(envioActual?.intentosUsados || 0);
+  if (estadoActual === ESTADOS.devuelto && intentosPrevios >= LIMITES.maxIntentos) {
+    throw new Error("Ya utilizó su única oportunidad de reenvío después de la devolución.");
+  }
+
+  const intentosUsados = Math.max(intentosPrevios, 0) + 1;
   const fecha = nowIso();
   const estudianteBase = estudiantePublico(estudiante, periodoActivo.label);
+  const telegramUser = clean(datosEnvio.telegramUser || datosEnvio.telegramUsuario || envioActual?.telegramUser || "");
 
   const data = {
+    docId: envio.id,
     envioId: envio.id,
     periodoId: periodoActivo.id,
     periodoLabel: periodoActivo.label,
     cedula,
-    telegramUser,
+    nombres: estudianteBase.nombres,
     codigoCarrera: estudianteBase.codigoCarrera,
     carrera: estudianteBase.carrera,
-    nombres: estudianteBase.nombres,
-    propuestas,
-    tituloPreferidoNumero: Number(datosEnvio.tituloPreferidoNumero),
     estado: ESTADOS.enviado,
-    intento,
-    enviadoEn: fecha,
-    actualizadoEn: fecha,
-    tituloElegidoNumero: null,
+    titulosEnviados: validacion.titulos,
+    tituloPreferidoNumero: Number(datosEnvio.tituloPreferidoNumero || datosEnvio.propuestaPreferidaNumero),
+    tituloElegidoNumero: "",
     tituloElegidoTexto: "",
-    tituloCorregido: "",
-    observacion: "",
+    tituloCorregidoCoordinador: "",
+    observacionCoordinador: "",
     coordinadorId: "",
-    coordinadorNombre: ""
+    coordinadorNombre: "",
+    intentosUsados,
+    maxIntentos: LIMITES.maxIntentos,
+    reenvioDisponible: false,
+    creadoEn: envioActual?.creadoEn || fecha,
+    enviadoEn: fecha,
+    revisadoEn: "",
+    actualizadoEn: fecha,
+    ...(telegramUser ? { telegramUser } : {})
   };
 
-  await setDoc(envio.ref, data, { merge: true });
-  await addDoc(collection(firestore, COLLECTIONS.historial), { tipo: "ENVIO_ESTUDIANTE", envioId: envio.id, cedula, periodoId: periodoActivo.id, periodoLabel: periodoActivo.label, intento, estado: ESTADOS.enviado, propuestas, creadoEn: fecha });
-  return { ok: true, envio: data, mensaje: "Propuestas enviadas correctamente." };
+  await setDoc(envio.ref, data, { merge: false });
+  await registrarLog(firestore, {
+    tipo: intentosUsados > 1 ? LOG_TIPOS.reenvioEstudiante : LOG_TIPOS.envioEstudiante,
+    docId: envio.id,
+    envioId: envio.id,
+    cedula,
+    periodoId: periodoActivo.id,
+    periodoLabel: periodoActivo.label,
+    estado: ESTADOS.enviado,
+    intentosUsados,
+    titulosEnviados: validacion.titulos,
+    creadoEn: fecha
+  });
+
+  return { ok: true, envio: normalizarEnvio(envio.id, data), mensaje: intentosUsados > 1 ? "Títulos reenviados correctamente." : "Títulos enviados correctamente." };
+}
+
+function carreraDesdeEntrada(item) {
+  if (typeof item === "string") {
+    return { codigoCarrera: "", nombreCarrera: clean(item) };
+  }
+  return {
+    codigoCarrera: clean(item?.codigoCarrera || item?.CodigoCarrera || item?.id || ""),
+    nombreCarrera: clean(item?.nombreCarrera || item?.NombreCarrera || item?.nombre || item?.carrera || "")
+  };
+}
+
+function carrerasCoordinador(data = {}) {
+  const directas = Array.isArray(data.carreras) ? data.carreras : [];
+  const asignadas = Array.isArray(data.carrerasAsignadas) ? data.carrerasAsignadas : [];
+  const mapa = new Map();
+
+  [...directas, ...asignadas].forEach((item) => {
+    const carrera = carreraDesdeEntrada(item);
+    const key = clean(carrera.codigoCarrera) || normalizeText(carrera.nombreCarrera);
+    if (key) mapa.set(key, carrera);
+  });
+
+  return Array.from(mapa.values());
 }
 
 function limpiarCoordinador(id, data = {}) {
+  const carrerasAsignadas = carrerasCoordinador(data);
   return {
     id,
-    nombre: clean(data.nombre),
+    nombre: clean(data.nombre || data.Nombres || id),
     activo: data.activo !== false,
-    carrerasAsignadas: Array.isArray(data.carrerasAsignadas) ? data.carrerasAsignadas : []
+    carreras: carrerasAsignadas.map((item) => item.nombreCarrera).filter(Boolean),
+    carrerasAsignadas
   };
 }
 
@@ -400,32 +566,52 @@ async function obtenerCoordinador(firestore, coordinadorId) {
   if (!snap.exists()) return null;
   const data = snap.data() || {};
   if (data.activo === false) return null;
-  return { ...data, id: snap.id };
+  return limpiarCoordinador(snap.id, data);
 }
 
-async function limpiarEnvio(firestore, id, data = {}) {
-  const estudiante = await buscarEstudiantePorCedula(firestore, data.cedula);
-  const codigoCarrera = clean(data.codigoCarrera || estudiante?.CodigoCarrera || estudiante?.codigoCarrera);
-  const carrera = clean(data.carrera || estudiante?.NombreCarrera || estudiante?.nombreCarrera || estudiante?.carrera);
-  const nombres = clean(data.nombres || estudiante?.Nombres || estudiante?.nombres || estudiante?.Nombre || estudiante?.nombre);
+function envioParaCoordinador(id, data = {}) {
+  const envio = normalizarEnvio(id, data);
   return {
-    envioId: id,
-    cedula: clean(data.cedula),
-    nombres,
-    carrera,
-    codigoCarrera,
-    periodoId: clean(data.periodoId || estudiante?.periodoId || estudiante?.ultimoPeriodoId || estudiante?.UltimoPeriodoId),
-    estado: clean(data.estado),
-    enviadoEn: clean(data.enviadoEn),
-    telegramUser: clean(data.telegramUser || estudiante?.telegramUser || estudiante?.telegramUsuario),
-    tituloPreferidoNumero: Number(data.tituloPreferidoNumero || 0),
-    propuestas: Array.isArray(data.propuestas) ? data.propuestas.map((p) => ({
-      numero: Number(p.numero),
-      preferido: Boolean(p.preferido),
-      tituloFinal: clean(p.tituloFinal),
-      coherencia: p.coherencia || null
-    })) : []
+    envioId: envio.envioId,
+    docId: envio.docId,
+    cedula: clean(envio.cedula || envio.numeroIdentificacion),
+    nombres: clean(envio.nombres || envio.Nombres),
+    carrera: clean(envio.carrera || envio.nombreCarrera),
+    codigoCarrera: clean(envio.codigoCarrera),
+    periodoId: clean(envio.periodoId),
+    periodoLabel: clean(envio.periodoLabel),
+    estado: envio.estado,
+    enviadoEn: envio.enviadoEn,
+    actualizadoEn: envio.actualizadoEn,
+    coordinadorId: clean(envio.coordinadorId),
+    coordinadorNombre: clean(envio.coordinadorNombre),
+    tituloPreferidoNumero: envio.tituloPreferidoNumero,
+    tituloElegidoNumero: envio.tituloElegidoNumero,
+    tituloElegidoTexto: envio.tituloElegidoTexto,
+    tituloCorregidoCoordinador: envio.tituloCorregidoCoordinador,
+    observacionCoordinador: envio.observacionCoordinador,
+    intentosUsados: envio.intentosUsados,
+    maxIntentos: envio.maxIntentos,
+    reenvioDisponible: envio.reenvioDisponible,
+    titulosEnviados: envio.titulosEnviados,
+    propuestas: envio.propuestas,
+    tituloCorregido: envio.tituloCorregido,
+    observacion: envio.observacion
   };
+}
+
+function coordinadorPuedeVerEnvio(coordinador, envio) {
+  const carreras = coordinador?.carrerasAsignadas || [];
+  if (!carreras.length) return true;
+
+  const codigoEnvio = clean(envio.codigoCarrera);
+  const nombreEnvio = normalizeText(envio.carrera);
+
+  return carreras.some((carrera) => {
+    const codigo = clean(carrera.codigoCarrera);
+    const nombre = normalizeText(carrera.nombreCarrera);
+    return Boolean((codigo && codigo === codigoEnvio) || (nombre && nombre === nombreEnvio));
+  });
 }
 
 async function cargarEstudiantes(coordinadorId) {
@@ -434,15 +620,14 @@ async function cargarEstudiantes(coordinadorId) {
   if (!coordinador) throw new Error("Seleccione un coordinador válido.");
 
   const periodoActivo = await getPeriodoActivo(firestore);
-  const carrerasAsignadas = Array.isArray(coordinador.carrerasAsignadas) ? coordinador.carrerasAsignadas : [];
-  const codigos = carrerasAsignadas.map((c) => clean(c.codigoCarrera)).filter(Boolean);
-
   const snap = await getDocs(collection(firestore, COLLECTIONS.envios));
-  const docsPeriodo = snap.docs.filter((item) => periodoEquivalente(item.data()?.periodoId || item.data()?.periodoLabel, periodoActivo.id));
-  const envios = await Promise.all(docsPeriodo.map((item) => limpiarEnvio(firestore, item.id, item.data())));
-  const estudiantes = codigos.length ? envios.filter((envio) => codigos.includes(envio.codigoCarrera)) : envios;
+  const envios = snap.docs
+    .map((item) => envioParaCoordinador(item.id, item.data()))
+    .filter((envio) => periodoEquivalente(envio.periodoId || envio.periodoLabel, periodoActivo.id))
+    .filter((envio) => envio.estado !== ESTADOS.sinEnvio)
+    .filter((envio) => coordinadorPuedeVerEnvio(coordinador, envio));
 
-  return { ok: true, coordinador: limpiarCoordinador(coordinador.id, coordinador), periodoActivo, estudiantes };
+  return { ok: true, coordinador, periodoActivo, estudiantes: envios };
 }
 
 async function iniciarRevision(envioId, coordinadorId) {
@@ -455,52 +640,85 @@ async function iniciarRevision(envioId, coordinadorId) {
   const ref = doc(firestore, COLLECTIONS.envios, id);
   const snap = await getDoc(ref);
   if (!snap.exists()) throw new Error("No se encontró el envío seleccionado.");
-  const envio = snap.data() || {};
+  const envio = normalizarEnvio(snap.id, snap.data() || {});
   if (envio.estado === ESTADOS.enviado) {
-    await setDoc(ref, { estado: ESTADOS.enRevision, revisionIniciadaEn: nowIso(), coordinadorId: coordinador.id, coordinadorNombre: clean(coordinador.nombre), actualizadoEn: nowIso() }, { merge: true });
+    const fecha = nowIso();
+    await setDoc(ref, {
+      estado: ESTADOS.enRevision,
+      revisionIniciadaEn: fecha,
+      coordinadorId: coordinador.id,
+      coordinadorNombre: clean(coordinador.nombre),
+      actualizadoEn: fecha
+    }, { merge: true });
+    await registrarLog(firestore, {
+      tipo: LOG_TIPOS.inicioRevision,
+      docId: id,
+      envioId: id,
+      cedula: clean(envio.cedula),
+      periodoId: clean(envio.periodoId),
+      estado: ESTADOS.enRevision,
+      coordinadorId: coordinador.id,
+      coordinadorNombre: clean(coordinador.nombre),
+      creadoEn: fecha
+    });
   }
   return { ok: true, mensaje: "Revisión iniciada." };
+}
+
+function tituloElegido(envio, numero) {
+  return (envio.titulosEnviados || []).find((item) => Number(item.numero) === Number(numero)) || null;
 }
 
 async function guardarRevision(revision) {
   const firestore = db();
   const envioId = clean(revision.envioId);
   const coordinador = await obtenerCoordinador(firestore, revision.coordinadorId);
-  const estado = clean(revision.estado);
+  const estado = normalizarEstadoTitulo(revision.estado);
   const tituloElegidoNumero = Number(revision.tituloElegidoNumero);
-  const tituloCorregido = clean(revision.tituloCorregido);
-  const observacion = clean(revision.observacion);
+  const tituloCorregidoCoordinador = limpiarTitulo(revision.tituloCorregidoCoordinador || revision.tituloCorregido || "");
+  const observacionCoordinador = clean(revision.observacionCoordinador || revision.observacion || "");
 
   if (!envioId) throw new Error("No se recibió el envío a revisar.");
   if (!coordinador) throw new Error("Seleccione un coordinador válido.");
   if (!DECISIONES_COORDINADOR.includes(estado)) throw new Error("Seleccione una decisión válida.");
   if (![1, 2, 3].includes(tituloElegidoNumero)) throw new Error("Seleccione uno de los 3 títulos.");
-  if (estado === ESTADOS.devuelto && !observacion) throw new Error("La observación es obligatoria cuando se devuelve al estudiante.");
-  if (estado === ESTADOS.aprobadoConCorrecciones && !tituloCorregido) throw new Error("Debe escribir el título corregido.");
+  if (estado === ESTADOS.devuelto && !observacionCoordinador) throw new Error("La observación es obligatoria cuando se devuelve al estudiante.");
+  if (estado === ESTADOS.aprobadoConCorrecciones && !tituloCorregidoCoordinador) throw new Error("Debe escribir el título corregido.");
 
   const ref = doc(firestore, COLLECTIONS.envios, envioId);
   const snap = await getDoc(ref);
   if (!snap.exists()) throw new Error("No se encontró el envío seleccionado.");
-  const envio = snap.data() || {};
-  const propuestaElegida = Array.isArray(envio.propuestas) ? envio.propuestas.find((p) => Number(p.numero) === tituloElegidoNumero) : null;
-  if (!propuestaElegida) throw new Error("No se encontró el título elegido.");
+  const envio = normalizarEnvio(snap.id, snap.data() || {});
+  const elegido = tituloElegido(envio, tituloElegidoNumero);
+  if (!elegido) throw new Error("No se encontró el título elegido.");
 
   const fecha = nowIso();
   const data = {
     estado,
     tituloElegidoNumero,
-    tituloElegidoTexto: clean(propuestaElegida.tituloFinal),
-    tituloCorregido,
-    observacion,
+    tituloElegidoTexto: limpiarTitulo(elegido.titulo),
+    tituloCorregidoCoordinador,
+    observacionCoordinador,
     coordinadorId: coordinador.id,
     coordinadorNombre: clean(coordinador.nombre),
     revisadoEn: fecha,
     actualizadoEn: fecha,
-    notificacionPendiente: true
+    reenvioDisponible: estado === ESTADOS.devuelto && Number(envio.intentosUsados || 0) < Number(envio.maxIntentos || LIMITES.maxIntentos)
   };
 
   await setDoc(ref, data, { merge: true });
-  await addDoc(collection(firestore, COLLECTIONS.historial), { tipo: "REVISION_COORDINADOR", envioId, cedula: clean(envio.cedula), periodoId: clean(envio.periodoId), intento: Number(envio.intento || 1), ...data, creadoEn: fecha });
+  await registrarLog(firestore, {
+    tipo: LOG_TIPOS.revisionCoordinador,
+    docId: envioId,
+    envioId,
+    cedula: clean(envio.cedula),
+    periodoId: clean(envio.periodoId),
+    periodoLabel: clean(envio.periodoLabel),
+    intentosUsados: Number(envio.intentosUsados || 1),
+    ...data,
+    creadoEn: fecha
+  });
+
   return { ok: true, revision: data, mensaje: "Revisión guardada correctamente." };
 }
 
@@ -510,17 +728,19 @@ function crearIdCoordinador(nombre) {
 
 function contarPorEstado(envios) {
   return envios.reduce((acc, envio) => {
-    const estado = clean(envio.estado || "SIN_ENVIO");
+    const estado = normalizarEstadoTitulo(envio.estado || ESTADOS.sinEnvio);
     acc[estado] = (acc[estado] || 0) + 1;
     return acc;
   }, {});
 }
 
 function carrerasDesdeEstudiantes(estudiantes, coordinadores) {
-  const mapaCoordinador = new Map();
+  const mapaCoordinadorCodigo = new Map();
+  const mapaCoordinadorNombre = new Map();
   coordinadores.forEach((coord) => {
     (coord.carrerasAsignadas || []).forEach((carrera) => {
-      mapaCoordinador.set(clean(carrera.codigoCarrera), { id: coord.id, nombre: coord.nombre });
+      if (clean(carrera.codigoCarrera)) mapaCoordinadorCodigo.set(clean(carrera.codigoCarrera), { id: coord.id, nombre: coord.nombre });
+      if (clean(carrera.nombreCarrera)) mapaCoordinadorNombre.set(normalizeText(carrera.nombreCarrera), { id: coord.id, nombre: coord.nombre });
     });
   });
 
@@ -528,12 +748,13 @@ function carrerasDesdeEstudiantes(estudiantes, coordinadores) {
   estudiantes.forEach((est) => {
     const codigo = clean(est.CodigoCarrera || est.codigoCarrera);
     const nombre = clean(est.NombreCarrera || est.nombreCarrera || est.carrera);
-    if (!codigo || !nombre) return;
-    if (!carreras.has(codigo)) {
-      const coord = mapaCoordinador.get(codigo) || null;
-      carreras.set(codigo, { codigoCarrera: codigo, nombreCarrera: nombre, totalEstudiantes: 0, coordinadorId: coord?.id || "", coordinadorNombre: coord?.nombre || "" });
+    if (!codigo && !nombre) return;
+    const key = codigo || normalizeText(nombre);
+    if (!carreras.has(key)) {
+      const coord = mapaCoordinadorCodigo.get(codigo) || mapaCoordinadorNombre.get(normalizeText(nombre)) || null;
+      carreras.set(key, { codigoCarrera: codigo, nombreCarrera: nombre, totalEstudiantes: 0, coordinadorId: coord?.id || "", coordinadorNombre: coord?.nombre || "" });
     }
-    carreras.get(codigo).totalEstudiantes += 1;
+    carreras.get(key).totalEstudiantes += 1;
   });
 
   return Array.from(carreras.values()).sort((a, b) => a.nombreCarrera.localeCompare(b.nombreCarrera));
@@ -550,11 +771,16 @@ function estudianteResumen(est, enviosPorCedula) {
     periodoId: clean(est.periodoId || est.ultimoPeriodoId || est.UltimoPeriodoId || est.Periodo),
     periodoNormalizado: normalizarPeriodoId(obtenerPeriodoEstudiante(est)),
     telegramUser: clean(envio?.telegramUser || est.telegramUser || est.telegramUsuario),
-    envioId: envio?.envioId || envio?.id || "",
-    estado: envio?.estado || "SIN_ENVIO",
+    envioId: envio?.envioId || envio?.docId || "",
+    docId: envio?.docId || envio?.envioId || "",
+    estado: envio?.estado || ESTADOS.sinEnvio,
     enviadoEn: envio?.enviadoEn || "",
     coordinadorId: envio?.coordinadorId || "",
-    coordinadorNombre: envio?.coordinadorNombre || ""
+    coordinadorNombre: envio?.coordinadorNombre || "",
+    tituloPreferidoNumero: envio?.tituloPreferidoNumero || "",
+    tituloElegidoTexto: envio?.tituloElegidoTexto || "",
+    tituloCorregidoCoordinador: envio?.tituloCorregidoCoordinador || "",
+    intentosUsados: envio?.intentosUsados || 0
   };
 }
 
@@ -564,18 +790,27 @@ async function listarResumen() {
   const periodos = await listarPeriodosInterno(firestore);
 
   const coordinadoresSnap = await getDocs(collection(firestore, COLLECTIONS.coordinadores));
-  const coordinadores = coordinadoresSnap.docs.map((item) => ({ ...(item.data() || {}), id: item.id })).sort((a, b) => clean(a.nombre).localeCompare(clean(b.nombre)));
+  const coordinadores = coordinadoresSnap.docs
+    .map((item) => limpiarCoordinador(item.id, item.data()))
+    .sort((a, b) => clean(a.nombre).localeCompare(clean(b.nombre)));
 
   const estudiantesSnap = await getDocs(collection(firestore, COLLECTIONS.estudiantes));
   const estudiantes = estudiantesSnap.docs.map(withId).filter((estudiante) => estudiantePertenecePeriodo(estudiante, periodoActivo.id));
 
   const enviosSnap = await getDocs(collection(firestore, COLLECTIONS.envios));
-  const envios = enviosSnap.docs.map((item) => ({ ...(item.data() || {}), id: item.id })).filter((envio) => periodoEquivalente(envio.periodoId || envio.periodoLabel, periodoActivo.id));
+  const envios = enviosSnap.docs
+    .map((item) => envioParaCoordinador(item.id, item.data()))
+    .filter((envio) => periodoEquivalente(envio.periodoId || envio.periodoLabel, periodoActivo.id));
 
   const enviosPorCedula = new Map(envios.map((envio) => [clean(envio.cedula), envio]));
   const carreras = carrerasDesdeEstudiantes(estudiantes, coordinadores);
-  const codigosConCoordinador = new Set(carreras.filter((c) => c.coordinadorId).map((c) => c.codigoCarrera));
-  const estudiantesSinCoordinador = estudiantes.filter((est) => !codigosConCoordinador.has(clean(est.CodigoCarrera || est.codigoCarrera))).length;
+  const codigosConCoordinador = new Set(carreras.filter((c) => c.coordinadorId && c.codigoCarrera).map((c) => c.codigoCarrera));
+  const nombresConCoordinador = new Set(carreras.filter((c) => c.coordinadorId && c.nombreCarrera).map((c) => normalizeText(c.nombreCarrera)));
+  const estudiantesSinCoordinador = estudiantes.filter((est) => {
+    const codigo = clean(est.CodigoCarrera || est.codigoCarrera);
+    const nombre = normalizeText(est.NombreCarrera || est.nombreCarrera || est.carrera);
+    return !(codigo && codigosConCoordinador.has(codigo)) && !(nombre && nombresConCoordinador.has(nombre));
+  }).length;
 
   return {
     ok: true,
@@ -587,7 +822,7 @@ async function listarResumen() {
     envios,
     estadisticas: {
       totalEstudiantes: estudiantes.length,
-      totalEnvios: envios.length,
+      totalEnvios: envios.filter((envio) => envio.estado !== ESTADOS.sinEnvio).length,
       porEstado: contarPorEstado(envios),
       sinCoordinador: estudiantesSinCoordinador
     }
@@ -598,9 +833,16 @@ async function activarPeriodo(periodoId) {
   const firestore = db();
   const id = clean(periodoId);
   if (!id) throw new Error("Seleccione un período válido.");
+  const periodos = await listarPeriodosInterno(firestore);
+  const periodo = periodos.find((item) => item.id === id || periodoEquivalente(item.id, id) || periodoEquivalente(item.label, id));
   const fecha = nowIso();
-  await setDoc(doc(firestore, COLLECTIONS.config, DOCUMENTS.appConfig), { periodoActivoId: id, periodoActivoIdNormalizado: normalizarPeriodoId(id), periodoActivoLabel: id, actualizadoEn: fecha }, { merge: true });
-  return { ok: true, periodoActivoId: id, mensaje: "Período activado correctamente." };
+  await setDoc(doc(firestore, COLLECTIONS.config, DOCUMENTS.appConfig), {
+    periodoActivoId: periodo?.id || id,
+    periodoActivoIdNormalizado: normalizarPeriodoId(periodo?.id || id),
+    periodoActivoLabel: clean(periodo?.label || id),
+    actualizadoEn: fecha
+  }, { merge: true });
+  return { ok: true, periodoActivoId: periodo?.id || id, mensaje: "Período activado correctamente." };
 }
 
 async function guardarCoordinador(nombre) {
@@ -609,7 +851,17 @@ async function guardarCoordinador(nombre) {
   if (!nombreLimpio) throw new Error("Ingrese el nombre del coordinador.");
   const id = crearIdCoordinador(nombreLimpio);
   const fecha = nowIso();
-  await setDoc(doc(firestore, COLLECTIONS.coordinadores, id), { nombre: nombreLimpio, activo: true, carrerasAsignadas: [], actualizadoEn: fecha, creadoEn: fecha }, { merge: true });
+  await setDoc(doc(firestore, COLLECTIONS.coordinadores, id), {
+    _docId: id,
+    id,
+    nombre: nombreLimpio,
+    activo: true,
+    carreras: [],
+    carrerasAsignadas: [],
+    origen: "admin_titulos",
+    actualizadoEn: fecha,
+    creadoEn: fecha
+  }, { merge: true });
   return { ok: true, coordinador: { id, nombre: nombreLimpio, activo: true }, mensaje: "Coordinador guardado correctamente." };
 }
 
@@ -618,15 +870,26 @@ async function asignarCoordinadorCarrera(datos) {
   const coordinadorId = clean(datos.coordinadorId);
   const codigoCarrera = clean(datos.codigoCarrera);
   const nombreCarrera = clean(datos.nombreCarrera);
-  if (!coordinadorId || !codigoCarrera || !nombreCarrera) throw new Error("Complete coordinador, código de carrera y nombre de carrera.");
+  if (!coordinadorId || (!codigoCarrera && !nombreCarrera)) throw new Error("Complete coordinador y carrera.");
 
   const snap = await getDocs(collection(firestore, COLLECTIONS.coordinadores));
   await Promise.all(snap.docs.map(async (item) => {
     const data = item.data() || {};
-    const carreras = Array.isArray(data.carrerasAsignadas) ? data.carrerasAsignadas : [];
-    const filtradas = carreras.filter((c) => clean(c.codigoCarrera) !== codigoCarrera);
-    if (item.id === coordinadorId) filtradas.push({ codigoCarrera, nombreCarrera });
-    await setDoc(item.ref, { carrerasAsignadas: filtradas, actualizadoEn: nowIso() }, { merge: true });
+    const actuales = carrerasCoordinador(data).filter((carrera) => {
+      const mismoCodigo = codigoCarrera && clean(carrera.codigoCarrera) === codigoCarrera;
+      const mismoNombre = nombreCarrera && normalizeText(carrera.nombreCarrera) === normalizeText(nombreCarrera);
+      return !mismoCodigo && !mismoNombre;
+    });
+
+    if (item.id === coordinadorId) {
+      actuales.push({ codigoCarrera, nombreCarrera });
+    }
+
+    await setDoc(item.ref, {
+      carreras: actuales.map((carrera) => carrera.nombreCarrera).filter(Boolean),
+      carrerasAsignadas: actuales,
+      actualizadoEn: nowIso()
+    }, { merge: true });
   }));
 
   return { ok: true, mensaje: "Carrera asignada correctamente." };
