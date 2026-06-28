@@ -7,10 +7,12 @@ Función o funciones:
 - Generar vista previa usando TablaMessage.
 - Copiar el mensaje y abrir Telegram cuando exista usuario o chat disponible.
 - Enviar mensaje individual por bot mediante TablaTelegramApi.
+- Registrar resultados en el historial local de Tabla.
 Con qué se conecta:
 - tabla.core.js
 - tabla.message.js
 - tabla.telegram-api.js
+- tabla.history.js
 - tabla.app.js
 - tabla.css
 ========================================================= */
@@ -55,6 +57,26 @@ Con qué se conecta:
       return window.TablaMessage.generarMensaje(state.row,tipo,{texto:textoLibre});
     }
     return textoLibre||"Estimado/a estudiante, reciba un cordial saludo.";
+  }
+
+  function registrarHistorial(estado,error,telegramMessageId){
+    if(!state.row||!window.TablaHistory||typeof window.TablaHistory.guardar!=="function")return;
+    var d=datos(state.row);
+    var tg=info(state.row);
+    window.TablaHistory.guardar({
+      modo:"individual",
+      tipoMensaje:state.type,
+      cedula:d.cedula,
+      nombre:d.nombre,
+      carrera:d.carrera,
+      periodo:d.periodo,
+      telegramUser:tg.user,
+      telegramChatId:tg.chatId,
+      mensaje:generarMensaje(),
+      estado:estado,
+      error:error||"",
+      telegramMessageId:telegramMessageId||null
+    });
   }
 
   function actualizarInfo(){
@@ -115,10 +137,12 @@ Con qué se conecta:
     try{
       state.sending=true;actualizarInfo();
       status("Enviando Telegram a "+(d.nombre||"estudiante")+"...","warn");
-      await window.TablaTelegramApi.enviarMensajeTelegram(tg.chatId,msg);
+      var result=await window.TablaTelegramApi.enviarMensajeTelegram(tg.chatId,msg);
+      registrarHistorial("enviado","",result&&result.telegramMessageId);
       status("Mensaje enviado por Telegram a "+(d.nombre||"estudiante")+".","ok");
     }catch(error){
       console.error("[TablaTelegram]",error);
+      registrarHistorial("fallido",error&&error.message?error.message:String(error));
       status(error&&error.message?error.message:String(error),"warn");
     }finally{
       state.sending=false;actualizarInfo();
