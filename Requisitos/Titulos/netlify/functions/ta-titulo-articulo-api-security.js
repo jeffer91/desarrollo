@@ -6,8 +6,7 @@
   - Inicializar Firebase Admin sin exponer credenciales al frontend.
   - Validar entradas básicas, limpiar textos y devolver respuestas JSON uniformes.
   - Proteger acciones administrativas mediante token interno cuando corresponda.
-  - Normalizar estudiantes, períodos e identificadores institucionales.
-  - Conectar por defecto con Primer semestre de 2026 si aún no existe período activo configurado.
+  - Alinear las funciones servidor con las colecciones reales del módulo Títulos.
 */
 
 import { initializeApp, cert, getApps } from "firebase-admin/app";
@@ -16,28 +15,33 @@ import { getFirestore, FieldValue } from "firebase-admin/firestore";
 export const COLLECTIONS = Object.freeze({
   estudiantes: "Estudiantes",
   periodos: "periodos",
-  config: "ta_titulo_articulo_config",
-  coordinadores: "ta_titulo_articulo_coordinadores",
-  envios: "ta_titulo_articulo_envios",
-  historial: "ta_titulo_articulo_historial",
-  alertas: "ta_titulo_articulo_alertas"
+  config: "titulos_config",
+  coordinadores: "titulos_coordinadores",
+  envios: "titulos",
+  historial: "titulos_logs",
+  alertas: "titulos_alertas"
 });
 
 export const DOCUMENTS = Object.freeze({ appConfig: "app" });
 
 export const DEFAULT_PERIODO_ACTIVO = Object.freeze({
-  id: "PRIMER_SEMESTRE_2026",
-  idNormalizado: "2026_1",
-  label: "Primer semestre de 2026"
+  id: "2026-02__2026-08",
+  idNormalizado: "2026_02_2026_08",
+  label: "Febrero 2026 a Agosto 2026"
 });
 
 export const ESTADOS = Object.freeze({
-  borrador: "BORRADOR",
+  sinEnvio: "SIN_ENVIO",
   enviado: "ENVIADO",
   enRevision: "EN_REVISION",
   aprobado: "APROBADO",
   aprobadoConCorrecciones: "APROBADO_CON_CORRECCIONES",
   devuelto: "DEVUELTO"
+});
+
+export const ESTADOS_LEGACY = Object.freeze({
+  PENDIENTE: ESTADOS.enviado,
+  BORRADOR: ESTADOS.sinEnvio
 });
 
 export const DECISIONES_COORDINADOR = Object.freeze([
@@ -63,10 +67,7 @@ export function onlyDigits(value) {
 }
 
 export function normalizeText(value) {
-  return cleanString(value)
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
+  return cleanString(value).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
 function textoPeriodo(value) {
@@ -118,18 +119,18 @@ function detectarPeriodoCanonico(value) {
 export function normalizarPeriodoId(value) {
   const canonico = detectarPeriodoCanonico(value);
   if (canonico) return canonico;
-
-  return normalizeText(value)
-    .toUpperCase()
-    .replace(/[^A-Z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "")
-    .replace(/_+/g, "_");
+  return normalizeText(value).toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_+|_+$/g, "").replace(/_+/g, "_");
 }
 
 export function periodoEquivalente(a, b) {
   const pa = normalizarPeriodoId(a);
   const pb = normalizarPeriodoId(b);
   return Boolean(pa && pb && pa === pb);
+}
+
+export function normalizarEstadoTitulo(estado) {
+  const value = upperClean(estado);
+  return ESTADOS_LEGACY[value] || value || ESTADOS.sinEnvio;
 }
 
 export function obtenerPeriodoEstudiante(estudiante = {}) {
@@ -139,22 +140,36 @@ export function obtenerPeriodoEstudiante(estudiante = {}) {
     estudiante.UltimoPeriodoId ||
     estudiante.periodo ||
     estudiante.Periodo ||
+    estudiante.PeriodoAcademico ||
+    estudiante.periodoAcademico ||
     ""
   );
 }
 
 export function estudiantePertenecePeriodo(estudiante = {}, periodoId = "") {
-  return [
+  const valores = [
     estudiante.periodoId,
     estudiante.ultimoPeriodoId,
     estudiante.UltimoPeriodoId,
     estudiante.periodo,
-    estudiante.Periodo
-  ].some((value) => periodoEquivalente(value, periodoId));
+    estudiante.Periodo,
+    estudiante.PeriodoAcademico,
+    estudiante.periodoAcademico
+  ].map(cleanString).filter(Boolean);
+
+  if (!valores.length) return true;
+  return valores.some((value) => periodoEquivalente(value, periodoId));
 }
 
 export function createEnvioId(periodoId, cedula) {
-  return `${normalizarPeriodoId(periodoId)}_${onlyDigits(cedula)}`;
+  const periodo = cleanString(periodoId).replace(/[^A-Za-z0-9_-]+/g, "_").replace(/^_+|_+$/g, "");
+  const identificacion = onlyDigits(cedula);
+  if (!periodo || !identificacion) return "";
+  return `${periodo}__${identificacion}`;
+}
+
+export function createEnvioIdLegacyCedula(cedula) {
+  return onlyDigits(cedula);
 }
 
 export function jsonResponse(statusCode, data) {
@@ -184,10 +199,7 @@ export function unauthorized(error = "Acceso no autorizado.") {
 }
 
 export function serverError(error) {
-  return jsonResponse(500, {
-    ok: false,
-    error: error && error.message ? error.message : String(error)
-  });
+  return jsonResponse(500, { ok: false, error: error && error.message ? error.message : String(error) });
 }
 
 export function handleOptions(event) {
@@ -197,14 +209,13 @@ export function handleOptions(event) {
 
 export function parseBody(event) {
   if (!event.body) return { action: "", payload: {} };
-
   try {
     const parsed = JSON.parse(event.body);
     return {
       action: cleanString(parsed.action),
       payload: parsed.payload && typeof parsed.payload === "object" ? parsed.payload : {}
     };
-  } catch (error) {
+  } catch {
     throw new Error("El cuerpo de la solicitud no es JSON válido.");
   }
 }
@@ -212,9 +223,7 @@ export function parseBody(event) {
 export function requireAdminToken(event) {
   const expected = cleanString(process.env.TA_TITULO_ARTICULO_ADMIN_TOKEN);
   const received = cleanString(event.headers["x-ta-admin-token"] || event.headers["X-TA-ADMIN-TOKEN"]);
-
   if (!expected) throw new Error("No está configurado TA_TITULO_ARTICULO_ADMIN_TOKEN.");
-
   if (!received || received !== expected) {
     const error = new Error("Token administrativo inválido.");
     error.statusCode = 401;
@@ -227,35 +236,22 @@ export function getAdminDb() {
     const projectId = cleanString(process.env.FIREBASE_ADMIN_PROJECT_ID);
     const clientEmail = cleanString(process.env.FIREBASE_ADMIN_CLIENT_EMAIL);
     const privateKey = String(process.env.FIREBASE_ADMIN_PRIVATE_KEY || "").replace(/\\n/g, "\n");
-
-    if (!projectId || !clientEmail || !privateKey) {
-      throw new Error("Faltan variables FIREBASE_ADMIN_PROJECT_ID, FIREBASE_ADMIN_CLIENT_EMAIL o FIREBASE_ADMIN_PRIVATE_KEY.");
-    }
-
+    if (!projectId || !clientEmail || !privateKey) throw new Error("Faltan variables FIREBASE_ADMIN_PROJECT_ID, FIREBASE_ADMIN_CLIENT_EMAIL o FIREBASE_ADMIN_PRIVATE_KEY.");
     initializeApp({ credential: cert({ projectId, clientEmail, privateKey }) });
   }
-
   return getFirestore();
 }
 
 function periodoDesdeDoc(doc) {
   const data = doc.exists ? (doc.data() || {}) : {};
-  const id = doc.id;
-  const texto = [id, data.id, data.periodoId, data.label, data.nombre, data.periodoLabel].map(cleanString).join(" ");
-  return {
-    ...data,
-    id,
-    idNormalizado: normalizarPeriodoId(texto || id),
-    label: cleanString(data.label || data.nombre || data.periodoLabel || id)
-  };
+  const id = cleanString(data.id || data.periodoId || doc.id);
+  const texto = [id, data.label, data.nombre, data.periodoLabel].map(cleanString).join(" ");
+  return { ...data, id, idNormalizado: normalizarPeriodoId(texto || id), label: cleanString(data.label || data.nombre || data.periodoLabel || id) };
 }
 
 async function buscarPeriodoPorCanonico(db, canonico) {
   const snap = await db.collection(COLLECTIONS.periodos).get();
-  const encontrado = snap.docs
-    .map(periodoDesdeDoc)
-    .find((periodo) => normalizarPeriodoId([periodo.id, periodo.label, periodo.nombre, periodo.periodoId].join(" ")) === canonico);
-
+  const encontrado = snap.docs.map(periodoDesdeDoc).find((periodo) => normalizarPeriodoId([periodo.id, periodo.label, periodo.nombre, periodo.periodoId].join(" ")) === canonico);
   return encontrado || null;
 }
 
@@ -266,25 +262,17 @@ export async function getPeriodoActivo(db) {
 
   if (periodoActivoId) {
     const candidatos = [periodoActivoId, normalizarPeriodoId(periodoActivoId)].filter(Boolean);
-
     for (const candidato of candidatos) {
       const periodoSnap = await db.collection(COLLECTIONS.periodos).doc(candidato).get();
       if (periodoSnap.exists) return periodoDesdeDoc(periodoSnap);
     }
-
     const periodoPorAlias = await buscarPeriodoPorCanonico(db, normalizarPeriodoId(periodoActivoId));
     if (periodoPorAlias) return periodoPorAlias;
-
-    return {
-      id: periodoActivoId,
-      idNormalizado: normalizarPeriodoId(periodoActivoId),
-      label: cleanString(config.periodoActivoLabel || periodoActivoId)
-    };
+    return { id: periodoActivoId, idNormalizado: normalizarPeriodoId(periodoActivoId), label: cleanString(config.periodoActivoLabel || periodoActivoId) };
   }
 
   const fallback = await buscarPeriodoPorCanonico(db, DEFAULT_PERIODO_ACTIVO.idNormalizado);
   if (fallback) return fallback;
-
   return { ...DEFAULT_PERIODO_ACTIVO };
 }
 
@@ -295,34 +283,28 @@ function withFirestoreDocId(doc) {
 export async function buscarEstudiantePorCedula(db, cedula) {
   const cedulaLimpia = onlyDigits(cedula);
   if (!cedulaLimpia) return null;
-
   const directo = await db.collection(COLLECTIONS.estudiantes).doc(cedulaLimpia).get();
   if (directo.exists) return withFirestoreDocId(directo);
-
-  const campos = ["numeroIdentificacion", "cedula"];
-
+  const campos = ["numeroIdentificacion", "NumeroIdentificacion", "cedula", "Cedula", "Identificacion", "identificacion"];
   for (const campo of campos) {
     const snap = await db.collection(COLLECTIONS.estudiantes).where(campo, "==", cedulaLimpia).limit(1).get();
-    if (!snap.empty) {
-      return withFirestoreDocId(snap.docs[0]);
-    }
+    if (!snap.empty) return withFirestoreDocId(snap.docs[0]);
   }
-
   return null;
 }
 
 export function estudiantePublico(estudiante, periodoLabel) {
-  const cedula = cleanString(estudiante.numeroIdentificacion || estudiante.cedula || estudiante.id);
+  const cedula = onlyDigits(estudiante.numeroIdentificacion || estudiante.NumeroIdentificacion || estudiante.cedula || estudiante.Cedula || estudiante.Identificacion || estudiante.identificacion || estudiante.id);
   return {
     cedula,
     numeroIdentificacion: cedula,
-    nombres: cleanString(estudiante.Nombres || estudiante.nombres),
+    nombres: cleanString(estudiante.Nombres || estudiante.nombres || estudiante.Nombre || estudiante.nombre),
     carrera: cleanString(estudiante.NombreCarrera || estudiante.nombreCarrera || estudiante.carrera),
     codigoCarrera: cleanString(estudiante.CodigoCarrera || estudiante.codigoCarrera),
     periodoId: cleanString(estudiante.periodoId),
     ultimoPeriodoId: cleanString(estudiante.ultimoPeriodoId || estudiante.UltimoPeriodoId),
     periodoNormalizado: normalizarPeriodoId(obtenerPeriodoEstudiante(estudiante)),
-    periodoLabel: cleanString(periodoLabel || estudiante.periodoId || estudiante.ultimoPeriodoId),
+    periodoLabel: cleanString(periodoLabel || estudiante.periodoId || estudiante.ultimoPeriodoId || estudiante.Periodo),
     telegramUser: cleanString(estudiante.telegramUser || estudiante.telegramUsuario),
     telegramUsuario: cleanString(estudiante.telegramUsuario || estudiante.telegramUser),
     telegramChatId: cleanString(estudiante.telegramChatId)
@@ -330,9 +312,7 @@ export function estudiantePublico(estudiante, periodoLabel) {
 }
 
 export function validarMetodoPost(event) {
-  if (event.httpMethod !== "POST") {
-    throw new Error("Método no permitido. Use POST.");
-  }
+  if (event.httpMethod !== "POST") throw new Error("Método no permitido. Use POST.");
 }
 
 export function fieldValueServerTimestamp() {
