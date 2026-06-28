@@ -4,8 +4,8 @@ Ruta o ubicación: /Requisitos/Gestion/Tabla/tabla.selection.js
 Función o funciones:
 - Manejar selección manual de estudiantes filtrados en Tabla.
 - Seleccionar todos, solo con Telegram o limpiar selección.
-- Separar estudiantes con Telegram y sin Telegram.
-- Entregar seleccionados para envío masivo futuro.
+- Separar estudiantes con Telegram, con chatId para bot y sin Telegram.
+- Entregar seleccionados aptos para envío masivo por bot.
 Con qué se conecta:
 - tabla.core.js
 - tabla.mass.js
@@ -39,7 +39,7 @@ Con qué se conecta:
     state.selected={};
     state.rows.forEach(function(row){
       var tg=row._tablaTelegramInfo||telegramInfo(row);
-      if(options.selectAll||options.selectWithTelegram!==false&&tg.hasTelegram){
+      if(options.selectAll||options.selectWithBot!==false&&tg.canSendByBot){
         state.selected[row._tablaSelectionKey]=true;
       }
     });
@@ -54,23 +54,30 @@ Con qué se conecta:
   }
   function selectAll(){state.rows.forEach(function(row){state.selected[row._tablaSelectionKey]=true;});return getState();}
   function selectWithTelegram(){state.selected={};state.rows.forEach(function(row){var tg=row._tablaTelegramInfo||telegramInfo(row);if(tg.hasTelegram)state.selected[row._tablaSelectionKey]=true;});return getState();}
+  function selectWithBot(){state.selected={};state.rows.forEach(function(row){var tg=row._tablaTelegramInfo||telegramInfo(row);if(tg.canSendByBot)state.selected[row._tablaSelectionKey]=true;});return getState();}
   function clear(){state.selected={};return getState();}
   function selectedRows(){return state.rows.filter(function(row){return !!state.selected[row._tablaSelectionKey];});}
   function withTelegram(){return state.rows.filter(function(row){var tg=row._tablaTelegramInfo||telegramInfo(row);return !!tg.hasTelegram;});}
+  function withBot(){return state.rows.filter(function(row){var tg=row._tablaTelegramInfo||telegramInfo(row);return !!tg.canSendByBot;});}
   function withoutTelegram(){return state.rows.filter(function(row){var tg=row._tablaTelegramInfo||telegramInfo(row);return !tg.hasTelegram;});}
   function selectedWithTelegram(){return selectedRows().filter(function(row){var tg=row._tablaTelegramInfo||telegramInfo(row);return !!tg.hasTelegram;});}
+  function selectedWithBot(){return selectedRows().filter(function(row){var tg=row._tablaTelegramInfo||telegramInfo(row);return !!tg.canSendByBot;});}
   function selectedWithoutTelegram(){return selectedRows().filter(function(row){var tg=row._tablaTelegramInfo||telegramInfo(row);return !tg.hasTelegram;});}
+  function selectedWithoutBot(){return selectedRows().filter(function(row){var tg=row._tablaTelegramInfo||telegramInfo(row);return !tg.canSendByBot;});}
   function summary(){
     return {
       total:state.rows.length,
       conTelegram:withTelegram().length,
+      conChatId:withBot().length,
       sinTelegram:withoutTelegram().length,
       seleccionados:selectedRows().length,
       seleccionadosConTelegram:selectedWithTelegram().length,
-      seleccionadosSinTelegram:selectedWithoutTelegram().length
+      seleccionadosConChatId:selectedWithBot().length,
+      seleccionadosSinTelegram:selectedWithoutTelegram().length,
+      seleccionadosSinChatId:selectedWithoutBot().length
     };
   }
   function getState(){return {rows:state.rows.slice(),selected:Object.assign({},state.selected),selectedRows:selectedRows(),summary:summary()};}
 
-  window.TablaSelection={create:create,toggle:toggle,selectAll:selectAll,selectWithTelegram:selectWithTelegram,clear:clear,getState:getState,selectedRows:selectedRows,withTelegram:withTelegram,withoutTelegram:withoutTelegram,selectedWithTelegram:selectedWithTelegram,selectedWithoutTelegram:selectedWithoutTelegram,summary:summary,telegramInfo:telegramInfo,key:key};
+  window.TablaSelection={create:create,toggle:toggle,selectAll:selectAll,selectWithTelegram:selectWithTelegram,selectWithBot:selectWithBot,clear:clear,getState:getState,selectedRows:selectedRows,withTelegram:withTelegram,withBot:withBot,withoutTelegram:withoutTelegram,selectedWithTelegram:selectedWithTelegram,selectedWithBot:selectedWithBot,selectedWithoutTelegram:selectedWithoutTelegram,selectedWithoutBot:selectedWithoutBot,summary:summary,telegramInfo:telegramInfo,key:key};
 })(window);
