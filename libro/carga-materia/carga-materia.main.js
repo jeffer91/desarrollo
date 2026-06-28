@@ -4,8 +4,8 @@ Ruta o ubicación: /desarrollo/libro/carga-materia/carga-materia.main.js
 Función o funciones:
 1. Controlar la pantalla Carga de la materia.
 2. Validar campos manuales y fuentes por archivo o texto pegado.
-3. Leer, interpretar, consolidar y validar información base, contenidos y actividades.
-4. Mantener la salida técnica oculta para el usuario.
+3. Leer Excel, PDF, TXT o texto pegado para información base, contenidos y actividades.
+4. Permitir que un solo documento principal sirva como fuente completa cuando no existan archivos separados.
 5. Guardar el resultado consolidado como JSON.
 ========================================================= */
 
@@ -57,6 +57,19 @@ Función o funciones:
     return parts.length < 2 ? "" : parts.pop().toLowerCase();
   }
 
+  function isPdfFile(file) {
+    return getExtension(file) === "pdf";
+  }
+
+  function isTextFile(file) {
+    return getExtension(file) === "txt";
+  }
+
+  function isExcelFile(file) {
+    var ext = getExtension(file);
+    return ext === "xlsx" || ext === "xls";
+  }
+
   function formatSize(bytes) {
     var value = Number(bytes || 0);
     if (!value) return "0 KB";
@@ -71,6 +84,7 @@ Función o funciones:
       nombre: file.name,
       extension: getExtension(file),
       tamano: formatSize(file.size),
+      tamanoBytes: file.size || 0,
       tipo: file.type || "No detectado",
       ultimaModificacion: file.lastModified ? new Date(file.lastModified).toISOString() : null
     };
@@ -96,13 +110,24 @@ Función o funciones:
     return Boolean(state.files[kind] && isFileAllowed(kind, state.files[kind])) || hasText(kind);
   }
 
+  function hasMasterSource() {
+    if (hasText("base")) return true;
+    if (!state.files.base || !isFileAllowed("base", state.files.base)) return false;
+    return isPdfFile(state.files.base) || isTextFile(state.files.base);
+  }
+
+  function hasSourceOrMaster(kind) {
+    if (hasSource(kind)) return true;
+    return kind !== "base" && hasMasterSource();
+  }
+
   function buildChecklist() {
     return [
       { label: "Carrera escrita", ok: Boolean(state.carrera) },
       { label: "Materia escrita", ok: Boolean(state.materia) },
       { label: "Información base agregada", ok: hasSource("base") },
-      { label: "Contenido de unidades agregado", ok: hasSource("contenidos") },
-      { label: "Actividades agregadas", ok: hasSource("actividades") }
+      { label: "Contenido de unidades agregado", ok: hasSourceOrMaster("contenidos") },
+      { label: "Actividades agregadas", ok: hasSourceOrMaster("actividades") }
     ];
   }
 
@@ -139,10 +164,11 @@ Función o funciones:
     var status = elements[kind + "Status"];
     var name = elements[kind + "FileName"];
     var lecturaTexto = lecturaStatus(kind);
+    var usingMaster = kind !== "base" && !hasSource(kind) && hasMasterSource();
 
-    if (!file && !hasText(kind)) {
+    if (!file && !hasText(kind) && !usingMaster) {
       setStatus(status, "is-pending", "Pendiente");
-      if (name) name.textContent = kind === "base" ? "Excel, PDF o TXT." : "Excel, PDF o TXT.";
+      if (name) name.textContent = "Excel, PDF o TXT.";
       return;
     }
 
@@ -156,12 +182,20 @@ Función o funciones:
       setStatus(status, "is-ok", isInterpreted(kind) ? "Interpretado" : "Leído");
     } else if (lecturaTexto === "Error") {
       setStatus(status, "is-error", "Error");
+    } else if (usingMaster) {
+      setStatus(status, "is-ok", "Desde documento principal");
     } else {
       setStatus(status, "is-ok", file ? "Archivo listo" : "Texto listo");
     }
 
     if (name) {
-      name.textContent = file ? file.name + " · " + formatSize(file.size) : "Texto pegado.";
+      if (file) {
+        name.textContent = file.name + " · " + formatSize(file.size);
+      } else if (usingMaster) {
+        name.textContent = "Se usará información base.";
+      } else {
+        name.textContent = "Texto pegado.";
+      }
     }
   }
 
@@ -226,15 +260,22 @@ Función o funciones:
     });
   }
 
-  function textToReading(kind, value) {
+  function textToReading(kind, value, meta, origin) {
     var content = clean(value);
+    var sourceMeta = meta || {
+      nombre: origin || "texto-pegado",
+      extension: "txt",
+      tamanoBytes: content.length,
+      ultimaModificacion: new Date().toISOString()
+    };
 
     if (kind === "base") {
       return {
         ok: true,
         tipo: "pdf",
         kind: "base",
-        archivo: { nombre: "texto-pegado", extension: "txt", tamanoBytes: content.length, ultimaModificacion: new Date().toISOString() },
+        origen: origin || "texto",
+        archivo: sourceMeta,
         totalPaginas: 1,
         caracteresTexto: content.length,
         textoCompleto: content,
@@ -250,7 +291,8 @@ Función o funciones:
       ok: true,
       tipo: "excel",
       kind: kind,
-      archivo: { nombre: "texto-pegado", extension: "txt", tamanoBytes: content.length, ultimaModificacion: new Date().toISOString() },
+      origen: origin || "texto",
+      archivo: sourceMeta,
       totalHojas: 1,
       hojaPrincipal: "Texto pegado",
       resumen: { hojas: 1, filas: rows.length, columnas: columns.length },
@@ -265,6 +307,45 @@ Función o funciones:
         vistaPrevia: rows.slice(0, 8)
       }]
     };
+  }
+
+  function readFileAsText(file) {
+    return new Promise(function promiseRead(resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function onLoad(event) {
+        resolve(String(event.target.result || ""));
+      };
+      reader.onerror = function onError() {
+        reject(new Error("No se pudo leer el archivo de texto: " + (file ? file.name : "sin nombre")));
+      };
+      reader.readAsText(file, "utf-8");
+    });
+  }
+
+  async function readFileSource(kind, file) {
+    if (isTextFile(file)) {
+      var textContent = await readFileAsText(file);
+      return textToReading(kind, textContent, fileToMeta(file), "archivo_txt");
+    }
+
+    if (isPdfFile(file)) {
+      if (!ExcelReader || typeof ExcelReader.readFileForKind !== "function") {
+        throw new Error("No está disponible el lector PDF.");
+      }
+
+      var pdfReading = await ExcelReader.readFileForKind(file, kind);
+      if (kind === "base") return pdfReading;
+      return textToReading(kind, pdfReading.textoCompleto || pdfReading.vistaPrevia || "", pdfReading.archivo, "archivo_pdf");
+    }
+
+    if (isExcelFile(file)) {
+      if (!ExcelReader || typeof ExcelReader.readFileForKind !== "function") {
+        throw new Error("No está disponible el lector Excel.");
+      }
+      return ExcelReader.readFileForKind(file, kind);
+    }
+
+    throw new Error("Formato no permitido: " + (file ? file.name : "sin archivo"));
   }
 
   function resumenLecturaParaPreview(lectura) {
@@ -310,14 +391,14 @@ Función o funciones:
   function updatePreviewBeforePrepare(elements) {
     if (state.expediente) return;
     elements.previewBox.textContent = JSON.stringify({
-      bloque: 3,
+      bloque: 4,
       estado: "esperando_proceso",
       carrera: state.carrera || "",
       materia: state.materia || "",
       fuentes: {
         base: state.files.base ? "archivo" : (hasText("base") ? "texto" : "pendiente"),
-        contenidos: state.files.contenidos ? "archivo" : (hasText("contenidos") ? "texto" : "pendiente"),
-        actividades: state.files.actividades ? "archivo" : (hasText("actividades") ? "texto" : "pendiente")
+        contenidos: state.files.contenidos ? "archivo" : (hasText("contenidos") ? "texto" : (hasMasterSource() ? "desde_documento_principal" : "pendiente")),
+        actividades: state.files.actividades ? "archivo" : (hasText("actividades") ? "texto" : (hasMasterSource() ? "desde_documento_principal" : "pendiente"))
       }
     }, null, 2);
   }
@@ -349,21 +430,33 @@ Función o funciones:
     }
   }
 
-  async function readSource(kind) {
+  async function readSource(kind, baseReading) {
     if (state.files[kind]) {
-      if (!ExcelReader || typeof ExcelReader.readFileForKind !== "function") {
-        throw new Error("No está disponible el lector de archivos.");
-      }
-      return ExcelReader.readFileForKind(state.files[kind], kind);
+      return readFileSource(kind, state.files[kind]);
     }
-    return textToReading(kind, state.texts[kind]);
+
+    if (hasText(kind)) {
+      return textToReading(kind, state.texts[kind], null, "texto_pegado");
+    }
+
+    if (kind !== "base" && baseReading && clean(baseReading.textoCompleto)) {
+      return textToReading(kind, baseReading.textoCompleto, {
+        nombre: "informacion-base-completa",
+        extension: "txt",
+        tamanoBytes: clean(baseReading.textoCompleto).length,
+        ultimaModificacion: new Date().toISOString()
+      }, "documento_principal");
+    }
+
+    throw new Error("Falta información para " + kind + ".");
   }
 
   async function readAllSources() {
+    var base = await readSource("base", null);
     return {
-      base: await readSource("base"),
-      contenidos: await readSource("contenidos"),
-      actividades: await readSource("actividades")
+      base: base,
+      contenidos: await readSource("contenidos", base),
+      actividades: await readSource("actividades", base)
     };
   }
 
@@ -389,8 +482,8 @@ Función o funciones:
       materia: state.materia,
       archivos: {
         informacionBase: fileToMeta(state.files.base) || { nombre: "texto-pegado", extension: "txt" },
-        contenidosUnidades: fileToMeta(state.files.contenidos) || { nombre: "texto-pegado", extension: "txt" },
-        actividadesMateria: fileToMeta(state.files.actividades) || { nombre: "texto-pegado", extension: "txt" }
+        contenidosUnidades: fileToMeta(state.files.contenidos) || { nombre: lecturas.contenidos.origen === "documento_principal" ? "informacion-base-completa" : "texto-pegado", extension: "txt" },
+        actividadesMateria: fileToMeta(state.files.actividades) || { nombre: lecturas.actividades.origen === "documento_principal" ? "informacion-base-completa" : "texto-pegado", extension: "txt" }
       },
       lecturas: {
         informacionBase: resumenLecturaParaPreview(lecturas.base),
@@ -408,18 +501,25 @@ Función o funciones:
     return Validator.validate(materiaConsolidada);
   }
 
+  function sourceName(kind, lectura) {
+    if (state.files[kind]) return "archivo";
+    if (hasText(kind)) return "texto";
+    if (lectura && lectura.origen === "documento_principal") return "documento_principal";
+    return "pendiente";
+  }
+
   function buildExpediente(lecturas, interpretacionBase, interpretacionContenidos, interpretacionActividades, materiaConsolidada, validacion) {
     return {
       modulo: "libro",
       pantalla: "carga-materia",
-      bloque: 3,
+      bloque: 4,
       estado: validacion.estado,
       carrera: state.carrera,
       materia: state.materia,
       fuentes: {
-        informacionBase: state.files.base ? "archivo" : "texto",
-        contenidosUnidades: state.files.contenidos ? "archivo" : "texto",
-        actividadesMateria: state.files.actividades ? "archivo" : "texto"
+        informacionBase: sourceName("base", lecturas.base),
+        contenidosUnidades: sourceName("contenidos", lecturas.contenidos),
+        actividadesMateria: sourceName("actividades", lecturas.actividades)
       },
       archivos: {
         informacionBase: fileToMeta(state.files.base),
@@ -439,7 +539,7 @@ Función o funciones:
       materiaConsolidada: materiaConsolidada,
       validacion: validacion,
       guardado: null,
-      pendienteBloque4: true,
+      pendienteBloque5: true,
       creadoEn: new Date().toISOString()
     };
   }
