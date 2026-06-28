@@ -2,16 +2,19 @@
   Nombre completo: ta-titulo-articulo-admin.app.js
   Ruta o ubicación: /Requisitos/Titulos/src/admin/ta-titulo-articulo-admin.app.js
   Función o funciones:
-  - Controlar la pantalla local/Electron del administrador.
-  - Cargar desde Firebase períodos, coordinadores, carreras y estudiantes.
-  - Trabajar sin token administrativo y sin Netlify Functions.
-  - Escribir únicamente la configuración operativa del módulo Títulos y sus revisiones.
+  - Controlar la pantalla de administración del módulo Títulos en Electron y Netlify.
+  - Cargar desde Firebase períodos, coordinadores, carreras, estudiantes y envíos.
+  - Mostrar visibilidad completa del proceso de revisión de títulos.
+  - Activar período, crear coordinadores, asignar carreras y limpiar pruebas de titulos/titulos_logs.
   Se conecta con:
   - Requisitos/Titulos/electron/admin/ta-titulo-articulo-administrador.html
+  - Requisitos/Titulos/public/ta-titulo-articulo-admin.html
   - Requisitos/Titulos/src/services/ta-titulo-articulo-api-client.service.js
+  - Requisitos/Titulos/src/admin/ta-titulo-articulo-admin-limpieza.service.js
 */
 
 import { TaTituloArticuloApi } from "../services/ta-titulo-articulo-api-client.service.js";
+import { TaTituloArticuloAdminLimpieza } from "./ta-titulo-articulo-admin-limpieza.service.js";
 
 let state = {
   resumen: null,
@@ -39,7 +42,11 @@ function message(id, text, type = "") {
 
 function setBusy(isBusy, text = "") {
   state.cargando = Boolean(isBusy);
-  ["ta-admin-actualizar-btn", "ta-admin-activar-periodo-btn"].forEach((id) => {
+  [
+    "ta-admin-actualizar-btn",
+    "ta-admin-activar-periodo-btn",
+    "ta-admin-limpiar-btn"
+  ].forEach((id) => {
     const btn = $(id);
     if (btn) btn.disabled = state.cargando;
   });
@@ -64,17 +71,23 @@ function emptyRow(colspan, text) {
   return row;
 }
 
+function normalizarEstado(estado) {
+  const value = clean(estado || "SIN_ENVIO").toUpperCase();
+  if (value === "PENDIENTE") return "ENVIADO";
+  if (value === "BORRADOR") return "SIN_ENVIO";
+  return value || "SIN_ENVIO";
+}
+
 function estadoLabel(estado) {
   const labels = {
     SIN_ENVIO: "Sin envío",
-    BORRADOR: "Borrador",
     ENVIADO: "Enviado",
     EN_REVISION: "En revisión",
     APROBADO: "Aprobado",
     APROBADO_CON_CORRECCIONES: "Aprobado con correcciones",
     DEVUELTO: "Devuelto"
   };
-  return labels[clean(estado)] || clean(estado || "SIN_ENVIO");
+  return labels[normalizarEstado(estado)] || clean(estado || "SIN_ENVIO");
 }
 
 function getResumen() {
@@ -83,6 +96,7 @@ function getResumen() {
     coordinadores: [],
     carreras: [],
     estudiantes: [],
+    envios: [],
     estadisticas: { totalEstudiantes: 0, totalEnvios: 0, porEstado: {}, sinCoordinador: 0 },
     periodoActivo: null
   };
@@ -107,6 +121,7 @@ function renderPeriodo() {
   });
 
   if (resumen.periodoActivo?.id) select.value = clean(resumen.periodoActivo.id);
+  setText("ta-admin-periodo-activo-label", resumen.periodoActivo?.label || resumen.periodoActivo?.id || "---");
 }
 
 function renderStats() {
@@ -119,6 +134,7 @@ function renderStats() {
   setText("ta-admin-stat-aprobados", (porEstado.APROBADO || 0) + (porEstado.APROBADO_CON_CORRECCIONES || 0));
   setText("ta-admin-stat-devueltos", porEstado.DEVUELTO || 0);
   setText("ta-admin-stat-sin-coord", stats.sinCoordinador || 0);
+  setText("ta-admin-stat-revision", porEstado.EN_REVISION || 0);
 }
 
 function renderAlertas() {
@@ -138,9 +154,9 @@ function renderAlertas() {
 
   box.className = "ta-state-box";
   const ul = document.createElement("ul");
-  carrerasSinCoordinador.slice(0, 12).forEach((carrera) => {
+  carrerasSinCoordinador.slice(0, 15).forEach((carrera) => {
     const li = document.createElement("li");
-    li.textContent = `${clean(carrera.nombreCarrera)}: sin coordinador asignado.`;
+    li.textContent = `${clean(carrera.nombreCarrera || carrera.codigoCarrera)}: sin coordinador asignado.`;
     ul.appendChild(li);
   });
   box.appendChild(ul);
@@ -149,8 +165,13 @@ function renderAlertas() {
 function contarEstudiantesCoordinador(coordinadorId) {
   const resumen = getResumen();
   const coord = (resumen.coordinadores || []).find((item) => clean(item.id) === clean(coordinadorId));
-  const codigos = new Set((coord?.carrerasAsignadas || []).map((c) => clean(c.codigoCarrera)));
-  return (resumen.estudiantes || []).filter((est) => codigos.has(clean(est.codigoCarrera))).length;
+  const codigos = new Set((coord?.carrerasAsignadas || []).map((c) => clean(c.codigoCarrera)).filter(Boolean));
+  const nombres = new Set((coord?.carrerasAsignadas || []).map((c) => normalizar(c.nombreCarrera)).filter(Boolean));
+  return (resumen.estudiantes || []).filter((est) => {
+    const codigo = clean(est.codigoCarrera);
+    const nombre = normalizar(est.carrera);
+    return (codigo && codigos.has(codigo)) || (nombre && nombres.has(nombre));
+  }).length;
 }
 
 function renderCoordinadores() {
@@ -232,24 +253,28 @@ function renderCarreras() {
   });
 }
 
-function estudiantesFiltrados() {
-  const resumen = getResumen();
+function filtroCoincide(item, camposExtra = []) {
   const filtro = normalizar(state.filtro);
-  const estudiantes = resumen.estudiantes || [];
-  if (!filtro) return estudiantes;
+  if (!filtro) return true;
+  const texto = camposExtra.concat([
+    item.nombres,
+    item.cedula,
+    item.carrera,
+    item.periodoId,
+    item.periodoLabel,
+    item.coordinadorNombre,
+    item.estado,
+    estadoLabel(item.estado),
+    item.tituloElegidoTexto,
+    item.tituloCorregidoCoordinador,
+    item.observacionCoordinador
+  ]).map(normalizar).join(" ");
+  return texto.includes(filtro);
+}
 
-  return estudiantes.filter((item) => {
-    const texto = [
-      item.nombres,
-      item.cedula,
-      item.carrera,
-      item.periodoId,
-      item.coordinadorNombre,
-      item.estado,
-      estadoLabel(item.estado)
-    ].map(normalizar).join(" ");
-    return texto.includes(filtro);
-  });
+function estudiantesFiltrados() {
+  const estudiantes = getResumen().estudiantes || [];
+  return estudiantes.filter((item) => filtroCoincide(item));
 }
 
 function renderEstudiantes() {
@@ -260,7 +285,7 @@ function renderEstudiantes() {
   body.replaceChildren();
 
   if (!rows.length) {
-    body.appendChild(emptyRow(7, state.filtro ? "No hay estudiantes que coincidan con la búsqueda." : "Sin datos cargados."));
+    body.appendChild(emptyRow(10, state.filtro ? "No hay estudiantes que coincidan con la búsqueda." : "Sin datos cargados."));
     return;
   }
 
@@ -272,7 +297,53 @@ function renderEstudiantes() {
     row.appendChild(td(est.periodoId));
     row.appendChild(td(est.coordinadorNombre || "Sin coordinador"));
     row.appendChild(td(estadoLabel(est.estado)));
-    row.appendChild(td(est.enviadoEn));
+    row.appendChild(td(est.tituloPreferidoNumero ? `Título ${est.tituloPreferidoNumero}` : "---"));
+    row.appendChild(td(est.tituloElegidoTexto || "---"));
+    row.appendChild(td(est.tituloCorregidoCoordinador || "---"));
+    row.appendChild(td(est.intentosUsados || 0));
+    body.appendChild(row);
+  });
+}
+
+function titulosTexto(envio) {
+  const titulos = Array.isArray(envio.titulosEnviados) ? envio.titulosEnviados : [];
+  if (!titulos.length) return "---";
+  return titulos.map((item) => {
+    const pref = Number(envio.tituloPreferidoNumero) === Number(item.numero) || item.preferido ? " *" : "";
+    return `${item.numero}. ${clean(item.titulo || item.tituloFinal)}${pref}`;
+  }).join(" | ");
+}
+
+function enviosFiltrados() {
+  const envios = getResumen().envios || [];
+  return envios.filter((envio) => filtroCoincide(envio, [titulosTexto(envio)]));
+}
+
+function renderEnvios() {
+  const body = $("ta-admin-envios-body");
+  if (!body) return;
+
+  const rows = enviosFiltrados();
+  body.replaceChildren();
+
+  if (!rows.length) {
+    body.appendChild(emptyRow(11, state.filtro ? "No hay envíos que coincidan con la búsqueda." : "Sin títulos enviados."));
+    return;
+  }
+
+  rows.forEach((envio) => {
+    const row = document.createElement("tr");
+    row.appendChild(td(envio.nombres));
+    row.appendChild(td(envio.cedula));
+    row.appendChild(td(envio.carrera));
+    row.appendChild(td(estadoLabel(envio.estado)));
+    row.appendChild(td(titulosTexto(envio)));
+    row.appendChild(td(envio.tituloPreferidoNumero ? `Título ${envio.tituloPreferidoNumero}` : "---"));
+    row.appendChild(td(envio.tituloElegidoTexto || "---"));
+    row.appendChild(td(envio.tituloCorregidoCoordinador || "---"));
+    row.appendChild(td(envio.coordinadorNombre || "---"));
+    row.appendChild(td(`${Number(envio.intentosUsados || 0)} de ${Number(envio.maxIntentos || 2)}`));
+    row.appendChild(td(envio.enviadoEn || "---"));
     body.appendChild(row);
   });
 }
@@ -284,6 +355,7 @@ function renderAll() {
   renderCoordinadores();
   renderCarreras();
   renderEstudiantes();
+  renderEnvios();
 }
 
 async function cargarResumen() {
@@ -368,13 +440,41 @@ async function asignarCarrera(carrera, coordinadorId) {
   }
 }
 
+async function limpiarPruebas() {
+  const input = $("ta-admin-limpiar-confirmacion");
+  const confirmacion = clean(input?.value);
+
+  if (confirmacion !== "BORRAR TITULOS") {
+    message("ta-admin-limpiar-mensaje", "Debe escribir exactamente BORRAR TITULOS para limpiar pruebas.", "error");
+    return;
+  }
+
+  const confirmar = window.confirm("Esta acción borrará todos los documentos de titulos y titulos_logs. No tocará Estudiantes, periodos ni titulos_coordinadores. ¿Desea continuar?");
+  if (!confirmar) return;
+
+  setBusy(true, "Limpiando títulos de prueba...");
+  try {
+    const data = await TaTituloArticuloAdminLimpieza.limpiarPruebasTitulos(confirmacion);
+    if (input) input.value = "";
+    await cargarResumen();
+    message("ta-admin-limpiar-mensaje", data.mensaje || "Limpieza completada.", "ok");
+  } catch (error) {
+    console.error("[Títulos admin limpieza]", error);
+    message("ta-admin-limpiar-mensaje", error.message || "No se pudo limpiar pruebas.", "error");
+  } finally {
+    setBusy(false);
+  }
+}
+
 function init() {
   $("ta-admin-actualizar-btn")?.addEventListener("click", cargarResumen);
   $("ta-admin-activar-periodo-btn")?.addEventListener("click", activarPeriodo);
   $("ta-admin-coordinador-form")?.addEventListener("submit", guardarCoordinador);
+  $("ta-admin-limpiar-btn")?.addEventListener("click", limpiarPruebas);
   $("ta-admin-buscar-estudiante")?.addEventListener("input", (event) => {
     state.filtro = clean(event.target.value);
     renderEstudiantes();
+    renderEnvios();
   });
   cargarResumen();
 }
