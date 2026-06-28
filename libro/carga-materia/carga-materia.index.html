@@ -1,0 +1,176 @@
+<!-- =========================================================
+Nombre completo: carga-materia.index.html
+Ruta o ubicación: /desarrollo/libro/carga-materia/carga-materia.index.html
+Función o funciones:
+1. Mostrar la primera pantalla del módulo Libro.
+2. Recibir carrera y materia digitadas manualmente.
+3. Recibir tres archivos fuente: base, contenidos y actividades.
+4. Preparar el expediente inicial para los siguientes bloques de lectura inteligente.
+5. No analizar todavía el contenido interno de Excel/PDF; eso inicia en el Bloque 2.
+========================================================= -->
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Libro · Carga de materia</title>
+  <meta name="description" content="Carga inicial de materia para el módulo Libro." />
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="./carga-materia.css" />
+</head>
+<body>
+  <main class="libro-page">
+    <header class="libro-topbar">
+      <div>
+        <p class="libro-kicker">Libro · Bloque 1</p>
+        <h1>Carga inteligente de materia</h1>
+        <p>
+          Primero registra la carrera, la materia y los tres archivos fuente. En los siguientes bloques
+          se leerá el contenido interno y se unirá automáticamente por unidades.
+        </p>
+      </div>
+
+      <nav class="libro-topbar__actions" aria-label="Navegación del módulo Libro">
+        <a class="libro-link-btn libro-link-btn--ghost" href="../index.html">Inicio Libro</a>
+        <a class="libro-link-btn libro-link-btn--ghost" href="../../index.html">Panel principal</a>
+      </nav>
+    </header>
+
+    <section class="libro-progress" aria-label="Estado del bloque actual">
+      <article class="libro-progress__item is-current">
+        <strong>1</strong>
+        <span>Pantalla base</span>
+      </article>
+      <article class="libro-progress__item">
+        <strong>2</strong>
+        <span>Lectura Excel</span>
+      </article>
+      <article class="libro-progress__item">
+        <strong>3</strong>
+        <span>Interpretación</span>
+      </article>
+      <article class="libro-progress__item">
+        <strong>4</strong>
+        <span>Unión y validación</span>
+      </article>
+    </section>
+
+    <section class="libro-grid libro-grid--main">
+      <article class="libro-card libro-card--wide">
+        <div class="libro-card__head">
+          <div>
+            <span class="libro-card__step">Datos manuales</span>
+            <h2>Carrera y materia</h2>
+          </div>
+          <span id="manual-status" class="libro-status-pill is-pending">Pendiente</span>
+        </div>
+
+        <div class="libro-form-grid">
+          <label class="libro-field">
+            <span>Carrera</span>
+            <input id="carrera-input" type="text" autocomplete="off" placeholder="Ej. Tecnología Superior en Mecánica Automotriz" />
+          </label>
+
+          <label class="libro-field">
+            <span>Materia</span>
+            <input id="materia-input" type="text" autocomplete="off" placeholder="Ej. Electricidad Automotriz" />
+          </label>
+        </div>
+      </article>
+
+      <article class="libro-card libro-upload-card" data-file-card="base">
+        <div class="libro-card__head">
+          <div>
+            <span class="libro-card__step">Archivo 1</span>
+            <h2>Información base</h2>
+          </div>
+          <span id="base-status" class="libro-status-pill is-pending">Pendiente</span>
+        </div>
+
+        <p>
+          Debe contener descripción, objetivo, cuatro unidades, competencias, resultados de aprendizaje,
+          bibliografía y justificación de bibliografía.
+        </p>
+
+        <label class="libro-file-zone">
+          <input id="base-file-input" type="file" accept=".xlsx,.xls,.pdf" />
+          <strong>Seleccionar Excel o PDF</strong>
+          <span id="base-file-name">Ningún archivo seleccionado.</span>
+        </label>
+      </article>
+
+      <article class="libro-card libro-upload-card" data-file-card="contenidos">
+        <div class="libro-card__head">
+          <div>
+            <span class="libro-card__step">Archivo 2</span>
+            <h2>Contenido de unidades</h2>
+          </div>
+          <span id="contenidos-status" class="libro-status-pill is-pending">Pendiente</span>
+        </div>
+
+        <p>
+          Debe contener los temas y subtemas de las cuatro unidades para unirlos con el archivo base.
+        </p>
+
+        <label class="libro-file-zone">
+          <input id="contenidos-file-input" type="file" accept=".xlsx,.xls" />
+          <strong>Seleccionar Excel</strong>
+          <span id="contenidos-file-name">Ningún archivo seleccionado.</span>
+        </label>
+      </article>
+
+      <article class="libro-card libro-upload-card" data-file-card="actividades">
+        <div class="libro-card__head">
+          <div>
+            <span class="libro-card__step">Archivo 3</span>
+            <h2>Actividades</h2>
+          </div>
+          <span id="actividades-status" class="libro-status-pill is-pending">Pendiente</span>
+        </div>
+
+        <p>
+          Debe contener las actividades de la materia. Luego se relacionarán con unidad, tema o resultado.
+        </p>
+
+        <label class="libro-file-zone">
+          <input id="actividades-file-input" type="file" accept=".xlsx,.xls" />
+          <strong>Seleccionar Excel</strong>
+          <span id="actividades-file-name">Ningún archivo seleccionado.</span>
+        </label>
+      </article>
+    </section>
+
+    <section class="libro-grid libro-grid--bottom">
+      <article class="libro-card">
+        <div class="libro-card__head">
+          <div>
+            <span class="libro-card__step">Revisión rápida</span>
+            <h2>Estado de carga</h2>
+          </div>
+        </div>
+
+        <ul id="checklist" class="libro-checklist" aria-live="polite"></ul>
+
+        <div class="libro-actions">
+          <button id="analizar-btn" class="libro-btn" type="button" disabled>Preparar expediente</button>
+          <button id="limpiar-btn" class="libro-btn libro-btn--ghost" type="button">Limpiar</button>
+        </div>
+      </article>
+
+      <article class="libro-card libro-card--preview">
+        <div class="libro-card__head">
+          <div>
+            <span class="libro-card__step">Vista previa</span>
+            <h2>Expediente inicial</h2>
+          </div>
+          <span id="expediente-status" class="libro-status-pill is-pending">Sin preparar</span>
+        </div>
+
+        <pre id="preview-box">Completa carrera, materia y selecciona los tres archivos.</pre>
+      </article>
+    </section>
+  </main>
+
+  <script src="./carga-materia.main.js"></script>
+</body>
+</html>
