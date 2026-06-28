@@ -4,9 +4,9 @@ Ruta o ubicación: /desarrollo/libro/carga-materia/carga-materia.main.js
 Función o funciones:
 1. Controlar la pantalla de carga del módulo Libro.
 2. Validar campos manuales y archivos fuente.
-3. Leer, interpretar y consolidar los tres archivos fuente.
-4. Validar la materia consolidada.
-5. Mostrar una vista previa legible antes del guardado del Bloque 8.
+3. Leer, interpretar, consolidar y validar los tres archivos fuente.
+4. Mostrar una vista previa legible de la materia consolidada.
+5. Guardar el resultado consolidado como JSON en el Bloque 8.
 ========================================================= */
 
 (function iniciarCargaMateria(window, document) {
@@ -20,6 +20,7 @@ Función o funciones:
   var Builder = window.LibroCargaMateriaBuilder || null;
   var Validator = window.LibroCargaMateriaValidator || null;
   var Preview = window.LibroCargaMateriaPreview || null;
+  var Storage = window.LibroCargaMateriaStorage || null;
 
   var ALLOWED = Constants ? {
     base: Constants.getAllowedExtensions("base"),
@@ -51,8 +52,10 @@ Función o funciones:
     },
     materiaConsolidada: null,
     validacion: null,
+    guardado: null,
     expediente: null,
-    isReading: false
+    isReading: false,
+    isSaving: false
   };
 
   function byId(id) {
@@ -119,6 +122,10 @@ Función o funciones:
     return buildChecklist().every(function everyCheck(item) {
       return item.ok;
     });
+  }
+
+  function canSave() {
+    return Boolean(state.expediente && state.materiaConsolidada && state.validacion) && !state.isReading && !state.isSaving;
   }
 
   function updateManualStatus(elements) {
@@ -265,8 +272,8 @@ Función o funciones:
 
     elements.previewBox.textContent = JSON.stringify(
       {
-        bloque: 7,
-        estado: "esperando_validacion",
+        bloque: 8,
+        estado: "esperando_validacion_y_guardado",
         carrera: state.carrera || "",
         materia: state.materia || "",
         archivos: {
@@ -279,9 +286,10 @@ Función o funciones:
           builderDisponible: Boolean(Builder),
           validatorDisponible: Boolean(Validator),
           previewDisponible: Boolean(Preview),
+          storageDisponible: Boolean(Storage),
           pendiente: true
         },
-        siguiente: "Presiona Validar materia para consolidar, validar y mostrar vista previa."
+        siguiente: "Presiona Validar materia y luego Guardar resultado."
       },
       null,
       2
@@ -298,8 +306,13 @@ Función o funciones:
     updateFileStatus(elements, "actividades");
     renderChecklist(elements);
 
-    elements.analizarBtn.disabled = !canPrepare() || state.isReading;
+    elements.analizarBtn.disabled = !canPrepare() || state.isReading || state.isSaving;
     elements.analizarBtn.textContent = state.isReading ? "Validando..." : "Validar materia";
+
+    if (elements.guardarBtn) {
+      elements.guardarBtn.disabled = !canSave();
+      elements.guardarBtn.textContent = state.isSaving ? "Guardando..." : "Guardar resultado";
+    }
 
     if (!state.expediente) {
       setStatus(elements.expedienteStatus, "is-pending", "Sin validar");
@@ -309,7 +322,7 @@ Función o funciones:
 
   async function readAllFiles() {
     if (!ExcelReader || typeof ExcelReader.readFileForKind !== "function") {
-      throw new Error("No está disponible el lector de archivos del Bloque 7.");
+      throw new Error("No está disponible el lector de archivos del Bloque 8.");
     }
 
     return {
@@ -321,28 +334,28 @@ Función o funciones:
 
   function interpretBase(lecturaBase) {
     if (!MapperBase || typeof MapperBase.interpret !== "function") {
-      throw new Error("No está disponible el mapeador del Archivo 1 del Bloque 7.");
+      throw new Error("No está disponible el mapeador del Archivo 1 del Bloque 8.");
     }
     return MapperBase.interpret(lecturaBase);
   }
 
   function interpretContenidos(lecturaContenidos) {
     if (!MapperContenidos || typeof MapperContenidos.interpret !== "function") {
-      throw new Error("No está disponible el mapeador de contenidos del Bloque 7.");
+      throw new Error("No está disponible el mapeador de contenidos del Bloque 8.");
     }
     return MapperContenidos.interpret(lecturaContenidos);
   }
 
   function interpretActividades(lecturaActividades) {
     if (!MapperActividades || typeof MapperActividades.interpret !== "function") {
-      throw new Error("No está disponible el mapeador de actividades del Bloque 7.");
+      throw new Error("No está disponible el mapeador de actividades del Bloque 8.");
     }
     return MapperActividades.interpret(lecturaActividades);
   }
 
   function buildMateriaConsolidada(lecturas, interpretacionBase, interpretacionContenidos, interpretacionActividades) {
     if (!Builder || typeof Builder.build !== "function") {
-      throw new Error("No está disponible el builder de materia consolidada del Bloque 7.");
+      throw new Error("No está disponible el builder de materia consolidada del Bloque 8.");
     }
 
     return Builder.build({
@@ -366,7 +379,7 @@ Función o funciones:
 
   function validateMateria(materiaConsolidada) {
     if (!Validator || typeof Validator.validate !== "function") {
-      throw new Error("No está disponible el validador del Bloque 7.");
+      throw new Error("No está disponible el validador del Bloque 8.");
     }
 
     return Validator.validate(materiaConsolidada);
@@ -376,7 +389,7 @@ Función o funciones:
     return {
       modulo: "libro",
       pantalla: "carga-materia",
-      bloque: 7,
+      bloque: 8,
       estado: validacion.estado,
       carrera: state.carrera,
       materia: state.materia,
@@ -397,7 +410,8 @@ Función o funciones:
       },
       materiaConsolidada: materiaConsolidada,
       validacion: validacion,
-      pendienteBloque8: true,
+      guardado: null,
+      pendienteBloque9: true,
       creadoEn: new Date().toISOString()
     };
   }
@@ -409,6 +423,21 @@ Función o funciones:
     }
 
     elements.previewBox.textContent = JSON.stringify(expediente, null, 2);
+  }
+
+  function appendSaveResult(elements, result) {
+    var output = elements.previewBox.textContent || "";
+    output += "\n\nGUARDADO";
+    output += "\nEstado: " + (result && result.ok ? "Guardado" : "Error");
+    output += "\nModo: " + (result && result.modo ? result.modo : "sin_modo");
+    output += "\nRuta: " + (result && result.path ? result.path : "sin_ruta");
+    output += "\nMensaje: " + (result && result.message ? result.message : "sin_mensaje");
+
+    if (result && result.warning) {
+      output += "\nAviso: " + result.warning;
+    }
+
+    elements.previewBox.textContent = output;
   }
 
   function statusFromValidation(validacion) {
@@ -429,6 +458,7 @@ Función o funciones:
     state.expediente = null;
     state.materiaConsolidada = null;
     state.validacion = null;
+    state.guardado = null;
     state.interpretaciones.base = null;
     state.interpretaciones.contenidos = null;
     state.interpretaciones.actividades = null;
@@ -471,13 +501,14 @@ Función o funciones:
       state.expediente = null;
       state.materiaConsolidada = null;
       state.validacion = null;
+      state.guardado = null;
       state.interpretaciones.base = null;
       state.interpretaciones.contenidos = null;
       state.interpretaciones.actividades = null;
       setStatus(elements.expedienteStatus, "is-error", "Error");
       elements.previewBox.textContent = JSON.stringify(
         {
-          bloque: 7,
+          bloque: 8,
           estado: "error_validacion_materia",
           mensaje: error && error.message ? error.message : String(error)
         },
@@ -490,6 +521,43 @@ Función o funciones:
     }
   }
 
+  async function saveCurrent(elements) {
+    if (!state.expediente || !state.materiaConsolidada) {
+      setStatus(elements.expedienteStatus, "is-warning", "Sin guardar");
+      elements.previewBox.textContent += "\n\nPrimero valida la materia antes de guardar.";
+      return;
+    }
+
+    if (!Storage || typeof Storage.save !== "function") {
+      setStatus(elements.expedienteStatus, "is-error", "Error");
+      elements.previewBox.textContent += "\n\nNo está disponible el módulo de guardado del Bloque 8.";
+      return;
+    }
+
+    state.isSaving = true;
+    refresh(elements);
+
+    try {
+      var result = await Storage.save(state.expediente);
+      state.guardado = result;
+      state.expediente.guardado = result;
+      state.expediente.pendienteBloque9 = true;
+
+      setStatus(elements.expedienteStatus, result.ok ? "is-ok" : "is-error", result.ok ? "Guardado" : "Error");
+      appendSaveResult(elements, result);
+    } catch (error) {
+      state.guardado = {
+        ok: false,
+        message: error && error.message ? error.message : String(error)
+      };
+      setStatus(elements.expedienteStatus, "is-error", "Error");
+      appendSaveResult(elements, state.guardado);
+    } finally {
+      state.isSaving = false;
+      refresh(elements);
+    }
+  }
+
   function clearAll(elements) {
     state.carrera = "";
     state.materia = "";
@@ -498,6 +566,7 @@ Función o funciones:
     state.files.actividades = null;
     resetLecturas();
     state.isReading = false;
+    state.isSaving = false;
 
     elements.carreraInput.value = "";
     elements.materiaInput.value = "";
@@ -517,6 +586,7 @@ Función o funciones:
     state.interpretaciones.actividades = null;
     state.materiaConsolidada = null;
     state.validacion = null;
+    state.guardado = null;
     state.expediente = null;
   }
 
@@ -539,6 +609,7 @@ Función o funciones:
     Builder = window.LibroCargaMateriaBuilder || Builder;
     Validator = window.LibroCargaMateriaValidator || Validator;
     Preview = window.LibroCargaMateriaPreview || Preview;
+    Storage = window.LibroCargaMateriaStorage || Storage;
 
     var elements = {
       carreraInput: byId("carrera-input"),
@@ -555,6 +626,7 @@ Función o funciones:
       actividadesFileName: byId("actividades-file-name"),
       checklist: byId("checklist"),
       analizarBtn: byId("analizar-btn"),
+      guardarBtn: byId("guardar-btn"),
       limpiarBtn: byId("limpiar-btn"),
       previewBox: byId("preview-box"),
       expedienteStatus: byId("expediente-status")
@@ -577,6 +649,12 @@ Función o funciones:
     elements.analizarBtn.addEventListener("click", function onPrepareClick() {
       prepareExpediente(elements);
     });
+
+    if (elements.guardarBtn) {
+      elements.guardarBtn.addEventListener("click", function onSaveClick() {
+        saveCurrent(elements);
+      });
+    }
 
     elements.limpiarBtn.addEventListener("click", function onClearClick() {
       clearAll(elements);
@@ -601,6 +679,7 @@ Función o funciones:
           },
           materiaConsolidada: state.materiaConsolidada,
           validacion: state.validacion,
+          guardado: state.guardado,
           expediente: state.expediente
         }));
       }
