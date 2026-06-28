@@ -4,7 +4,7 @@
   Función o funciones:
   - Validar configuración mínima antes de publicar en Netlify.
   - Revisar netlify.toml, funciones, variables ejemplo y build público.
-  - Confirmar que Netlify sea el último paso después de las pruebas locales.
+  - Confirmar rutas públicas de estudiante, coordinador y administrador.
   - No valida secretos reales; solo revisa que las claves esperadas estén documentadas.
   Se conecta con:
   - netlify.toml
@@ -27,11 +27,15 @@ const requiredFiles = [
   ".env.example",
   "vite.config.js",
   "package.json",
+  "public/ta-titulo-articulo-estudiante.html",
+  "public/ta-titulo-articulo-coordinador.html",
+  "public/ta-titulo-articulo-admin.html",
   "netlify/functions/ta-titulo-articulo-api-security.js",
   "netlify/functions/ta-titulo-articulo-api-estudiante.js",
   "netlify/functions/ta-titulo-articulo-api-coordinador.js",
   "netlify/functions/ta-titulo-articulo-api-admin.js",
-  "netlify/functions/ta-titulo-articulo-api-telegram.js"
+  "netlify/functions/ta-titulo-articulo-api-telegram.js",
+  "netlify/functions/ta-titulo-articulo-gemini.js"
 ];
 
 const requiredEnv = [
@@ -40,6 +44,8 @@ const requiredEnv = [
   "FIREBASE_ADMIN_PRIVATE_KEY",
   "TA_TITULO_ARTICULO_ADMIN_TOKEN",
   "TELEGRAM_BOT_TOKEN",
+  "GEMINI_API_KEY",
+  "GEMINI_MODEL",
   "VITE_FIREBASE_API_KEY",
   "VITE_FIREBASE_AUTH_DOMAIN",
   "VITE_FIREBASE_PROJECT_ID",
@@ -67,7 +73,11 @@ if (existsSync(resolve(root, "netlify.toml"))) {
     'node_bundler = "esbuild"',
     'from = "/"',
     'from = "/estudiante"',
-    'from = "/coordinador"'
+    'from = "/coordinador"',
+    'from = "/admin"',
+    'to = "/public/ta-titulo-articulo-estudiante.html"',
+    'to = "/public/ta-titulo-articulo-coordinador.html"',
+    'to = "/public/ta-titulo-articulo-admin.html"'
   ];
 
   for (const value of checks) {
@@ -84,7 +94,7 @@ if (existsSync(resolve(root, ".env.example"))) {
 
 if (existsSync(resolve(root, "package.json"))) {
   const pkg = JSON.parse(read("package.json"));
-  const scripts = ["check:netlify", "build:netlify", "dev:netlify"];
+  const scripts = ["check:netlify", "build:netlify", "dev:netlify", "dev", "dev:coordinador", "dev:admin"];
   for (const script of scripts) {
     if (!pkg.scripts?.[script]) errors.push(`package.json: falta script ${script}.`);
   }
@@ -92,7 +102,7 @@ if (existsSync(resolve(root, "package.json"))) {
 
 if (existsSync(resolve(root, "vite.config.js"))) {
   const vite = read("vite.config.js");
-  for (const value of ["ta-titulo-articulo-estudiante.html", "ta-titulo-articulo-coordinador.html", "outDir: \"dist\""]) {
+  for (const value of ["ta-titulo-articulo-estudiante.html", "ta-titulo-articulo-coordinador.html", "ta-titulo-articulo-admin.html", "outDir: \"dist\""]) {
     if (!vite.includes(value)) errors.push(`vite.config.js: falta ${value}.`);
   }
 }
@@ -108,3 +118,4 @@ console.log("Base directory recomendada en Netlify: Requisitos/Titulos");
 console.log("Build command: npm run build:netlify");
 console.log("Publish directory: dist");
 console.log("Functions directory: netlify/functions");
+console.log("Rutas: /estudiante, /coordinador, /admin");
