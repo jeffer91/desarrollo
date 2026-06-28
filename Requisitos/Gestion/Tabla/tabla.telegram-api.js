@@ -6,6 +6,7 @@ Función o funciones:
 - Conectar con Netlify Functions mediante endpoint seguro.
 - Enviar mensajes individuales y lotes masivos controlados.
 - Reutilizar token administrativo guardado/configurado cuando exista.
+- Preservar saltos de línea y formato del mensaje formal.
 Con qué se conecta:
 - Requisitos/Titulos/netlify/functions/ta-titulo-articulo-api-telegram.js
 - tabla.telegram.js
@@ -22,6 +23,7 @@ Con qué se conecta:
   var LOCAL_HOSTS={localhost:true,"127.0.0.1":true,"0.0.0.0":true,"::1":true};
 
   function clean(value){return String(value==null?"":value).replace(/\s+/g," ").trim();}
+  function cleanMessage(value){return String(value==null?"":value).replace(/\r\n/g,"\n").replace(/\r/g,"\n").trim();}
   function normalizarBaseFunctionsUrl(value){
     var url=clean(value).replace(/\/+$/,"");
     if(!url)return "";
@@ -91,7 +93,7 @@ Con qué se conecta:
   function limpiarChatId(value){return clean(value).replace(/[^0-9-]/g,"");}
   async function enviarMensajeTelegram(chatId,mensaje,options){
     chatId=limpiarChatId(chatId);
-    mensaje=clean(mensaje);
+    mensaje=cleanMessage(mensaje);
     if(!chatId)throw new Error("El estudiante no tiene chatId de Telegram para envío por bot.");
     if(!mensaje)throw new Error("El mensaje está vacío.");
     return llamar("enviarMensaje",{chatId:chatId,mensaje:mensaje},options);
@@ -102,7 +104,7 @@ Con qué se conecta:
     for(var i=0;i<rows.length;i++){
       var item=rows[i]||{};
       var chatId=limpiarChatId(item.telegramChatId||item.chatId||"");
-      var mensaje=clean(item.mensaje||"");
+      var mensaje=cleanMessage(item.mensaje||"");
       if(!chatId||!mensaje){omitidos.push(Object.assign({},item,{estado:"omitido",error:!chatId?"Sin chatId":"Mensaje vacío"}));continue;}
       try{
         var data=await enviarMensajeTelegram(chatId,mensaje,options);
