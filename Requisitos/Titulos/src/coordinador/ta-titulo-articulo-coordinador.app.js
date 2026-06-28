@@ -3,11 +3,10 @@
   Ruta o ubicación: /Requisitos/Titulos/src/coordinador/ta-titulo-articulo-coordinador.app.js
   Función o funciones:
   - Controlar la pantalla pública del coordinador.
-  - Cargar coordinadores activos desde la API.
-  - Mostrar solo los estudiantes de las carreras asignadas al coordinador.
-  - Permitir buscar estudiantes por nombre, cédula, carrera o estado.
-  - Abrir modal de revisión de títulos.
-  - Guardar decisión del coordinador: aprobar, aprobar con correcciones o devolver.
+  - Cargar coordinadores activos desde Firebase directo/API.
+  - Mostrar solo los envíos de las carreras asignadas al coordinador.
+  - Leer la estructura limpia de titulos: titulosEnviados, tituloPreferidoNumero, título elegido y título corregido.
+  - Permitir aprobar, aprobar con correcciones o devolver con observación obligatoria.
   Se conecta con:
   - Requisitos/Titulos/public/ta-titulo-articulo-coordinador.html
   - Requisitos/Titulos/src/services/ta-titulo-articulo-api-client.service.js
@@ -56,11 +55,17 @@ function td(text) {
   return cell;
 }
 
+function normalizarEstado(estado) {
+  const value = clean(estado || "SIN_ENVIO").toUpperCase();
+  if (value === "PENDIENTE") return "ENVIADO";
+  if (value === "BORRADOR") return "SIN_ENVIO";
+  return value || "SIN_ENVIO";
+}
+
 function estadoLabel(estado) {
-  const value = clean(estado || "SIN_ENVIO");
+  const value = normalizarEstado(estado);
   const labels = {
     SIN_ENVIO: "Sin envío",
-    BORRADOR: "Borrador",
     ENVIADO: "Pendiente",
     EN_REVISION: "En revisión",
     APROBADO: "Aprobado",
@@ -108,7 +113,7 @@ async function cargarCoordinadores() {
 
 function renderStats(estudiantes) {
   const conteo = estudiantes.reduce((acc, item) => {
-    const estado = clean(item.estado || "SIN_ENVIO");
+    const estado = normalizarEstado(item.estado);
     acc[estado] = (acc[estado] || 0) + 1;
     return acc;
   }, {});
@@ -117,6 +122,22 @@ function renderStats(estudiantes) {
   setText("ta-coord-stat-revision", conteo.EN_REVISION || 0);
   setText("ta-coord-stat-aprobados", (conteo.APROBADO || 0) + (conteo.APROBADO_CON_CORRECCIONES || 0));
   setText("ta-coord-stat-devueltos", conteo.DEVUELTO || 0);
+}
+
+function titulosEnvio(item = {}) {
+  const fuente = Array.isArray(item.titulosEnviados)
+    ? item.titulosEnviados
+    : (Array.isArray(item.propuestas) ? item.propuestas : []);
+
+  return fuente.map((titulo, index) => ({
+    numero: Number(titulo.numero || index + 1),
+    titulo: clean(titulo.titulo || titulo.tituloFinal || titulo.texto || titulo.value || ""),
+    preferido: Boolean(titulo.preferido)
+  })).filter((titulo) => titulo.numero && titulo.titulo);
+}
+
+function tituloPorNumero(item, numero) {
+  return titulosEnvio(item).find((titulo) => Number(titulo.numero) === Number(numero)) || null;
 }
 
 function aplicarFiltro(estudiantes) {
@@ -130,7 +151,10 @@ function aplicarFiltro(estudiantes) {
       item.carrera,
       item.codigoCarrera,
       item.estado,
-      estadoLabel(item.estado)
+      estadoLabel(item.estado),
+      item.tituloElegidoTexto,
+      item.tituloCorregidoCoordinador,
+      ...titulosEnvio(item).map((titulo) => titulo.titulo)
     ].map(normalizar).join(" ");
     return texto.includes(filtro);
   });
@@ -164,7 +188,7 @@ function renderTable(estudiantes) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "ta-button ta-button--primary";
-    button.textContent = "Revisar";
+    button.textContent = normalizarEstado(item.estado) === "ENVIADO" ? "Iniciar revisión" : "Revisar";
     button.addEventListener("click", () => abrirRevision(item));
     action.appendChild(button);
     row.appendChild(action);
@@ -200,36 +224,59 @@ async function cargarEstudiantes(event) {
   }
 }
 
-function propuestaPorNumero(item, numero) {
-  return (item.propuestas || []).find((prop) => Number(prop.numero) === Number(numero)) || null;
-}
-
-function abrirRevision(item) {
-  state.actual = item;
-
-  setText("ta-revision-estudiante", item.nombres);
-  setText("ta-revision-cedula", item.cedula);
-  setText("ta-revision-carrera", item.carrera);
-  setText("ta-revision-preferido", item.tituloPreferidoNumero || "---");
-
-  for (let n = 1; n <= 3; n += 1) {
-    const propuesta = propuestaPorNumero(item, n);
-    setText(`ta-revision-titulo-${n}`, propuesta?.tituloFinal || "---");
-  }
-
-  document.querySelectorAll('[name="taTituloElegido"]').forEach((radio) => {
-    radio.checked = Number(radio.value) === Number(item.tituloPreferidoNumero);
-  });
-
+function prellenarRevision(item) {
   const estado = $("ta-revision-estado");
   const tituloCorregido = $("ta-revision-titulo-corregido");
   const observacion = $("ta-revision-observacion");
 
-  if (estado) estado.value = "";
-  if (tituloCorregido) tituloCorregido.value = "";
-  if (observacion) observacion.value = "";
+  if (estado) estado.value = ["APROBADO", "APROBADO_CON_CORRECCIONES", "DEVUELTO"].includes(normalizarEstado(item.estado)) ? normalizarEstado(item.estado) : "";
+  if (tituloCorregido) tituloCorregido.value = clean(item.tituloCorregidoCoordinador || item.tituloCorregido || "");
+  if (observacion) observacion.value = clean(item.observacionCoordinador || item.observacion || "");
+}
 
+function renderModal(item) {
+  setText("ta-revision-estudiante", item.nombres);
+  setText("ta-revision-cedula", item.cedula);
+  setText("ta-revision-carrera", item.carrera);
+  setText("ta-revision-estado-actual", estadoLabel(item.estado));
+  setText("ta-revision-preferido", item.tituloPreferidoNumero ? `Título ${item.tituloPreferidoNumero}` : "---");
+  setText("ta-revision-intentos", `${Number(item.intentosUsados || 0)} de ${Number(item.maxIntentos || 2)}`);
+  setText("ta-revision-enviado", item.enviadoEn || item.fechaEnvio || "---");
+
+  for (let n = 1; n <= 3; n += 1) {
+    const titulo = tituloPorNumero(item, n);
+    const extra = Number(item.tituloPreferidoNumero) === n ? " (preferido por estudiante)" : "";
+    setText(`ta-revision-titulo-${n}`, titulo ? `${titulo.titulo}${extra}` : "---");
+  }
+
+  const elegidoActual = Number(item.tituloElegidoNumero || item.tituloPreferidoNumero || 0);
+  document.querySelectorAll('[name="taTituloElegido"]').forEach((radio) => {
+    radio.checked = Number(radio.value) === elegidoActual;
+  });
+
+  prellenarRevision(item);
+}
+
+async function iniciarRevisionSiCorresponde(item) {
+  if (normalizarEstado(item.estado) !== "ENVIADO") return;
+  try {
+    await TaTituloArticuloApi.coordinador.iniciarRevision(item.envioId, state.coordinadorId);
+    item.estado = "EN_REVISION";
+    renderModal(item);
+    renderStats(state.estudiantes);
+    renderTable(state.estudiantes);
+    msg("Revisión iniciada. Puede guardar su decisión.", "ok");
+  } catch (error) {
+    console.warn("[Títulos coordinador iniciar revisión]", error);
+    msg(error.message || "No se pudo marcar el envío como en revisión, pero puede continuar revisando.", "warning");
+  }
+}
+
+async function abrirRevision(item) {
+  state.actual = item;
+  renderModal(item);
   show("ta-coordinador-revision-modal", true);
+  await iniciarRevisionSiCorresponde(item);
 }
 
 function cerrarModal() {
@@ -242,8 +289,8 @@ function validarRevision(payload) {
   if (!payload.coordinadorId) return "Seleccione un coordinador.";
   if (![1, 2, 3].includes(Number(payload.tituloElegidoNumero))) return "Seleccione uno de los 3 títulos.";
   if (!payload.estado) return "Seleccione la decisión de revisión.";
-  if (payload.estado === "APROBADO_CON_CORRECCIONES" && !payload.tituloCorregido) return "Escriba el título corregido.";
-  if (payload.estado === "DEVUELTO" && !payload.observacion) return "La observación es obligatoria cuando devuelve.";
+  if (payload.estado === "APROBADO_CON_CORRECCIONES" && !payload.tituloCorregidoCoordinador) return "Escriba el título corregido.";
+  if (payload.estado === "DEVUELTO" && !payload.observacionCoordinador) return "La observación es obligatoria cuando devuelve.";
   return "";
 }
 
@@ -251,18 +298,23 @@ async function guardarRevision() {
   if (!state.actual || state.cargando) return;
 
   const payload = {
-    envioId: clean(state.actual.envioId),
+    envioId: clean(state.actual.envioId || state.actual.docId),
     coordinadorId: state.coordinadorId,
     estado: clean($("ta-revision-estado")?.value),
     tituloElegidoNumero: Number(document.querySelector('[name="taTituloElegido"]:checked')?.value || 0),
-    tituloCorregido: clean($("ta-revision-titulo-corregido")?.value),
-    observacion: clean($("ta-revision-observacion")?.value)
+    tituloCorregidoCoordinador: clean($("ta-revision-titulo-corregido")?.value),
+    observacionCoordinador: clean($("ta-revision-observacion")?.value)
   };
 
   const error = validarRevision(payload);
   if (error) {
     msg(error, "error");
     return;
+  }
+
+  if (payload.estado === "DEVUELTO") {
+    const confirmar = window.confirm("Va a devolver los títulos. El estudiante solo tendrá una oportunidad de reenvío. ¿Desea continuar?");
+    if (!confirmar) return;
   }
 
   setBusy(true, "Guardando revisión...");
@@ -279,9 +331,25 @@ async function guardarRevision() {
   }
 }
 
+function ajustarCamposDecision() {
+  const estado = clean($("ta-revision-estado")?.value);
+  const tituloCorregido = $("ta-revision-titulo-corregido");
+  const observacion = $("ta-revision-observacion");
+
+  if (tituloCorregido) {
+    tituloCorregido.required = estado === "APROBADO_CON_CORRECCIONES";
+    tituloCorregido.placeholder = estado === "APROBADO_CON_CORRECCIONES" ? "Escriba el título final corregido" : "Solo si aprueba con correcciones";
+  }
+  if (observacion) {
+    observacion.required = estado === "DEVUELTO";
+    observacion.placeholder = estado === "DEVUELTO" ? "Explique claramente qué debe corregir el estudiante" : "Opcional si aprueba o corrige";
+  }
+}
+
 function init() {
   $("ta-coordinador-selector-form")?.addEventListener("submit", cargarEstudiantes);
   $("ta-revision-guardar-btn")?.addEventListener("click", guardarRevision);
+  $("ta-revision-estado")?.addEventListener("change", ajustarCamposDecision);
   $("ta-coordinador-buscar")?.addEventListener("input", (event) => {
     state.filtro = clean(event.target.value);
     renderTable(state.estudiantes);
