@@ -4,35 +4,41 @@
   Función o funciones:
   - Controlar la pantalla pública del estudiante.
   - Consultar estudiante por cédula.
-  - Mostrar datos básicos del estudiante y estado del envío.
-  - Validar 3 propuestas de título solo cuando el estudiante presiona validar o enviar.
-  - Generar título y resultado esperado de apoyo cuando estén vacíos.
-  - Enviar propuestas a revisión mediante Netlify Functions.
+  - Trabajar los 3 títulos por etapas.
+  - Guardar localmente los datos de apoyo sin enviarlos a Firebase.
+  - Solicitar dos sugerencias de título por etapa mediante cliente Gemini seguro con fallback local.
+  - Enviar a Firebase solo los 3 títulos finales, el título preferido y datos mínimos.
   Se conecta con:
   - Requisitos/Titulos/public/ta-titulo-articulo-estudiante.html
   - Requisitos/Titulos/src/services/ta-titulo-articulo-api-client.service.js
+  - Requisitos/Titulos/src/services/ta-titulo-articulo-gemini-client.service.js
+  - Requisitos/Titulos/src/services/ta-titulo-articulo-local-draft.service.js
   - Requisitos/Titulos/src/services/ta-titulo-articulo-coherencia.service.js
 */
 
 import { TaTituloArticuloApi } from "../services/ta-titulo-articulo-api-client.service.js";
-import {
-  COHERENCIA_ESTADOS,
-  construirTitulo,
-  resumirCorreccion,
-  validarCoherenciaPropuesta
-} from "../services/ta-titulo-articulo-coherencia.service.js";
+import { TaTituloArticuloGemini } from "../services/ta-titulo-articulo-gemini-client.service.js";
+import { TaTituloArticuloLocalDraft } from "../services/ta-titulo-articulo-local-draft.service.js";
+import { validarCoherenciaPropuesta } from "../services/ta-titulo-articulo-coherencia.service.js";
+
+const TOTAL_PROPUESTAS = 3;
+const ESTADOS_BLOQUEADOS = new Set(["ENVIADO", "EN_REVISION", "APROBADO", "APROBADO_CON_CORRECCIONES"]);
 
 const state = {
   cedula: "",
   estudiante: null,
   periodoActivo: null,
-  envio: null
+  envio: null,
+  etapaActual: 1,
+  bloqueado: false,
+  cargando: false
 };
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => Array.from(document.querySelectorAll(selector));
 const clean = (value) => String(value ?? "").replace(/\s+/g, " ").trim();
 const onlyDigits = (value) => String(value ?? "").replace(/\D+/g, "").trim();
+const normalizar = (value) => clean(value).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
 function byId(id) {
   return document.getElementById(id);
@@ -61,13 +67,21 @@ function setVal(name, value) {
   if (element) element.value = clean(value);
 }
 
-function msg(text, type = "") {
-  const element = byId("ta-estudiante-busqueda-mensaje");
+function setMsg(id, text, type = "") {
+  const element = byId(id);
   if (!element) return;
   element.textContent = clean(text);
   element.classList.remove("ta-message--error", "ta-message--ok", "ta-message--warning");
   if (type) element.classList.add(`ta-message--${type}`);
   element.hidden = !text;
+}
+
+function msgBusqueda(text, type = "") {
+  setMsg("ta-estudiante-busqueda-mensaje", text, type);
+}
+
+function msgPropuestas(text, type = "") {
+  setMsg("ta-estudiante-propuestas-mensaje", text, type);
 }
 
 function names(number) {
@@ -91,13 +105,17 @@ function carreraEstudiante() {
   return clean(state.estudiante?.carrera || state.estudiante?.nombreCarrera || state.estudiante?.NombreCarrera || "");
 }
 
+function codigoCarreraEstudiante() {
+  return clean(state.estudiante?.codigoCarrera || state.estudiante?.CodigoCarrera || "");
+}
+
 function generarResultadoEsperado(propuesta) {
   const tema = clean(propuesta.temaGeneral || "tema planteado").toLowerCase();
   const grupo = clean(propuesta.grupoEstudio || "grupo de estudio").toLowerCase();
   return `Propuesta de mejora relacionada con ${tema} para ${grupo}.`;
 }
 
-function leerPropuesta(number) {
+function leerPropuesta(number, { autocompletarResultado = true } = {}) {
   const map = names(number);
   const propuesta = {
     numero: number,
@@ -112,25 +130,15 @@ function leerPropuesta(number) {
     carrera: carreraEstudiante()
   };
 
-  if (!propuesta.resultadoEsperado && propuesta.temaGeneral && propuesta.grupoEstudio) {
+  if (autocompletarResultado && !propuesta.resultadoEsperado && propuesta.temaGeneral && propuesta.grupoEstudio) {
     propuesta.resultadoEsperado = generarResultadoEsperado(propuesta);
     setVal(map.resultadoEsperado, propuesta.resultadoEsperado);
-  }
-
-  if (!propuesta.tituloFinal && propuesta.temaGeneral && propuesta.problemaNecesidad && propuesta.lugarContexto && propuesta.grupoEstudio) {
-    propuesta.tituloFinal = construirTitulo(propuesta, propuesta.carrera);
-    setVal(map.tituloFinal, propuesta.tituloFinal);
-  }
-
-  const card = proposalCard(number);
-  if (card?.dataset.coherenciaAceptada === "true") {
-    propuesta.coherencia = { aceptadaEnCliente: true };
   }
 
   return propuesta;
 }
 
-function escribirPropuesta(number, propuesta = {}, marcarAceptada = false) {
+function escribirPropuesta(number, propuesta = {}) {
   const map = names(number);
   setVal(map.temaGeneral, propuesta.temaGeneral);
   setVal(map.lugarContexto, propuesta.lugarContexto);
@@ -139,134 +147,66 @@ function escribirPropuesta(number, propuesta = {}, marcarAceptada = false) {
   setVal(map.anioPeriodoDatos, propuesta.anioPeriodoDatos);
   setVal(map.objetivoArticulo, propuesta.objetivoArticulo);
   setVal(map.resultadoEsperado, propuesta.resultadoEsperado);
-  setVal(map.tituloFinal, propuesta.tituloFinal);
-
-  const card = proposalCard(number);
-  if (card) card.dataset.coherenciaAceptada = marcarAceptada ? "true" : "false";
+  setVal(map.tituloFinal, propuesta.tituloFinal || propuesta.titulo || "");
 }
 
-function limpiarPanelCoherencia(number) {
-  proposalCard(number)?.querySelector(".ta-coherencia-card")?.remove();
+function contextoBorrador() {
+  return {
+    periodoId: state.periodoActivo?.id || state.periodoActivo?.label || "periodo",
+    cedula: state.cedula || "cedula"
+  };
 }
 
-function crearFilaCorreccion(label, value) {
-  const li = document.createElement("li");
-  li.innerHTML = `<strong>${label}:</strong> ${clean(value)}`;
-  return li;
-}
-
-function mostrarPanelCoherencia(number, resultado) {
-  const card = proposalCard(number);
-  if (!card) return;
-
-  limpiarPanelCoherencia(number);
-
-  const panel = document.createElement("div");
-  panel.className = "ta-coherencia-card";
-
-  if (resultado.estado === COHERENCIA_ESTADOS.valida) {
-    panel.classList.add("ta-coherencia-card--ok");
-    panel.innerHTML = `<strong>Propuesta ${number} validada.</strong><p>La propuesta mantiene relación con la carrera del estudiante.</p>`;
-    card.appendChild(panel);
-    return;
-  }
-
-  if (resultado.estado === COHERENCIA_ESTADOS.bloqueada) {
-    panel.classList.add("ta-coherencia-card--error");
-    panel.innerHTML = `<strong>Propuesta ${number} bloqueada.</strong><p>${clean(resultado.mensaje)}</p>`;
-    card.appendChild(panel);
-    return;
-  }
-
-  if (resultado.estado === COHERENCIA_ESTADOS.adaptable && resultado.propuestaCorregida) {
-    panel.classList.add("ta-coherencia-card--warning");
-    const title = document.createElement("strong");
-    title.textContent = `Propuesta ${number} corregida hacia la carrera.`;
-    const help = document.createElement("p");
-    help.textContent = "Debe aceptar esta versión corregida para poder enviar.";
-    const ul = document.createElement("ul");
-
-    resumirCorreccion(resultado.propuestaCorregida).forEach(([label, value]) => {
-      ul.appendChild(crearFilaCorreccion(label, value));
-    });
-
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "ta-button ta-button--primary";
-    button.textContent = "Aceptar versión corregida";
-    button.addEventListener("click", () => {
-      escribirPropuesta(number, resultado.propuestaCorregida, true);
-      mostrarPanelCoherencia(number, {
-        estado: COHERENCIA_ESTADOS.valida
-      });
-      msg(`Propuesta ${number} corregida y aceptada.`, "ok");
-    });
-
-    panel.append(title, help, ul, button);
-    card.appendChild(panel);
-  }
-}
-
-function validarCamposBasicos(propuesta, number) {
-  const obligatorios = [
-    ["Tema general", propuesta.temaGeneral],
-    ["Lugar o contexto", propuesta.lugarContexto],
-    ["Problema o necesidad", propuesta.problemaNecesidad],
-    ["Grupo de estudio", propuesta.grupoEstudio],
-    ["Año o período de datos", propuesta.anioPeriodoDatos],
-    ["Objetivo del artículo", propuesta.objetivoArticulo],
-    ["Resultado esperado", propuesta.resultadoEsperado],
-    ["Título final", propuesta.tituloFinal]
-  ];
-
-  const faltante = obligatorios.find(([, value]) => !clean(value));
-  if (faltante) {
-    msg(`La propuesta ${number} tiene incompleto: ${faltante[0]}.`, "error");
-    return false;
-  }
-  return true;
-}
-
-function validarPropuestas({ mostrar = true } = {}) {
-  if (!state.estudiante) {
-    msg("Primero consulte su cédula.", "error");
-    return { ok: false, propuestas: [] };
-  }
-
-  let ok = true;
-  const propuestas = [];
-
-  for (let number = 1; number <= 3; number += 1) {
-    const propuesta = leerPropuesta(number);
-    propuestas.push(propuesta);
-    limpiarPanelCoherencia(number);
-
-    if (!validarCamposBasicos(propuesta, number)) {
-      ok = false;
-      continue;
-    }
-
-    const resultado = validarCoherenciaPropuesta(propuesta, carreraEstudiante(), { forzar: true });
-    if (mostrar) mostrarPanelCoherencia(number, resultado);
-
-    if (!resultado.ok) ok = false;
-  }
-
-  const titulos = propuestas.map((p) => clean(p.tituloFinal).toLowerCase()).filter(Boolean);
-  if (titulos.length === 3 && new Set(titulos).size !== 3) {
-    msg("Los 3 títulos deben ser diferentes.", "error");
-    ok = false;
-  }
-
-  if (ok) {
-    msg("Las 3 propuestas están listas para enviar.", "ok");
-  }
-
-  return { ok, propuestas };
+function leerTodasPropuestas() {
+  return [1, 2, 3].map((number) => leerPropuesta(number));
 }
 
 function obtenerTituloPreferido() {
   return Number($('[name="tituloPreferido"]:checked')?.value || 0);
+}
+
+function guardarBorradorLocal({ silencioso = true } = {}) {
+  if (!state.estudiante || !state.periodoActivo || state.bloqueado) return false;
+  const ok = TaTituloArticuloLocalDraft.guardar(contextoBorrador(), {
+    cedula: state.cedula,
+    periodoActivo: state.periodoActivo,
+    estudiante: state.estudiante,
+    etapaActual: state.etapaActual,
+    telegramUser: clean(byId("ta-estudiante-telegram-user")?.value),
+    tituloPreferidoNumero: obtenerTituloPreferido(),
+    propuestas: leerTodasPropuestas()
+  });
+  actualizarEstadoBorrador(ok ? "Borrador local guardado" : "No se pudo guardar borrador local");
+  if (!silencioso) msgPropuestas(ok ? "Etapa guardada en este navegador." : "No se pudo guardar el borrador local.", ok ? "ok" : "error");
+  return ok;
+}
+
+function cargarBorradorLocal() {
+  if (!state.estudiante || !state.periodoActivo || state.bloqueado) return;
+  const borrador = TaTituloArticuloLocalDraft.cargar(contextoBorrador());
+  if (!borrador) {
+    actualizarEstadoBorrador("Sin borrador local");
+    return;
+  }
+
+  if (borrador.telegramUser) byId("ta-estudiante-telegram-user").value = clean(borrador.telegramUser);
+  (borrador.propuestas || []).forEach((propuesta, index) => escribirPropuesta(Number(propuesta.numero || index + 1), propuesta));
+  if (borrador.tituloPreferidoNumero) {
+    const radio = $(`[name="tituloPreferido"][value="${Number(borrador.tituloPreferidoNumero)}"]`);
+    if (radio) radio.checked = true;
+  }
+  state.etapaActual = Math.min(Math.max(Number(borrador.etapaActual || 1), 1), TOTAL_PROPUESTAS);
+  actualizarEstadoBorrador("Borrador local recuperado");
+}
+
+function limpiarBorradorLocal() {
+  if (!state.estudiante || !state.periodoActivo) return;
+  TaTituloArticuloLocalDraft.limpiar(contextoBorrador());
+  actualizarEstadoBorrador("Borrador local enviado y limpiado");
+}
+
+function actualizarEstadoBorrador(text) {
+  setText("ta-estudiante-borrador-estado", text || "Sin borrador local");
 }
 
 function renderDatos() {
@@ -282,6 +222,7 @@ function estadoLabel(estado) {
   const labels = {
     SIN_ENVIO: "Sin envío registrado",
     BORRADOR: "Borrador",
+    PENDIENTE: "Enviado para revisión",
     ENVIADO: "Enviado para revisión",
     EN_REVISION: "En revisión",
     APROBADO: "Aprobado",
@@ -291,9 +232,19 @@ function estadoLabel(estado) {
   return labels[value] || value;
 }
 
+function agregarParrafo(parent, label, value) {
+  if (!clean(value)) return;
+  const p = document.createElement("p");
+  const strong = document.createElement("strong");
+  strong.textContent = `${label}: `;
+  p.append(strong, document.createTextNode(clean(value)));
+  parent.appendChild(p);
+}
+
 function renderEstado() {
   const box = byId("ta-estudiante-estado-contenido");
   if (!box) return;
+  box.replaceChildren();
 
   const envio = state.envio;
   if (!envio) {
@@ -302,28 +253,261 @@ function renderEstado() {
     return;
   }
 
-  const tituloFinal = clean(envio.tituloCorregido || envio.tituloElegidoTexto || "");
+  const tituloFinal = clean(envio.tituloCorregidoCoordinador || envio.tituloCorregido || envio.tituloElegidoTexto || "");
   box.className = "ta-state-box";
-  box.innerHTML = `
-    <p><strong>Estado:</strong> ${estadoLabel(envio.estado)}</p>
-    ${tituloFinal ? `<p><strong>Título seleccionado:</strong> ${tituloFinal}</p>` : ""}
-    ${clean(envio.observacion) ? `<p><strong>Observación:</strong> ${clean(envio.observacion)}</p>` : ""}
-    ${clean(envio.enviadoEn) ? `<p><strong>Fecha de envío:</strong> ${clean(envio.enviadoEn)}</p>` : ""}
-  `;
+  agregarParrafo(box, "Estado", estadoLabel(envio.estado));
+  agregarParrafo(box, "Título seleccionado", tituloFinal);
+  agregarParrafo(box, "Observación", envio.observacionCoordinador || envio.observacion);
+  agregarParrafo(box, "Fecha de envío", envio.enviadoEn || envio.fechaEnvio);
+
+  if (envio.estado === "DEVUELTO" && envio.reenvioDisponible !== false) {
+    agregarParrafo(box, "Reenvío", "Tiene una única oportunidad para reenviar sus títulos corregidos.");
+  }
 }
 
 function restaurarEnvio(envio) {
   if (!envio) return;
-
   if (envio.telegramUser) byId("ta-estudiante-telegram-user").value = clean(envio.telegramUser);
-  if (envio.tituloPreferidoNumero) {
-    const radio = $(`[name="tituloPreferido"][value="${Number(envio.tituloPreferidoNumero)}"]`);
+
+  const titulos = Array.isArray(envio.titulosEnviados) ? envio.titulosEnviados : (Array.isArray(envio.propuestas) ? envio.propuestas : []);
+  titulos.forEach((item, index) => {
+    const numero = Number(item.numero || index + 1);
+    const map = names(numero);
+    setVal(map.tituloFinal, item.titulo || item.tituloFinal || "");
+  });
+
+  const preferido = Number(envio.tituloPreferidoNumero || envio.propuestaPreferidaNumero || titulos.find((t) => t.preferido)?.numero || 0);
+  if (preferido) {
+    const radio = $(`[name="tituloPreferido"][value="${preferido}"]`);
     if (radio) radio.checked = true;
   }
+}
 
-  if (Array.isArray(envio.propuestas)) {
-    envio.propuestas.forEach((propuesta, index) => escribirPropuesta(Number(propuesta.numero || index + 1), propuesta, true));
+function estaBloqueadoPorEnvio(envio) {
+  if (!envio) return false;
+  if (envio.estado === "DEVUELTO") return envio.reenvioDisponible === false;
+  return ESTADOS_BLOQUEADOS.has(clean(envio.estado));
+}
+
+function setFormularioBloqueado(bloqueado) {
+  state.bloqueado = Boolean(bloqueado);
+  $$("#ta-estudiante-propuestas-card input, #ta-estudiante-propuestas-card textarea, #ta-estudiante-propuestas-card button, #ta-estudiante-telegram-user").forEach((element) => {
+    element.disabled = state.bloqueado;
+  });
+  byId("ta-estudiante-validar-btn")?.toggleAttribute("disabled", state.bloqueado);
+  byId("ta-estudiante-enviar-btn")?.toggleAttribute("disabled", state.bloqueado);
+  actualizarBotonesEtapa();
+}
+
+function propuestaTieneCamposApoyo(propuesta) {
+  return Boolean(
+    clean(propuesta.temaGeneral) &&
+    clean(propuesta.lugarContexto) &&
+    clean(propuesta.problemaNecesidad) &&
+    clean(propuesta.grupoEstudio) &&
+    clean(propuesta.anioPeriodoDatos) &&
+    clean(propuesta.objetivoArticulo) &&
+    clean(propuesta.resultadoEsperado)
+  );
+}
+
+function validarCamposApoyo(propuesta, number, { mostrar = true } = {}) {
+  const campos = [
+    ["Tema general", propuesta.temaGeneral],
+    ["Lugar o contexto", propuesta.lugarContexto],
+    ["Problema o necesidad", propuesta.problemaNecesidad],
+    ["Grupo de estudio", propuesta.grupoEstudio],
+    ["Año o período de datos", propuesta.anioPeriodoDatos],
+    ["Objetivo del artículo", propuesta.objetivoArticulo],
+    ["Resultado esperado", propuesta.resultadoEsperado]
+  ];
+  const faltante = campos.find(([, value]) => !clean(value));
+  if (faltante) {
+    if (mostrar) msgPropuestas(`Complete ${faltante[0]} en el título ${number}.`, "error");
+    return false;
   }
+  return true;
+}
+
+function validarTituloEtapa(number, { mostrar = true } = {}) {
+  const propuesta = leerPropuesta(number);
+  if (!validarCamposApoyo(propuesta, number, { mostrar })) return false;
+  if (!clean(propuesta.tituloFinal)) {
+    if (mostrar) msgPropuestas(`Debe elegir o escribir el título final ${number}.`, "error");
+    return false;
+  }
+
+  const resultado = validarCoherenciaPropuesta(propuesta, carreraEstudiante(), { forzar: true });
+  if (!resultado.ok) {
+    if (mostrar) msgPropuestas(`El título ${number} no mantiene coherencia suficiente con la carrera ${carreraEstudiante()}. Genere una sugerencia o ajuste el tema.`, "error");
+    return false;
+  }
+  return true;
+}
+
+function titulosYaGenerados(excluirNumero = 0) {
+  return leerTodasPropuestas()
+    .filter((propuesta) => Number(propuesta.numero) !== Number(excluirNumero))
+    .map((propuesta) => clean(propuesta.tituloFinal))
+    .filter(Boolean);
+}
+
+function renderSugerencias(number, resultado) {
+  const container = byId(`ta-sugerencias-${number}`);
+  if (!container) return;
+  container.replaceChildren();
+
+  if (resultado.bloqueado) {
+    const box = document.createElement("div");
+    box.className = "ta-state-box ta-state-box--error";
+    box.textContent = clean(resultado.motivo || "La información no corresponde a la carrera del estudiante.");
+    container.appendChild(box);
+    return;
+  }
+
+  (resultado.sugerencias || []).forEach((titulo, index) => {
+    const card = document.createElement("div");
+    card.className = "ta-state-box";
+
+    const p = document.createElement("p");
+    p.textContent = titulo;
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "ta-button ta-button--primary";
+    button.textContent = `Usar sugerencia ${index + 1}`;
+    button.addEventListener("click", () => {
+      setVal(names(number).tituloFinal, titulo);
+      msgPropuestas(`Sugerencia ${index + 1} aplicada al título ${number}.`, "ok");
+      guardarBorradorLocal({ silencioso: true });
+      renderResumen();
+    });
+
+    card.append(p, button);
+    container.appendChild(card);
+  });
+
+  if (resultado.advertencia) {
+    const help = document.createElement("p");
+    help.className = "ta-help";
+    help.textContent = resultado.advertencia;
+    container.appendChild(help);
+  }
+}
+
+async function generarSugerencias(number) {
+  if (state.bloqueado || state.cargando) return;
+  const propuesta = leerPropuesta(number);
+  if (!validarCamposApoyo(propuesta, number)) return;
+
+  const button = byId(`ta-generar-sugerencias-${number}`);
+  if (button) button.disabled = true;
+  state.cargando = true;
+  msgPropuestas(`Generando sugerencias para el título ${number}...`, "warning");
+
+  try {
+    const resultado = await TaTituloArticuloGemini.generarSugerenciasTitulo({
+      ...propuesta,
+      carrera: carreraEstudiante(),
+      codigoCarrera: codigoCarreraEstudiante(),
+      numeroTitulo: number,
+      tituloManual: propuesta.tituloFinal,
+      titulosYaGenerados: titulosYaGenerados(number)
+    });
+
+    renderSugerencias(number, resultado);
+    if (resultado.bloqueado) {
+      msgPropuestas(resultado.motivo || "La propuesta no corresponde a la carrera.", "error");
+    } else {
+      msgPropuestas(`Revise las sugerencias del título ${number} o escriba su propia versión.`, "ok");
+    }
+  } catch (error) {
+    console.error("[Títulos estudiante sugerencias]", error);
+    msgPropuestas(error.message || "No se pudieron generar sugerencias.", "error");
+  } finally {
+    state.cargando = false;
+    actualizarBotonesEtapa();
+  }
+}
+
+function renderEtapa() {
+  for (let number = 1; number <= TOTAL_PROPUESTAS; number += 1) {
+    const card = proposalCard(number);
+    if (card) card.hidden = number !== state.etapaActual;
+  }
+  setText("ta-estudiante-paso-actual", state.etapaActual);
+  setText("ta-estudiante-paso-total", TOTAL_PROPUESTAS);
+  actualizarBotonesEtapa();
+  renderResumen();
+}
+
+function actualizarBotonesEtapa() {
+  const anterior = byId("ta-estudiante-anterior-btn");
+  const siguiente = byId("ta-estudiante-siguiente-btn");
+  if (anterior) anterior.disabled = state.bloqueado || state.etapaActual <= 1;
+  if (siguiente) siguiente.disabled = state.bloqueado || state.etapaActual >= TOTAL_PROPUESTAS;
+
+  for (let number = 1; number <= TOTAL_PROPUESTAS; number += 1) {
+    const propuesta = leerPropuesta(number, { autocompletarResultado: false });
+    const btn = byId(`ta-generar-sugerencias-${number}`);
+    if (btn) btn.disabled = state.bloqueado || state.cargando || !propuestaTieneCamposApoyo(propuesta);
+  }
+}
+
+function moverEtapa(delta) {
+  if (state.bloqueado) return;
+  if (delta > 0 && !validarTituloEtapa(state.etapaActual)) return;
+  guardarBorradorLocal({ silencioso: true });
+  state.etapaActual = Math.min(Math.max(state.etapaActual + delta, 1), TOTAL_PROPUESTAS);
+  renderEtapa();
+}
+
+function renderResumen() {
+  const card = byId("ta-estudiante-resumen-card");
+  const list = byId("ta-estudiante-resumen-lista");
+  if (!card || !list) return;
+
+  const propuestas = leerTodasPropuestas();
+  const hayTitulos = propuestas.some((propuesta) => clean(propuesta.tituloFinal));
+  card.hidden = !hayTitulos;
+  list.replaceChildren();
+
+  propuestas.forEach((propuesta) => {
+    const p = document.createElement("p");
+    const strong = document.createElement("strong");
+    strong.textContent = `Título ${propuesta.numero}: `;
+    p.append(strong, document.createTextNode(clean(propuesta.tituloFinal) || "Pendiente"));
+    list.appendChild(p);
+  });
+}
+
+function validarTodas({ mostrarOk = true } = {}) {
+  if (!state.estudiante) {
+    msgPropuestas("Primero consulte su cédula.", "error");
+    return { ok: false, propuestas: [] };
+  }
+
+  const propuestas = [];
+  for (let number = 1; number <= TOTAL_PROPUESTAS; number += 1) {
+    const propuesta = leerPropuesta(number);
+    propuestas.push(propuesta);
+    if (!validarTituloEtapa(number)) return { ok: false, propuestas };
+  }
+
+  const titulos = propuestas.map((propuesta) => normalizar(propuesta.tituloFinal));
+  if (new Set(titulos).size !== TOTAL_PROPUESTAS) {
+    msgPropuestas("Los 3 títulos deben ser diferentes.", "error");
+    return { ok: false, propuestas };
+  }
+
+  const preferido = obtenerTituloPreferido();
+  if (![1, 2, 3].includes(preferido)) {
+    msgPropuestas("Seleccione cuál de los 3 títulos prefiere.", "error");
+    return { ok: false, propuestas };
+  }
+
+  if (mostrarOk) msgPropuestas("Los 3 títulos están listos para enviar.", "ok");
+  return { ok: true, propuestas };
 }
 
 async function buscarEstudiante(event) {
@@ -331,35 +515,45 @@ async function buscarEstudiante(event) {
   const cedula = onlyDigits(byId("ta-estudiante-cedula")?.value);
 
   if (!cedula) {
-    msg("Ingrese una cédula válida.", "error");
+    msgBusqueda("Ingrese una cédula válida.", "error");
     return;
   }
 
   try {
-    msg("Consultando estudiante...", "warning");
+    msgBusqueda("Consultando estudiante...", "warning");
     const data = await TaTituloArticuloApi.estudiante.buscarPorCedula(cedula);
 
     state.cedula = cedula;
     state.estudiante = data.estudiante || null;
     state.periodoActivo = data.periodoActivo || null;
     state.envio = data.envio || null;
+    state.etapaActual = 1;
 
-    if (!state.estudiante) {
-      throw new Error("No se encontró el estudiante.");
-    }
+    if (!state.estudiante) throw new Error("No se encontró el estudiante.");
 
     renderDatos();
     restaurarEnvio(state.envio);
+    state.bloqueado = estaBloqueadoPorEnvio(state.envio);
+    if (!state.bloqueado) cargarBorradorLocal();
     renderEstado();
+    renderEtapa();
+    setFormularioBloqueado(state.bloqueado);
 
     show("ta-estudiante-datos-card", true);
     show("ta-estudiante-telegram-card", true);
     show("ta-estudiante-propuestas-card", true);
     show("ta-estudiante-estado-card", true);
-    msg("Estudiante encontrado. Puede completar sus propuestas.", "ok");
+
+    if (state.bloqueado) {
+      msgBusqueda("El envío ya está registrado y no puede editarse en este estado.", "warning");
+    } else if (state.envio?.estado === "DEVUELTO") {
+      msgBusqueda("Sus títulos fueron devueltos. Recuerde que solo tiene una oportunidad de reenvío.", "warning");
+    } else {
+      msgBusqueda("Estudiante encontrado. Puede completar sus títulos por etapas.", "ok");
+    }
   } catch (error) {
     console.error("[Títulos estudiante]", error);
-    msg(error.message || "No se pudo consultar la cédula.", "error");
+    msgBusqueda(error.message || "No se pudo consultar la cédula.", "error");
     show("ta-estudiante-datos-card", false);
     show("ta-estudiante-telegram-card", false);
     show("ta-estudiante-propuestas-card", false);
@@ -368,64 +562,87 @@ async function buscarEstudiante(event) {
 }
 
 async function enviarPropuestas() {
+  if (state.bloqueado) {
+    msgPropuestas("El envío ya no se puede editar en este estado.", "error");
+    return;
+  }
   if (!state.estudiante || !state.periodoActivo) {
-    msg("Primero consulte su cédula.", "error");
+    msgPropuestas("Primero consulte su cédula.", "error");
     return;
   }
 
-  const telegramUser = clean(byId("ta-estudiante-telegram-user")?.value);
-  if (!telegramUser) {
-    msg("Ingrese su usuario de Telegram.", "error");
-    return;
-  }
+  const validacion = validarTodas({ mostrarOk: false });
+  if (!validacion.ok) return;
 
   const tituloPreferidoNumero = obtenerTituloPreferido();
-  if (![1, 2, 3].includes(tituloPreferidoNumero)) {
-    msg("Seleccione cuál de los 3 títulos prefiere.", "error");
-    return;
-  }
-
-  const validacion = validarPropuestas({ mostrar: true });
-  if (!validacion.ok) {
-    msg("Revise las correcciones marcadas antes de enviar.", "error");
-    return;
-  }
+  const titulosEnviados = validacion.propuestas.map((propuesta) => ({
+    numero: propuesta.numero,
+    titulo: clean(propuesta.tituloFinal),
+    preferido: propuesta.numero === tituloPreferidoNumero
+  }));
 
   try {
-    msg("Enviando propuestas...", "warning");
+    msgPropuestas("Enviando títulos a revisión...", "warning");
     const data = await TaTituloArticuloApi.estudiante.enviarPropuestas({
       cedula: state.cedula,
-      telegramUser,
+      telegramUser: clean(byId("ta-estudiante-telegram-user")?.value),
       tituloPreferidoNumero,
+      titulosEnviados,
       propuestas: validacion.propuestas
     });
 
     state.envio = data.envio || null;
+    limpiarBorradorLocal();
     renderEstado();
+    setFormularioBloqueado(true);
     show("ta-estudiante-estado-card", true);
-    msg(data.mensaje || "Propuestas enviadas correctamente.", "ok");
+    msgPropuestas(data.mensaje || "Títulos enviados correctamente.", "ok");
   } catch (error) {
     console.error("[Títulos estudiante envío]", error);
-    msg(error.message || "No se pudieron enviar las propuestas.", "error");
+    msgPropuestas(error.message || "No se pudieron enviar los títulos.", "error");
   }
 }
 
 function prepararResultadoSoloLectura() {
-  for (let number = 1; number <= 3; number += 1) {
-    const map = names(number);
-    const result = field(map.resultadoEsperado);
+  for (let number = 1; number <= TOTAL_PROPUESTAS; number += 1) {
+    const result = field(names(number).resultadoEsperado);
     if (result) {
       result.readOnly = true;
-      result.placeholder = "Se genera automáticamente al validar.";
+      result.placeholder = "Se genera automáticamente al llenar tema y grupo.";
     }
   }
 }
 
+function registrarEventosFormulario() {
+  $$('[data-ta-generar-sugerencias]').forEach((button) => {
+    button.addEventListener("click", () => generarSugerencias(Number(button.dataset.taGenerarSugerencias)));
+  });
+
+  $$("#ta-estudiante-propuestas-card input, #ta-estudiante-propuestas-card textarea, #ta-estudiante-telegram-user").forEach((element) => {
+    element.addEventListener("input", () => {
+      if (!state.bloqueado) {
+        leerTodasPropuestas();
+        actualizarBotonesEtapa();
+        renderResumen();
+        guardarBorradorLocal({ silencioso: true });
+      }
+    });
+    element.addEventListener("change", () => {
+      if (!state.bloqueado) guardarBorradorLocal({ silencioso: true });
+    });
+  });
+}
+
 function init() {
   prepararResultadoSoloLectura();
+  registrarEventosFormulario();
   byId("ta-estudiante-busqueda-form")?.addEventListener("submit", buscarEstudiante);
-  byId("ta-estudiante-validar-btn")?.addEventListener("click", () => validarPropuestas({ mostrar: true }));
+  byId("ta-estudiante-anterior-btn")?.addEventListener("click", () => moverEtapa(-1));
+  byId("ta-estudiante-siguiente-btn")?.addEventListener("click", () => moverEtapa(1));
+  byId("ta-estudiante-guardar-etapa-btn")?.addEventListener("click", () => guardarBorradorLocal({ silencioso: false }));
+  byId("ta-estudiante-validar-btn")?.addEventListener("click", () => validarTodas({ mostrarOk: true }));
   byId("ta-estudiante-enviar-btn")?.addEventListener("click", enviarPropuestas);
+  renderEtapa();
 }
 
 if (document.readyState === "loading") {
