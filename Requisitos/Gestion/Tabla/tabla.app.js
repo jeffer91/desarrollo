@@ -26,18 +26,20 @@ Con qué se conecta:
   function option(value,label,selected){return '<option value="'+esc(value)+'" '+(selected?'selected':'')+'>'+esc(label)+'</option>';}
   function debounceRender(){if(state.renderTimer)clearTimeout(state.renderTimer);state.renderTimer=setTimeout(function(){state.renderTimer=null;state.page=1;render();},260);}
   function sourceLabel(){return window.TablaCore&&typeof window.TablaCore.source==="function"?window.TablaCore.source():"Base Local";}
+  function periodId(item){return text(item&&typeof item==="object"?(item.id||item.periodoId||item.value||item.key||item.label||item.periodoLabel):item);}
+  function periodLabel(item){return text(item&&typeof item==="object"?(item.label||item.periodoLabel||item.nombre||item.name||item.id||item.periodoId):item);}
 
   function fillSelects(){
     var p=el("tabla-periodo"), d=el("tabla-division"), c=el("tabla-carrera"), m=el("tabla-matricula"), ps=el("tabla-page-size");
-    var periods=window.TablaCore.periods();
-    if(p){p.innerHTML=option("","Todos",!state.periodId)+periods.map(function(x){return option(x.id,x.label||x.periodoLabel||x.id,state.periodId===x.id);}).join("");}
+    var periods=window.TablaCore.periods()||[];
+    if(p){p.innerHTML=option("","Todos",!state.periodId)+periods.map(function(x){var id=periodId(x);return option(id,periodLabel(x)||id,state.periodId===id);}).join("");}
     if(m){m.value=state.matricula;}
     if(ps){ps.value=String(state.pageSize);}
     var key=[state.periodId,state.matricula,sourceLabel()].join("|");
     if(state.selectKey!==key){
-      state.divisionOptions=window.TablaCore.divisions(null,{periodId:state.periodId,matricula:state.matricula});
+      state.divisionOptions=window.TablaCore.divisions(null,{periodId:state.periodId,matricula:state.matricula})||[];
       var baseRows=window.TablaCore.filter({periodId:state.periodId,matricula:state.matricula,division:"",search:"",status:""});
-      state.careerOptions=window.TablaCore.careers(baseRows);
+      state.careerOptions=window.TablaCore.careers(baseRows)||[];
       state.selectKey=key;
     }
     if(d){d.innerHTML=option("","Todas",!state.division)+state.divisionOptions.map(function(x){return option(x,x,state.division===x);}).join("");if(state.division&&!state.divisionOptions.some(function(x){return x===state.division;})){state.division="";d.value="";}else{d.value=state.division;}}
@@ -92,22 +94,23 @@ Con qué se conecta:
     if(window.TablaMass&&typeof window.TablaMass.abrir==="function")window.TablaMass.abrir(rows,massFilters());
     else status("Módulo de Telegram masivo no disponible.","warn");
   }
+  function safeBind(id,event,handler){var node=el(id);if(node)node.addEventListener(event,handler);}
   function bind(){
-    el("tabla-periodo").addEventListener("change",function(e){state.periodId=e.target.value;resetOptions();render();});
-    el("tabla-division").addEventListener("change",function(e){state.division=e.target.value;state.career="";state.page=1;render();});
-    el("tabla-matricula").addEventListener("change",function(e){state.matricula=e.target.value;resetOptions();render();});
-    el("tabla-carrera").addEventListener("change",function(e){state.career=e.target.value;state.page=1;render();});
-    el("tabla-estado").addEventListener("change",function(e){state.status=e.target.value;state.page=1;render();});
-    el("tabla-search").addEventListener("input",function(e){state.search=e.target.value;debounceRender();});
-    el("tabla-page-size").addEventListener("change",function(e){state.pageSize=Number(e.target.value)||100;state.page=1;render();});
-    el("tabla-refresh").addEventListener("click",function(){state.selectKey="";render();});
-    el("tabla-page-first").addEventListener("click",function(){state.page=1;render();});
-    el("tabla-page-prev").addEventListener("click",function(){state.page=Math.max(1,state.page-1);render();});
-    el("tabla-page-next").addEventListener("click",function(){state.page=Math.min(state.pagination?state.pagination.pages:state.page+1,state.page+1);render();});
-    el("tabla-page-last").addEventListener("click",function(){state.page=state.pagination?state.pagination.pages:state.page;render();});
-    el("tabla-telegram-masivo").addEventListener("click",openMass);
-    el("tabla-export-csv").addEventListener("click",function(){window.TablaExport.exportCsv(state.allRows.length?state.allRows:state.rows);});
-    el("tabla-export-json").addEventListener("click",function(){window.TablaExport.exportJson(state.allRows.length?state.allRows:state.rows);});
+    safeBind("tabla-periodo","change",function(e){state.periodId=e.target.value;resetOptions();render();});
+    safeBind("tabla-division","change",function(e){state.division=e.target.value;state.career="";state.page=1;render();});
+    safeBind("tabla-matricula","change",function(e){state.matricula=e.target.value;resetOptions();render();});
+    safeBind("tabla-carrera","change",function(e){state.career=e.target.value;state.page=1;render();});
+    safeBind("tabla-estado","change",function(e){state.status=e.target.value;state.page=1;render();});
+    safeBind("tabla-search","input",function(e){state.search=e.target.value;debounceRender();});
+    safeBind("tabla-page-size","change",function(e){state.pageSize=Number(e.target.value)||100;state.page=1;render();});
+    safeBind("tabla-refresh","click",function(){state.selectKey="";render();});
+    safeBind("tabla-page-first","click",function(){state.page=1;render();});
+    safeBind("tabla-page-prev","click",function(){state.page=Math.max(1,state.page-1);render();});
+    safeBind("tabla-page-next","click",function(){state.page=Math.min(state.pagination?state.pagination.pages:state.page+1,state.page+1);render();});
+    safeBind("tabla-page-last","click",function(){state.page=state.pagination?state.pagination.pages:state.page;render();});
+    safeBind("tabla-telegram-masivo","click",openMass);
+    safeBind("tabla-export-csv","click",function(){window.TablaExport.exportCsv(state.allRows.length?state.allRows:state.rows);});
+    safeBind("tabla-export-json","click",function(){window.TablaExport.exportJson(state.allRows.length?state.allRows:state.rows);});
   }
   function boot(){if(window.ExcelLocalBridge)window.ExcelLocalBridge.ensureReady();bind();render();}
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",boot);else boot();
