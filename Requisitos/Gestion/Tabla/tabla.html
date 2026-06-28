@@ -9,10 +9,12 @@ Función o funciones:
 - Usar BL2 cuando esté disponible y ExcelLocalRepo como respaldo.
 - Paginar la tabla para evitar renderizar demasiadas filas.
 - Cargar el generador de mensajes formales para comunicación por Telegram.
+- Mostrar modal individual compacto para preparar contacto por Telegram.
 Con qué se conecta:
 - tabla.css
 - tabla.core.js
 - tabla.message.js
+- tabla.telegram.js
 - tabla.app.js
 - ../Excel/excel-local/excel-local.config.js
 - ../Excel/excel-local/excel-local.storage.js
@@ -68,6 +70,43 @@ Con qué se conecta:
       </div>
     </section>
   </main>
+
+  <section id="tabla-telegram-modal" class="tabla-modal" hidden aria-hidden="true" aria-label="Telegram individual">
+    <div class="tabla-modal-card" role="dialog" aria-modal="true" aria-labelledby="tabla-tg-title">
+      <header class="tabla-modal-header">
+        <div>
+          <h2 id="tabla-tg-title">Telegram individual</h2>
+          <p id="tabla-tg-meta" class="tabla-modal-meta">Seleccione un estudiante.</p>
+        </div>
+        <button id="tabla-tg-close" class="icon-btn" type="button" title="Cerrar" aria-label="Cerrar">×</button>
+      </header>
+      <div class="tabla-modal-body">
+        <div class="tabla-tg-info">
+          <span id="tabla-tg-dato">Sin Telegram registrado</span>
+          <small id="tabla-tg-warning">Seleccione el tipo de mensaje y revise la vista previa.</small>
+        </div>
+        <label>Tipo de mensaje
+          <select id="tabla-tg-tipo">
+            <option value="requisitos">Requisitos faltantes</option>
+            <option value="cronograma">Cronograma manual</option>
+            <option value="libre">Mensaje libre</option>
+          </select>
+        </label>
+        <label id="tabla-tg-texto-wrap" hidden><span id="tabla-tg-texto-label">Mensaje libre</span>
+          <textarea id="tabla-tg-texto" rows="5" placeholder="Escriba aquí el texto. Puede usar {{NOMBRE}}, {{CEDULA}}, {{CARRERA}}, {{PERIODO}} o {{DIVISION}}."></textarea>
+        </label>
+        <label>Vista previa
+          <textarea id="tabla-tg-preview" rows="12" readonly></textarea>
+        </label>
+      </div>
+      <footer class="tabla-modal-actions">
+        <button id="tabla-tg-cancel" type="button">Cerrar</button>
+        <button id="tabla-tg-copy" type="button">Copiar mensaje</button>
+        <button id="tabla-tg-open" type="button">Abrir Telegram</button>
+      </footer>
+    </div>
+  </section>
+
   <script src="../Excel/excel-local/excel-local.config.js"></script>
   <script src="../Excel/excel-local/excel-local.storage.js"></script>
   <script src="../Excel/excel-local/excel-local.bridge.js"></script>
@@ -83,6 +122,7 @@ Con qué se conecta:
   <script src="../../BaseLocal2/repositories/bl2-estudiantes.repo.js"></script>
   <script src="tabla.core.js"></script>
   <script src="tabla.message.js"></script>
+  <script src="tabla.telegram.js"></script>
   <script src="tabla.export.js"></script>
   <script src="tabla.app.js"></script>
 </body>
