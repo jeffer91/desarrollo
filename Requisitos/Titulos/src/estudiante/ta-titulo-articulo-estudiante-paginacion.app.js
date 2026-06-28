@@ -4,6 +4,7 @@
   Función o funciones:
   - Convertir la pantalla del estudiante en un flujo paginado tipo asistente.
   - Mostrar una sola acción por paso: cédula, datos, Telegram, título 1, título 2, título 3, resumen y estado.
+  - Mostrar avisos importantes en modal para no saturar la pantalla principal.
   - Reutilizar la lógica existente de guardado, validación, sugerencias y envío sin cambiar el esquema de Firebase.
   Se conecta con:
   - Requisitos/Titulos/public/ta-titulo-articulo-estudiante.html
@@ -16,21 +17,23 @@ import { validarCoherenciaPropuesta } from "../services/ta-titulo-articulo-coher
 const TOTAL_PROPUESTAS = 3;
 
 const PASOS = Object.freeze([
-  { id: 1, label: "Cédula", detalle: "Ingrese su identificación y consulte sus datos." },
-  { id: 2, label: "Datos", detalle: "Revise que sus datos correspondan al período activo." },
-  { id: 3, label: "Telegram", detalle: "Registre su usuario de Telegram o continúe si no lo tiene." },
-  { id: 4, label: "Título 1", detalle: "Complete la primera propuesta y el título final." },
-  { id: 5, label: "Título 2", detalle: "Complete la segunda propuesta y el título final." },
-  { id: 6, label: "Título 3", detalle: "Complete la tercera propuesta y el título final." },
-  { id: 7, label: "Resumen", detalle: "Revise los 3 títulos, marque el preferido y envíe." },
-  { id: 8, label: "Estado", detalle: "Consulte el resultado de revisión cuando exista." }
+  { id: 1, label: "Cédula", detalle: "Identificación" },
+  { id: 2, label: "Datos", detalle: "Verificación" },
+  { id: 3, label: "Telegram", detalle: "Avisos" },
+  { id: 4, label: "Título 1", detalle: "Propuesta 1" },
+  { id: 5, label: "Título 2", detalle: "Propuesta 2" },
+  { id: 6, label: "Título 3", detalle: "Propuesta 3" },
+  { id: 7, label: "Resumen", detalle: "Envío" },
+  { id: 8, label: "Estado", detalle: "Revisión" }
 ]);
 
 const state = {
   pasoActual: 1,
   estudianteCargado: false,
   aplicando: false,
-  syncTimer: null
+  syncTimer: null,
+  avisoLeido: false,
+  modalContinuar: false
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -123,6 +126,56 @@ function crearPasoItem(paso) {
   return item;
 }
 
+function crearModalAviso() {
+  if (byId("ta-estudiante-aviso-modal")) return;
+
+  const modal = document.createElement("section");
+  modal.className = "ta-wizard-modal";
+  modal.id = "ta-estudiante-aviso-modal";
+  modal.hidden = true;
+  modal.setAttribute("role", "dialog");
+  modal.setAttribute("aria-modal", "true");
+  modal.setAttribute("aria-labelledby", "ta-estudiante-aviso-title");
+
+  modal.innerHTML = `
+    <div class="ta-wizard-modal__backdrop" data-ta-aviso-cerrar></div>
+    <article class="ta-wizard-modal__dialog">
+      <button class="ta-icon-button ta-wizard-modal__close" type="button" data-ta-aviso-cerrar aria-label="Cerrar aviso">×</button>
+      <p class="ta-brand__eyebrow">Aviso importante</p>
+      <h2 id="ta-estudiante-aviso-title">Antes de continuar</h2>
+      <p>Revise bien sus propuestas. Si el coordinador devuelve los títulos, tendrá solo una oportunidad de reenvío.</p>
+      <div class="ta-actions ta-actions--end">
+        <button class="ta-button ta-button--primary" type="button" id="ta-estudiante-aviso-continuar-btn">Entendido, continuar</button>
+      </div>
+    </article>
+  `;
+
+  document.body.appendChild(modal);
+  modal.querySelectorAll("[data-ta-aviso-cerrar]").forEach((element) => element.addEventListener("click", cerrarAvisoImportante));
+  byId("ta-estudiante-aviso-continuar-btn")?.addEventListener("click", cerrarAvisoImportante);
+}
+
+function abrirAvisoImportante({ continuarAlCerrar = false } = {}) {
+  crearModalAviso();
+  state.modalContinuar = Boolean(continuarAlCerrar);
+  const modal = byId("ta-estudiante-aviso-modal");
+  if (!modal) return;
+  modal.hidden = false;
+  byId("ta-estudiante-aviso-continuar-btn")?.focus();
+}
+
+function cerrarAvisoImportante() {
+  const modal = byId("ta-estudiante-aviso-modal");
+  if (modal) modal.hidden = true;
+  state.avisoLeido = true;
+
+  if (state.modalContinuar) {
+    state.modalContinuar = false;
+    state.pasoActual = Math.max(state.pasoActual + 1, 3);
+    aplicarPaso();
+  }
+}
+
 function crearPaginacion() {
   const main = byId("ta-estudiante-app");
   if (!main || byId("ta-estudiante-wizard-progress")) return;
@@ -138,7 +191,7 @@ function crearPaginacion() {
   heading.className = "ta-section-heading";
   heading.innerHTML = `
     <div>
-      <h2>Proceso paso a paso</h2>
+      <h2>Proceso</h2>
       <p id="ta-estudiante-wizard-detalle">${PASOS[0].detalle}</p>
     </div>
     <span class="ta-badge ta-badge--soft" id="ta-estudiante-wizard-contador">Paso 1 de ${PASOS.length}</span>
@@ -155,7 +208,7 @@ function crearPaginacion() {
   nav.id = "ta-estudiante-paginacion-card";
   nav.innerHTML = `
     <div class="ta-wizard-nav__content">
-      <p class="ta-help" id="ta-estudiante-wizard-ayuda">Complete el paso actual para continuar.</p>
+      <p class="ta-help" id="ta-estudiante-wizard-ayuda">Complete este paso para continuar.</p>
       <div class="ta-actions ta-actions--between">
         <button class="ta-button ta-button--secondary" type="button" id="ta-estudiante-wizard-anterior-btn">Anterior</button>
         <button class="ta-button ta-button--primary" type="button" id="ta-estudiante-wizard-siguiente-btn">Continuar</button>
@@ -254,6 +307,7 @@ function aplicarPaso({ scroll = true } = {}) {
   setHidden(byId("ta-estudiante-telegram-card"), state.pasoActual !== 3);
   setHidden(byId("ta-estudiante-propuestas-card"), !enPropuestas);
   setHidden(byId("ta-estudiante-estado-card"), state.pasoActual !== 8);
+  setHidden(byId("ta-unico-reenvio-aviso"), true);
 
   if (enPropuestas) aplicarVisibilidadPropuestas();
 
@@ -308,19 +362,19 @@ function validarPropuesta(number) {
 
   const faltante = campos.find(([, value]) => !clean(value));
   if (faltante) {
-    msgPropuestas(`Complete ${faltante[0]} en el título ${number} antes de continuar.`, "error");
+    msgPropuestas(`Complete ${faltante[0]} en el título ${number}.`, "error");
     enfocarCampo(faltante[2]);
     return false;
   }
 
   const resultado = validarCoherenciaPropuesta(propuesta, carreraEstudiante(), { forzar: true });
   if (!resultado.ok) {
-    msgPropuestas(`El título ${number} no mantiene coherencia suficiente con la carrera ${carreraEstudiante()}. Ajuste el enfoque antes de continuar.`, "error");
+    msgPropuestas(`Ajuste el título ${number} para que corresponda a ${carreraEstudiante()}.`, "error");
     enfocarCampo(map.tituloFinal);
     return false;
   }
 
-  msgPropuestas(`Título ${number} completo. Puede continuar.`, "ok");
+  msgPropuestas(`Título ${number} completo.`, "ok");
   byId("ta-estudiante-guardar-etapa-btn")?.click();
   return true;
 }
@@ -329,7 +383,7 @@ function validarTitulosDiferentes() {
   const titulos = [1, 2, 3].map((number) => normalizar(val(names(number).tituloFinal))).filter(Boolean);
   if (titulos.length !== TOTAL_PROPUESTAS) return true;
   if (new Set(titulos).size !== TOTAL_PROPUESTAS) {
-    msgPropuestas("Los 3 títulos deben ser diferentes antes de pasar al resumen.", "error");
+    msgPropuestas("Los 3 títulos deben ser diferentes.", "error");
     return false;
   }
   return true;
@@ -339,7 +393,7 @@ function validarAntesDeContinuar() {
   if (state.pasoActual === 1) {
     const cedula = clean(byId("ta-estudiante-cedula")?.value);
     if (!cedula) {
-      msgBusqueda("Ingrese la cédula antes de continuar.", "error");
+      msgBusqueda("Ingrese la cédula.", "error");
       byId("ta-estudiante-cedula")?.focus();
       return false;
     }
@@ -349,6 +403,11 @@ function validarAntesDeContinuar() {
     msgBusqueda("Primero consulte una cédula válida.", "error");
     state.pasoActual = 1;
     aplicarPaso();
+    return false;
+  }
+
+  if (state.pasoActual === 2 && !state.avisoLeido) {
+    abrirAvisoImportante({ continuarAlCerrar: true });
     return false;
   }
 
@@ -375,6 +434,7 @@ function sincronizarCargaEstudiante() {
 
   if (!state.estudianteCargado && estudianteVisibleDesdeApp()) {
     state.estudianteCargado = true;
+    state.avisoLeido = false;
     state.pasoActual = 2;
     aplicarPaso();
     return;
@@ -419,9 +479,14 @@ function registrarEventos() {
   $$("#ta-estudiante-propuestas-card input, #ta-estudiante-propuestas-card textarea").forEach((element) => {
     element.addEventListener("input", () => window.setTimeout(() => aplicarPaso({ scroll: false }), 0));
   });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !byId("ta-estudiante-aviso-modal")?.hidden) cerrarAvisoImportante();
+  });
 }
 
 function init() {
+  crearModalAviso();
   crearPaginacion();
   registrarEventos();
   observarCambiosApp();
