@@ -2,8 +2,7 @@
   Nombre completo: vite.config.js
   Ruta o ubicación: /Requisitos/Titulos/vite.config.js
   Función o funciones:
-  - Configurar Vite para compilar las pantallas públicas de estudiante y coordinador.
-  - Mantener fuera del build público la pantalla privada/local del administrador.
+  - Configurar Vite para compilar las pantallas públicas de estudiante, coordinador y administrador.
   - Preparar la salida de producción para Netlify en la carpeta dist.
   - Copiar los assets públicos del módulo, incluido el logo institucional.
   - Mantener rutas relativas y limpias para publicación en subcarpeta o dominio Netlify.
@@ -12,6 +11,7 @@
   - netlify.toml
   - public/ta-titulo-articulo-estudiante.html
   - public/ta-titulo-articulo-coordinador.html
+  - public/ta-titulo-articulo-admin.html
   - public/assets/logo-itsqmet.svg
 */
 
@@ -47,7 +47,8 @@ export default defineConfig({
     rollupOptions: {
       input: {
         estudiante: resolve(rootDir, "public/ta-titulo-articulo-estudiante.html"),
-        coordinador: resolve(rootDir, "public/ta-titulo-articulo-coordinador.html")
+        coordinador: resolve(rootDir, "public/ta-titulo-articulo-coordinador.html"),
+        admin: resolve(rootDir, "public/ta-titulo-articulo-admin.html")
       },
       output: {
         entryFileNames: "assets/[name]-[hash].js",
