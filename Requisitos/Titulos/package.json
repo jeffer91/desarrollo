@@ -18,6 +18,7 @@
       "scripts/ta-titulo-articulo-check.mjs",
       "scripts/ta-titulo-articulo-local-check.mjs",
       "scripts/ta-titulo-articulo-netlify-check.mjs",
+      "scripts/ta-titulo-articulo-schema-check.mjs",
       "scripts/ta-titulo-articulo-build-local.mjs"
     ]
   },
@@ -46,7 +47,8 @@
     "check": "node scripts/ta-titulo-articulo-check.mjs",
     "check:local": "node scripts/ta-titulo-articulo-local-check.mjs",
     "check:netlify": "node scripts/ta-titulo-articulo-netlify-check.mjs",
-    "check:all": "npm run check && npm run check:local && npm run check:netlify",
+    "check:schema": "node scripts/ta-titulo-articulo-schema-check.mjs",
+    "check:all": "npm run check && npm run check:local && npm run check:netlify && npm run check:schema",
     "start": "npm run dev"
   },
   "dependencies": {
