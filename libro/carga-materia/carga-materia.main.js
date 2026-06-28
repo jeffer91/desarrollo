@@ -4,9 +4,9 @@ Ruta o ubicación: /desarrollo/libro/carga-materia/carga-materia.main.js
 Función o funciones:
 1. Controlar la pantalla de carga del módulo Libro.
 2. Validar campos manuales y archivos fuente.
-3. Leer Excel/PDF para detectar hojas, filas, columnas y texto.
-4. Interpretar Archivo 1, Archivo 2 y Archivo 3.
-5. Consolidar información base, contenidos y actividades en una sola materia por unidades.
+3. Leer, interpretar y consolidar los tres archivos fuente.
+4. Validar la materia consolidada.
+5. Mostrar una vista previa legible antes del guardado del Bloque 8.
 ========================================================= */
 
 (function iniciarCargaMateria(window, document) {
@@ -18,6 +18,8 @@ Función o funciones:
   var MapperContenidos = window.LibroCargaMateriaMapperContenidos || null;
   var MapperActividades = window.LibroCargaMateriaMapperActividades || null;
   var Builder = window.LibroCargaMateriaBuilder || null;
+  var Validator = window.LibroCargaMateriaValidator || null;
+  var Preview = window.LibroCargaMateriaPreview || null;
 
   var ALLOWED = Constants ? {
     base: Constants.getAllowedExtensions("base"),
@@ -48,6 +50,7 @@ Función o funciones:
       actividades: null
     },
     materiaConsolidada: null,
+    validacion: null,
     expediente: null,
     isReading: false
   };
@@ -262,8 +265,8 @@ Función o funciones:
 
     elements.previewBox.textContent = JSON.stringify(
       {
-        bloque: 6,
-        estado: "esperando_consolidacion",
+        bloque: 7,
+        estado: "esperando_validacion",
         carrera: state.carrera || "",
         materia: state.materia || "",
         archivos: {
@@ -273,13 +276,12 @@ Función o funciones:
         },
         lectura: {
           excelDisponible: Boolean(ExcelReader),
-          mapperBaseDisponible: Boolean(MapperBase),
-          mapperContenidosDisponible: Boolean(MapperContenidos),
-          mapperActividadesDisponible: Boolean(MapperActividades),
           builderDisponible: Boolean(Builder),
+          validatorDisponible: Boolean(Validator),
+          previewDisponible: Boolean(Preview),
           pendiente: true
         },
-        siguiente: "Presiona Consolidar materia para unir información base, contenidos y actividades."
+        siguiente: "Presiona Validar materia para consolidar, validar y mostrar vista previa."
       },
       null,
       2
@@ -297,17 +299,17 @@ Función o funciones:
     renderChecklist(elements);
 
     elements.analizarBtn.disabled = !canPrepare() || state.isReading;
-    elements.analizarBtn.textContent = state.isReading ? "Consolidando..." : "Consolidar materia";
+    elements.analizarBtn.textContent = state.isReading ? "Validando..." : "Validar materia";
 
     if (!state.expediente) {
-      setStatus(elements.expedienteStatus, "is-pending", "Sin consolidar");
+      setStatus(elements.expedienteStatus, "is-pending", "Sin validar");
       updatePreviewBeforePrepare(elements);
     }
   }
 
   async function readAllFiles() {
     if (!ExcelReader || typeof ExcelReader.readFileForKind !== "function") {
-      throw new Error("No está disponible el lector de archivos del Bloque 6.");
+      throw new Error("No está disponible el lector de archivos del Bloque 7.");
     }
 
     return {
@@ -319,28 +321,28 @@ Función o funciones:
 
   function interpretBase(lecturaBase) {
     if (!MapperBase || typeof MapperBase.interpret !== "function") {
-      throw new Error("No está disponible el mapeador del Archivo 1 del Bloque 6.");
+      throw new Error("No está disponible el mapeador del Archivo 1 del Bloque 7.");
     }
     return MapperBase.interpret(lecturaBase);
   }
 
   function interpretContenidos(lecturaContenidos) {
     if (!MapperContenidos || typeof MapperContenidos.interpret !== "function") {
-      throw new Error("No está disponible el mapeador de contenidos del Bloque 6.");
+      throw new Error("No está disponible el mapeador de contenidos del Bloque 7.");
     }
     return MapperContenidos.interpret(lecturaContenidos);
   }
 
   function interpretActividades(lecturaActividades) {
     if (!MapperActividades || typeof MapperActividades.interpret !== "function") {
-      throw new Error("No está disponible el mapeador de actividades del Bloque 6.");
+      throw new Error("No está disponible el mapeador de actividades del Bloque 7.");
     }
     return MapperActividades.interpret(lecturaActividades);
   }
 
   function buildMateriaConsolidada(lecturas, interpretacionBase, interpretacionContenidos, interpretacionActividades) {
     if (!Builder || typeof Builder.build !== "function") {
-      throw new Error("No está disponible el builder de materia consolidada del Bloque 6.");
+      throw new Error("No está disponible el builder de materia consolidada del Bloque 7.");
     }
 
     return Builder.build({
@@ -362,12 +364,20 @@ Función o funciones:
     });
   }
 
-  function buildExpediente(lecturas, interpretacionBase, interpretacionContenidos, interpretacionActividades, materiaConsolidada) {
+  function validateMateria(materiaConsolidada) {
+    if (!Validator || typeof Validator.validate !== "function") {
+      throw new Error("No está disponible el validador del Bloque 7.");
+    }
+
+    return Validator.validate(materiaConsolidada);
+  }
+
+  function buildExpediente(lecturas, interpretacionBase, interpretacionContenidos, interpretacionActividades, materiaConsolidada, validacion) {
     return {
       modulo: "libro",
       pantalla: "carga-materia",
-      bloque: 6,
-      estado: materiaConsolidada.estado,
+      bloque: 7,
+      estado: validacion.estado,
       carrera: state.carrera,
       materia: state.materia,
       archivos: {
@@ -386,26 +396,44 @@ Función o funciones:
         actividadesMateria: resumenInterpretacionActividades(interpretacionActividades)
       },
       materiaConsolidada: materiaConsolidada,
-      pendienteBloque7: true,
+      validacion: validacion,
+      pendienteBloque8: true,
       creadoEn: new Date().toISOString()
     };
+  }
+
+  function renderFinalPreview(elements, expediente, materiaConsolidada, validacion) {
+    if (Preview && typeof Preview.render === "function") {
+      Preview.render(elements.previewBox, expediente, materiaConsolidada, validacion);
+      return;
+    }
+
+    elements.previewBox.textContent = JSON.stringify(expediente, null, 2);
+  }
+
+  function statusFromValidation(validacion) {
+    if (!validacion) return { type: "is-error", text: "Error" };
+    if (validacion.errores && validacion.errores.length) return { type: "is-error", text: "Incompleto" };
+    if (validacion.advertencias && validacion.advertencias.length) return { type: "is-warning", text: "Con alertas" };
+    return { type: "is-ok", text: "Completo" };
   }
 
   async function prepareExpediente(elements) {
     if (!canPrepare()) {
       setStatus(elements.expedienteStatus, "is-warning", "Incompleto");
-      elements.previewBox.textContent = "Faltan datos o archivos para consolidar.";
+      elements.previewBox.textContent = "Faltan datos o archivos para validar.";
       return;
     }
 
     state.isReading = true;
     state.expediente = null;
     state.materiaConsolidada = null;
+    state.validacion = null;
     state.interpretaciones.base = null;
     state.interpretaciones.contenidos = null;
     state.interpretaciones.actividades = null;
-    setStatus(elements.expedienteStatus, "is-warning", "Consolidando");
-    elements.previewBox.textContent = "Leyendo, interpretando y consolidando materia. Espera un momento...";
+    setStatus(elements.expedienteStatus, "is-warning", "Validando");
+    elements.previewBox.textContent = "Leyendo, interpretando, consolidando y validando materia. Espera un momento...";
     refresh(elements);
 
     try {
@@ -419,37 +447,38 @@ Función o funciones:
         interpretacionContenidos,
         interpretacionActividades
       );
+      var validacion = validateMateria(materiaConsolidada);
 
       state.lecturas = lecturas;
       state.interpretaciones.base = interpretacionBase;
       state.interpretaciones.contenidos = interpretacionContenidos;
       state.interpretaciones.actividades = interpretacionActividades;
       state.materiaConsolidada = materiaConsolidada;
+      state.validacion = validacion;
       state.expediente = buildExpediente(
         lecturas,
         interpretacionBase,
         interpretacionContenidos,
         interpretacionActividades,
-        materiaConsolidada
+        materiaConsolidada,
+        validacion
       );
 
-      setStatus(
-        elements.expedienteStatus,
-        materiaConsolidada.advertencias && materiaConsolidada.advertencias.length ? "is-warning" : "is-ok",
-        materiaConsolidada.advertencias && materiaConsolidada.advertencias.length ? "Con alertas" : "Consolidado"
-      );
-      elements.previewBox.textContent = JSON.stringify(state.expediente, null, 2);
+      var status = statusFromValidation(validacion);
+      setStatus(elements.expedienteStatus, status.type, status.text);
+      renderFinalPreview(elements, state.expediente, materiaConsolidada, validacion);
     } catch (error) {
       state.expediente = null;
       state.materiaConsolidada = null;
+      state.validacion = null;
       state.interpretaciones.base = null;
       state.interpretaciones.contenidos = null;
       state.interpretaciones.actividades = null;
       setStatus(elements.expedienteStatus, "is-error", "Error");
       elements.previewBox.textContent = JSON.stringify(
         {
-          bloque: 6,
-          estado: "error_consolidacion_materia",
+          bloque: 7,
+          estado: "error_validacion_materia",
           mensaje: error && error.message ? error.message : String(error)
         },
         null,
@@ -487,6 +516,7 @@ Función o funciones:
     state.interpretaciones.contenidos = null;
     state.interpretaciones.actividades = null;
     state.materiaConsolidada = null;
+    state.validacion = null;
     state.expediente = null;
   }
 
@@ -507,6 +537,8 @@ Función o funciones:
     MapperContenidos = window.LibroCargaMateriaMapperContenidos || MapperContenidos;
     MapperActividades = window.LibroCargaMateriaMapperActividades || MapperActividades;
     Builder = window.LibroCargaMateriaBuilder || Builder;
+    Validator = window.LibroCargaMateriaValidator || Validator;
+    Preview = window.LibroCargaMateriaPreview || Preview;
 
     var elements = {
       carreraInput: byId("carrera-input"),
@@ -568,6 +600,7 @@ Función o funciones:
             actividades: resumenInterpretacionActividades(state.interpretaciones.actividades)
           },
           materiaConsolidada: state.materiaConsolidada,
+          validacion: state.validacion,
           expediente: state.expediente
         }));
       }
