@@ -12,11 +12,13 @@ Función o funciones:
 - Mostrar modal individual compacto para contacto por Telegram.
 - Mostrar modal masivo con selección manual de estudiantes filtrados.
 - Enviar Telegram individual y masivo mediante API segura.
+- Consultar y exportar historial local de envíos de Telegram.
 Con qué se conecta:
 - tabla.css
 - tabla.core.js
 - tabla.message.js
 - tabla.telegram-api.js
+- tabla.history.js
 - tabla.telegram.js
 - tabla.selection.js
 - tabla.mass.js
@@ -49,6 +51,7 @@ Con qué se conecta:
       <label>Filas<select id="tabla-page-size"><option value="50">50</option><option value="100" selected>100</option><option value="200">200</option><option value="300">300</option></select></label>
       <button id="tabla-refresh" type="button">Actualizar</button>
       <button id="tabla-telegram-masivo" type="button">Telegram masivo</button>
+      <button id="tabla-history-open" type="button">Historial</button>
       <button id="tabla-export-csv" type="button">Exportar CSV</button>
       <button id="tabla-export-json" type="button">Exportar JSON</button>
     </section>
@@ -149,6 +152,28 @@ Con qué se conecta:
     </div>
   </section>
 
+  <section id="tabla-history-modal" class="tabla-modal" hidden aria-hidden="true" aria-label="Historial de Telegram">
+    <div class="tabla-modal-card tabla-modal-card-wide" role="dialog" aria-modal="true" aria-labelledby="tabla-history-title">
+      <header class="tabla-modal-header">
+        <div>
+          <h2 id="tabla-history-title">Historial de Telegram</h2>
+          <p class="tabla-modal-meta">Registro local de mensajes enviados, fallidos u omitidos.</p>
+        </div>
+        <button id="tabla-history-close" class="icon-btn" type="button" title="Cerrar" aria-label="Cerrar">×</button>
+      </header>
+      <div class="tabla-modal-body">
+        <div id="tabla-history-summary" class="tabla-mass-summary"></div>
+        <div id="tabla-history-list" class="tabla-history-list"></div>
+      </div>
+      <footer class="tabla-modal-actions">
+        <button id="tabla-history-cancel" type="button">Cerrar</button>
+        <button id="tabla-history-json" type="button">Exportar JSON</button>
+        <button id="tabla-history-csv" type="button">Exportar CSV</button>
+        <button id="tabla-history-clear" type="button">Limpiar historial</button>
+      </footer>
+    </div>
+  </section>
+
   <script src="../Excel/excel-local/excel-local.config.js"></script>
   <script src="../Excel/excel-local/excel-local.storage.js"></script>
   <script src="../Excel/excel-local/excel-local.bridge.js"></script>
@@ -165,6 +190,7 @@ Con qué se conecta:
   <script src="tabla.core.js"></script>
   <script src="tabla.message.js"></script>
   <script src="tabla.telegram-api.js"></script>
+  <script src="tabla.history.js"></script>
   <script src="tabla.telegram.js"></script>
   <script src="tabla.selection.js"></script>
   <script src="tabla.mass.js"></script>
