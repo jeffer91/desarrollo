@@ -6,9 +6,11 @@ Función o funciones:
 - Hacer match por cédula, considerando cédula con o sin cero inicial.
 - Usar nombres normalizados como respaldo cuando no exista cédula.
 - Asignar modalidad de titulación automática para el informe.
+- En períodos regulares, usar InforRegular para excluir cédulas fuera del período y calcular Complexivo 60/40.
 Con qué se conecta:
 - infor.state.js
 - infor.periodo.js
+- infor.regular.js
 - ../../BaseLocal2/repositories/bl2-estudiantes.repo.js
 - ../../Gestion/Excel/excel-local.repo.js
 - ../frontend/titulacion.app.js
@@ -188,7 +190,7 @@ Con qué se conecta:
     };
   }
 
-  function summarize(matches, baseSource, baseTotal){
+  function summarize(matches, baseSource, baseTotal, regularAnalysis){
     var out = {total:matches.length, unidos:0, pendientes:0, porCedula:0, porNombre:0, baseSource:baseSource, baseTotal:baseTotal, modalidades:{}};
     matches.forEach(function(item){
       if(item.status === "unido"){out.unidos += 1;}else{out.pendientes += 1;}
@@ -197,14 +199,29 @@ Con qué se conecta:
       var m = item.modalidadTitulacion || "SIN_MODALIDAD";
       out.modalidades[m] = (out.modalidades[m] || 0) + 1;
     });
+    if(regularAnalysis && regularAnalysis.summary){
+      out.regular = regularAnalysis.summary;
+      out.excluidosPeriodo = regularAnalysis.summary.excludedByPeriod || 0;
+      out.duplicadosOmitidos = regularAnalysis.summary.duplicates || 0;
+    }
     return out;
+  }
+
+  function regularRows(snapshot, periodType){
+    if(!(periodType && periodType.id === "REGULAR")){return null;}
+    if(!(window.InforRegular && typeof window.InforRegular.analyze === "function")){return null;}
+    var analysis = window.InforRegular.analyze(snapshot);
+    if(!analysis || !Array.isArray(analysis.rows)){return null;}
+    return analysis;
   }
 
   function match(snapshot){
     snapshot = snapshot || {};
     var periodId = text(snapshot.periodId || snapshot.periodLabel);
     var periodType = snapshot.periodType || (window.InforPeriodo && window.InforPeriodo.classify ? window.InforPeriodo.classify(snapshot.periodLabel || snapshot.periodId) : null);
-    var excelRows = snapshot.excelData && Array.isArray(snapshot.excelData.rows) ? snapshot.excelData.rows : [];
+    var sourceRows = snapshot.excelData && Array.isArray(snapshot.excelData.rows) ? snapshot.excelData.rows : [];
+    var regularAnalysis = regularRows(snapshot, periodType);
+    var excelRows = regularAnalysis ? regularAnalysis.rows : sourceRows;
     var base = loadBaseStudents(periodId);
     var index = indexBase(base.rows, periodType);
     var excel = excelRows.map(function(row){return normalizeExcelRow(row, periodType);});
@@ -216,8 +233,10 @@ Con qué se conecta:
       baseSource:base.source,
       baseTotal:index.rows.length,
       totalExcel:excelRows.length,
+      totalExcelOriginal:sourceRows.length,
+      regularAnalysis:regularAnalysis,
       matches:matches,
-      summary:summarize(matches, base.source, index.rows.length),
+      summary:summarize(matches, base.source, index.rows.length, regularAnalysis),
       generatedAt:new Date().toISOString()
     };
   }
