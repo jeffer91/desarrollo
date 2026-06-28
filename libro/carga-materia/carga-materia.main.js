@@ -2,11 +2,11 @@
 Nombre completo: carga-materia.main.js
 Ruta o ubicación: /desarrollo/libro/carga-materia/carga-materia.main.js
 Función o funciones:
-1. Controlar la pantalla de carga del módulo Libro.
-2. Validar campos manuales y archivos fuente.
-3. Leer, interpretar, consolidar y validar los tres archivos fuente.
-4. Mostrar una vista previa legible de la materia consolidada.
-5. Guardar el resultado consolidado como JSON en el Bloque 8.
+1. Controlar la pantalla Carga de la materia.
+2. Validar campos manuales y fuentes por archivo o texto pegado.
+3. Leer, interpretar, consolidar y validar información base, contenidos y actividades.
+4. Mantener la salida técnica oculta para el usuario.
+5. Guardar el resultado consolidado como JSON.
 ========================================================= */
 
 (function iniciarCargaMateria(window, document) {
@@ -22,34 +22,19 @@ Función o funciones:
   var Preview = window.LibroCargaMateriaPreview || null;
   var Storage = window.LibroCargaMateriaStorage || null;
 
-  var ALLOWED = Constants ? {
-    base: Constants.getAllowedExtensions("base"),
-    contenidos: Constants.getAllowedExtensions("contenidos"),
-    actividades: Constants.getAllowedExtensions("actividades")
-  } : {
-    base: ["xlsx", "xls", "pdf"],
-    contenidos: ["xlsx", "xls"],
-    actividades: ["xlsx", "xls"]
+  var ALLOWED = {
+    base: ["xlsx", "xls", "pdf", "txt"],
+    contenidos: ["xlsx", "xls", "pdf", "txt"],
+    actividades: ["xlsx", "xls", "pdf", "txt"]
   };
 
   var state = {
     carrera: "",
     materia: "",
-    files: {
-      base: null,
-      contenidos: null,
-      actividades: null
-    },
-    lecturas: {
-      base: null,
-      contenidos: null,
-      actividades: null
-    },
-    interpretaciones: {
-      base: null,
-      contenidos: null,
-      actividades: null
-    },
+    files: { base: null, contenidos: null, actividades: null },
+    texts: { base: "", contenidos: "", actividades: "" },
+    lecturas: { base: null, contenidos: null, actividades: null },
+    interpretaciones: { base: null, contenidos: null, actividades: null },
     materiaConsolidada: null,
     validacion: null,
     guardado: null,
@@ -69,14 +54,11 @@ Función o funciones:
   function getExtension(file) {
     var name = file && file.name ? String(file.name) : "";
     var parts = name.split(".");
-
-    if (parts.length < 2) return "";
-    return parts.pop().toLowerCase();
+    return parts.length < 2 ? "" : parts.pop().toLowerCase();
   }
 
   function formatSize(bytes) {
     var value = Number(bytes || 0);
-
     if (!value) return "0 KB";
     if (value < 1024) return value + " B";
     if (value < 1024 * 1024) return (value / 1024).toFixed(1) + " KB";
@@ -85,7 +67,6 @@ Función o funciones:
 
   function fileToMeta(file) {
     if (!file) return null;
-
     return {
       nombre: file.name,
       extension: getExtension(file),
@@ -97,7 +78,6 @@ Función o funciones:
 
   function setStatus(element, type, text) {
     if (!element) return;
-
     element.classList.remove("is-pending", "is-ok", "is-warning", "is-error");
     element.classList.add(type || "is-pending");
     element.textContent = text || "Pendiente";
@@ -108,13 +88,21 @@ Función o funciones:
     return ALLOWED[kind].indexOf(getExtension(file)) >= 0;
   }
 
+  function hasText(kind) {
+    return Boolean(clean(state.texts[kind]));
+  }
+
+  function hasSource(kind) {
+    return Boolean(state.files[kind] && isFileAllowed(kind, state.files[kind])) || hasText(kind);
+  }
+
   function buildChecklist() {
     return [
       { label: "Carrera escrita", ok: Boolean(state.carrera) },
       { label: "Materia escrita", ok: Boolean(state.materia) },
-      { label: "Archivo 1 cargado", ok: Boolean(state.files.base) && isFileAllowed("base", state.files.base) },
-      { label: "Archivo 2 cargado", ok: Boolean(state.files.contenidos) && isFileAllowed("contenidos", state.files.contenidos) },
-      { label: "Archivo 3 cargado", ok: Boolean(state.files.actividades) && isFileAllowed("actividades", state.files.actividades) }
+      { label: "Información base agregada", ok: hasSource("base") },
+      { label: "Contenido de unidades agregado", ok: hasSource("contenidos") },
+      { label: "Actividades agregadas", ok: hasSource("actividades") }
     ];
   }
 
@@ -136,8 +124,7 @@ Función o funciones:
   function lecturaStatus(kind) {
     var lectura = state.lecturas[kind];
     if (!lectura) return null;
-    if (lectura.ok) return "Leído";
-    return "Error";
+    return lectura.ok ? "Leído" : "Error";
   }
 
   function isInterpreted(kind) {
@@ -153,13 +140,13 @@ Función o funciones:
     var name = elements[kind + "FileName"];
     var lecturaTexto = lecturaStatus(kind);
 
-    if (!file) {
+    if (!file && !hasText(kind)) {
       setStatus(status, "is-pending", "Pendiente");
-      if (name) name.textContent = "Ningún archivo seleccionado.";
+      if (name) name.textContent = kind === "base" ? "Excel, PDF o TXT." : "Excel, PDF o TXT.";
       return;
     }
 
-    if (!isFileAllowed(kind, file)) {
+    if (file && !isFileAllowed(kind, file)) {
       setStatus(status, "is-error", "Formato no válido");
       if (name) name.textContent = file.name + " · formato no permitido";
       return;
@@ -170,44 +157,121 @@ Función o funciones:
     } else if (lecturaTexto === "Error") {
       setStatus(status, "is-error", "Error");
     } else {
-      setStatus(status, "is-ok", "Cargado");
+      setStatus(status, "is-ok", file ? "Archivo listo" : "Texto listo");
     }
 
-    if (name) name.textContent = file.name + " · " + formatSize(file.size);
+    if (name) {
+      name.textContent = file ? file.name + " · " + formatSize(file.size) : "Texto pegado.";
+    }
   }
 
   function renderChecklist(elements) {
-    var checklist = buildChecklist();
     elements.checklist.innerHTML = "";
-
-    checklist.forEach(function renderItem(item) {
+    buildChecklist().forEach(function renderItem(item) {
       var li = document.createElement("li");
       var label = document.createElement("strong");
       var badge = document.createElement("span");
-
       label.textContent = item.label;
       badge.className = "libro-status-pill " + (item.ok ? "is-ok" : "is-pending");
       badge.textContent = item.ok ? "Listo" : "Pendiente";
-
       li.appendChild(label);
       li.appendChild(badge);
       elements.checklist.appendChild(li);
     });
   }
 
-  function resumenLecturaParaPreview(lectura) {
-    if (!lectura) return null;
+  function extractUnit(value) {
+    var raw = clean(value);
+    var code = raw.match(/(^|\s|\|)([1-4](?:\.\d+){1,5})(?=\s|\||$)/);
+    if (code && code[2]) return Number(String(code[2]).split(".")[0]);
+    var unit = raw.toLowerCase().match(/unidad\s*([1-4])/);
+    if (unit && unit[1]) return Number(unit[1]);
+    return null;
+  }
 
-    if (lectura.tipo === "pdf") {
+  function extractCode(value) {
+    var match = clean(value).match(/(^|\s|\|)([1-4](?:\.\d+){1,5})(?=\s|\||$)/);
+    return match && match[2] ? match[2] : "";
+  }
+
+  function linesFromText(value) {
+    return clean(value)
+      .split(/\n+/)
+      .map(function mapLine(line) { return clean(line); })
+      .filter(Boolean);
+  }
+
+  function rowsFromText(kind, value) {
+    return linesFromText(value).map(function mapLine(line, index) {
+      var unidad = extractUnit(line);
+      var codigo = extractCode(line);
+
+      if (kind === "contenidos") {
+        return {
+          Unidad: unidad || "",
+          Codigo: codigo,
+          Contenido: line,
+          Texto: line,
+          Orden: index + 1
+        };
+      }
+
       return {
+        Unidad: unidad || "",
+        Codigo: codigo,
+        Actividad: line,
+        Texto: line,
+        Orden: index + 1
+      };
+    });
+  }
+
+  function textToReading(kind, value) {
+    var content = clean(value);
+
+    if (kind === "base") {
+      return {
+        ok: true,
         tipo: "pdf",
-        archivo: lectura.archivo,
-        totalPaginas: lectura.totalPaginas || 0,
-        caracteresTexto: lectura.caracteresTexto || 0,
-        vistaPrevia: lectura.vistaPrevia || ""
+        kind: "base",
+        archivo: { nombre: "texto-pegado", extension: "txt", tamanoBytes: content.length, ultimaModificacion: new Date().toISOString() },
+        totalPaginas: 1,
+        caracteresTexto: content.length,
+        textoCompleto: content,
+        paginas: [{ pagina: 1, texto: content, caracteres: content.length }],
+        vistaPrevia: content.slice(0, 5000)
       };
     }
 
+    var rows = rowsFromText(kind, content);
+    var columns = kind === "contenidos" ? ["Unidad", "Codigo", "Contenido", "Texto", "Orden"] : ["Unidad", "Codigo", "Actividad", "Texto", "Orden"];
+
+    return {
+      ok: true,
+      tipo: "excel",
+      kind: kind,
+      archivo: { nombre: "texto-pegado", extension: "txt", tamanoBytes: content.length, ultimaModificacion: new Date().toISOString() },
+      totalHojas: 1,
+      hojaPrincipal: "Texto pegado",
+      resumen: { hojas: 1, filas: rows.length, columnas: columns.length },
+      hojas: [{
+        nombreHoja: "Texto pegado",
+        totalFilas: rows.length,
+        totalFilasConDatos: rows.length,
+        totalColumnas: columns.length,
+        columnas: columns,
+        columnasDetectadas: {},
+        filas: rows,
+        vistaPrevia: rows.slice(0, 8)
+      }]
+    };
+  }
+
+  function resumenLecturaParaPreview(lectura) {
+    if (!lectura) return null;
+    if (lectura.tipo === "pdf") {
+      return { tipo: "pdf", archivo: lectura.archivo, totalPaginas: lectura.totalPaginas || 0, caracteresTexto: lectura.caracteresTexto || 0, vistaPrevia: lectura.vistaPrevia || "" };
+    }
     return {
       tipo: "excel",
       archivo: lectura.archivo,
@@ -230,75 +294,40 @@ Función o funciones:
 
   function resumenInterpretacionBase(interpretacion) {
     if (!interpretacion) return null;
-    return {
-      tipoFuente: interpretacion.tipoFuente,
-      campos: interpretacion.campos,
-      conteo: interpretacion.conteo,
-      advertencias: interpretacion.advertencias,
-      evidencia: interpretacion.evidencia
-    };
+    return { tipoFuente: interpretacion.tipoFuente, campos: interpretacion.campos, conteo: interpretacion.conteo, advertencias: interpretacion.advertencias, evidencia: interpretacion.evidencia };
   }
 
   function resumenInterpretacionContenidos(interpretacion) {
     if (!interpretacion) return null;
-    return {
-      tipoFuente: interpretacion.tipoFuente,
-      hojaPrincipal: interpretacion.hojaPrincipal,
-      columnasDetectadas: interpretacion.columnasDetectadas,
-      unidades: interpretacion.unidades,
-      sinUnidad: interpretacion.sinUnidad,
-      resumen: interpretacion.resumen,
-      advertencias: interpretacion.advertencias,
-      reglas: interpretacion.reglas
-    };
+    return { tipoFuente: interpretacion.tipoFuente, hojaPrincipal: interpretacion.hojaPrincipal, columnasDetectadas: interpretacion.columnasDetectadas, unidades: interpretacion.unidades, sinUnidad: interpretacion.sinUnidad, resumen: interpretacion.resumen, advertencias: interpretacion.advertencias, reglas: interpretacion.reglas };
   }
 
   function resumenInterpretacionActividades(interpretacion) {
     if (!interpretacion) return null;
-    return {
-      tipoFuente: interpretacion.tipoFuente,
-      hojaPrincipal: interpretacion.hojaPrincipal,
-      columnasDetectadas: interpretacion.columnasDetectadas,
-      unidades: interpretacion.unidades,
-      sinUnidad: interpretacion.sinUnidad,
-      resumen: interpretacion.resumen,
-      advertencias: interpretacion.advertencias,
-      reglas: interpretacion.reglas
-    };
+    return { tipoFuente: interpretacion.tipoFuente, hojaPrincipal: interpretacion.hojaPrincipal, columnasDetectadas: interpretacion.columnasDetectadas, unidades: interpretacion.unidades, sinUnidad: interpretacion.sinUnidad, resumen: interpretacion.resumen, advertencias: interpretacion.advertencias, reglas: interpretacion.reglas };
   }
 
   function updatePreviewBeforePrepare(elements) {
     if (state.expediente) return;
-
-    elements.previewBox.textContent = JSON.stringify(
-      {
-        bloque: 8,
-        estado: "esperando_validacion_y_guardado",
-        carrera: state.carrera || "",
-        materia: state.materia || "",
-        archivos: {
-          base: fileToMeta(state.files.base),
-          contenidos: fileToMeta(state.files.contenidos),
-          actividades: fileToMeta(state.files.actividades)
-        },
-        lectura: {
-          excelDisponible: Boolean(ExcelReader),
-          builderDisponible: Boolean(Builder),
-          validatorDisponible: Boolean(Validator),
-          previewDisponible: Boolean(Preview),
-          storageDisponible: Boolean(Storage),
-          pendiente: true
-        },
-        siguiente: "Presiona Validar materia y luego Guardar resultado."
-      },
-      null,
-      2
-    );
+    elements.previewBox.textContent = JSON.stringify({
+      bloque: 3,
+      estado: "esperando_proceso",
+      carrera: state.carrera || "",
+      materia: state.materia || "",
+      fuentes: {
+        base: state.files.base ? "archivo" : (hasText("base") ? "texto" : "pendiente"),
+        contenidos: state.files.contenidos ? "archivo" : (hasText("contenidos") ? "texto" : "pendiente"),
+        actividades: state.files.actividades ? "archivo" : (hasText("actividades") ? "texto" : "pendiente")
+      }
+    }, null, 2);
   }
 
   function refresh(elements) {
     state.carrera = clean(elements.carreraInput.value);
     state.materia = clean(elements.materiaInput.value);
+    state.texts.base = clean(elements.baseTextInput ? elements.baseTextInput.value : "");
+    state.texts.contenidos = clean(elements.contenidosTextInput ? elements.contenidosTextInput.value : "");
+    state.texts.actividades = clean(elements.actividadesTextInput ? elements.actividadesTextInput.value : "");
 
     updateManualStatus(elements);
     updateFileStatus(elements, "base");
@@ -307,64 +336,61 @@ Función o funciones:
     renderChecklist(elements);
 
     elements.analizarBtn.disabled = !canPrepare() || state.isReading || state.isSaving;
-    elements.analizarBtn.textContent = state.isReading ? "Validando..." : "Validar materia";
+    elements.analizarBtn.textContent = state.isReading ? "Procesando..." : "Procesar materia";
 
     if (elements.guardarBtn) {
       elements.guardarBtn.disabled = !canSave();
-      elements.guardarBtn.textContent = state.isSaving ? "Guardando..." : "Guardar resultado";
+      elements.guardarBtn.textContent = state.isSaving ? "Guardando..." : "Guardar";
     }
 
     if (!state.expediente) {
-      setStatus(elements.expedienteStatus, "is-pending", "Sin validar");
+      setStatus(elements.expedienteStatus, "is-pending", "Sin procesar");
       updatePreviewBeforePrepare(elements);
     }
   }
 
-  async function readAllFiles() {
-    if (!ExcelReader || typeof ExcelReader.readFileForKind !== "function") {
-      throw new Error("No está disponible el lector de archivos del Bloque 8.");
+  async function readSource(kind) {
+    if (state.files[kind]) {
+      if (!ExcelReader || typeof ExcelReader.readFileForKind !== "function") {
+        throw new Error("No está disponible el lector de archivos.");
+      }
+      return ExcelReader.readFileForKind(state.files[kind], kind);
     }
+    return textToReading(kind, state.texts[kind]);
+  }
 
+  async function readAllSources() {
     return {
-      base: await ExcelReader.readFileForKind(state.files.base, "base"),
-      contenidos: await ExcelReader.readFileForKind(state.files.contenidos, "contenidos"),
-      actividades: await ExcelReader.readFileForKind(state.files.actividades, "actividades")
+      base: await readSource("base"),
+      contenidos: await readSource("contenidos"),
+      actividades: await readSource("actividades")
     };
   }
 
   function interpretBase(lecturaBase) {
-    if (!MapperBase || typeof MapperBase.interpret !== "function") {
-      throw new Error("No está disponible el mapeador del Archivo 1 del Bloque 8.");
-    }
+    if (!MapperBase || typeof MapperBase.interpret !== "function") throw new Error("No está disponible el mapeador de información base.");
     return MapperBase.interpret(lecturaBase);
   }
 
   function interpretContenidos(lecturaContenidos) {
-    if (!MapperContenidos || typeof MapperContenidos.interpret !== "function") {
-      throw new Error("No está disponible el mapeador de contenidos del Bloque 8.");
-    }
+    if (!MapperContenidos || typeof MapperContenidos.interpret !== "function") throw new Error("No está disponible el mapeador de contenidos.");
     return MapperContenidos.interpret(lecturaContenidos);
   }
 
   function interpretActividades(lecturaActividades) {
-    if (!MapperActividades || typeof MapperActividades.interpret !== "function") {
-      throw new Error("No está disponible el mapeador de actividades del Bloque 8.");
-    }
+    if (!MapperActividades || typeof MapperActividades.interpret !== "function") throw new Error("No está disponible el mapeador de actividades.");
     return MapperActividades.interpret(lecturaActividades);
   }
 
   function buildMateriaConsolidada(lecturas, interpretacionBase, interpretacionContenidos, interpretacionActividades) {
-    if (!Builder || typeof Builder.build !== "function") {
-      throw new Error("No está disponible el builder de materia consolidada del Bloque 8.");
-    }
-
+    if (!Builder || typeof Builder.build !== "function") throw new Error("No está disponible el constructor de materia consolidada.");
     return Builder.build({
       carrera: state.carrera,
       materia: state.materia,
       archivos: {
-        informacionBase: fileToMeta(state.files.base),
-        contenidosUnidades: fileToMeta(state.files.contenidos),
-        actividadesMateria: fileToMeta(state.files.actividades)
+        informacionBase: fileToMeta(state.files.base) || { nombre: "texto-pegado", extension: "txt" },
+        contenidosUnidades: fileToMeta(state.files.contenidos) || { nombre: "texto-pegado", extension: "txt" },
+        actividadesMateria: fileToMeta(state.files.actividades) || { nombre: "texto-pegado", extension: "txt" }
       },
       lecturas: {
         informacionBase: resumenLecturaParaPreview(lecturas.base),
@@ -378,10 +404,7 @@ Función o funciones:
   }
 
   function validateMateria(materiaConsolidada) {
-    if (!Validator || typeof Validator.validate !== "function") {
-      throw new Error("No está disponible el validador del Bloque 8.");
-    }
-
+    if (!Validator || typeof Validator.validate !== "function") throw new Error("No está disponible el validador.");
     return Validator.validate(materiaConsolidada);
   }
 
@@ -389,10 +412,15 @@ Función o funciones:
     return {
       modulo: "libro",
       pantalla: "carga-materia",
-      bloque: 8,
+      bloque: 3,
       estado: validacion.estado,
       carrera: state.carrera,
       materia: state.materia,
+      fuentes: {
+        informacionBase: state.files.base ? "archivo" : "texto",
+        contenidosUnidades: state.files.contenidos ? "archivo" : "texto",
+        actividadesMateria: state.files.actividades ? "archivo" : "texto"
+      },
       archivos: {
         informacionBase: fileToMeta(state.files.base),
         contenidosUnidades: fileToMeta(state.files.contenidos),
@@ -411,7 +439,7 @@ Función o funciones:
       materiaConsolidada: materiaConsolidada,
       validacion: validacion,
       guardado: null,
-      pendienteBloque9: true,
+      pendienteBloque4: true,
       creadoEn: new Date().toISOString()
     };
   }
@@ -421,7 +449,6 @@ Función o funciones:
       Preview.render(elements.previewBox, expediente, materiaConsolidada, validacion);
       return;
     }
-
     elements.previewBox.textContent = JSON.stringify(expediente, null, 2);
   }
 
@@ -429,14 +456,8 @@ Función o funciones:
     var output = elements.previewBox.textContent || "";
     output += "\n\nGUARDADO";
     output += "\nEstado: " + (result && result.ok ? "Guardado" : "Error");
-    output += "\nModo: " + (result && result.modo ? result.modo : "sin_modo");
     output += "\nRuta: " + (result && result.path ? result.path : "sin_ruta");
     output += "\nMensaje: " + (result && result.message ? result.message : "sin_mensaje");
-
-    if (result && result.warning) {
-      output += "\nAviso: " + result.warning;
-    }
-
     elements.previewBox.textContent = output;
   }
 
@@ -444,13 +465,13 @@ Función o funciones:
     if (!validacion) return { type: "is-error", text: "Error" };
     if (validacion.errores && validacion.errores.length) return { type: "is-error", text: "Incompleto" };
     if (validacion.advertencias && validacion.advertencias.length) return { type: "is-warning", text: "Con alertas" };
-    return { type: "is-ok", text: "Completo" };
+    return { type: "is-ok", text: "Procesado" };
   }
 
   async function prepareExpediente(elements) {
     if (!canPrepare()) {
       setStatus(elements.expedienteStatus, "is-warning", "Incompleto");
-      elements.previewBox.textContent = "Faltan datos o archivos para validar.";
+      elements.previewBox.textContent = "Faltan datos para procesar.";
       return;
     }
 
@@ -462,21 +483,16 @@ Función o funciones:
     state.interpretaciones.base = null;
     state.interpretaciones.contenidos = null;
     state.interpretaciones.actividades = null;
-    setStatus(elements.expedienteStatus, "is-warning", "Validando");
-    elements.previewBox.textContent = "Leyendo, interpretando, consolidando y validando materia. Espera un momento...";
+    setStatus(elements.expedienteStatus, "is-warning", "Procesando");
+    elements.previewBox.textContent = "Procesando materia...";
     refresh(elements);
 
     try {
-      var lecturas = await readAllFiles();
+      var lecturas = await readAllSources();
       var interpretacionBase = interpretBase(lecturas.base);
       var interpretacionContenidos = interpretContenidos(lecturas.contenidos);
       var interpretacionActividades = interpretActividades(lecturas.actividades);
-      var materiaConsolidada = buildMateriaConsolidada(
-        lecturas,
-        interpretacionBase,
-        interpretacionContenidos,
-        interpretacionActividades
-      );
+      var materiaConsolidada = buildMateriaConsolidada(lecturas, interpretacionBase, interpretacionContenidos, interpretacionActividades);
       var validacion = validateMateria(materiaConsolidada);
 
       state.lecturas = lecturas;
@@ -485,14 +501,7 @@ Función o funciones:
       state.interpretaciones.actividades = interpretacionActividades;
       state.materiaConsolidada = materiaConsolidada;
       state.validacion = validacion;
-      state.expediente = buildExpediente(
-        lecturas,
-        interpretacionBase,
-        interpretacionContenidos,
-        interpretacionActividades,
-        materiaConsolidada,
-        validacion
-      );
+      state.expediente = buildExpediente(lecturas, interpretacionBase, interpretacionContenidos, interpretacionActividades, materiaConsolidada, validacion);
 
       var status = statusFromValidation(validacion);
       setStatus(elements.expedienteStatus, status.type, status.text);
@@ -502,19 +511,8 @@ Función o funciones:
       state.materiaConsolidada = null;
       state.validacion = null;
       state.guardado = null;
-      state.interpretaciones.base = null;
-      state.interpretaciones.contenidos = null;
-      state.interpretaciones.actividades = null;
       setStatus(elements.expedienteStatus, "is-error", "Error");
-      elements.previewBox.textContent = JSON.stringify(
-        {
-          bloque: 8,
-          estado: "error_validacion_materia",
-          mensaje: error && error.message ? error.message : String(error)
-        },
-        null,
-        2
-      );
+      elements.previewBox.textContent = error && error.message ? error.message : String(error);
     } finally {
       state.isReading = false;
       refresh(elements);
@@ -524,13 +522,11 @@ Función o funciones:
   async function saveCurrent(elements) {
     if (!state.expediente || !state.materiaConsolidada) {
       setStatus(elements.expedienteStatus, "is-warning", "Sin guardar");
-      elements.previewBox.textContent += "\n\nPrimero valida la materia antes de guardar.";
       return;
     }
 
     if (!Storage || typeof Storage.save !== "function") {
       setStatus(elements.expedienteStatus, "is-error", "Error");
-      elements.previewBox.textContent += "\n\nNo está disponible el módulo de guardado del Bloque 8.";
       return;
     }
 
@@ -541,40 +537,16 @@ Función o funciones:
       var result = await Storage.save(state.expediente);
       state.guardado = result;
       state.expediente.guardado = result;
-      state.expediente.pendienteBloque9 = true;
-
       setStatus(elements.expedienteStatus, result.ok ? "is-ok" : "is-error", result.ok ? "Guardado" : "Error");
       appendSaveResult(elements, result);
     } catch (error) {
-      state.guardado = {
-        ok: false,
-        message: error && error.message ? error.message : String(error)
-      };
+      state.guardado = { ok: false, message: error && error.message ? error.message : String(error) };
       setStatus(elements.expedienteStatus, "is-error", "Error");
       appendSaveResult(elements, state.guardado);
     } finally {
       state.isSaving = false;
       refresh(elements);
     }
-  }
-
-  function clearAll(elements) {
-    state.carrera = "";
-    state.materia = "";
-    state.files.base = null;
-    state.files.contenidos = null;
-    state.files.actividades = null;
-    resetLecturas();
-    state.isReading = false;
-    state.isSaving = false;
-
-    elements.carreraInput.value = "";
-    elements.materiaInput.value = "";
-    elements.baseFileInput.value = "";
-    elements.contenidosFileInput.value = "";
-    elements.actividadesFileInput.value = "";
-
-    refresh(elements);
   }
 
   function resetLecturas() {
@@ -590,11 +562,45 @@ Función o funciones:
     state.expediente = null;
   }
 
+  function clearAll(elements) {
+    state.carrera = "";
+    state.materia = "";
+    state.files.base = null;
+    state.files.contenidos = null;
+    state.files.actividades = null;
+    state.texts.base = "";
+    state.texts.contenidos = "";
+    state.texts.actividades = "";
+    resetLecturas();
+    state.isReading = false;
+    state.isSaving = false;
+
+    elements.carreraInput.value = "";
+    elements.materiaInput.value = "";
+    elements.baseFileInput.value = "";
+    elements.contenidosFileInput.value = "";
+    elements.actividadesFileInput.value = "";
+    if (elements.baseTextInput) elements.baseTextInput.value = "";
+    if (elements.contenidosTextInput) elements.contenidosTextInput.value = "";
+    if (elements.actividadesTextInput) elements.actividadesTextInput.value = "";
+
+    refresh(elements);
+  }
+
   function bindFileInput(elements, kind) {
     var input = elements[kind + "FileInput"];
-
     input.addEventListener("change", function onChange() {
       state.files[kind] = input.files && input.files.length ? input.files[0] : null;
+      resetLecturas();
+      refresh(elements);
+    });
+  }
+
+  function bindTextInput(elements, kind) {
+    var input = elements[kind + "TextInput"];
+    if (!input) return;
+    input.addEventListener("input", function onInput() {
+      state.texts[kind] = clean(input.value);
       resetLecturas();
       refresh(elements);
     });
@@ -617,6 +623,9 @@ Función o funciones:
       baseFileInput: byId("base-file-input"),
       contenidosFileInput: byId("contenidos-file-input"),
       actividadesFileInput: byId("actividades-file-input"),
+      baseTextInput: byId("base-text-input"),
+      contenidosTextInput: byId("contenidos-text-input"),
+      actividadesTextInput: byId("actividades-text-input"),
       manualStatus: byId("manual-status"),
       baseStatus: byId("base-status"),
       contenidosStatus: byId("contenidos-status"),
@@ -632,33 +641,19 @@ Función o funciones:
       expedienteStatus: byId("expediente-status")
     };
 
-    elements.carreraInput.addEventListener("input", function onCarreraInput() {
-      resetLecturas();
-      refresh(elements);
-    });
-
-    elements.materiaInput.addEventListener("input", function onMateriaInput() {
-      resetLecturas();
-      refresh(elements);
-    });
+    elements.carreraInput.addEventListener("input", function onCarreraInput() { resetLecturas(); refresh(elements); });
+    elements.materiaInput.addEventListener("input", function onMateriaInput() { resetLecturas(); refresh(elements); });
 
     bindFileInput(elements, "base");
     bindFileInput(elements, "contenidos");
     bindFileInput(elements, "actividades");
+    bindTextInput(elements, "base");
+    bindTextInput(elements, "contenidos");
+    bindTextInput(elements, "actividades");
 
-    elements.analizarBtn.addEventListener("click", function onPrepareClick() {
-      prepareExpediente(elements);
-    });
-
-    if (elements.guardarBtn) {
-      elements.guardarBtn.addEventListener("click", function onSaveClick() {
-        saveCurrent(elements);
-      });
-    }
-
-    elements.limpiarBtn.addEventListener("click", function onClearClick() {
-      clearAll(elements);
-    });
+    elements.analizarBtn.addEventListener("click", function onPrepareClick() { prepareExpediente(elements); });
+    if (elements.guardarBtn) elements.guardarBtn.addEventListener("click", function onSaveClick() { saveCurrent(elements); });
+    elements.limpiarBtn.addEventListener("click", function onClearClick() { clearAll(elements); });
 
     refresh(elements);
 
@@ -667,6 +662,7 @@ Función o funciones:
         return JSON.parse(JSON.stringify({
           carrera: state.carrera,
           materia: state.materia,
+          textos: state.texts,
           lecturas: {
             base: resumenLecturaParaPreview(state.lecturas.base),
             contenidos: resumenLecturaParaPreview(state.lecturas.contenidos),
