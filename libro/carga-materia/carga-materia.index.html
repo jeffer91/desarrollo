@@ -5,8 +5,8 @@ Función o funciones:
 1. Mostrar la primera pantalla del módulo Libro.
 2. Recibir carrera y materia digitadas manualmente.
 3. Recibir tres archivos fuente: base, contenidos y actividades.
-4. Leer archivos Excel .xlsx/.xls para detectar hojas, filas y columnas.
-5. Preparar el expediente inicial para los siguientes bloques de interpretación inteligente.
+4. Leer archivos Excel/PDF para detectar información técnica.
+5. Interpretar el Archivo 1 para extraer información base de la materia.
 ========================================================= -->
 <!doctype html>
 <html lang="es">
@@ -22,11 +22,11 @@ Función o funciones:
   <main class="libro-page">
     <header class="libro-topbar">
       <div>
-        <p class="libro-kicker">Libro · Bloque 2</p>
+        <p class="libro-kicker">Libro · Bloque 3</p>
         <h1>Carga inteligente de materia</h1>
         <p>
-          Registra la carrera, la materia y los tres archivos fuente. Esta pantalla ya puede leer
-          Excel para detectar hojas, filas, columnas y una vista previa de datos.
+          Registra la carrera, la materia y los tres archivos fuente. Esta pantalla ya lee Excel/PDF
+          e interpreta el Archivo 1 para extraer la información base de la materia.
         </p>
       </div>
 
@@ -41,11 +41,11 @@ Función o funciones:
         <strong>1</strong>
         <span>Pantalla base</span>
       </article>
-      <article class="libro-progress__item is-current">
+      <article class="libro-progress__item">
         <strong>2</strong>
         <span>Lectura Excel</span>
       </article>
-      <article class="libro-progress__item">
+      <article class="libro-progress__item is-current">
         <strong>3</strong>
         <span>Interpretación</span>
       </article>
@@ -152,7 +152,7 @@ Función o funciones:
         <ul id="checklist" class="libro-checklist" aria-live="polite"></ul>
 
         <div class="libro-actions">
-          <button id="analizar-btn" class="libro-btn" type="button" disabled>Analizar archivos</button>
+          <button id="analizar-btn" class="libro-btn" type="button" disabled>Analizar e interpretar</button>
           <button id="limpiar-btn" class="libro-btn libro-btn--ghost" type="button">Limpiar</button>
         </div>
       </article>
@@ -161,7 +161,7 @@ Función o funciones:
         <div class="libro-card__head">
           <div>
             <span class="libro-card__step">Vista previa</span>
-            <h2>Lectura de archivos</h2>
+            <h2>Interpretación base</h2>
           </div>
           <span id="expediente-status" class="libro-status-pill is-pending">Sin analizar</span>
         </div>
@@ -174,7 +174,9 @@ Función o funciones:
   <script src="./carga-materia.constants.js"></script>
   <script src="./carga-materia.normalizer.js"></script>
   <script src="./carga-materia.xlsx-loader.js"></script>
+  <script src="./carga-materia.pdf-reader.js"></script>
   <script src="./carga-materia.excel-reader.js"></script>
+  <script src="./carga-materia.mapper-base.js"></script>
   <script src="./carga-materia.main.js"></script>
 </body>
 </html>
