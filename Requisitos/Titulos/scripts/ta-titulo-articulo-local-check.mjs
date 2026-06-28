@@ -4,13 +4,14 @@
   Función o funciones:
   - Revisar que el módulo pueda abrirse desde Live Server tomando como raíz la carpeta desarrollo.
   - Revisar que las rutas relativas de HTML apunten a archivos existentes.
-  - Revisar que las tres pantallas principales tengan import map de Firebase.
-  - Revisar que Electron fuerce Firebase directo.
+  - Revisar que las pantallas principales tengan import map de Firebase.
+  - Revisar que Electron pueda abrir estudiante, coordinador y administrador con Firebase directo.
   - Revisar comandos locales definidos en package.json.
   Se conecta con:
   - package.json
   - public/ta-titulo-articulo-estudiante.html
   - public/ta-titulo-articulo-coordinador.html
+  - public/ta-titulo-articulo-admin.html
   - electron/admin/ta-titulo-articulo-administrador.html
   - electron/ta-titulo-articulo-main.js
 */
@@ -26,6 +27,7 @@ const root = resolve(__dirname, "..");
 const htmlFiles = [
   "public/ta-titulo-articulo-estudiante.html",
   "public/ta-titulo-articulo-coordinador.html",
+  "public/ta-titulo-articulo-admin.html",
   "electron/admin/ta-titulo-articulo-administrador.html"
 ];
 
@@ -35,8 +37,13 @@ const expectedScripts = [
   "check:all",
   "build:local",
   "electron",
+  "electron:admin",
+  "electron:estudiante",
+  "electron:coordinador",
   "electron:dev",
   "dev",
+  "dev:coordinador",
+  "dev:admin",
   "dev:netlify"
 ];
 
@@ -112,8 +119,8 @@ for (const htmlFile of htmlFiles) {
 const electronMain = "electron/ta-titulo-articulo-main.js";
 if (existsSync(resolve(root, electronMain))) {
   const mainContent = read(electronMain);
-  if (!mainContent.includes('taDataMode: "firebase-direct"')) {
-    errors.push("electron/ta-titulo-articulo-main.js: Electron debe forzar taDataMode firebase-direct.");
+  for (const value of ['taDataMode: "firebase-direct"', "--estudiante", "--coordinador", "--admin", "public", "ta-titulo-articulo-estudiante.html", "ta-titulo-articulo-coordinador.html", "ta-titulo-articulo-administrador.html"]) {
+    if (!mainContent.includes(value)) errors.push(`${electronMain}: falta ${value}.`);
   }
   if (!mainContent.includes("setWindowOpenHandler")) {
     warnings.push("electron/ta-titulo-articulo-main.js: no se detectó bloqueo de nuevas ventanas externas.");
@@ -132,7 +139,7 @@ if (errors.length) {
 
 console.log("Títulos: revisión local correcta.");
 console.log("Modo Live Server desde carpeta desarrollo: rutas compatibles.");
-console.log("Modo Electron: Firebase directo forzado.");
+console.log("Modo Electron: Firebase directo forzado para estudiante, coordinador y administrador.");
 console.log("Modo doble click: estructura local preparada; requiere internet para CDN Firebase.");
 if (warnings.length) {
   console.warn("Advertencias:");
