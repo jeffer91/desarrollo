@@ -18,7 +18,7 @@ npm install
 npm run check:all
 ```
 
-Si `check:all` pasa, probar cada modo.
+`check:all` ejecuta revisión general, revisión local, revisión Netlify y revisión de esquema limpio. Si pasa, probar cada modo.
 
 ## 1. Live Server desde carpeta desarrollo
 
@@ -200,6 +200,7 @@ GEMINI_MODEL
 npm run check
 npm run check:local
 npm run check:netlify
+npm run check:schema
 npm run check:all
 npm run build:local
 npm run build:netlify
