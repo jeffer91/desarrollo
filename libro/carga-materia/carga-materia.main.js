@@ -2,17 +2,24 @@
 Nombre completo: carga-materia.main.js
 Ruta o ubicación: /desarrollo/libro/carga-materia/carga-materia.main.js
 Función o funciones:
-1. Controlar la primera pantalla de carga del módulo Libro.
+1. Controlar la pantalla de carga del módulo Libro.
 2. Validar campos manuales: carrera y materia.
 3. Validar selección de los tres archivos fuente.
-4. Preparar un expediente inicial con metadatos de carga.
-5. Dejar lista la pantalla para conectar el lector inteligente de Excel/PDF en el Bloque 2.
+4. Leer archivos Excel para detectar hojas, filas, columnas y vista previa.
+5. Preparar un expediente inicial con metadatos y lecturas técnicas.
 ========================================================= */
 
 (function iniciarCargaMateria(window, document) {
   "use strict";
 
-  var ALLOWED = {
+  var Constants = window.LibroCargaMateriaConstants || null;
+  var ExcelReader = window.LibroCargaMateriaExcelReader || null;
+
+  var ALLOWED = Constants ? {
+    base: Constants.getAllowedExtensions("base"),
+    contenidos: Constants.getAllowedExtensions("contenidos"),
+    actividades: Constants.getAllowedExtensions("actividades")
+  } : {
     base: ["xlsx", "xls", "pdf"],
     contenidos: ["xlsx", "xls"],
     actividades: ["xlsx", "xls"]
@@ -26,7 +33,13 @@ Función o funciones:
       contenidos: null,
       actividades: null
     },
-    expediente: null
+    lecturas: {
+      base: null,
+      contenidos: null,
+      actividades: null
+    },
+    expediente: null,
+    isReading: false
   };
 
   function byId(id) {
@@ -44,6 +57,11 @@ Función o funciones:
     if (parts.length < 2) return "";
 
     return parts.pop().toLowerCase();
+  }
+
+  function isExcelFile(file) {
+    var ext = getExtension(file);
+    return ext === "xlsx" || ext === "xls";
   }
 
   function formatSize(bytes) {
@@ -83,15 +101,8 @@ Función o funciones:
     return ALLOWED[kind].indexOf(extension) >= 0;
   }
 
-  function fileLabel(kind) {
-    if (kind === "base") return "Archivo 1: información base";
-    if (kind === "contenidos") return "Archivo 2: contenidos de unidades";
-    if (kind === "actividades") return "Archivo 3: actividades";
-    return "Archivo";
-  }
-
   function buildChecklist() {
-    var checks = [
+    return [
       {
         label: "Carrera escrita",
         ok: Boolean(state.carrera)
@@ -113,8 +124,6 @@ Función o funciones:
         ok: Boolean(state.files.actividades) && isFileAllowed("actividades", state.files.actividades)
       }
     ];
-
-    return checks;
   }
 
   function canPrepare() {
@@ -132,10 +141,21 @@ Función o funciones:
     );
   }
 
+  function lecturaStatus(kind) {
+    var lectura = state.lecturas[kind];
+
+    if (!lectura) return null;
+    if (lectura.tipo === "pdf") return "PDF pendiente";
+    if (lectura.ok) return "Leído";
+
+    return "Error";
+  }
+
   function updateFileStatus(elements, kind) {
     var file = state.files[kind];
     var status = elements[kind + "Status"];
     var name = elements[kind + "FileName"];
+    var lecturaTexto = lecturaStatus(kind);
 
     if (!file) {
       setStatus(status, "is-pending", "Pendiente");
@@ -151,7 +171,16 @@ Función o funciones:
       return;
     }
 
-    setStatus(status, "is-ok", "Cargado");
+    if (lecturaTexto === "Leído") {
+      setStatus(status, "is-ok", "Leído");
+    } else if (lecturaTexto === "PDF pendiente") {
+      setStatus(status, "is-warning", "PDF pendiente");
+    } else if (lecturaTexto === "Error") {
+      setStatus(status, "is-error", "Error");
+    } else {
+      setStatus(status, "is-ok", "Cargado");
+    }
+
     if (name) {
       name.textContent = file.name + " · " + formatSize(file.size);
     }
@@ -176,13 +205,45 @@ Función o funciones:
     });
   }
 
+  function resumenLecturaParaPreview(lectura) {
+    if (!lectura) return null;
+
+    if (lectura.tipo === "pdf") {
+      return {
+        tipo: "pdf",
+        archivo: lectura.archivo,
+        mensaje: lectura.mensaje,
+        pendienteBloque3: true
+      };
+    }
+
+    return {
+      tipo: "excel",
+      archivo: lectura.archivo,
+      totalHojas: lectura.totalHojas,
+      hojaPrincipal: lectura.hojaPrincipal,
+      resumen: lectura.resumen,
+      hojas: (lectura.hojas || []).map(function mapSheet(sheet) {
+        return {
+          nombreHoja: sheet.nombreHoja,
+          totalFilas: sheet.totalFilas,
+          totalFilasConDatos: sheet.totalFilasConDatos,
+          totalColumnas: sheet.totalColumnas,
+          columnas: sheet.columnas,
+          columnasDetectadas: sheet.columnasDetectadas,
+          vistaPrevia: sheet.vistaPrevia
+        };
+      })
+    };
+  }
+
   function updatePreviewBeforePrepare(elements) {
     if (state.expediente) return;
 
     elements.previewBox.textContent = JSON.stringify(
       {
-        bloque: 1,
-        estado: "pantalla_base_lista",
+        bloque: 2,
+        estado: "esperando_analisis_de_archivos",
         carrera: state.carrera || "",
         materia: state.materia || "",
         archivos: {
@@ -190,7 +251,11 @@ Función o funciones:
           contenidos: fileToMeta(state.files.contenidos),
           actividades: fileToMeta(state.files.actividades)
         },
-        siguiente: "Bloque 2: lector de Excel"
+        lecturaExcel: {
+          disponible: Boolean(ExcelReader),
+          pendiente: true
+        },
+        siguiente: "Presiona Analizar archivos para leer hojas, filas y columnas."
       },
       null,
       2
@@ -207,26 +272,35 @@ Función o funciones:
     updateFileStatus(elements, "actividades");
     renderChecklist(elements);
 
-    elements.analizarBtn.disabled = !canPrepare();
+    elements.analizarBtn.disabled = !canPrepare() || state.isReading;
+    elements.analizarBtn.textContent = state.isReading ? "Analizando..." : "Analizar archivos";
 
     if (!state.expediente) {
-      setStatus(elements.expedienteStatus, "is-pending", "Sin preparar");
+      setStatus(elements.expedienteStatus, "is-pending", "Sin analizar");
       updatePreviewBeforePrepare(elements);
     }
   }
 
-  function prepareExpediente(elements) {
-    if (!canPrepare()) {
-      setStatus(elements.expedienteStatus, "is-warning", "Incompleto");
-      elements.previewBox.textContent = "Faltan datos o archivos para preparar el expediente inicial.";
-      return;
+  async function readAllFiles() {
+    if (!ExcelReader || typeof ExcelReader.readFileForKind !== "function") {
+      throw new Error("No está disponible el lector de Excel del Bloque 2.");
     }
 
-    state.expediente = {
+    var lecturas = {};
+
+    lecturas.base = await ExcelReader.readFileForKind(state.files.base, "base");
+    lecturas.contenidos = await ExcelReader.readFileForKind(state.files.contenidos, "contenidos");
+    lecturas.actividades = await ExcelReader.readFileForKind(state.files.actividades, "actividades");
+
+    return lecturas;
+  }
+
+  function buildExpedienteFromLecturas(lecturas) {
+    return {
       modulo: "libro",
       pantalla: "carga-materia",
-      bloque: 1,
-      estado: "expediente_inicial_preparado",
+      bloque: 2,
+      estado: "archivos_leidos",
       carrera: state.carrera,
       materia: state.materia,
       archivos: {
@@ -234,18 +308,58 @@ Función o funciones:
         contenidosUnidades: fileToMeta(state.files.contenidos),
         actividadesMateria: fileToMeta(state.files.actividades)
       },
+      lecturas: {
+        informacionBase: resumenLecturaParaPreview(lecturas.base),
+        contenidosUnidades: resumenLecturaParaPreview(lecturas.contenidos),
+        actividadesMateria: resumenLecturaParaPreview(lecturas.actividades)
+      },
       reglas: {
-        unidadesEsperadas: 4,
+        unidadesEsperadas: Constants ? Constants.RULES.unidadesEsperadas : 4,
         archivo1: "descripcion_objetivo_unidades_competencias_resultados_bibliografia_justificacion",
         archivo2: "contenidos_de_unidades",
         archivo3: "actividades_de_la_materia"
       },
-      pendienteBloque2: true,
+      pendienteBloque3: true,
       creadoEn: new Date().toISOString()
     };
+  }
 
-    setStatus(elements.expedienteStatus, "is-ok", "Preparado");
-    elements.previewBox.textContent = JSON.stringify(state.expediente, null, 2);
+  async function prepareExpediente(elements) {
+    if (!canPrepare()) {
+      setStatus(elements.expedienteStatus, "is-warning", "Incompleto");
+      elements.previewBox.textContent = "Faltan datos o archivos para analizar.";
+      return;
+    }
+
+    state.isReading = true;
+    state.expediente = null;
+    setStatus(elements.expedienteStatus, "is-warning", "Analizando");
+    elements.previewBox.textContent = "Leyendo archivos Excel. Espera un momento...";
+    refresh(elements);
+
+    try {
+      var lecturas = await readAllFiles();
+      state.lecturas = lecturas;
+      state.expediente = buildExpedienteFromLecturas(lecturas);
+
+      setStatus(elements.expedienteStatus, "is-ok", "Analizado");
+      elements.previewBox.textContent = JSON.stringify(state.expediente, null, 2);
+    } catch (error) {
+      state.expediente = null;
+      setStatus(elements.expedienteStatus, "is-error", "Error");
+      elements.previewBox.textContent = JSON.stringify(
+        {
+          bloque: 2,
+          estado: "error_lectura_archivos",
+          mensaje: error && error.message ? error.message : String(error)
+        },
+        null,
+        2
+      );
+    } finally {
+      state.isReading = false;
+      refresh(elements);
+    }
   }
 
   function clearAll(elements) {
@@ -254,7 +368,11 @@ Función o funciones:
     state.files.base = null;
     state.files.contenidos = null;
     state.files.actividades = null;
+    state.lecturas.base = null;
+    state.lecturas.contenidos = null;
+    state.lecturas.actividades = null;
     state.expediente = null;
+    state.isReading = false;
 
     elements.carreraInput.value = "";
     elements.materiaInput.value = "";
@@ -265,17 +383,27 @@ Función o funciones:
     refresh(elements);
   }
 
+  function resetLecturas() {
+    state.lecturas.base = null;
+    state.lecturas.contenidos = null;
+    state.lecturas.actividades = null;
+    state.expediente = null;
+  }
+
   function bindFileInput(elements, kind) {
     var input = elements[kind + "FileInput"];
 
     input.addEventListener("change", function onChange() {
       state.files[kind] = input.files && input.files.length ? input.files[0] : null;
-      state.expediente = null;
+      resetLecturas();
       refresh(elements);
     });
   }
 
   function boot() {
+    Constants = window.LibroCargaMateriaConstants || Constants;
+    ExcelReader = window.LibroCargaMateriaExcelReader || ExcelReader;
+
     var elements = {
       carreraInput: byId("carrera-input"),
       materiaInput: byId("materia-input"),
@@ -297,12 +425,12 @@ Función o funciones:
     };
 
     elements.carreraInput.addEventListener("input", function onCarreraInput() {
-      state.expediente = null;
+      resetLecturas();
       refresh(elements);
     });
 
     elements.materiaInput.addEventListener("input", function onMateriaInput() {
-      state.expediente = null;
+      resetLecturas();
       refresh(elements);
     });
 
@@ -325,6 +453,11 @@ Función o funciones:
         return JSON.parse(JSON.stringify({
           carrera: state.carrera,
           materia: state.materia,
+          lecturas: {
+            base: resumenLecturaParaPreview(state.lecturas.base),
+            contenidos: resumenLecturaParaPreview(state.lecturas.contenidos),
+            actividades: resumenLecturaParaPreview(state.lecturas.actividades)
+          },
           expediente: state.expediente
         }));
       }
