@@ -8,6 +8,7 @@ Función o funciones:
 3. Expone funciones para listar, buscar y validar visibilidad.
 4. Agrega el módulo Incorporaciones como entorno independiente.
 5. Mantiene el módulo Titulación separado para evitar sobrecargarlo.
+6. Agrega el módulo Libro como entorno independiente por bloques.
 =========================================================
 */
 
@@ -44,6 +45,13 @@ Función o funciones:
       group: "Documentos",
       description: "Entrada principal del bloque Documentos.",
       path: "./Documentos/index.html"
+    },
+    {
+      id: "libro",
+      title: "Libro",
+      group: "Libro",
+      description: "Carga inteligente de materia, unidades, contenidos y actividades para generar libros académicos.",
+      path: "./libro/index.html"
     },
     {
       id: "incorporaciones",
