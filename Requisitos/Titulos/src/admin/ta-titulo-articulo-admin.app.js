@@ -6,6 +6,7 @@
   - Cargar desde Firebase períodos, coordinadores, carreras, estudiantes y envíos.
   - Mostrar visibilidad completa del proceso de revisión de títulos.
   - Activar período, crear coordinadores, asignar carreras y limpiar pruebas de titulos/titulos_logs.
+  - Unificar períodos repetidos en el selector principal del administrador.
   Se conecta con:
   - Requisitos/Titulos/electron/admin/ta-titulo-articulo-administrador.html
   - Requisitos/Titulos/public/ta-titulo-articulo-admin.html
@@ -25,6 +26,22 @@ let state = {
 const $ = (id) => document.getElementById(id);
 const clean = (value) => String(value ?? "").replace(/\s+/g, " ").trim();
 const normalizar = (value) => clean(value).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+const MESES_PERIODO = Object.freeze({
+  enero: { label: "Enero", orden: 1 },
+  febrero: { label: "Febrero", orden: 2 },
+  marzo: { label: "Marzo", orden: 3 },
+  abril: { label: "Abril", orden: 4 },
+  mayo: { label: "Mayo", orden: 5 },
+  junio: { label: "Junio", orden: 6 },
+  julio: { label: "Julio", orden: 7 },
+  agosto: { label: "Agosto", orden: 8 },
+  septiembre: { label: "Septiembre", orden: 9 },
+  setiembre: { label: "Septiembre", orden: 9 },
+  octubre: { label: "Octubre", orden: 10 },
+  noviembre: { label: "Noviembre", orden: 11 },
+  diciembre: { label: "Diciembre", orden: 12 }
+});
 
 function setText(id, value) {
   const el = $(id);
@@ -102,18 +119,93 @@ function getResumen() {
   };
 }
 
+function formatearPeriodoLabel(value) {
+  return clean(value).replace(/\b(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)\b/gi, (match) => {
+    const key = normalizar(match);
+    return MESES_PERIODO[key]?.label || match;
+  });
+}
+
+function extraerMesAnioPeriodo(value) {
+  const texto = normalizar(value);
+  const patron = /\b(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)\s+(20\d{2})\b/g;
+  const salida = [];
+  let match = patron.exec(texto);
+  while (match) {
+    const mesKey = match[1] === "setiembre" ? "septiembre" : match[1];
+    const mes = MESES_PERIODO[mesKey]?.orden || 0;
+    salida.push({ anio: Number(match[2]), mes, key: `${match[2]}-${String(mes).padStart(2, "0")}` });
+    match = patron.exec(texto);
+  }
+  return salida;
+}
+
+function clavePeriodo(periodo = {}) {
+  const label = periodo.label || periodo.nombre || periodo.periodoLabel || periodo.id;
+  const partes = extraerMesAnioPeriodo(label);
+  if (partes.length >= 2) return `${partes[0].key}__${partes[1].key}`;
+  if (partes.length === 1) return partes[0].key;
+  return normalizar(label).replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+}
+
+function ordenPeriodo(periodo = {}) {
+  const partes = extraerMesAnioPeriodo(periodo.label || periodo.nombre || periodo.periodoLabel || periodo.id);
+  if (!partes.length) return 0;
+  return (partes[0].anio * 100) + partes[0].mes;
+}
+
+function periodosUnificados(periodos = [], periodoActivo = null) {
+  const activoId = clean(periodoActivo?.id);
+  const mapa = new Map();
+
+  periodos.forEach((periodo, index) => {
+    const key = clavePeriodo(periodo);
+    if (!key) return;
+
+    const label = formatearPeriodoLabel(periodo.label || periodo.nombre || periodo.periodoLabel || periodo.id);
+    const item = {
+      ...periodo,
+      id: clean(periodo.id),
+      label,
+      key,
+      orden: ordenPeriodo(periodo),
+      index,
+      activo: clean(periodo.id) === activoId
+    };
+
+    if (!mapa.has(key)) {
+      mapa.set(key, item);
+      return;
+    }
+
+    const actual = mapa.get(key);
+    if (item.activo) {
+      mapa.set(key, { ...actual, ...item, activo: true });
+    } else if (!actual.id && item.id) {
+      mapa.set(key, { ...actual, id: item.id, label: item.label, orden: actual.orden || item.orden });
+    }
+  });
+
+  return Array.from(mapa.values()).sort((a, b) => {
+    if (a.orden !== b.orden) return b.orden - a.orden;
+    return a.index - b.index;
+  });
+}
+
 function renderPeriodo() {
   const resumen = getResumen();
   const select = $("ta-admin-periodo-select");
   if (!select) return;
 
+  const periodos = periodosUnificados(resumen.periodos || [], resumen.periodoActivo);
+
   select.replaceChildren();
   const empty = document.createElement("option");
   empty.value = "";
-  empty.textContent = resumen.periodos.length ? "Seleccione período" : "No hay períodos cargados";
+  empty.textContent = periodos.length ? "Seleccione período" : "No hay períodos cargados";
   select.appendChild(empty);
 
-  resumen.periodos.forEach((periodo) => {
+  periodos.forEach((periodo) => {
     const option = document.createElement("option");
     option.value = clean(periodo.id);
     option.textContent = clean(periodo.label || periodo.nombre || periodo.id);
@@ -121,7 +213,7 @@ function renderPeriodo() {
   });
 
   if (resumen.periodoActivo?.id) select.value = clean(resumen.periodoActivo.id);
-  setText("ta-admin-periodo-activo-label", resumen.periodoActivo?.label || resumen.periodoActivo?.id || "---");
+  setText("ta-admin-periodo-activo-label", formatearPeriodoLabel(resumen.periodoActivo?.label || resumen.periodoActivo?.id || "---"));
 }
 
 function renderStats() {
