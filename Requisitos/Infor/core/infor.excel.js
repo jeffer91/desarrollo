@@ -6,6 +6,7 @@ Función o funciones:
 - Procesar varias hojas del archivo.
 - Ignorar hojas vacías o sin registros de estudiantes.
 - Normalizar encabezados y filas útiles para los siguientes bloques.
+- Detectar filas útiles aunque una hoja tenga cédula y notas, pero no nombres.
 Con qué se conecta:
 - ../../Gestion/Excel/excel-xlsx-loader.js
 - ../frontend/titulacion.app.js
@@ -21,6 +22,7 @@ Con qué se conecta:
   var HEADER_HINTS = [
     "cedula", "identificacion", "estudiante", "nombre", "nombres", "apellido", "carrera", "programa",
     "titulo", "articulo", "trabajo", "tutor", "nota", "notafinal", "nfin", "nart", "ndef",
+    "notapractico", "notateorico", "notasupletorio", "practico", "teorico", "supletorio",
     "tribunal", "estado", "modalidad"
   ];
 
@@ -83,8 +85,8 @@ Con qué se conecta:
     var keyText = keys.join(" ");
     var hasId = keys.some(function(k){return compact(k).indexOf("cedula") >= 0 || compact(k).indexOf("identificacion") >= 0;}) || cedulaLike(joined);
     var hasName = keys.some(function(k){var c = compact(k);return c.indexOf("nombre") >= 0 || c.indexOf("estudiante") >= 0 || c.indexOf("apellido") >= 0;}) || hasNameLike(joined);
-    var hasAcademic = /carrera|programa|nota|titulo|articulo|trabajo|tutor|tribunal|modalidad/i.test(keyText + " " + joined);
-    return (hasId && hasName) || (hasName && hasAcademic);
+    var hasAcademic = /carrera|programa|nota|nfin|nart|ndef|practico|teorico|supletorio|titulo|articulo|trabajo|tutor|tribunal|modalidad/i.test(keyText + " " + joined);
+    return (hasId && hasName) || (hasId && hasAcademic) || (hasName && hasAcademic);
   }
 
   function objectFromRow(headers, row){
