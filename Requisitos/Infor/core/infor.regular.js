@@ -5,7 +5,7 @@ Función o funciones:
 - Analizar el Excel regular de Infor usando NÚCLEOS y notas_complexivo.
 - Usar el Excel como fuente principal del informe.
 - Validar 4 núcleos por estudiante, nota mínima 7 y nota 0 como retirado.
-- Deduplicar notas_complexivo por cédula.
+- Deduplicar núcleos repetidos y notas_complexivo por cédula.
 - Calcular nota final: si existe notaSupletorio, esa nota manda; si no, práctica 60% y teórico 40%.
 - Marcar inconsistencia cuando existe complexivo sin 4 núcleos aprobados.
 Con qué se conecta:
@@ -86,22 +86,40 @@ Con qué se conecta:
     return fallback || 1;
   }
 
+  function nucleoNota(row){return num(findValue(row, NUCLEO_NOTA_ALIASES));}
+
+  function dedupeNucleos(mappedRows){
+    var byNumber = Object.create(null);
+    safeList(mappedRows).forEach(function(item){
+      var key = String(item.numero || 0);
+      if(!byNumber[key]){byNumber[key] = item;return;}
+      var current = byNumber[key];
+      var nextNota = item.nota == null ? -1 : item.nota;
+      var currentNota = current.nota == null ? -1 : current.nota;
+      if(nextNota > currentNota){byNumber[key] = item;}
+    });
+    return Object.keys(byNumber).sort(function(a,b){return Number(a) - Number(b);}).map(function(key){return byNumber[key];});
+  }
+
   function buildNucleosIndex(rows){
     var byCedula = Object.create(null);
     safeList(rows).forEach(function(row, index){
       var key = cedulaKey(cedulaOf(row));
       if(!key){return;}
-      if(!byCedula[key]){byCedula[key] = {cedula:cedulaOf(row),nombres:nameOf(row),carrera:careerOf(row),rows:[]};}
-      byCedula[key].rows.push(Object.assign({_inforOriginalIndex:index}, row));
+      if(!byCedula[key]){byCedula[key] = {cedula:cedulaOf(row),nombres:nameOf(row),carrera:careerOf(row),rows:[],rawRows:[]};}
+      byCedula[key].rawRows.push(Object.assign({_inforOriginalIndex:index}, row));
     });
 
     Object.keys(byCedula).forEach(function(key){
       var item = byCedula[key];
-      item.rows = item.rows.map(function(row, idx){
+      var mapped = item.rawRows.map(function(row, idx){
         var numero = nucleoNumber(row, idx + 1);
-        var nota = num(findValue(row, NUCLEO_NOTA_ALIASES));
+        var nota = nucleoNota(row);
         return {numero:numero,materia:materiaOf(row) || ("Núcleo " + numero),docente:docenteForNucleo(numero),nota:nota,aprobado:nota != null && nota >= 7,retirado:nota === 0,row:row};
-      }).sort(function(a,b){return a.numero - b.numero;});
+      });
+      item.rows = dedupeNucleos(mapped);
+      item.totalOriginal = mapped.length;
+      item.duplicados = Math.max(0, mapped.length - item.rows.length);
       item.total = item.rows.length;
       item.aprobados = item.rows.filter(function(n){return n.aprobado;}).length;
       item.retirado = item.rows.some(function(n){return n.retirado;});
@@ -116,7 +134,7 @@ Con qué se conecta:
 
   function summarizeNucleos(index){
     var list = Object.keys(index).map(function(key){return index[key];});
-    return {total:list.length,completos:list.filter(function(x){return x.completo;}).length,aprobados:list.filter(function(x){return x.aprobado;}).length,retirados:list.filter(function(x){return x.retirado;}).length,incompletos:list.filter(function(x){return x.incompleto;}).length,reprobados:list.filter(function(x){return x.reprobado;}).length};
+    return {total:list.length,completos:list.filter(function(x){return x.completo;}).length,aprobados:list.filter(function(x){return x.aprobado;}).length,retirados:list.filter(function(x){return x.retirado;}).length,incompletos:list.filter(function(x){return x.incompleto;}).length,reprobados:list.filter(function(x){return x.reprobado;}).length,duplicados:list.reduce(function(sum,x){return sum + (x.duplicados || 0);}, 0)};
   }
 
   function complexivoNote(row){
@@ -178,7 +196,7 @@ Con qué se conecta:
       modalidadTitulacion:"EXAMEN_COMPLEXIVO",
       modalidadLabel:"Examen Complexivo",
       _inforRegularPrepared:true,
-      _inforNucleos:nucleoInfo ? {total:nucleoInfo.total,aprobados:nucleoInfo.aprobados,completo:nucleoInfo.completo,aprobado:nucleoInfo.aprobado,retirado:nucleoInfo.retirado,estado:nucleoInfo.estado,rows:nucleoInfo.rows.map(function(n){return {numero:n.numero,materia:n.materia,docente:n.docente,nota:n.nota,aprobado:n.aprobado,retirado:n.retirado};})} : {total:0,aprobados:0,completo:false,aprobado:false,retirado:false,estado:"SIN_NUCLEOS",rows:[]},
+      _inforNucleos:nucleoInfo ? {total:nucleoInfo.total,aprobados:nucleoInfo.aprobados,completo:nucleoInfo.completo,aprobado:nucleoInfo.aprobado,retirado:nucleoInfo.retirado,estado:nucleoInfo.estado,duplicados:nucleoInfo.duplicados || 0,rows:nucleoInfo.rows.map(function(n){return {numero:n.numero,materia:n.materia,docente:n.docente,nota:n.nota,aprobado:n.aprobado,retirado:n.retirado};})} : {total:0,aprobados:0,completo:false,aprobado:false,retirado:false,estado:"SIN_NUCLEOS",rows:[]},
       _inforTieneComplexivo:!!hasComplexivo
     });
   }
@@ -235,7 +253,7 @@ Con qué se conecta:
       duplicates:complexivoDedup.duplicates,
       inconsistencies:inconsistencies.map(function(row){return {cedula:row.cedula,nombres:row.nombres,carrera:row.carrera,reason:row._inforInconsistenciaDetalle,nucleos:row._inforNucleos};}),
       rows:preparedRows,
-      summary:{totalExcel:rows.length,validForReport:preparedRows.length,studentsFromExcel:preparedRows.length,excludedByPeriod:0,excludedNoCedula:complexivoDedup.duplicates.filter(function(x){return x.reason === "sin_cedula";}).length,duplicates:complexivoDedup.duplicates.length,nucleosTotal:nucleosSummary.total,nucleosAprobados:nucleosSummary.aprobados,nucleosRetirados:nucleosSummary.retirados,complexivoFinal:preparedComplexivo.length,supletorios:supletorios.length,retirados:retirados.length,inconsistencias:inconsistencies.length},
+      summary:{totalExcel:rows.length,validForReport:preparedRows.length,studentsFromExcel:preparedRows.length,excludedByPeriod:0,excludedNoCedula:complexivoDedup.duplicates.filter(function(x){return x.reason === "sin_cedula";}).length,duplicates:complexivoDedup.duplicates.length,nucleosTotal:nucleosSummary.total,nucleosAprobados:nucleosSummary.aprobados,nucleosRetirados:nucleosSummary.retirados,nucleosDuplicados:nucleosSummary.duplicados,complexivoFinal:preparedComplexivo.length,supletorios:supletorios.length,retirados:retirados.length,inconsistencias:inconsistencies.length},
       generatedAt:new Date().toISOString()
     };
   }
