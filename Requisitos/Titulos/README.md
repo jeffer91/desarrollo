@@ -18,7 +18,7 @@ npm install
 npm run check:all
 ```
 
-`check:all` ejecuta revisión general, revisión local, revisión Netlify y revisión de esquema limpio. Si pasa, probar cada modo.
+`check:all` ejecuta revisión general, revisión local, revisión Netlify, revisión de esquema limpio y revisión de conexión/comunicación. Si pasa, probar cada modo.
 
 ## 1. Live Server desde carpeta desarrollo
 
@@ -194,6 +194,26 @@ VITE_FIREBASE_APP_ID
 GEMINI_MODEL
 ```
 
+## Revisión de conexión
+
+Para validar rutas, comunicación interna y conexiones entre pantallas, ejecutar:
+
+```bash
+npm run check:connection
+```
+
+Este comando verifica:
+
+```text
+HTML conectado con sus apps
+Apps conectadas con API client
+API client conectado con runtime y Firebase directo
+Electron conectado con estudiante, coordinador y administrador
+Netlify Functions conectadas
+Gemini con endpoint y respaldo local
+Panel administrador lateral visible
+```
+
 ## Comandos principales
 
 ```bash
@@ -201,6 +221,7 @@ npm run check
 npm run check:local
 npm run check:netlify
 npm run check:schema
+npm run check:connection
 npm run check:all
 npm run build:local
 npm run build:netlify
