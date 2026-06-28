@@ -12,6 +12,7 @@
       "netlify.toml",
       "public/ta-titulo-articulo-estudiante.html",
       "public/ta-titulo-articulo-coordinador.html",
+      "public/ta-titulo-articulo-admin.html",
       "electron/ta-titulo-articulo-main.js",
       "electron/admin/ta-titulo-articulo-administrador.html",
       "scripts/ta-titulo-articulo-check.mjs",
@@ -29,6 +30,7 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1 --open /public/ta-titulo-articulo-estudiante.html",
     "dev:coordinador": "vite --host 127.0.0.1 --open /public/ta-titulo-articulo-coordinador.html",
+    "dev:admin": "vite --host 127.0.0.1 --open /public/ta-titulo-articulo-admin.html",
     "dev:netlify": "npx netlify-cli@latest dev --host 127.0.0.1 --port 8888",
     "build": "vite build",
     "build:local": "node scripts/ta-titulo-articulo-build-local.mjs",
