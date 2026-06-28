@@ -4,8 +4,9 @@ Ruta o ubicación: /desarrollo/libro/index.html
 Función o funciones:
 1. Servir como entrada principal del módulo Libro.
 2. Mantener el módulo aislado del panel principal de desarrollo.
-3. Abrir la primera pantalla: Carga inteligente de materia.
-4. Preparar el crecimiento por bloques sin romper otros módulos.
+3. Abrir la pantalla de carga inteligente de materia.
+4. Abrir el generador de libro académico.
+5. Preparar el crecimiento por bloques sin romper otros módulos.
 ========================================================= -->
 <!doctype html>
 <html lang="es">
@@ -45,13 +46,16 @@ Función o funciones:
         </a>
       </article>
 
-      <article class="libro-option-card libro-option-card--disabled" aria-disabled="true">
-        <span class="libro-option-card__step">Próximamente</span>
+      <article class="libro-option-card">
+        <span class="libro-option-card__step">Bloque 9</span>
         <h2>Generador de libro</h2>
         <p>
-          Esta pantalla se activará después de consolidar correctamente la materia con sus unidades,
-          contenidos y actividades.
+          Carga una materia consolidada, genera una primera versión del libro académico por unidades
+          y exporta el resultado en TXT o JSON.
         </p>
+        <a class="libro-link-btn" href="./generador-libro/generador-libro.index.html">
+          Abrir generador
+        </a>
       </article>
     </section>
   </main>
