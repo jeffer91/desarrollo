@@ -10,6 +10,7 @@ Con qué se conecta:
 - infor.state.js
 - infor.periodo.js
 - infor.excel.js
+- infor.regular.js
 - infor.match.js
 - infor.report.js
 - infor.gemini.js
@@ -29,6 +30,7 @@ Con qué se conecta:
     {name:"StatsRules", value:"StatsRules", required:true},
     {name:"InforPeriodo", value:"InforPeriodo", required:true},
     {name:"InforExcel", value:"InforExcel", required:true},
+    {name:"InforRegular", value:"InforRegular", required:true},
     {name:"InforMatch", value:"InforMatch", required:true},
     {name:"InforCronogramaParser", value:"InforCronogramaParser", required:true},
     {name:"InforReport", value:"InforReport", required:true},
@@ -53,11 +55,13 @@ Con qué se conecta:
     var excelRows = snapshot.excelData && Array.isArray(snapshot.excelData.rows) ? snapshot.excelData.rows.length : 0;
     var match = snapshot.matchResult || null;
     var matchSummary = match && match.summary ? match.summary : null;
+    var regular = match && match.regularAnalysis ? match.regularAnalysis : null;
     var report = snapshot.reportDraft || null;
     var key = window.InforState && typeof window.InforState.getGeminiKey === "function" ? window.InforState.getGeminiKey() : "";
 
     checks.push({type:hasPeriod ? "ok" : "warn", label:"Período", message:hasPeriod ? "Seleccionado" : "Pendiente de seleccionar"});
     checks.push({type:excelRows > 0 ? "ok" : "warn", label:"Excel", message:excelRows > 0 ? (excelRows + " filas detectadas") : "Sin filas detectadas"});
+    checks.push({type:regular ? "ok" : "warn", label:"Análisis regular", message:regular ? ((regular.summary.validForReport || 0) + " válidos, " + (regular.summary.excludedByPeriod || 0) + " fuera del período, " + (regular.summary.duplicates || 0) + " duplicados") : "Pendiente de ejecutar"});
     checks.push({type:matchSummary && matchSummary.total ? (matchSummary.pendientes ? "warn" : "ok") : "warn", label:"Unión BaseLocal", message:matchSummary ? (matchSummary.unidos + " unidos, " + matchSummary.pendientes + " pendientes") : "Sin unión todavía"});
     checks.push({type:key ? "ok" : "warn", label:"Gemini", message:key ? "Clave configurada" : "Clave pendiente"});
     checks.push({type:report && report.ok ? "ok" : "warn", label:"Motor informe", message:report && report.ok ? (report.sections.length + " secciones listas") : "Pendiente de procesar"});
