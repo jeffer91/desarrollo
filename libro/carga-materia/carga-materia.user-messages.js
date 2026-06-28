@@ -30,12 +30,21 @@ Función o funciones:
     return Boolean(element && element.files && element.files.length);
   }
 
+  function getFileExtension(id) {
+    var element = byId(id);
+    var file = element && element.files && element.files.length ? element.files[0] : null;
+    var name = file && file.name ? String(file.name) : "";
+    var parts = name.split(".");
+    return parts.length < 2 ? "" : parts.pop().toLowerCase();
+  }
+
   function hasSource(kind) {
     return hasFile(kind + "-file-input") || hasValue(kind + "-text-input");
   }
 
   function hasMainDocument() {
-    return hasSource("base");
+    var ext = getFileExtension("base-file-input");
+    return hasValue("base-text-input") || ext === "pdf" || ext === "txt";
   }
 
   function setMessage(element, type, message) {
@@ -66,7 +75,7 @@ Función o funciones:
     }
 
     if (!contenidos || !actividades) {
-      return "Puedes agregar contenidos y actividades por separado, o usar un documento principal completo en Información base.";
+      return "Agrega contenidos y actividades, o usa un PDF/TXT completo en Información base.";
     }
 
     return "Información lista. Presiona Procesar materia.";
