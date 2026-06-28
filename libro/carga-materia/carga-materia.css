@@ -4,7 +4,7 @@ Ruta o ubicación: /desarrollo/libro/carga-materia/carga-materia.css
 Función o funciones:
 1. Definir una pantalla limpia para Carga de la materia.
 2. Quitar ruido visual, tarjetas innecesarias y textos largos.
-3. Mantener visibles solo carrera, materia, archivos y acciones principales.
+3. Mantener visibles solo carrera, materia, archivos, texto pegado y acciones principales.
 4. Ocultar elementos técnicos que necesita el controlador JavaScript.
 ========================================================= */
 
@@ -41,7 +41,8 @@ body {
 }
 
 button,
-input {
+input,
+textarea {
   font: inherit;
 }
 
@@ -151,29 +152,23 @@ a {
   letter-spacing: -0.025em;
 }
 
-.libro-card p {
-  margin: 8px 0 0;
-  color: var(--libro-muted);
-  line-height: 1.45;
-}
-
 .libro-form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 
-.libro-field {
+.libro-field,
+.libro-text-zone {
   display: grid;
   gap: 7px;
   color: var(--libro-text);
   font-weight: 800;
 }
 
-.libro-field input {
+.libro-field input,
+.libro-text-zone textarea {
   width: 100%;
-  min-height: 44px;
-  padding: 0 13px;
   border-radius: 13px;
   border: 1px solid var(--libro-border);
   background: #ffffff;
@@ -182,7 +177,30 @@ a {
   transition: border-color 0.16s ease, box-shadow 0.16s ease;
 }
 
-.libro-field input:focus {
+.libro-field input {
+  min-height: 44px;
+  padding: 0 13px;
+}
+
+.libro-text-zone {
+  margin-top: 12px;
+}
+
+.libro-text-zone span {
+  color: var(--libro-muted);
+  font-size: 0.86rem;
+}
+
+.libro-text-zone textarea {
+  min-height: 132px;
+  padding: 12px;
+  resize: vertical;
+  line-height: 1.45;
+  font-size: 0.92rem;
+}
+
+.libro-field input:focus,
+.libro-text-zone textarea:focus {
   border-color: var(--libro-primary);
   box-shadow: 0 0 0 3px rgba(49, 92, 255, 0.12);
 }
@@ -190,8 +208,8 @@ a {
 .libro-file-zone {
   display: grid;
   gap: 6px;
-  min-height: 118px;
-  padding: 16px;
+  min-height: 96px;
+  padding: 14px;
   border: 1.5px dashed var(--libro-border-strong);
   border-radius: 16px;
   background: var(--libro-card-soft);
