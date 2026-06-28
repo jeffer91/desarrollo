@@ -6,6 +6,7 @@ Función o funciones:
 2. Traducir estados técnicos internos a lenguaje normal.
 3. Mantener oculto cualquier JSON, código, ruta o detalle técnico.
 4. Acompañar el flujo Procesar materia y Guardar.
+5. Mostrar guardado limpio sin rutas internas.
 ========================================================= */
 
 (function iniciarMensajesCargaMateria(window, document) {
@@ -78,8 +79,16 @@ Función o funciones:
       return { type: "is-warning", message: "Procesando la materia. Espera un momento." };
     }
 
+    if (status.indexOf("guardando") >= 0) {
+      return { type: "is-warning", message: "Guardando la materia. Espera un momento." };
+    }
+
     if (status.indexOf("guardado") >= 0) {
       return { type: "is-ok", message: "Materia guardada correctamente." };
+    }
+
+    if (status.indexOf("sin guardar") >= 0) {
+      return { type: "is-warning", message: "Primero procesa la materia para poder guardar." };
     }
 
     if (status.indexOf("procesado") >= 0 || status.indexOf("completo") >= 0) {
