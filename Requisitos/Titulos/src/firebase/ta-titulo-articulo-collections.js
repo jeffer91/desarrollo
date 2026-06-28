@@ -101,8 +101,7 @@ export function limpiarCedula(value) {
 export function normalizarIdSegmento(value) {
   return limpiarTextoBase(value)
     .replace(/[^A-Za-z0-9_-]+/g, "_")
-    .replace(/^_+|_+$/g, "")
-    .replace(/_+/g, "_");
+    .replace(/^_+|_+$/g, "");
 }
 
 export function crearEnvioId(periodoId, cedula) {
