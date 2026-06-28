@@ -3,15 +3,16 @@
   Ruta o ubicación: /Requisitos/Titulos/scripts/ta-titulo-articulo-check.mjs
   Función o funciones:
   - Ejecutar una revisión rápida de archivos mínimos del módulo Títulos.
-  - Detectar archivos faltantes antes de correr Vite, Netlify, Firebase o Electron.
+  - Detectar archivos faltantes antes de correr Vite, Netlify, Firebase, Gemini o Electron.
   - Validar rutas HTML principales de estudiante, coordinador y administrador.
   - Detectar HTML duplicado o pantallas mezcladas.
-  - Verificar servicios centrales de runtime, origen de datos, Firebase directo, Electron, pruebas locales y Netlify.
+  - Verificar servicios centrales de runtime, Firebase directo, Gemini, Electron, pruebas locales y Netlify.
   - Servir como prueba final del bloque desde la terminal.
   Se conecta con:
   - Requisitos/Titulos/package.json
   - Requisitos/Titulos/public/ta-titulo-articulo-estudiante.html
   - Requisitos/Titulos/public/ta-titulo-articulo-coordinador.html
+  - Requisitos/Titulos/public/ta-titulo-articulo-admin.html
   - Requisitos/Titulos/electron/admin/ta-titulo-articulo-administrador.html
 */
 
@@ -31,6 +32,7 @@ const requiredFiles = [
   "README.md",
   "public/ta-titulo-articulo-estudiante.html",
   "public/ta-titulo-articulo-coordinador.html",
+  "public/ta-titulo-articulo-admin.html",
   "public/assets/logo-itsqmet.svg",
   "electron/ta-titulo-articulo-main.js",
   "electron/admin/ta-titulo-articulo-administrador.html",
@@ -47,10 +49,13 @@ const requiredFiles = [
   "src/services/ta-titulo-articulo-firebase-direct.service.js",
   "src/services/ta-titulo-articulo-coherencia.service.js",
   "src/services/ta-titulo-articulo-periodos.service.js",
+  "src/services/ta-titulo-articulo-local-draft.service.js",
+  "src/services/ta-titulo-articulo-gemini-client.service.js",
   "src/estudiante/ta-titulo-articulo-estudiante.app.js",
   "src/coordinador/ta-titulo-articulo-coordinador.app.js",
   "src/admin/ta-titulo-articulo-admin.app.js",
   "src/admin/ta-titulo-articulo-admin-diagnostico.app.js",
+  "src/admin/ta-titulo-articulo-admin-limpieza.service.js",
   "scripts/ta-titulo-articulo-local-check.mjs",
   "scripts/ta-titulo-articulo-netlify-check.mjs",
   "scripts/ta-titulo-articulo-build-local.mjs",
@@ -58,7 +63,8 @@ const requiredFiles = [
   "netlify/functions/ta-titulo-articulo-api-estudiante.js",
   "netlify/functions/ta-titulo-articulo-api-coordinador.js",
   "netlify/functions/ta-titulo-articulo-api-admin.js",
-  "netlify/functions/ta-titulo-articulo-api-telegram.js"
+  "netlify/functions/ta-titulo-articulo-api-telegram.js",
+  "netlify/functions/ta-titulo-articulo-gemini.js"
 ];
 
 const firebaseImportMapChecks = [
@@ -70,12 +76,16 @@ const firebaseImportMapChecks = [
 const packageScripts = [
   "dev",
   "dev:coordinador",
+  "dev:admin",
   "dev:netlify",
   "build",
   "build:local",
   "build:netlify",
   "preview",
   "electron",
+  "electron:admin",
+  "electron:estudiante",
+  "electron:coordinador",
   "electron:dev",
   "check",
   "check:local",
@@ -121,6 +131,25 @@ const htmlChecks = [
     ]
   },
   {
+    file: "public/ta-titulo-articulo-admin.html",
+    mustInclude: [
+      "../src/styles/ta-titulo-articulo-base.css",
+      "../src/styles/ta-titulo-articulo-layout.css",
+      "../src/styles/ta-titulo-articulo-components.css",
+      "../src/admin/ta-titulo-articulo-admin-diagnostico.app.js",
+      "../src/admin/ta-titulo-articulo-admin.app.js",
+      'data-ta-screen="administrador"',
+      'data-ta-runtime="public"',
+      "ta-admin-envios-body",
+      "ta-admin-limpiar-confirmacion",
+      ...firebaseImportMapChecks
+    ],
+    mustNotInclude: [
+      "../../src/admin/ta-titulo-articulo-admin.app.js",
+      'data-ta-runtime="electron"'
+    ]
+  },
+  {
     file: "electron/admin/ta-titulo-articulo-administrador.html",
     mustInclude: [
       "../../src/styles/ta-titulo-articulo-base.css",
@@ -131,7 +160,8 @@ const htmlChecks = [
       'data-ta-screen="administrador"',
       'data-ta-runtime="electron"',
       "ta-admin-diagnostico-card",
-      "ta-admin-origen-datos",
+      "ta-admin-envios-body",
+      "ta-admin-limpiar-confirmacion",
       ...firebaseImportMapChecks
     ],
     mustNotInclude: [
@@ -142,62 +172,26 @@ const htmlChecks = [
 ];
 
 const serviceChecks = [
-  {
-    file: "src/firebase/ta-titulo-articulo-firebase-sdk.service.js",
-    mustInclude: ["TA_TITULO_ARTICULO_FIREBASE_SDK_VERSION", "firebase/app", "firebase/firestore", "10.14.1"]
-  },
-  {
-    file: "src/firebase/ta-titulo-articulo-firebase-client.js",
-    mustInclude: ["import.meta.env || {}", "TA_TITULO_ARTICULO_FIREBASE_CONFIG", "firebaseDisponible", "sdkVersion"]
-  },
-  {
-    file: "src/services/ta-titulo-articulo-runtime.service.js",
-    mustInclude: ["TaTituloArticuloRuntime", "obtenerOrigenDatos", "firebase-direct", "netlify-functions"]
-  },
-  {
-    file: "src/services/ta-titulo-articulo-data-adapter.service.js",
-    mustInclude: ["TaTituloArticuloData", "ta-titulo-articulo-runtime.service.js", "ta-titulo-articulo-firebase-direct.service.js"]
-  },
-  {
-    file: "src/services/ta-titulo-articulo-api-client.service.js",
-    mustInclude: ["TaTituloArticuloApi", "ta-titulo-articulo-runtime.service.js", "ta-titulo-articulo-firebase-direct.service.js", "origenDatos"]
-  },
-  {
-    file: "src/services/ta-titulo-articulo-functions-client.service.js",
-    mustInclude: ["TaTituloArticuloFunctionsClient", "/.netlify/functions"]
-  },
-  {
-    file: "src/admin/ta-titulo-articulo-admin-diagnostico.app.js",
-    mustInclude: ["obtenerFirebaseConfigPublica", "obtenerOrigenDatos", "ta-admin-runtime", "ta-admin-origen"]
-  },
-  {
-    file: "electron/ta-titulo-articulo-main.js",
-    mustInclude: ["taDataMode", "firebase-direct", "setWindowOpenHandler", "loadFile"]
-  },
-  {
-    file: "scripts/ta-titulo-articulo-local-check.mjs",
-    mustInclude: ["Live Server", "check:local", "firebase-direct", "rutas compatibles"]
-  },
-  {
-    file: "scripts/ta-titulo-articulo-netlify-check.mjs",
-    mustInclude: ["check:netlify", "build:netlify", "Publish directory", "Functions directory"]
-  },
-  {
-    file: "scripts/ta-titulo-articulo-build-local.mjs",
-    mustInclude: ["dist-local", "manifest.local.json", "local-firebase-direct"]
-  },
-  {
-    file: "netlify.toml",
-    mustInclude: ["npm run build:netlify", "node_bundler = \"esbuild\"", "functions = \"netlify/functions\"", "publish = \"dist\""]
-  },
-  {
-    file: ".env.example",
-    mustInclude: ["FIREBASE_ADMIN_PRIVATE_KEY", "TA_TITULO_ARTICULO_ADMIN_TOKEN", "TELEGRAM_BOT_TOKEN", "Base directory recomendada"]
-  },
-  {
-    file: "README.md",
-    mustInclude: ["npm run check:all", "Live Server", "npm run build:local", "Netlify, último paso"]
-  }
+  { file: "src/firebase/ta-titulo-articulo-firebase-sdk.service.js", mustInclude: ["TA_TITULO_ARTICULO_FIREBASE_SDK_VERSION", "firebase/app", "firebase/firestore", "10.14.1"] },
+  { file: "src/firebase/ta-titulo-articulo-firebase-client.js", mustInclude: ["import.meta.env || {}", "TA_TITULO_ARTICULO_FIREBASE_CONFIG", "firebaseDisponible", "sdkVersion"] },
+  { file: "src/firebase/ta-titulo-articulo-collections.js", mustInclude: ["titulos", "titulos_coordinadores", "titulos_logs", "crearEnvioId", "normalizarEstadoTitulo"] },
+  { file: "src/services/ta-titulo-articulo-runtime.service.js", mustInclude: ["TaTituloArticuloRuntime", "obtenerOrigenDatos", "firebase-direct", "netlify-functions"] },
+  { file: "src/services/ta-titulo-articulo-data-adapter.service.js", mustInclude: ["TaTituloArticuloData", "ta-titulo-articulo-runtime.service.js", "ta-titulo-articulo-firebase-direct.service.js"] },
+  { file: "src/services/ta-titulo-articulo-api-client.service.js", mustInclude: ["TaTituloArticuloApi", "ta-titulo-articulo-runtime.service.js", "ta-titulo-articulo-firebase-direct.service.js", "origenDatos"] },
+  { file: "src/services/ta-titulo-articulo-functions-client.service.js", mustInclude: ["TaTituloArticuloFunctionsClient", "/.netlify/functions"] },
+  { file: "src/services/ta-titulo-articulo-local-draft.service.js", mustInclude: ["localStorage", "ta.titulos.borrador", "TaTituloArticuloLocalDraft"] },
+  { file: "src/services/ta-titulo-articulo-gemini-client.service.js", mustInclude: ["/.netlify/functions/ta-titulo-articulo-gemini", "TaTituloArticuloGemini", "fallbackLocal"] },
+  { file: "src/services/ta-titulo-articulo-firebase-direct.service.js", mustInclude: ["titulosEnviados", "tituloPreferidoNumero", "tituloCorregidoCoordinador", "titulos_logs"] },
+  { file: "src/admin/ta-titulo-articulo-admin-diagnostico.app.js", mustInclude: ["obtenerFirebaseConfigPublica", "obtenerOrigenDatos", "ta-admin-runtime", "ta-admin-origen"] },
+  { file: "src/admin/ta-titulo-articulo-admin-limpieza.service.js", mustInclude: ["BORRAR TITULOS", "deleteDoc", "titulos_logs"] },
+  { file: "electron/ta-titulo-articulo-main.js", mustInclude: ["taDataMode", "firebase-direct", "--estudiante", "--coordinador", "--admin", "setWindowOpenHandler", "loadFile"] },
+  { file: "scripts/ta-titulo-articulo-local-check.mjs", mustInclude: ["Live Server", "check:local", "firebase-direct", "estudiante, coordinador y administrador"] },
+  { file: "scripts/ta-titulo-articulo-netlify-check.mjs", mustInclude: ["check:netlify", "build:netlify", "Publish directory", "Functions directory", "ta-titulo-articulo-gemini.js"] },
+  { file: "scripts/ta-titulo-articulo-build-local.mjs", mustInclude: ["dist-local", "manifest.local.json", "administradorPublico", "local-firebase-direct"] },
+  { file: "netlify.toml", mustInclude: ["npm run build:netlify", "node_bundler = \"esbuild\"", "functions = \"netlify/functions\"", "publish = \"dist\"", "from = \"/admin\""] },
+  { file: "vite.config.js", mustInclude: ["ta-titulo-articulo-estudiante.html", "ta-titulo-articulo-coordinador.html", "ta-titulo-articulo-admin.html"] },
+  { file: ".env.example", mustInclude: ["FIREBASE_ADMIN_PRIVATE_KEY", "TA_TITULO_ARTICULO_ADMIN_TOKEN", "TELEGRAM_BOT_TOKEN", "GEMINI_API_KEY", "Base directory recomendada"] },
+  { file: "README.md", mustInclude: ["npm run check:all", "Live Server", "npm run build:local", "Netlify, último paso"] }
 ];
 
 function readRelative(file) {
@@ -211,17 +205,13 @@ function countOccurrences(text, value) {
 const errors = [];
 
 for (const file of requiredFiles) {
-  if (!existsSync(resolve(root, file))) {
-    errors.push(`Archivo faltante: ${file}`);
-  }
+  if (!existsSync(resolve(root, file))) errors.push(`Archivo faltante: ${file}`);
 }
 
 if (existsSync(resolve(root, "package.json"))) {
   const pkg = JSON.parse(readRelative("package.json"));
   for (const scriptName of packageScripts) {
-    if (!pkg.scripts?.[scriptName]) {
-      errors.push(`package.json: falta script "${scriptName}".`);
-    }
+    if (!pkg.scripts?.[scriptName]) errors.push(`package.json: falta script "${scriptName}".`);
   }
 }
 
@@ -231,32 +221,16 @@ for (const check of htmlChecks) {
 
   const content = readRelative(check.file);
 
-  if (countOccurrences(content, "<!DOCTYPE html>") !== 1) {
-    errors.push(`${check.file}: debe tener un solo <!DOCTYPE html>.`);
-  }
-
-  if (countOccurrences(content, "<html") !== 1) {
-    errors.push(`${check.file}: debe tener una sola etiqueta <html>.`);
-  }
-
-  if (countOccurrences(content, "</html>") !== 1) {
-    errors.push(`${check.file}: debe tener un solo cierre </html>.`);
-  }
-
-  if (countOccurrences(content, '<script type="importmap">') !== 1) {
-    errors.push(`${check.file}: debe tener un solo import map de Firebase.`);
-  }
+  if (countOccurrences(content, "<!DOCTYPE html>") !== 1) errors.push(`${check.file}: debe tener un solo <!DOCTYPE html>.`);
+  if (countOccurrences(content, "<html") !== 1) errors.push(`${check.file}: debe tener una sola etiqueta <html>.`);
+  if (countOccurrences(content, "</html>") !== 1) errors.push(`${check.file}: debe tener un solo cierre </html>.`);
+  if (countOccurrences(content, '<script type="importmap">') !== 1) errors.push(`${check.file}: debe tener un solo import map de Firebase.`);
 
   for (const value of check.mustInclude) {
-    if (!content.includes(value)) {
-      errors.push(`${check.file}: falta "${value}".`);
-    }
+    if (!content.includes(value)) errors.push(`${check.file}: falta "${value}".`);
   }
-
   for (const value of check.mustNotInclude) {
-    if (content.includes(value)) {
-      errors.push(`${check.file}: no debe contener "${value}".`);
-    }
+    if (content.includes(value)) errors.push(`${check.file}: no debe contener "${value}".`);
   }
 }
 
@@ -266,9 +240,7 @@ for (const check of serviceChecks) {
 
   const content = readRelative(check.file);
   for (const value of check.mustInclude) {
-    if (!content.includes(value)) {
-      errors.push(`${check.file}: falta "${value}".`);
-    }
+    if (!content.includes(value)) errors.push(`${check.file}: falta "${value}".`);
   }
 }
 
