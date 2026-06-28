@@ -1,0 +1,59 @@
+<!-- =========================================================
+Nombre completo: index.html
+Ruta o ubicación: /desarrollo/libro/index.html
+Función o funciones:
+1. Servir como entrada principal del módulo Libro.
+2. Mantener el módulo aislado del panel principal de desarrollo.
+3. Abrir la primera pantalla: Carga inteligente de materia.
+4. Preparar el crecimiento por bloques sin romper otros módulos.
+========================================================= -->
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Libro · Módulo académico</title>
+  <meta name="description" content="Módulo Libro para cargar materias, unidades, contenidos y actividades." />
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="./carga-materia/carga-materia.css" />
+</head>
+<body>
+  <main class="libro-page libro-page--home">
+    <section class="libro-hero">
+      <div>
+        <p class="libro-kicker">Módulo académico</p>
+        <h1>Libro</h1>
+        <p>
+          Espacio para cargar información de una materia, unir unidades, contenidos y actividades,
+          y preparar la base para generar libros académicos.
+        </p>
+      </div>
+
+      <a class="libro-link-btn libro-link-btn--ghost" href="../index.html">Volver al panel</a>
+    </section>
+
+    <section class="libro-card-grid" aria-label="Pantallas disponibles del módulo Libro">
+      <article class="libro-option-card">
+        <span class="libro-option-card__step">Bloque 1</span>
+        <h2>Carga inteligente de materia</h2>
+        <p>
+          Registra carrera y materia, selecciona tres archivos fuente y prepara el expediente inicial
+          para análisis posterior.
+        </p>
+        <a class="libro-link-btn" href="./carga-materia/carga-materia.index.html">
+          Abrir carga de materia
+        </a>
+      </article>
+
+      <article class="libro-option-card libro-option-card--disabled" aria-disabled="true">
+        <span class="libro-option-card__step">Próximamente</span>
+        <h2>Generador de libro</h2>
+        <p>
+          Esta pantalla se activará después de consolidar correctamente la materia con sus unidades,
+          contenidos y actividades.
+        </p>
+      </article>
+    </section>
+  </main>
+</body>
+</html>
