@@ -6,7 +6,7 @@ Función o funciones:
 2. Convertir cada hoja en filas JSON conservando encabezados originales.
 3. Resumir hojas, columnas, filas y vista previa.
 4. Detectar columnas esperadas usando el normalizador inteligente.
-5. No interpretar todavía contenidos académicos; eso se realiza en bloques posteriores.
+5. Delegar lectura PDF del Archivo 1 al lector PDF del Bloque 3.
 ========================================================= */
 
 (function attachCargaMateriaExcelReader(window) {
@@ -193,19 +193,11 @@ Función o funciones:
     var ext = getExtension(file);
 
     if (ext === "pdf") {
-      return {
-        ok: true,
-        tipo: "pdf",
-        kind: kind,
-        archivo: {
-          nombre: file.name,
-          extension: ext,
-          tamanoBytes: file.size || 0,
-          ultimaModificacion: file.lastModified ? new Date(file.lastModified).toISOString() : null
-        },
-        pendienteBloque3: true,
-        mensaje: "PDF detectado. La lectura de texto PDF se implementa en el Bloque 3."
-      };
+      if (!window.LibroCargaMateriaPdfReader || typeof window.LibroCargaMateriaPdfReader.readPdfFile !== "function") {
+        throw new Error("El lector PDF del Bloque 3 no está disponible.");
+      }
+
+      return window.LibroCargaMateriaPdfReader.readPdfFile(file, kind);
     }
 
     return readExcelFile(file, kind);
