@@ -6,7 +6,7 @@ Función o funciones:
 2. Validar campos manuales y archivos fuente.
 3. Leer Excel/PDF para detectar hojas, filas, columnas y texto.
 4. Interpretar Archivo 1, Archivo 2 y Archivo 3.
-5. Preparar información base, contenidos y actividades para la unión inteligente del Bloque 6.
+5. Consolidar información base, contenidos y actividades en una sola materia por unidades.
 ========================================================= */
 
 (function iniciarCargaMateria(window, document) {
@@ -17,6 +17,7 @@ Función o funciones:
   var MapperBase = window.LibroCargaMateriaMapperBase || null;
   var MapperContenidos = window.LibroCargaMateriaMapperContenidos || null;
   var MapperActividades = window.LibroCargaMateriaMapperActividades || null;
+  var Builder = window.LibroCargaMateriaBuilder || null;
 
   var ALLOWED = Constants ? {
     base: Constants.getAllowedExtensions("base"),
@@ -46,6 +47,7 @@ Función o funciones:
       contenidos: null,
       actividades: null
     },
+    materiaConsolidada: null,
     expediente: null,
     isReading: false
   };
@@ -97,7 +99,6 @@ Función o funciones:
 
   function isFileAllowed(kind, file) {
     if (!file) return false;
-
     return ALLOWED[kind].indexOf(getExtension(file)) >= 0;
   }
 
@@ -124,7 +125,6 @@ Función o funciones:
 
   function lecturaStatus(kind) {
     var lectura = state.lecturas[kind];
-
     if (!lectura) return null;
     if (lectura.ok) return "Leído";
     return "Error";
@@ -220,7 +220,6 @@ Función o funciones:
 
   function resumenInterpretacionBase(interpretacion) {
     if (!interpretacion) return null;
-
     return {
       tipoFuente: interpretacion.tipoFuente,
       campos: interpretacion.campos,
@@ -232,7 +231,6 @@ Función o funciones:
 
   function resumenInterpretacionContenidos(interpretacion) {
     if (!interpretacion) return null;
-
     return {
       tipoFuente: interpretacion.tipoFuente,
       hojaPrincipal: interpretacion.hojaPrincipal,
@@ -247,7 +245,6 @@ Función o funciones:
 
   function resumenInterpretacionActividades(interpretacion) {
     if (!interpretacion) return null;
-
     return {
       tipoFuente: interpretacion.tipoFuente,
       hojaPrincipal: interpretacion.hojaPrincipal,
@@ -265,8 +262,8 @@ Función o funciones:
 
     elements.previewBox.textContent = JSON.stringify(
       {
-        bloque: 5,
-        estado: "esperando_analisis_de_actividades",
+        bloque: 6,
+        estado: "esperando_consolidacion",
         carrera: state.carrera || "",
         materia: state.materia || "",
         archivos: {
@@ -279,9 +276,10 @@ Función o funciones:
           mapperBaseDisponible: Boolean(MapperBase),
           mapperContenidosDisponible: Boolean(MapperContenidos),
           mapperActividadesDisponible: Boolean(MapperActividades),
+          builderDisponible: Boolean(Builder),
           pendiente: true
         },
-        siguiente: "Presiona Analizar actividades para interpretar los tres archivos."
+        siguiente: "Presiona Consolidar materia para unir información base, contenidos y actividades."
       },
       null,
       2
@@ -299,17 +297,17 @@ Función o funciones:
     renderChecklist(elements);
 
     elements.analizarBtn.disabled = !canPrepare() || state.isReading;
-    elements.analizarBtn.textContent = state.isReading ? "Analizando..." : "Analizar actividades";
+    elements.analizarBtn.textContent = state.isReading ? "Consolidando..." : "Consolidar materia";
 
     if (!state.expediente) {
-      setStatus(elements.expedienteStatus, "is-pending", "Sin analizar");
+      setStatus(elements.expedienteStatus, "is-pending", "Sin consolidar");
       updatePreviewBeforePrepare(elements);
     }
   }
 
   async function readAllFiles() {
     if (!ExcelReader || typeof ExcelReader.readFileForKind !== "function") {
-      throw new Error("No está disponible el lector de archivos del Bloque 5.");
+      throw new Error("No está disponible el lector de archivos del Bloque 6.");
     }
 
     return {
@@ -321,48 +319,55 @@ Función o funciones:
 
   function interpretBase(lecturaBase) {
     if (!MapperBase || typeof MapperBase.interpret !== "function") {
-      throw new Error("No está disponible el mapeador del Archivo 1 del Bloque 5.");
+      throw new Error("No está disponible el mapeador del Archivo 1 del Bloque 6.");
     }
-
     return MapperBase.interpret(lecturaBase);
   }
 
   function interpretContenidos(lecturaContenidos) {
     if (!MapperContenidos || typeof MapperContenidos.interpret !== "function") {
-      throw new Error("No está disponible el mapeador de contenidos del Bloque 5.");
+      throw new Error("No está disponible el mapeador de contenidos del Bloque 6.");
     }
-
     return MapperContenidos.interpret(lecturaContenidos);
   }
 
   function interpretActividades(lecturaActividades) {
     if (!MapperActividades || typeof MapperActividades.interpret !== "function") {
-      throw new Error("No está disponible el mapeador de actividades del Bloque 5.");
+      throw new Error("No está disponible el mapeador de actividades del Bloque 6.");
     }
-
     return MapperActividades.interpret(lecturaActividades);
   }
 
-  function countWarnings() {
-    var total = 0;
+  function buildMateriaConsolidada(lecturas, interpretacionBase, interpretacionContenidos, interpretacionActividades) {
+    if (!Builder || typeof Builder.build !== "function") {
+      throw new Error("No está disponible el builder de materia consolidada del Bloque 6.");
+    }
 
-    [
-      state.interpretaciones.base,
-      state.interpretaciones.contenidos,
-      state.interpretaciones.actividades
-    ].forEach(function eachInterpretation(item) {
-      total += item && item.advertencias ? item.advertencias.length : 0;
+    return Builder.build({
+      carrera: state.carrera,
+      materia: state.materia,
+      archivos: {
+        informacionBase: fileToMeta(state.files.base),
+        contenidosUnidades: fileToMeta(state.files.contenidos),
+        actividadesMateria: fileToMeta(state.files.actividades)
+      },
+      lecturas: {
+        informacionBase: resumenLecturaParaPreview(lecturas.base),
+        contenidosUnidades: resumenLecturaParaPreview(lecturas.contenidos),
+        actividadesMateria: resumenLecturaParaPreview(lecturas.actividades)
+      },
+      interpretacionBase: interpretacionBase,
+      interpretacionContenidos: interpretacionContenidos,
+      interpretacionActividades: interpretacionActividades
     });
-
-    return total;
   }
 
-  function buildExpedienteFromLecturas(lecturas, interpretacionBase, interpretacionContenidos, interpretacionActividades) {
+  function buildExpediente(lecturas, interpretacionBase, interpretacionContenidos, interpretacionActividades, materiaConsolidada) {
     return {
       modulo: "libro",
       pantalla: "carga-materia",
-      bloque: 5,
-      estado: "actividades_interpretadas",
+      bloque: 6,
+      estado: materiaConsolidada.estado,
       carrera: state.carrera,
       materia: state.materia,
       archivos: {
@@ -380,13 +385,8 @@ Función o funciones:
         contenidosUnidades: resumenInterpretacionContenidos(interpretacionContenidos),
         actividadesMateria: resumenInterpretacionActividades(interpretacionActividades)
       },
-      reglas: {
-        unidadesEsperadas: Constants ? Constants.RULES.unidadesEsperadas : 4,
-        archivo1: "descripcion_objetivo_unidades_competencias_resultados_bibliografia_justificacion",
-        archivo2: "contenidos_de_unidades_con_numeracion_por_unidad",
-        archivo3: "actividades_de_la_materia_relacionadas_por_unidad_o_tema"
-      },
-      pendienteBloque6: true,
+      materiaConsolidada: materiaConsolidada,
+      pendienteBloque7: true,
       creadoEn: new Date().toISOString()
     };
   }
@@ -394,17 +394,18 @@ Función o funciones:
   async function prepareExpediente(elements) {
     if (!canPrepare()) {
       setStatus(elements.expedienteStatus, "is-warning", "Incompleto");
-      elements.previewBox.textContent = "Faltan datos o archivos para analizar.";
+      elements.previewBox.textContent = "Faltan datos o archivos para consolidar.";
       return;
     }
 
     state.isReading = true;
     state.expediente = null;
+    state.materiaConsolidada = null;
     state.interpretaciones.base = null;
     state.interpretaciones.contenidos = null;
     state.interpretaciones.actividades = null;
-    setStatus(elements.expedienteStatus, "is-warning", "Analizando");
-    elements.previewBox.textContent = "Leyendo archivos e interpretando base, contenidos y actividades. Espera un momento...";
+    setStatus(elements.expedienteStatus, "is-warning", "Consolidando");
+    elements.previewBox.textContent = "Leyendo, interpretando y consolidando materia. Espera un momento...";
     refresh(elements);
 
     try {
@@ -412,34 +413,43 @@ Función o funciones:
       var interpretacionBase = interpretBase(lecturas.base);
       var interpretacionContenidos = interpretContenidos(lecturas.contenidos);
       var interpretacionActividades = interpretActividades(lecturas.actividades);
-
-      state.lecturas = lecturas;
-      state.interpretaciones.base = interpretacionBase;
-      state.interpretaciones.contenidos = interpretacionContenidos;
-      state.interpretaciones.actividades = interpretacionActividades;
-      state.expediente = buildExpedienteFromLecturas(
+      var materiaConsolidada = buildMateriaConsolidada(
         lecturas,
         interpretacionBase,
         interpretacionContenidos,
         interpretacionActividades
       );
 
+      state.lecturas = lecturas;
+      state.interpretaciones.base = interpretacionBase;
+      state.interpretaciones.contenidos = interpretacionContenidos;
+      state.interpretaciones.actividades = interpretacionActividades;
+      state.materiaConsolidada = materiaConsolidada;
+      state.expediente = buildExpediente(
+        lecturas,
+        interpretacionBase,
+        interpretacionContenidos,
+        interpretacionActividades,
+        materiaConsolidada
+      );
+
       setStatus(
         elements.expedienteStatus,
-        countWarnings() ? "is-warning" : "is-ok",
-        countWarnings() ? "Con alertas" : "Actividades listas"
+        materiaConsolidada.advertencias && materiaConsolidada.advertencias.length ? "is-warning" : "is-ok",
+        materiaConsolidada.advertencias && materiaConsolidada.advertencias.length ? "Con alertas" : "Consolidado"
       );
       elements.previewBox.textContent = JSON.stringify(state.expediente, null, 2);
     } catch (error) {
       state.expediente = null;
+      state.materiaConsolidada = null;
       state.interpretaciones.base = null;
       state.interpretaciones.contenidos = null;
       state.interpretaciones.actividades = null;
       setStatus(elements.expedienteStatus, "is-error", "Error");
       elements.previewBox.textContent = JSON.stringify(
         {
-          bloque: 5,
-          estado: "error_lectura_o_interpretacion_actividades",
+          bloque: 6,
+          estado: "error_consolidacion_materia",
           mensaje: error && error.message ? error.message : String(error)
         },
         null,
@@ -476,6 +486,7 @@ Función o funciones:
     state.interpretaciones.base = null;
     state.interpretaciones.contenidos = null;
     state.interpretaciones.actividades = null;
+    state.materiaConsolidada = null;
     state.expediente = null;
   }
 
@@ -495,6 +506,7 @@ Función o funciones:
     MapperBase = window.LibroCargaMateriaMapperBase || MapperBase;
     MapperContenidos = window.LibroCargaMateriaMapperContenidos || MapperContenidos;
     MapperActividades = window.LibroCargaMateriaMapperActividades || MapperActividades;
+    Builder = window.LibroCargaMateriaBuilder || Builder;
 
     var elements = {
       carreraInput: byId("carrera-input"),
@@ -555,6 +567,7 @@ Función o funciones:
             contenidos: resumenInterpretacionContenidos(state.interpretaciones.contenidos),
             actividades: resumenInterpretacionActividades(state.interpretaciones.actividades)
           },
+          materiaConsolidada: state.materiaConsolidada,
           expediente: state.expediente
         }));
       }
