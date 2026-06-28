@@ -5,9 +5,11 @@
     "funcionOFunciones": [
       "Declarar índices de Firestore necesarios para consultas del sistema.",
       "Preparar consultas por período, carrera, estado y coordinador.",
-      "Mantener documentada la configuración de índices para despliegues futuros."
+      "Mantener documentada la configuración de índices para despliegues futuros.",
+      "Alinear índices con las colecciones reales: titulos y titulos_logs."
     ],
     "seConectaCon": [
+      "src/services/ta-titulo-articulo-firebase-direct.service.js",
       "netlify/functions/ta-titulo-articulo-api-estudiante.js",
       "netlify/functions/ta-titulo-articulo-api-coordinador.js",
       "netlify/functions/ta-titulo-articulo-api-admin.js"
@@ -15,7 +17,7 @@
   },
   "indexes": [
     {
-      "collectionGroup": "ta_titulo_articulo_envios",
+      "collectionGroup": "titulos",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "periodoId", "order": "ASCENDING" },
@@ -24,7 +26,7 @@
       ]
     },
     {
-      "collectionGroup": "ta_titulo_articulo_envios",
+      "collectionGroup": "titulos",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "periodoId", "order": "ASCENDING" },
@@ -33,7 +35,7 @@
       ]
     },
     {
-      "collectionGroup": "ta_titulo_articulo_historial",
+      "collectionGroup": "titulos_logs",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "envioId", "order": "ASCENDING" },
