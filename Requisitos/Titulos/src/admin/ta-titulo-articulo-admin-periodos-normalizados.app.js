@@ -6,6 +6,7 @@
   - Unificar opciones repetidas del selector de períodos sin borrar datos de Firestore.
   - Mantener una sola opción por período académico equivalente.
   - Corregir mayúsculas de meses para que el selector se vea limpio.
+  - Ordenar períodos por fecha de inicio descendente cuando el texto lo permite.
   Se conecta con:
   - Requisitos/Titulos/public/ta-titulo-articulo-admin.html
   - Requisitos/Titulos/electron/admin/ta-titulo-articulo-administrador.html
@@ -15,19 +16,19 @@
 const SELECT_ID = "ta-admin-periodo-select";
 
 const MESES = Object.freeze({
-  enero: "Enero",
-  febrero: "Febrero",
-  marzo: "Marzo",
-  abril: "Abril",
-  mayo: "Mayo",
-  junio: "Junio",
-  julio: "Julio",
-  agosto: "Agosto",
-  septiembre: "Septiembre",
-  setiembre: "Septiembre",
-  octubre: "Octubre",
-  noviembre: "Noviembre",
-  diciembre: "Diciembre"
+  enero: { label: "Enero", orden: 1 },
+  febrero: { label: "Febrero", orden: 2 },
+  marzo: { label: "Marzo", orden: 3 },
+  abril: { label: "Abril", orden: 4 },
+  mayo: { label: "Mayo", orden: 5 },
+  junio: { label: "Junio", orden: 6 },
+  julio: { label: "Julio", orden: 7 },
+  agosto: { label: "Agosto", orden: 8 },
+  septiembre: { label: "Septiembre", orden: 9 },
+  setiembre: { label: "Septiembre", orden: 9 },
+  octubre: { label: "Octubre", orden: 10 },
+  noviembre: { label: "Noviembre", orden: 11 },
+  diciembre: { label: "Diciembre", orden: 12 }
 });
 
 let normalizando = false;
@@ -43,7 +44,7 @@ function normalizarTexto(value) {
 function formatearMeses(value) {
   return clean(value).replace(/\b(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)\b/gi, (match) => {
     const key = normalizarTexto(match);
-    return MESES[key] || match;
+    return MESES[key]?.label || match;
   });
 }
 
@@ -53,8 +54,8 @@ function extraerMesAnio(value) {
   const salida = [];
   let match = patron.exec(texto);
   while (match) {
-    const mes = match[1] === "setiembre" ? "septiembre" : match[1];
-    salida.push(`${match[2]}-${mes}`);
+    const mesKey = match[1] === "setiembre" ? "septiembre" : match[1];
+    salida.push({ anio: Number(match[2]), mes: MESES[mesKey]?.orden || 0, key: `${match[2]}-${String(MESES[mesKey]?.orden || 0).padStart(2, "0")}` });
     match = patron.exec(texto);
   }
   return salida;
@@ -63,9 +64,15 @@ function extraerMesAnio(value) {
 function crearClavePeriodo(option) {
   const texto = normalizarTexto(option.textContent || option.label || option.value);
   const partes = extraerMesAnio(texto);
-  if (partes.length >= 2) return `${partes[0]}__${partes[1]}`;
-  if (partes.length === 1) return partes[0];
+  if (partes.length >= 2) return `${partes[0].key}__${partes[1].key}`;
+  if (partes.length === 1) return partes[0].key;
   return texto.replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+}
+
+function calcularOrdenPeriodo(option) {
+  const partes = extraerMesAnio(option.textContent || option.label || option.value);
+  if (!partes.length) return 0;
+  return (partes[0].anio * 100) + partes[0].mes;
 }
 
 function optionEsPlaceholder(option) {
@@ -82,26 +89,30 @@ function normalizarSelectorPeriodos(select) {
     const placeholder = options.find(optionEsPlaceholder) || null;
     const mapa = new Map();
 
-    options.filter((option) => !optionEsPlaceholder(option)).forEach((option) => {
+    options.filter((option) => !optionEsPlaceholder(option)).forEach((option, index) => {
       const key = crearClavePeriodo(option);
       const label = formatearMeses(option.textContent || option.label || option.value);
       const value = clean(option.value);
+      const orden = calcularOrdenPeriodo(option);
       if (!key) return;
 
       if (!mapa.has(key)) {
-        mapa.set(key, { key, label, value, selected: value === selectedValue });
+        mapa.set(key, { key, label, value, selected: value === selectedValue, orden, index });
         return;
       }
 
       const actual = mapa.get(key);
       if (value === selectedValue) {
-        mapa.set(key, { key, label, value, selected: true });
+        mapa.set(key, { ...actual, label, value, selected: true, orden: actual.orden || orden });
       } else if (!actual.value && value) {
-        mapa.set(key, { ...actual, value, label });
+        mapa.set(key, { ...actual, value, label, orden: actual.orden || orden });
       }
     });
 
-    const unificados = Array.from(mapa.values()).sort((a, b) => b.label.localeCompare(a.label, "es"));
+    const unificados = Array.from(mapa.values()).sort((a, b) => {
+      if (a.orden !== b.orden) return b.orden - a.orden;
+      return a.index - b.index;
+    });
     select.replaceChildren();
 
     if (placeholder) {
