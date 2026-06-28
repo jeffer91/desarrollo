@@ -6,6 +6,7 @@ Función o funciones:
 2. Cargar PDF.js desde copia local o CDN cuando sea necesario.
 3. Extraer texto por página y construir un resumen técnico.
 4. Entregar una estructura compatible con el mapeador base.
+5. Usar la versión clásica de PDF.js para asegurar window.pdfjsLib.
 ========================================================= */
 
 (function attachCargaMateriaPdfReader(window, document) {
@@ -13,14 +14,14 @@ Función o funciones:
 
   var PDFJS_URLS = [
     "./vendor/pdf.min.js",
-    "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.min.mjs",
-    "https://unpkg.com/pdfjs-dist@4.10.38/build/pdf.min.mjs"
+    "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js",
+    "https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js"
   ];
 
   var WORKER_URLS = [
     "./vendor/pdf.worker.min.js",
-    "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs",
-    "https://unpkg.com/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs"
+    "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js",
+    "https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js"
   ];
 
   var loadingPromise = null;
@@ -54,11 +55,11 @@ Función o funciones:
     });
   }
 
-  function loadModuleScript(src) {
+  function loadScript(src) {
     return new Promise(function promiseLoad(resolve, reject) {
       var script = document.createElement("script");
 
-      script.type = src.indexOf(".mjs") >= 0 ? "module" : "text/javascript";
+      script.type = "text/javascript";
       script.src = src;
       script.async = false;
       script.onload = function onLoad() {
@@ -72,6 +73,16 @@ Función o funciones:
     });
   }
 
+  function configureWorker(index) {
+    if (!window.pdfjsLib || !window.pdfjsLib.GlobalWorkerOptions) return;
+
+    try {
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = WORKER_URLS[Math.min(index, WORKER_URLS.length - 1)];
+    } catch (_error) {
+      // Si el worker no se puede configurar, PDF.js intentará su modo por defecto.
+    }
+  }
+
   async function ensurePdfJs() {
     if (window.pdfjsLib) return true;
     if (loadingPromise) return loadingPromise;
@@ -81,17 +92,14 @@ Función o funciones:
 
       for (var i = 0; i < PDFJS_URLS.length; i += 1) {
         try {
-          await loadModuleScript(PDFJS_URLS[i]);
+          await loadScript(PDFJS_URLS[i]);
 
           if (window.pdfjsLib) {
-            try {
-              window.pdfjsLib.GlobalWorkerOptions.workerSrc = WORKER_URLS[Math.min(i, WORKER_URLS.length - 1)];
-            } catch (_error) {
-              // Si el worker no se puede configurar, PDF.js intentará su modo por defecto.
-            }
-
+            configureWorker(i);
             return true;
           }
+
+          errors.push("La librería cargó, pero no expuso window.pdfjsLib: " + PDFJS_URLS[i]);
         } catch (error) {
           errors.push(error.message || String(error));
         }
