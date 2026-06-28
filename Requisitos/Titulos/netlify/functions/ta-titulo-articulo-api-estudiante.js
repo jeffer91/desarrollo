@@ -2,12 +2,9 @@
   Nombre completo: ta-titulo-articulo-api-estudiante.js
   Ruta o ubicación: /Requisitos/Titulos/netlify/functions/ta-titulo-articulo-api-estudiante.js
   Función o funciones:
-  - Atender acciones públicas del estudiante desde Netlify.
-  - Buscar estudiante por cédula, numeroIdentificacion o ID del documento.
-  - Validar período activo normalizado, sin bloquear por campos CUMPLE / NO CUMPLE.
-  - Guardar solo telegramUser solicitado al estudiante.
-  - Validar coherencia de las 3 propuestas antes de guardar.
-  - Reutilizar envíos existentes aunque el período esté escrito como Primer semestre de 2026, 2026-1 o 2026 I.
+  - Atender acciones públicas del estudiante desde Netlify si se fuerza el modo functions.
+  - Alinear el guardado servidor con la estructura limpia de la colección titulos.
+  - Mantener compatibilidad con documentos viejos por cédula.
 */
 
 import {
@@ -17,12 +14,14 @@ import {
   buscarEstudiantePorCedula,
   cleanString,
   createEnvioId,
+  createEnvioIdLegacyCedula,
   estudiantePertenecePeriodo,
   estudiantePublico,
   getAdminDb,
   getPeriodoActivo,
   handleOptions,
   normalizeText,
+  normalizarEstadoTitulo,
   nowIso,
   ok,
   onlyDigits,
@@ -32,140 +31,95 @@ import {
   validarMetodoPost
 } from "./ta-titulo-articulo-api-security.js";
 
-import {
-  COHERENCIA_ESTADOS,
-  validarCoherenciaPropuesta
-} from "../../src/services/ta-titulo-articulo-coherencia.service.js";
+const TOTAL_TITULOS = 3;
+const MAX_INTENTOS = 2;
 
-function tituloReflejaCampos(propuesta) {
-  const titulo = normalizeText(propuesta.tituloFinal);
-  const valores = [
-    propuesta.temaGeneral,
-    propuesta.problemaNecesidad,
-    propuesta.lugarContexto,
-    propuesta.grupoEstudio,
-    propuesta.anioPeriodoDatos,
-    propuesta.resultadoEsperado
-  ].map(normalizeText).filter(Boolean);
-
-  return valores.some((valor) => {
-    const palabras = valor.split(" ").filter((p) => p.length >= 4);
-    return palabras.some((palabra) => titulo.includes(palabra));
-  });
+function tituloDesdeItem(item = {}) {
+  if (typeof item === "string") return cleanString(item);
+  return cleanString(item.titulo || item.tituloFinal || item.texto || "");
 }
 
-function validarPropuestas(propuestas, tituloPreferidoNumero, carrera) {
-  if (!Array.isArray(propuestas) || propuestas.length !== 3) return "Debe enviar exactamente 3 propuestas.";
-  if (![1, 2, 3].includes(Number(tituloPreferidoNumero))) return "Debe seleccionar cuál de los 3 títulos prefiere.";
+function titulosDesdePayload(payload = {}) {
+  const preferido = Number(payload.tituloPreferidoNumero || payload.propuestaPreferidaNumero || 0);
+  const fuente = Array.isArray(payload.titulosEnviados) ? payload.titulosEnviados : (Array.isArray(payload.propuestas) ? payload.propuestas : []);
+  return fuente.slice(0, TOTAL_TITULOS).map((item, index) => ({
+    numero: Number(item.numero || index + 1),
+    titulo: tituloDesdeItem(item),
+    preferido: Number(item.numero || index + 1) === preferido || Boolean(item.preferido)
+  })).filter((item) => item.numero && item.titulo);
+}
 
-  const campos = ["temaGeneral", "lugarContexto", "problemaNecesidad", "grupoEstudio", "anioPeriodoDatos", "objetivoArticulo", "resultadoEsperado", "tituloFinal"];
-  const titulos = [];
-
-  for (let i = 0; i < propuestas.length; i += 1) {
-    const numero = i + 1;
-    const propuesta = propuestas[i] || {};
-
-    for (const campo of campos) {
-      if (!cleanString(propuesta[campo])) return `La propuesta ${numero} tiene incompleto el campo ${campo}.`;
-    }
-
-    const coherencia = validarCoherenciaPropuesta({ ...propuesta, numero, carrera }, carrera, { forzar: true });
-    if (!coherencia.ok) {
-      if (coherencia.estado === COHERENCIA_ESTADOS.adaptable) return `La propuesta ${numero} necesita usar el enfoque corregido antes de enviarse.`;
-      return coherencia.mensaje || `La propuesta ${numero} no corresponde a la carrera del estudiante.`;
-    }
-
-    if (!tituloReflejaCampos(propuesta)) return `El título final de la propuesta ${numero} debe reflejar la información de sus campos guía.`;
-
-    const titulo = normalizeText(propuesta.tituloFinal);
-    if (titulos.includes(titulo)) return "Los 3 títulos no pueden ser iguales.";
-    titulos.push(titulo);
+function validarTitulos(payload = {}) {
+  const preferido = Number(payload.tituloPreferidoNumero || payload.propuestaPreferidaNumero || 0);
+  if (![1, 2, 3].includes(preferido)) return { error: "Debe seleccionar cuál de los 3 títulos prefiere.", titulos: [] };
+  const titulos = titulosDesdePayload({ ...payload, tituloPreferidoNumero: preferido });
+  if (titulos.length !== TOTAL_TITULOS) return { error: "Debe enviar exactamente 3 títulos.", titulos: [] };
+  const vistos = [];
+  for (const item of titulos) {
+    const key = normalizeText(item.titulo);
+    if (!key) return { error: `El título ${item.numero} está vacío.`, titulos: [] };
+    if (vistos.includes(key)) return { error: "Los 3 títulos deben ser diferentes.", titulos: [] };
+    vistos.push(key);
   }
-
-  const repetidos = titulos.some((titulo, index) => titulos.some((otro, otroIndex) => index !== otroIndex && (titulo.includes(otro) || otro.includes(titulo))));
-  if (repetidos) return "Los títulos son demasiado parecidos. Deben ser 3 propuestas diferentes.";
-
-  return "";
-}
-
-function limpiarPropuestas(propuestas, tituloPreferidoNumero, carrera) {
-  const preferido = Number(tituloPreferidoNumero);
-
-  return propuestas.map((propuesta, index) => {
-    const numero = index + 1;
-    const coherencia = validarCoherenciaPropuesta({ ...propuesta, numero, carrera }, carrera, { forzar: true });
-
-    return {
-      numero,
-      preferido: numero === preferido,
-      temaGeneral: cleanString(propuesta.temaGeneral),
-      lugarContexto: cleanString(propuesta.lugarContexto),
-      problemaNecesidad: cleanString(propuesta.problemaNecesidad),
-      grupoEstudio: cleanString(propuesta.grupoEstudio),
-      anioPeriodoDatos: cleanString(propuesta.anioPeriodoDatos),
-      objetivoArticulo: cleanString(propuesta.objetivoArticulo),
-      resultadoEsperado: cleanString(propuesta.resultadoEsperado),
-      tituloFinal: cleanString(propuesta.tituloFinal),
-      coherencia: {
-        estado: coherencia.estado,
-        clasificacion: coherencia.clasificacion,
-        areaCarrera: coherencia.areaCarrera?.id || "",
-        areaTema: coherencia.areaTema?.id || "",
-        validadoEnServidor: true,
-        actualizadoEn: nowIso()
-      }
-    };
-  });
+  return { error: "", titulos: titulos.map((item) => ({ ...item, preferido: item.numero === preferido })) };
 }
 
 async function obtenerEstudiantePeriodo(db, cedula) {
   const periodoActivo = await getPeriodoActivo(db);
   if (!periodoActivo) return { error: badRequest("No existe un período activo configurado.") };
-
   const estudiante = await buscarEstudiantePorCedula(db, cedula);
   if (!estudiante) return { error: badRequest("No se encontró un estudiante con esa cédula.") };
-
   if (!estudiantePertenecePeriodo(estudiante, periodoActivo.id)) {
-    return {
-      error: badRequest("El estudiante no pertenece al período activo.", {
-        periodoActivoId: periodoActivo.id,
-        periodoActivoLabel: periodoActivo.label
-      })
-    };
+    return { error: badRequest("El estudiante no pertenece al período activo.", { periodoActivoId: periodoActivo.id, periodoActivoLabel: periodoActivo.label }) };
   }
-
   return { estudiante, periodoActivo };
+}
+
+function normalizarEnvio(id, data = {}) {
+  const titulos = Array.isArray(data.titulosEnviados)
+    ? data.titulosEnviados
+    : (Array.isArray(data.propuestas) ? data.propuestas.map((item) => ({ numero: item.numero, titulo: item.titulo || item.tituloFinal, preferido: item.preferido })) : []);
+  const estado = normalizarEstadoTitulo(data.estado);
+  const intentosUsados = Number(data.intentosUsados || data.intento || 0);
+  const maxIntentos = Number(data.maxIntentos || MAX_INTENTOS);
+  return {
+    ...data,
+    docId: cleanString(data.docId || data.envioId || id),
+    envioId: cleanString(data.envioId || data.docId || id),
+    estado,
+    titulosEnviados: titulos,
+    tituloPreferidoNumero: Number(data.tituloPreferidoNumero || data.propuestaPreferidaNumero || 0),
+    tituloCorregidoCoordinador: cleanString(data.tituloCorregidoCoordinador || data.tituloCorregido || ""),
+    observacionCoordinador: cleanString(data.observacionCoordinador || data.observacion || ""),
+    tituloElegidoTexto: cleanString(data.tituloElegidoTexto || data.tituloElegido || ""),
+    intentosUsados,
+    maxIntentos,
+    reenvioDisponible: estado === ESTADOS.devuelto && intentosUsados < maxIntentos
+  };
 }
 
 async function buscarEnvioEstudiante(db, periodoActivo, cedula) {
   const envioId = createEnvioId(periodoActivo.id, cedula);
-  const directoRef = db.collection(COLLECTIONS.envios).doc(envioId);
-  const directoSnap = await directoRef.get();
+  const ref = db.collection(COLLECTIONS.envios).doc(envioId);
+  const snap = await ref.get();
+  if (snap.exists) return { ref, id: snap.id, data: normalizarEnvio(snap.id, snap.data() || {}), exists: true };
 
-  if (directoSnap.exists) {
-    return { ref: directoRef, id: directoSnap.id, data: directoSnap.data() || {}, exists: true };
-  }
+  const legacyId = createEnvioIdLegacyCedula(cedula);
+  const legacyRef = db.collection(COLLECTIONS.envios).doc(legacyId);
+  const legacySnap = await legacyRef.get();
+  if (legacySnap.exists) return { ref, id: envioId, data: normalizarEnvio(envioId, legacySnap.data() || {}), exists: true, legacyRef };
 
-  const snap = await db.collection(COLLECTIONS.envios).where("cedula", "==", cedula).get();
-  const encontrado = snap.docs.find((doc) => {
-    const data = doc.data() || {};
-    return periodoEquivalente(data.periodoId || data.periodoLabel, periodoActivo.id);
-  });
-
-  if (encontrado) {
-    return { ref: encontrado.ref, id: encontrado.id, data: encontrado.data() || {}, exists: true };
-  }
-
-  return { ref: directoRef, id: envioId, data: null, exists: false };
+  const querySnap = await db.collection(COLLECTIONS.envios).where("cedula", "==", cedula).get();
+  const encontrado = querySnap.docs.find((doc) => periodoEquivalente(doc.data()?.periodoId || doc.data()?.periodoLabel, periodoActivo.id));
+  if (encontrado) return { ref, id: envioId, data: normalizarEnvio(envioId, encontrado.data() || {}), exists: true, legacyRef: encontrado.ref };
+  return { ref, id: envioId, data: null, exists: false };
 }
 
 async function buscarPorCedula(db, payload) {
   const cedula = onlyDigits(payload.cedula);
   if (!cedula) return badRequest("Ingrese una cédula válida.");
-
   const { estudiante, periodoActivo, error } = await obtenerEstudiantePeriodo(db, cedula);
   if (error) return error;
-
   const envio = await buscarEnvioEstudiante(db, periodoActivo, cedula);
   return ok({ estudiante: estudiantePublico(estudiante, periodoActivo.label), periodoActivo, envio: envio.exists ? envio.data : null });
 }
@@ -173,99 +127,87 @@ async function buscarPorCedula(db, payload) {
 async function guardarTelegram(db, payload) {
   const cedula = onlyDigits(payload.cedula);
   const telegramUser = cleanString(payload.telegramUser || payload.telegramUsuario);
-
   if (!cedula) return badRequest("Ingrese una cédula válida.");
   if (!telegramUser) return badRequest("Ingrese su usuario de Telegram.");
-
   const { estudiante, periodoActivo, error } = await obtenerEstudiantePeriodo(db, cedula);
   if (error) return error;
-
   const envio = await buscarEnvioEstudiante(db, periodoActivo, cedula);
   const fecha = nowIso();
-
   await db.collection(COLLECTIONS.estudiantes).doc(estudiante.id).set({ telegramUser, updatedAt: fecha }, { merge: true });
-  await envio.ref.set({ envioId: envio.id, periodoId: periodoActivo.id, periodoLabel: periodoActivo.label, cedula, telegramUser, actualizadoEn: fecha }, { merge: true });
-
+  await envio.ref.set({ docId: envio.id, envioId: envio.id, periodoId: periodoActivo.id, periodoLabel: periodoActivo.label, cedula, estado: envio.data?.estado || ESTADOS.sinEnvio, telegramUser, actualizadoEn: fecha, creadoEn: envio.data?.creadoEn || fecha }, { merge: true });
   return ok({ mensaje: "Usuario de Telegram guardado correctamente." });
 }
 
 async function consultarEstado(db, payload) {
   const cedula = onlyDigits(payload.cedula);
   if (!cedula) return badRequest("Ingrese una cédula válida.");
-
   const periodoActivo = await getPeriodoActivo(db);
-  if (!periodoActivo) return badRequest("No existe un período activo configurado.");
-
   const envio = await buscarEnvioEstudiante(db, periodoActivo, cedula);
   return ok({ envio: envio.exists ? envio.data : null, periodoActivo });
 }
 
 async function enviarPropuestas(db, payload) {
   const cedula = onlyDigits(payload.cedula);
-  const telegramUser = cleanString(payload.telegramUser || payload.telegramUsuario);
-
   if (!cedula) return badRequest("Ingrese una cédula válida.");
-  if (!telegramUser) return badRequest("Ingrese su usuario de Telegram.");
-
   const { estudiante, periodoActivo, error } = await obtenerEstudiantePeriodo(db, cedula);
   if (error) return error;
 
-  const carrera = cleanString(estudiante.NombreCarrera || estudiante.nombreCarrera || estudiante.carrera);
-  const errorPropuestas = validarPropuestas(payload.propuestas, payload.tituloPreferidoNumero, carrera);
-  if (errorPropuestas) return badRequest(errorPropuestas);
+  const validacion = validarTitulos(payload);
+  if (validacion.error) return badRequest(validacion.error);
 
   const envio = await buscarEnvioEstudiante(db, periodoActivo, cedula);
-  const envioActual = envio.exists ? envio.data : null;
+  const envioActual = envio.exists ? normalizarEnvio(envio.id, envio.data || {}) : null;
+  const estadoActual = envioActual?.estado || ESTADOS.sinEnvio;
+  if ([ESTADOS.enviado, ESTADOS.enRevision, ESTADOS.aprobado, ESTADOS.aprobadoConCorrecciones].includes(estadoActual)) return badRequest("El envío ya fue registrado y no puede editarse en este estado.");
+  if (estadoActual === ESTADOS.devuelto && Number(envioActual?.intentosUsados || 0) >= MAX_INTENTOS) return badRequest("Ya utilizó su única oportunidad de reenvío después de la devolución.");
 
-  if (envioActual && [ESTADOS.enviado, ESTADOS.enRevision, ESTADOS.aprobado, ESTADOS.aprobadoConCorrecciones].includes(envioActual.estado)) {
-    return badRequest("El envío ya fue registrado y no puede editarse en este estado.");
-  }
-
-  const intento = Number(envioActual?.intento || 0) + 1;
-  const propuestas = limpiarPropuestas(payload.propuestas, payload.tituloPreferidoNumero, carrera);
   const fecha = nowIso();
-
+  const estudianteBase = estudiantePublico(estudiante, periodoActivo.label);
+  const intentosUsados = Number(envioActual?.intentosUsados || 0) + 1;
+  const telegramUser = cleanString(payload.telegramUser || payload.telegramUsuario || envioActual?.telegramUser || "");
   const data = {
+    docId: envio.id,
     envioId: envio.id,
     periodoId: periodoActivo.id,
     periodoLabel: periodoActivo.label,
     cedula,
-    telegramUser,
-    propuestas,
-    tituloPreferidoNumero: Number(payload.tituloPreferidoNumero),
+    nombres: estudianteBase.nombres,
+    codigoCarrera: estudianteBase.codigoCarrera,
+    carrera: estudianteBase.carrera,
     estado: ESTADOS.enviado,
-    intento,
-    enviadoEn: fecha,
-    actualizadoEn: fecha,
-    tituloElegidoNumero: null,
+    titulosEnviados: validacion.titulos,
+    tituloPreferidoNumero: Number(payload.tituloPreferidoNumero || payload.propuestaPreferidaNumero),
+    tituloElegidoNumero: "",
     tituloElegidoTexto: "",
-    tituloCorregido: "",
-    observacion: "",
+    tituloCorregidoCoordinador: "",
+    observacionCoordinador: "",
     coordinadorId: "",
-    coordinadorNombre: ""
+    coordinadorNombre: "",
+    intentosUsados,
+    maxIntentos: MAX_INTENTOS,
+    reenvioDisponible: false,
+    creadoEn: envioActual?.creadoEn || fecha,
+    enviadoEn: fecha,
+    revisadoEn: "",
+    actualizadoEn: fecha,
+    ...(telegramUser ? { telegramUser } : {})
   };
-
-  await db.collection(COLLECTIONS.estudiantes).doc(estudiante.id).set({ telegramUser, updatedAt: fecha }, { merge: true });
-  await envio.ref.set(data, { merge: true });
-  await db.collection(COLLECTIONS.historial).add({ tipo: "ENVIO_ESTUDIANTE", envioId: envio.id, cedula, periodoId: periodoActivo.id, periodoLabel: periodoActivo.label, intento, estado: ESTADOS.enviado, propuestas, creadoEn: fecha });
-
-  return ok({ envio: data, mensaje: "Propuestas enviadas correctamente." });
+  await envio.ref.set(data, { merge: false });
+  await db.collection(COLLECTIONS.historial).add({ tipo: intentosUsados > 1 ? "REENVIO_ESTUDIANTE" : "ENVIO_ESTUDIANTE", docId: envio.id, envioId: envio.id, cedula, periodoId: periodoActivo.id, periodoLabel: periodoActivo.label, estado: ESTADOS.enviado, intentosUsados, titulosEnviados: validacion.titulos, creadoEn: fecha });
+  return ok({ envio: normalizarEnvio(envio.id, data), mensaje: intentosUsados > 1 ? "Títulos reenviados correctamente." : "Títulos enviados correctamente." });
 }
 
 export async function handler(event) {
   const options = handleOptions(event);
   if (options) return options;
-
   try {
     validarMetodoPost(event);
     const { action, payload } = parseBody(event);
     const db = getAdminDb();
-
     if (action === "buscarPorCedula") return await buscarPorCedula(db, payload);
     if (action === "guardarTelegram") return await guardarTelegram(db, payload);
     if (action === "consultarEstado") return await consultarEstado(db, payload);
     if (action === "enviarPropuestas") return await enviarPropuestas(db, payload);
-
     return badRequest("Acción de estudiante no reconocida.");
   } catch (error) {
     return serverError(error);
