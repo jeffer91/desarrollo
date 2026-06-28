@@ -33,9 +33,10 @@ Luego abrir con Live Server:
 ```text
 Requisitos/Titulos/public/ta-titulo-articulo-estudiante.html
 Requisitos/Titulos/public/ta-titulo-articulo-coordinador.html
+Requisitos/Titulos/public/ta-titulo-articulo-admin.html
 ```
 
-Estas pantallas usan Firebase directo en modo local.
+Estas pantallas usan Firebase directo.
 
 ## 2. Doble click
 
@@ -44,6 +45,7 @@ También se pueden abrir directamente los HTML:
 ```text
 Requisitos/Titulos/public/ta-titulo-articulo-estudiante.html
 Requisitos/Titulos/public/ta-titulo-articulo-coordinador.html
+Requisitos/Titulos/public/ta-titulo-articulo-admin.html
 ```
 
 Importante: Firebase directo usa CDN mediante import map, por lo que necesita internet.
@@ -62,29 +64,51 @@ Coordinador:
 npm run dev:coordinador
 ```
 
+Administrador:
+
+```bash
+npm run dev:admin
+```
+
 Rutas:
 
 ```text
 http://127.0.0.1:5173/public/ta-titulo-articulo-estudiante.html
 http://127.0.0.1:5173/public/ta-titulo-articulo-coordinador.html
+http://127.0.0.1:5173/public/ta-titulo-articulo-admin.html
 ```
 
-## 4. Administrador en Electron
+## 4. Electron
+
+Administrador:
 
 ```bash
-npm run electron
+npm run electron:admin
+```
+
+Estudiante:
+
+```bash
+npm run electron:estudiante
+```
+
+Coordinador:
+
+```bash
+npm run electron:coordinador
 ```
 
 Modo diagnóstico con consola:
 
 ```bash
 npm run electron:dev
+npm run electron:dev:estudiante
+npm run electron:dev:coordinador
 ```
 
-En la parte superior del administrador debe aparecer:
+En diagnóstico debe aparecer:
 
 ```text
-Runtime: Electron
 Origen de datos: firebase-direct
 Proyecto Firebase: utet-4387a
 SDK Firebase: 10.14.1
@@ -107,6 +131,7 @@ Entradas:
 ```text
 dist-local/public/ta-titulo-articulo-estudiante.html
 dist-local/public/ta-titulo-articulo-coordinador.html
+dist-local/public/ta-titulo-articulo-admin.html
 dist-local/electron/admin/ta-titulo-articulo-administrador.html
 ```
 
@@ -139,9 +164,10 @@ Rutas públicas esperadas:
 /
 /estudiante
 /coordinador
+/admin
 ```
 
-La pantalla `/admin` no se publica como panel administrativo. El administrador real se usa por Electron.
+Las pantallas de estudiante, coordinador y administrador usan Firebase directo para leer y escribir datos del proceso. Netlify Functions se mantiene para servicios privados como Gemini.
 
 ### Variables obligatorias en Netlify
 
@@ -151,13 +177,12 @@ FIREBASE_ADMIN_CLIENT_EMAIL
 FIREBASE_ADMIN_PRIVATE_KEY
 TA_TITULO_ARTICULO_ADMIN_TOKEN
 TELEGRAM_BOT_TOKEN
+GEMINI_API_KEY
 ```
 
 En `FIREBASE_ADMIN_PRIVATE_KEY`, si se pega en una sola línea, conservar los saltos como `\n`.
 
-### Variables opcionales para frontend
-
-Se pueden configurar si se quiere reemplazar la configuración pública local:
+### Variables opcionales para frontend y Gemini
 
 ```text
 VITE_FIREBASE_API_KEY
@@ -166,6 +191,7 @@ VITE_FIREBASE_PROJECT_ID
 VITE_FIREBASE_STORAGE_BUCKET
 VITE_FIREBASE_MESSAGING_SENDER_ID
 VITE_FIREBASE_APP_ID
+GEMINI_MODEL
 ```
 
 ## Comandos principales
@@ -179,7 +205,10 @@ npm run build:local
 npm run build:netlify
 npm run dev
 npm run dev:coordinador
-npm run electron
+npm run dev:admin
+npm run electron:admin
+npm run electron:estudiante
+npm run electron:coordinador
 npm run electron:dev
 npm run dev:netlify
 ```
