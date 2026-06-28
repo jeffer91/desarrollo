@@ -6,11 +6,13 @@
   - Crear layout compacto para estudiante, coordinador y administrador.
   - Organizar encabezado, grillas, secciones y contenedores principales.
   - Mostrar el logo institucional en estudiante, coordinador y administrador.
+  - Organizar el administrador con panel lateral fijo y contenido visible por secciones.
   Se conecta con:
   - Requisitos/Titulos/src/styles/ta-titulo-articulo-base.css
   - Requisitos/Titulos/src/styles/ta-titulo-articulo-components.css
   - Requisitos/Titulos/public/ta-titulo-articulo-estudiante.html
   - Requisitos/Titulos/public/ta-titulo-articulo-coordinador.html
+  - Requisitos/Titulos/public/ta-titulo-articulo-admin.html
   - Requisitos/Titulos/electron/admin/ta-titulo-articulo-administrador.html
 */
 
@@ -22,7 +24,7 @@
 }
 
 .ta-shell--wide {
-  width: min(1480px, 100%);
+  width: min(1680px, 100%);
 }
 
 .ta-header {
@@ -133,6 +135,107 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.ta-admin-layout {
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+}
+
+.ta-admin-sidebar {
+  position: sticky;
+  top: 16px;
+  z-index: 5;
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid rgba(201, 168, 102, 0.32);
+  border-radius: var(--ta-radius-xl);
+  background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(250,247,239,.98));
+  box-shadow: var(--ta-shadow-card);
+}
+
+.ta-admin-sidebar__eyebrow {
+  margin: 0 0 4px;
+  color: var(--ta-color-dorado);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ta-admin-sidebar__title {
+  margin: 0;
+  color: var(--ta-color-azul-marino);
+  font-size: 1.05rem;
+  font-weight: 900;
+  line-height: 1.15;
+}
+
+.ta-admin-sidebar__help {
+  margin: 6px 0 0;
+  color: var(--ta-color-texto-suave);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.ta-admin-menu {
+  display: grid;
+  gap: 8px;
+}
+
+.ta-admin-menu__link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 40px;
+  padding: 10px 12px;
+  border: 1px solid var(--ta-color-gris-borde-2);
+  border-radius: var(--ta-radius-md);
+  background: var(--ta-color-blanco);
+  color: var(--ta-color-azul-marino);
+  font-size: 0.86rem;
+  font-weight: 850;
+  line-height: 1.2;
+  text-decoration: none;
+  transition: transform var(--ta-transition), border-color var(--ta-transition), box-shadow var(--ta-transition), background var(--ta-transition);
+}
+
+.ta-admin-menu__link::after {
+  content: "›";
+  color: var(--ta-color-dorado);
+  font-size: 1.15rem;
+  font-weight: 900;
+}
+
+.ta-admin-menu__link:hover,
+.ta-admin-menu__link:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(201,168,102,.55);
+  background: var(--ta-color-dorado-suave);
+  box-shadow: var(--ta-shadow-soft);
+  outline: none;
+}
+
+.ta-admin-menu__link--danger {
+  color: #8a3d08;
+  border-color: rgba(217,119,6,.22);
+  background: #fffaf0;
+}
+
+.ta-admin-content {
+  min-width: 0;
+  display: grid;
+  gap: 16px;
+}
+
+.ta-admin-section {
+  display: grid;
+  gap: 16px;
+  scroll-margin-top: 18px;
+}
+
 .ta-admin-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
@@ -145,7 +248,7 @@
 
 .ta-summary-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(140px, 1fr));
+  grid-template-columns: repeat(6, minmax(130px, 1fr));
   gap: 12px;
 }
 
@@ -164,6 +267,20 @@
 
 .ta-actions--end {
   justify-content: flex-end;
+}
+
+@media (max-width: 1120px) {
+  .ta-admin-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .ta-admin-sidebar {
+    position: static;
+  }
+
+  .ta-admin-menu {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 920px) {
@@ -203,6 +320,12 @@
   }
 }
 
+@media (max-width: 760px) {
+  .ta-admin-menu {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 640px) {
   .ta-brand {
     flex-direction: column;
@@ -216,7 +339,8 @@
 }
 
 @media (max-width: 560px) {
-  .ta-summary-grid {
+  .ta-summary-grid,
+  .ta-admin-menu {
     grid-template-columns: 1fr;
   }
 
