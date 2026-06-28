@@ -3,9 +3,9 @@
   Ruta o ubicación: /Requisitos/Titulos/src/services/ta-titulo-articulo-api-client.service.js
   Función o funciones:
   - Mantener la interfaz histórica TaTituloArticuloApi usada por estudiante, coordinador y administrador.
-  - Elegir automáticamente el origen de datos según el entorno.
-  - En modo local intentar Firebase directo.
-  - En Netlify usar Netlify Functions.
+  - Elegir el origen de datos desde el runtime.
+  - Usar Firebase directo como origen principal en Netlify, Electron, Vite y Live Server.
+  - Mantener Netlify Functions como compatibilidad si se fuerza manualmente.
   - Cargar Firebase directo de forma diferida para no romper doble click o Live Server al abrir la pantalla.
 */
 
@@ -215,7 +215,7 @@ function errorFirebaseDirecto(error) {
   const mensaje = clean(error?.message || error) || "Firebase directo no está disponible.";
   const necesitaSdk = mensaje.includes("Failed to resolve module specifier") || mensaje.includes("firebase/firestore") || mensaje.includes("import.meta.env");
   if (necesitaSdk) {
-    return new Error(`${mensaje} Falta el Bloque 3 para dejar el SDK de Firebase compatible con doble click y Live Server.`);
+    return new Error(`${mensaje} Revise el import map de Firebase y abra la pantalla con Vite, Electron, Netlify o Live Server.`);
   }
   return new Error(mensaje);
 }
