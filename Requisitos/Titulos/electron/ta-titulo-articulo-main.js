@@ -7,6 +7,7 @@
   - Forzar el origen de datos local a Firebase directo.
   - Cargar HTML local sin depender primero de Netlify.
   - Bloquear navegación externa dentro de la ventana.
+  - Cargar normalización visual de períodos en el administrador Electron.
   Se conecta con:
   - Requisitos/Titulos/package.json
   - Requisitos/Titulos/public/ta-titulo-articulo-estudiante.html
@@ -69,6 +70,17 @@ function detectarPantalla() {
   return "admin";
 }
 
+function cargarComplementosAdmin(win, screenName) {
+  if (screenName !== "admin") return;
+  win.webContents.once("did-finish-load", () => {
+    win.webContents.executeJavaScript(
+      'import("../../src/admin/ta-titulo-articulo-admin-periodos-normalizados.app.js").catch((error) => console.error("[Títulos admin períodos]", error));'
+    ).catch((error) => {
+      console.warn(`[Títulos Electron] No se pudo cargar normalizador de períodos: ${error.message}`);
+    });
+  });
+}
+
 function createWindow() {
   const screenName = detectarPantalla();
   const screen = SCREENS[screenName] || SCREENS.admin;
@@ -107,6 +119,8 @@ function createWindow() {
       shell.openExternal(url);
     }
   });
+
+  cargarComplementosAdmin(win, screenName);
 
   win.loadFile(screen.html, {
     query: {
