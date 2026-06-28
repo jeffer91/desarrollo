@@ -6,7 +6,7 @@ Función o funciones:
 2. Reubicar contenidos o actividades sin unidad cuando el texto o código permita inferirla.
 3. Ordenar contenidos por numeración académica: 1.1, 1.1.1, 1.1.2, etc.
 4. Mantener separados los elementos que no puedan relacionarse para no perder información.
-5. Entregar advertencias para revisión antes de guardar o generar el libro.
+5. Evitar reubicar actividades por números sueltos como semana 1 o actividad 1.
 ========================================================= */
 
 (function attachCargaMateriaMatcher(window) {
@@ -31,21 +31,35 @@ Función o funciones:
     return JSON.parse(JSON.stringify(value == null ? null : value));
   }
 
-  function getUnitNumber(value) {
+  function unitFromAcademicCode(value) {
+    var raw = text(value);
+    var match = raw.match(/(^|\s|\|)([1-4](?:\.\d+){1,6})(?=\s|\||$)/);
+
+    if (match && match[2]) {
+      return Number(String(match[2]).split(".")[0]);
+    }
+
+    return 0;
+  }
+
+  function unitFromExplicitText(value) {
     var raw = text(value);
     var normalized = normalize(raw);
+    var fromCode = unitFromAcademicCode(raw);
 
-    if (!raw) return 0;
-
-    var codeMatch = raw.match(/(^|\s|\|)([1-4](?:\.\d+){0,6})(?=\s|\||$)/);
-    if (codeMatch && codeMatch[2]) {
-      return Number(String(codeMatch[2]).split(".")[0]);
-    }
+    if (fromCode) return fromCode;
 
     var unitMatch = normalized.match(/unidad\s*([1-4])/);
     if (unitMatch && unitMatch[1]) return Number(unitMatch[1]);
 
-    var simple = normalized.match(/^([1-4])$/);
+    return 0;
+  }
+
+  function unitFromUnitField(value) {
+    var explicit = unitFromExplicitText(value);
+    var simple = normalize(value).match(/^([1-4])$/);
+
+    if (explicit) return explicit;
     if (simple && simple[1]) return Number(simple[1]);
 
     return 0;
@@ -54,13 +68,11 @@ Función o funciones:
   function getItemUnit(item) {
     if (!item) return 0;
 
-    return Number(item.unidad || 0) ||
-      getUnitNumber(item.codigo) ||
-      getUnitNumber(item.codigoRelacionado) ||
-      getUnitNumber(item.temaRelacionado) ||
-      getUnitNumber(item.contenido) ||
-      getUnitNumber(item.actividad) ||
-      getUnitNumber(item.textoOriginal);
+    return unitFromUnitField(item.unidad) ||
+      unitFromExplicitText(item.codigo) ||
+      unitFromExplicitText(item.codigoRelacionado) ||
+      unitFromExplicitText(item.temaRelacionado) ||
+      unitFromExplicitText(item.contenido);
   }
 
   function numericCodeParts(code) {
