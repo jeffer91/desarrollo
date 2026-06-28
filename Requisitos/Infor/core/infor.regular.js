@@ -2,41 +2,42 @@
 Nombre completo: infor.regular.js
 Ruta o ubicación: /Requisitos/Infor/core/infor.regular.js
 Función o funciones:
-- Analizar el Excel regular de Infor con tres hojas: NÚCLEOS, notas_complexivo y defensa/trabajo.
-- Usar NÚCLEOS solo como información del informe, no como validación de aprobación.
-- Filtrar estudiantes del Excel contra las cédulas reales del período seleccionado.
-- Eliminar duplicados por cédula cuando correspondan al mismo estudiante.
-- Calcular nota final de Examen Complexivo con fórmula institucional: práctica 60% y teórico 40%.
+- Analizar el Excel regular de Infor usando NÚCLEOS y notas_complexivo.
+- Usar el Excel como fuente principal del informe.
+- Validar 4 núcleos por estudiante, nota mínima 7 y nota 0 como retirado.
+- Deduplicar notas_complexivo por cédula.
+- Calcular nota final: si existe notaSupletorio, esa nota manda; si no, práctica 60% y teórico 40%.
+- Marcar inconsistencia cuando existe complexivo sin 4 núcleos aprobados.
 Con qué se conecta:
 - infor.excel.js
 - infor.match.js
 - infor.report.js
-- ../../BaseLocal2/repositories/bl2-estudiantes.repo.js
-- ../../Gestion/Excel/excel-local.repo.js
 - ../frontend/titulacion.app.js
 ========================================================= */
 (function(window){
   "use strict";
 
-  function text(value){return String(value == null ? "" : value).trim();}
+  function text(value){
+    var out = String(value == null ? "" : value).trim();
+    return /^(null|undefined|nan|n\/a|s\/n)$/i.test(out) ? "" : out;
+  }
   function norm(value){return text(value).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();}
   function compact(value){return norm(value).replace(/[^a-z0-9]/g, "");}
   function onlyDigits(value){return text(value).replace(/[^0-9]/g, "");}
-  function num(value){var n = Number(text(value).replace(",", "."));return Number.isFinite(n) ? n : null;}
+  function num(value){var raw = text(value).replace(",", ".");if(!raw){return null;}var n = Number(raw);return Number.isFinite(n) ? n : null;}
   function round2(value){return Number.isFinite(value) ? Math.round(value * 100) / 100 : null;}
   function safeList(value){return Array.isArray(value) ? value : [];}
 
-  var CEDULA_ALIASES = ["cedula","cédula","identificacion","identificación","numeroidentificacion","numero identificacion","documento","dni"];
-  var NAME_ALIASES = ["nombres","nombre","estudiante","apellidosynombres","apellidos nombres","alumno","participante"];
+  var CEDULA_ALIASES = ["cedula","cédula","identificacion","identificación","identificacionestudiante","identificacion estudiante","numeroidentificacion","numero identificacion","documento","dni"];
+  var NAME_ALIASES = ["nombre_est","nombre est","nombres","nombre","estudiante","apellidosynombres","apellidos nombres","alumno","participante"];
   var CAREER_ALIASES = ["carrera","nombrecarrera","nombre carrera","programa","especialidad"];
   var TITLE_ALIASES = ["titulo","título","tema","articulo","artículo","trabajo","nombretrabajo","propuesta"];
   var TUTOR_ALIASES = ["tutor","docente tutor","director","asesor"];
+  var MATERIA_ALIASES = ["materia","nucleo","núcleo","asignatura"];
+  var NUCLEO_NOTA_ALIASES = ["nota_final","nota final","notafinal","nfin","final"];
   var PRACTICO_ALIASES = ["notaPractico","nota práctico","nota practico","practico","práctico","nota práctica","nota practica","evaluacionPractica","evaluación práctica"];
   var TEORICO_ALIASES = ["notaTeorico","nota teórico","nota teorico","teorico","teórico","evaluacionTeorica","evaluación teórica"];
-  var SUPLETORIO_ALIASES = ["notaSupletorio","nota supletorio","supletorio"];
-  var NART_ALIASES = ["notart","nart","notaart","nota articulo","nota artículo","articulo","artículo"];
-  var NDEF_ALIASES = ["notdef","ndef","notadef","nota defensa","defensa"];
-  var NFIN_ALIASES = ["notafinal","nota final","nfin","final"];
+  var SUPLETORIO_ALIASES = ["notaSupletorio","nota supletorio"];
 
   function findValue(row, aliases){
     row = row || {};
@@ -46,8 +47,8 @@ Con qué se conecta:
       for(var j = 0; j < keys.length; j += 1){
         var key = compact(keys[j]);
         if(key === wanted || key.indexOf(wanted) >= 0 || wanted.indexOf(key) >= 0){
-          var value = row[keys[j]];
-          if(text(value)){return value;}
+          var value = text(row[keys[j]]);
+          if(value){return value;}
         }
       }
     }
@@ -59,6 +60,7 @@ Con qué se conecta:
   function careerOf(row){return text(row && (row.carrera || row.Carrera || row.nombreCarrera || row._bl2Carrera || findValue(row, CAREER_ALIASES)));}
   function titleOf(row){return text(row && (row.titulo || row.Titulo || row.título || findValue(row, TITLE_ALIASES)));}
   function tutorOf(row){return text(row && (row.tutor || row.Tutor || findValue(row, TUTOR_ALIASES)));}
+  function materiaOf(row){return text(row && (row.materia || row.Materia || findValue(row, MATERIA_ALIASES)));}
 
   function cedulaVariants(value){
     var d = onlyDigits(value);
@@ -68,152 +70,137 @@ Con qué se conecta:
     else if(d.length === 9){out.push("0" + d);}
     return out.filter(function(x, index, arr){return x && arr.indexOf(x) === index;});
   }
-
+  function cedulaKey(value){return cedulaVariants(value)[0] || "";}
   function sheetName(row){return text(row && row._inforSheet);}
   function sheetKey(row){return compact(sheetName(row));}
-  function isNucleos(row){var s = sheetKey(row);return s.indexOf("nucleo") >= 0 || s.indexOf("nucleos") >= 0;}
-  function isComplexivo(row){var s = sheetKey(row);return s.indexOf("complexivo") >= 0;}
-  function isTrabajo(row){return !isNucleos(row) && !isComplexivo(row);}
+  function isNucleos(row){return text(row && row._inforSheetType) === "NUCLEOS" || sheetKey(row).indexOf("nucleo") >= 0;}
+  function isComplexivo(row){return text(row && row._inforSheetType) === "COMPLEXIVO" || sheetKey(row).indexOf("complexivo") >= 0;}
+  function isTrabajo(){return false;}
 
-  function rowScore(row){
-    row = row || {};
-    var keys = Object.keys(row);
-    var nonEmpty = keys.filter(function(k){return text(row[k]);}).length;
-    var score = nonEmpty;
-    if(num(findValue(row, PRACTICO_ALIASES)) != null){score += 5;}
-    if(num(findValue(row, TEORICO_ALIASES)) != null){score += 5;}
-    if(num(findValue(row, NFIN_ALIASES)) != null){score += 5;}
-    if(num(findValue(row, NART_ALIASES)) != null){score += 3;}
-    if(num(findValue(row, NDEF_ALIASES)) != null){score += 3;}
-    return score;
+  function docenteForNucleo(numero){return "Docente " + (numero || 1);}
+
+  function nucleoNumber(row, fallback){
+    var m = materiaOf(row);
+    var match = norm(m).match(/nucleo\s*(\d+)/);
+    if(match){return Number(match[1]);}
+    return fallback || 1;
   }
 
-  function periodSource(periodId){
-    periodId = text(periodId);
-    try{
-      if(window.BL2EstudiantesRepo && typeof window.BL2EstudiantesRepo.buscar === "function"){
-        var result = window.BL2EstudiantesRepo.buscar({periodId:periodId, matricula:"ACTIVO", search:"", limit:12000});
-        if(result && Array.isArray(result.rows)){return {source:"BL2", rows:result.rows};}
-      }
-    }catch(error){console.warn("[InforRegular BL2]", error);}
-
-    try{
-      if(window.ExcelLocalRepo){
-        var rows = [];
-        if(typeof window.ExcelLocalRepo.listStudentsByPeriod === "function"){rows = window.ExcelLocalRepo.listStudentsByPeriod(periodId, {estadoMatricula:"ACTIVO"}) || [];}
-        else if(typeof window.ExcelLocalRepo.listAllStudents === "function"){rows = window.ExcelLocalRepo.listAllStudents() || [];}
-        return {source:"ExcelLocalRepo", rows:rows};
-      }
-    }catch(error2){console.warn("[InforRegular ExcelLocalRepo]", error2);}
-
-    return {source:"Sin BaseLocal", rows:[]};
-  }
-
-  function buildPeriodIndex(rows){
+  function buildNucleosIndex(rows){
     var byCedula = Object.create(null);
-    safeList(rows).forEach(function(row){
-      cedulaVariants(cedulaOf(row)).forEach(function(key){if(key && !byCedula[key]){byCedula[key] = row;}});
+    safeList(rows).forEach(function(row, index){
+      var key = cedulaKey(cedulaOf(row));
+      if(!key){return;}
+      if(!byCedula[key]){byCedula[key] = {cedula:cedulaOf(row),nombres:nameOf(row),carrera:careerOf(row),rows:[]};}
+      byCedula[key].rows.push(Object.assign({_inforOriginalIndex:index}, row));
+    });
+
+    Object.keys(byCedula).forEach(function(key){
+      var item = byCedula[key];
+      item.rows = item.rows.map(function(row, idx){
+        var numero = nucleoNumber(row, idx + 1);
+        var nota = num(findValue(row, NUCLEO_NOTA_ALIASES));
+        return {numero:numero,materia:materiaOf(row) || ("Núcleo " + numero),docente:docenteForNucleo(numero),nota:nota,aprobado:nota != null && nota >= 7,retirado:nota === 0,row:row};
+      }).sort(function(a,b){return a.numero - b.numero;});
+      item.total = item.rows.length;
+      item.aprobados = item.rows.filter(function(n){return n.aprobado;}).length;
+      item.retirado = item.rows.some(function(n){return n.retirado;});
+      item.completo = item.total >= 4;
+      item.aprobado = item.completo && !item.retirado && item.rows.slice(0, 4).every(function(n){return n.aprobado;});
+      item.incompleto = !item.completo && !item.retirado;
+      item.reprobado = item.completo && !item.retirado && !item.aprobado;
+      item.estado = item.retirado ? "RETIRADO" : (item.aprobado ? "APROBADO_NUCLEOS" : (item.incompleto ? "NUCLEOS_INCOMPLETOS" : "REPROBADO_NUCLEOS"));
     });
     return byCedula;
   }
 
-  function existsInPeriod(cedula, index){
-    return cedulaVariants(cedula).some(function(key){return !!index[key];});
+  function summarizeNucleos(index){
+    var list = Object.keys(index).map(function(key){return index[key];});
+    return {total:list.length,completos:list.filter(function(x){return x.completo;}).length,aprobados:list.filter(function(x){return x.aprobado;}).length,retirados:list.filter(function(x){return x.retirado;}).length,incompletos:list.filter(function(x){return x.incompleto;}).length,reprobados:list.filter(function(x){return x.reprobado;}).length};
   }
 
-  function filterByPeriod(rows, index, enabled, sourceName){
-    var valid = [];
-    var excluded = [];
-    safeList(rows).forEach(function(row){
-      var cedula = cedulaOf(row);
-      if(!cedula){
-        excluded.push({source:sourceName, reason:"sin_cedula", cedula:"", estudiante:nameOf(row), sheet:sheetName(row), rowNumber:row._inforRowNumber || ""});
-        return;
-      }
-      if(enabled && !existsInPeriod(cedula, index)){
-        excluded.push({source:sourceName, reason:"fuera_del_periodo", cedula:cedula, estudiante:nameOf(row), sheet:sheetName(row), rowNumber:row._inforRowNumber || ""});
-        return;
-      }
-      valid.push(row);
-    });
-    return {valid:valid, excluded:excluded};
+  function complexivoNote(row){
+    var practico = num(findValue(row, PRACTICO_ALIASES));
+    var teorico = num(findValue(row, TEORICO_ALIASES));
+    var notaSupletorio = num(findValue(row, SUPLETORIO_ALIASES));
+    var final = null;
+    var formula = "";
+    var tieneSupletorio = notaSupletorio != null;
+    if(tieneSupletorio){final = notaSupletorio;formula = "notaSupletorio";}
+    else if(practico != null && teorico != null){final = round2((practico * 0.60) + (teorico * 0.40));formula = "notaPractico*0.60 + notaTeorico*0.40";}
+    return {notaPractico:practico,notaTeorico:teorico,notaSupletorio:notaSupletorio,notaFinal:final,formula:formula,quedoSupletorio:tieneSupletorio};
+  }
+
+  function rowScore(row){
+    var n = complexivoNote(row);
+    var score = 0;
+    if(n.notaSupletorio != null){score += 100;}
+    if(n.notaFinal != null){score += 20;}
+    if(n.notaPractico != null){score += 10;}
+    if(n.notaTeorico != null){score += 10;}
+    score += Object.keys(row || {}).filter(function(k){return text(row[k]);}).length;
+    return score;
   }
 
   function dedupeByCedula(rows, sourceName){
     var map = Object.create(null);
     var duplicates = [];
     safeList(rows).forEach(function(row){
-      var variants = cedulaVariants(cedulaOf(row));
-      var key = variants[0] || ("sin_cedula_" + (row._inforRowNumber || Math.random()));
+      var key = cedulaKey(cedulaOf(row));
+      if(!key){duplicates.push({source:sourceName,reason:"sin_cedula",cedula:"",estudiante:nameOf(row),sheet:sheetName(row),rowNumber:row._inforRowNumber || ""});return;}
       if(!map[key]){map[key] = row;return;}
       var current = map[key];
       if(rowScore(row) > rowScore(current)){
-        duplicates.push({source:sourceName, reason:"duplicado_reemplazado", cedula:cedulaOf(current), estudiante:nameOf(current), sheet:sheetName(current), rowNumber:current._inforRowNumber || ""});
+        duplicates.push({source:sourceName,reason:"duplicado_reemplazado",cedula:cedulaOf(current),estudiante:nameOf(current),sheet:sheetName(current),rowNumber:current._inforRowNumber || ""});
         map[key] = row;
       }else{
-        duplicates.push({source:sourceName, reason:"duplicado_omitido", cedula:cedulaOf(row), estudiante:nameOf(row), sheet:sheetName(row), rowNumber:row._inforRowNumber || ""});
+        duplicates.push({source:sourceName,reason:"duplicado_omitido",cedula:cedulaOf(row),estudiante:nameOf(row),sheet:sheetName(row),rowNumber:row._inforRowNumber || ""});
       }
     });
-    return {rows:Object.keys(map).map(function(key){return map[key];}), duplicates:duplicates};
+    return {rows:Object.keys(map).map(function(key){return map[key];}),duplicates:duplicates};
   }
 
-  function complexivoNote(row){
-    var practico = num(findValue(row, PRACTICO_ALIASES));
-    var teorico = num(findValue(row, TEORICO_ALIASES));
-    var supletorio = num(findValue(row, SUPLETORIO_ALIASES));
-    var final = practico != null && teorico != null ? round2((practico * 0.60) + (teorico * 0.40)) : null;
-    return {notaPractico:practico, notaTeorico:teorico, notaSupletorio:supletorio, notaFinal:final, formula:"notaPractico*0.60 + notaTeorico*0.40"};
+  function estadoPorNota(final, nucleoInfo, hasComplexivo){
+    if(nucleoInfo && nucleoInfo.retirado){return "RETIRADO";}
+    if(!hasComplexivo){return "SIN_COMPLEXIVO";}
+    if(final == null){return "SIN_NOTA";}
+    return final >= 7 ? "APROBADO" : "REPROBADO";
   }
 
-  function trabajoNote(row){
-    var nart = num(findValue(row, NART_ALIASES));
-    var ndef = num(findValue(row, NDEF_ALIASES));
-    var nfin = num(findValue(row, NFIN_ALIASES));
-    if(nfin == null && nart != null && ndef != null && nart >= 7){nfin = round2((nart * 0.70) + (ndef * 0.30));}
-    return {nart:nart, ndef:ndef, nfin:nfin};
-  }
-
-  function basePrepared(row, modalidad, label){
-    return Object.assign({}, row, {
-      cedula:cedulaOf(row),
-      nombres:nameOf(row),
-      carrera:careerOf(row),
+  function basePrepared(row, nucleoInfo, hasComplexivo){
+    nucleoInfo = nucleoInfo || null;
+    return Object.assign({}, row || {}, {
+      cedula:cedulaOf(row) || (nucleoInfo && nucleoInfo.cedula) || "",
+      nombres:nameOf(row) || (nucleoInfo && nucleoInfo.nombres) || "",
+      carrera:careerOf(row) || (nucleoInfo && nucleoInfo.carrera) || "",
       titulo:titleOf(row),
       tutor:tutorOf(row),
-      modalidadTitulacion:modalidad,
-      modalidadLabel:label,
-      _inforRegularPrepared:true
+      modalidadTitulacion:"EXAMEN_COMPLEXIVO",
+      modalidadLabel:"Examen Complexivo",
+      _inforRegularPrepared:true,
+      _inforNucleos:nucleoInfo ? {total:nucleoInfo.total,aprobados:nucleoInfo.aprobados,completo:nucleoInfo.completo,aprobado:nucleoInfo.aprobado,retirado:nucleoInfo.retirado,estado:nucleoInfo.estado,rows:nucleoInfo.rows.map(function(n){return {numero:n.numero,materia:n.materia,docente:n.docente,nota:n.nota,aprobado:n.aprobado,retirado:n.retirado};})} : {total:0,aprobados:0,completo:false,aprobado:false,retirado:false,estado:"SIN_NUCLEOS",rows:[]},
+      _inforTieneComplexivo:!!hasComplexivo
     });
   }
 
-  function prepareComplexivo(row){
+  function prepareComplexivo(row, nucleosIndex){
+    var key = cedulaKey(cedulaOf(row));
+    var nucleoInfo = nucleosIndex[key] || null;
     var note = complexivoNote(row);
-    return Object.assign(basePrepared(row, "EXAMEN_COMPLEXIVO", "Examen Complexivo"), {
-      notaPractico:note.notaPractico,
-      notaTeorico:note.notaTeorico,
-      notaSupletorio:note.notaSupletorio,
-      notaFinal:note.notaFinal,
-      notafinal:note.notaFinal,
-      nfin:note.notaFinal,
-      _inforNotaFormula:note.formula
-    });
+    var inconsistencia = !(nucleoInfo && nucleoInfo.aprobado);
+    var estado = estadoPorNota(note.notaFinal, nucleoInfo, true);
+    return Object.assign(basePrepared(row, nucleoInfo, true), {notaPractico:note.notaPractico,notaTeorico:note.notaTeorico,notaSupletorio:note.notaSupletorio,notaFinal:note.notaFinal,notafinal:note.notaFinal,nfin:note.notaFinal,_inforNotaFormula:note.formula,_inforQuedoSupletorio:note.quedoSupletorio,_inforEstadoAcademico:estado,_inforInconsistenciaNucleos:inconsistencia,_inforInconsistenciaDetalle:inconsistencia ? "Registra complexivo sin 4 núcleos aprobados" : ""});
   }
 
-  function prepareTrabajo(row){
-    var note = trabajoNote(row);
-    return Object.assign(basePrepared(row, "TRABAJO_TITULACION", "Trabajo de Titulación"), {
-      nart:note.nart,
-      ndef:note.ndef,
-      nfin:note.nfin,
-      notaFinal:note.nfin,
-      notafinal:note.nfin
-    });
+  function prepareNucleoOnly(nucleoInfo){
+    var estado = estadoPorNota(null, nucleoInfo, false);
+    return Object.assign(basePrepared({cedula:nucleoInfo.cedula,nombres:nucleoInfo.nombres,carrera:nucleoInfo.carrera,_inforSheet:"NÚCLEOS",_inforSheetType:"NUCLEOS"}, nucleoInfo, false), {notaPractico:null,notaTeorico:null,notaSupletorio:null,notaFinal:null,notafinal:null,nfin:null,_inforNotaFormula:"",_inforQuedoSupletorio:false,_inforEstadoAcademico:estado,_inforInconsistenciaNucleos:false,_inforInconsistenciaDetalle:""});
   }
 
   function summarizeRows(rows){
     var cedulas = Object.create(null);
     safeList(rows).forEach(function(row){cedulaVariants(cedulaOf(row)).forEach(function(c){cedulas[c] = true;});});
-    return {rows:safeList(rows).length, cedulas:Object.keys(cedulas).length};
+    return {rows:safeList(rows).length,cedulas:Object.keys(cedulas).length};
   }
 
   function analyze(snapshot){
@@ -221,58 +208,39 @@ Con qué se conecta:
     var periodId = text(snapshot.periodId || snapshot.periodLabel);
     var periodType = snapshot.periodType || {};
     var rows = snapshot.excelData && Array.isArray(snapshot.excelData.rows) ? snapshot.excelData.rows : [];
-    var source = periodSource(periodId);
-    var index = buildPeriodIndex(source.rows);
-    var validationEnabled = source.rows.length > 0;
-
     var nucleosAll = rows.filter(isNucleos);
     var complexivoAll = rows.filter(isComplexivo);
-    var trabajoAll = rows.filter(isTrabajo);
-
-    var nucleosFiltered = filterByPeriod(nucleosAll, index, validationEnabled, "NÚCLEOS");
-    var complexivoFiltered = filterByPeriod(complexivoAll, index, validationEnabled, "notas_complexivo");
-    var trabajoFiltered = filterByPeriod(trabajoAll, index, validationEnabled, "trabajo_titulacion");
-
-    var complexivoDedup = dedupeByCedula(complexivoFiltered.valid, "notas_complexivo");
-    var trabajoDedup = dedupeByCedula(trabajoFiltered.valid, "trabajo_titulacion");
-
-    var preparedComplexivo = complexivoDedup.rows.map(prepareComplexivo);
-    var preparedTrabajo = trabajoDedup.rows.map(prepareTrabajo);
-    var preparedRows = preparedComplexivo.concat(preparedTrabajo);
-    var excluded = [].concat(nucleosFiltered.excluded, complexivoFiltered.excluded, trabajoFiltered.excluded);
-    var duplicates = [].concat(complexivoDedup.duplicates, trabajoDedup.duplicates);
-
+    var trabajoAll = [];
+    var nucleosIndex = buildNucleosIndex(nucleosAll);
+    var complexivoDedup = dedupeByCedula(complexivoAll, "notas_complexivo");
+    var preparedComplexivo = complexivoDedup.rows.map(function(row){return prepareComplexivo(row, nucleosIndex);});
+    var complexivoKeys = Object.create(null);
+    preparedComplexivo.forEach(function(row){var key = cedulaKey(cedulaOf(row));if(key){complexivoKeys[key] = true;}});
+    var nucleoOnly = Object.keys(nucleosIndex).filter(function(key){return !complexivoKeys[key];}).map(function(key){return prepareNucleoOnly(nucleosIndex[key]);});
+    var preparedRows = preparedComplexivo.concat(nucleoOnly);
+    var inconsistencies = preparedComplexivo.filter(function(row){return !!row._inforInconsistenciaNucleos;});
+    var supletorios = preparedComplexivo.filter(function(row){return !!row._inforQuedoSupletorio;});
+    var retirados = preparedRows.filter(function(row){return row._inforEstadoAcademico === "RETIRADO";});
+    var nucleosSummary = summarizeNucleos(nucleosIndex);
     return {
       ok:rows.length > 0,
       periodId:periodId,
       periodType:periodType,
-      validation:{enabled:validationEnabled, source:source.source, periodCedulas:Object.keys(index).length, excluded:excluded.length},
-      sheets:{nucleos:summarizeRows(nucleosAll), complexivo:summarizeRows(complexivoAll), trabajoTitulacion:summarizeRows(trabajoAll)},
-      nucleos:{rows:nucleosFiltered.valid, infoOnly:true, total:nucleosFiltered.valid.length},
-      complexivo:{rows:preparedComplexivo, totalOriginal:complexivoAll.length, totalValid:complexivoFiltered.valid.length, totalFinal:preparedComplexivo.length, formula:"notaPractico*0.60 + notaTeorico*0.40"},
-      trabajoTitulacion:{rows:preparedTrabajo, totalOriginal:trabajoAll.length, totalValid:trabajoFiltered.valid.length, totalFinal:preparedTrabajo.length},
-      excluded:excluded,
-      duplicates:duplicates,
+      validation:{enabled:false,source:"Excel",periodCedulas:0,excluded:0,message:"Fuente principal: Excel cargado en Infor."},
+      sheets:{nucleos:summarizeRows(nucleosAll),complexivo:summarizeRows(complexivoAll),trabajoTitulacion:summarizeRows(trabajoAll)},
+      nucleos:Object.assign({rows:nucleosAll,infoOnly:false,docentes:["Docente 1","Docente 2","Docente 3","Docente 4"]}, nucleosSummary),
+      complexivo:{rows:preparedComplexivo,totalOriginal:complexivoAll.length,totalValid:complexivoAll.length,totalFinal:preparedComplexivo.length,formula:"notaSupletorio si existe; caso contrario notaPractico*0.60 + notaTeorico*0.40",supletorios:supletorios.length},
+      trabajoTitulacion:{rows:[],totalOriginal:0,totalValid:0,totalFinal:0,ignored:true,reason:"Hoja3 ignorada temporalmente por información incorrecta."},
+      excluded:[],
+      duplicates:complexivoDedup.duplicates,
+      inconsistencies:inconsistencies.map(function(row){return {cedula:row.cedula,nombres:row.nombres,carrera:row.carrera,reason:row._inforInconsistenciaDetalle,nucleos:row._inforNucleos};}),
       rows:preparedRows,
-      summary:{totalExcel:rows.length, validForReport:preparedRows.length, excludedByPeriod:excluded.filter(function(x){return x.reason === "fuera_del_periodo";}).length, excludedNoCedula:excluded.filter(function(x){return x.reason === "sin_cedula";}).length, duplicates:duplicates.length},
+      summary:{totalExcel:rows.length,validForReport:preparedRows.length,studentsFromExcel:preparedRows.length,excludedByPeriod:0,excludedNoCedula:complexivoDedup.duplicates.filter(function(x){return x.reason === "sin_cedula";}).length,duplicates:complexivoDedup.duplicates.length,nucleosTotal:nucleosSummary.total,nucleosAprobados:nucleosSummary.aprobados,nucleosRetirados:nucleosSummary.retirados,complexivoFinal:preparedComplexivo.length,supletorios:supletorios.length,retirados:retirados.length,inconsistencias:inconsistencies.length},
       generatedAt:new Date().toISOString()
     };
   }
 
-  function prepareRows(snapshot){
-    var result = analyze(snapshot);
-    return result.rows || [];
-  }
+  function prepareRows(snapshot){return analyze(snapshot).rows || [];}
 
-  window.InforRegular = {
-    analyze:analyze,
-    prepareRows:prepareRows,
-    complexivoNote:complexivoNote,
-    trabajoNote:trabajoNote,
-    cedulaOf:cedulaOf,
-    cedulaVariants:cedulaVariants,
-    isNucleos:isNucleos,
-    isComplexivo:isComplexivo,
-    isTrabajo:isTrabajo
-  };
+  window.InforRegular = {analyze:analyze,prepareRows:prepareRows,complexivoNote:complexivoNote,cedulaOf:cedulaOf,cedulaVariants:cedulaVariants,isNucleos:isNucleos,isComplexivo:isComplexivo,isTrabajo:isTrabajo};
 })(window);
