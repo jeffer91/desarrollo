@@ -1,0 +1,462 @@
+/* =========================================================
+Nombre completo: carga-materia.css
+Ruta o ubicación: /desarrollo/libro/carga-materia/carga-materia.css
+Función o funciones:
+1. Definir el diseño visual del módulo Libro.
+2. Mantener una interfaz clara, blanca, compacta y ordenada.
+3. Estilizar la pantalla base de carga de materia.
+4. Servir también para la entrada /desarrollo/libro/index.html.
+========================================================= */
+
+:root {
+  --libro-bg: #f4f7fb;
+  --libro-card: rgba(255, 255, 255, 0.94);
+  --libro-card-soft: #f8fbff;
+  --libro-border: #d9e3f1;
+  --libro-border-strong: #aec2e4;
+  --libro-text: #10203f;
+  --libro-muted: #637089;
+  --libro-primary: #315cff;
+  --libro-primary-dark: #2449d8;
+  --libro-success: #1f8f5f;
+  --libro-warning: #a86900;
+  --libro-danger: #bc2d2d;
+  --libro-shadow: 0 14px 36px rgba(28, 46, 91, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at top left, rgba(49, 92, 255, 0.08), transparent 34%),
+    linear-gradient(180deg, #f8fbff 0%, var(--libro-bg) 100%);
+  color: var(--libro-text);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.libro-page {
+  width: min(1240px, calc(100% - 24px));
+  margin: 0 auto;
+  padding: 18px 0 28px;
+}
+
+.libro-page--home {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  justify-content: center;
+}
+
+.libro-hero,
+.libro-topbar,
+.libro-progress,
+.libro-card,
+.libro-option-card {
+  border: 1px solid var(--libro-border);
+  background: var(--libro-card);
+  box-shadow: var(--libro-shadow);
+  backdrop-filter: blur(8px);
+}
+
+.libro-hero,
+.libro-topbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 22px;
+  border-radius: 26px;
+}
+
+.libro-kicker,
+.libro-card__step,
+.libro-option-card__step {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  min-height: 26px;
+  margin: 0 0 9px;
+  padding: 0 11px;
+  border-radius: 999px;
+  background: #eef3ff;
+  border: 1px solid #dbe6ff;
+  color: #506ba8;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.libro-hero h1,
+.libro-topbar h1,
+.libro-option-card h2,
+.libro-card h2 {
+  margin: 0;
+  color: var(--libro-text);
+  letter-spacing: -0.035em;
+}
+
+.libro-hero h1,
+.libro-topbar h1 {
+  font-size: clamp(2rem, 1.6rem + 1.4vw, 3rem);
+  line-height: 1;
+}
+
+.libro-option-card h2,
+.libro-card h2 {
+  font-size: clamp(1.06rem, 1rem + 0.35vw, 1.32rem);
+  line-height: 1.14;
+}
+
+.libro-hero p,
+.libro-topbar p,
+.libro-option-card p,
+.libro-card p {
+  margin: 9px 0 0;
+  color: var(--libro-muted);
+  line-height: 1.5;
+}
+
+.libro-topbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.libro-link-btn,
+.libro-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 14px;
+  border: 1px solid var(--libro-primary);
+  background: linear-gradient(180deg, #456fff 0%, var(--libro-primary) 100%);
+  color: #ffffff;
+  font-weight: 800;
+  cursor: pointer;
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.16s ease,
+    border-color 0.16s ease,
+    background-color 0.16s ease;
+}
+
+.libro-link-btn:hover,
+.libro-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(49, 92, 255, 0.18);
+}
+
+.libro-link-btn--ghost,
+.libro-btn--ghost {
+  background: #ffffff;
+  color: var(--libro-text);
+  border-color: var(--libro-border-strong);
+}
+
+.libro-btn:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+.libro-card-grid,
+.libro-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.libro-card-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.libro-grid--main {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 16px;
+}
+
+.libro-grid--bottom {
+  grid-template-columns: minmax(320px, 0.85fr) minmax(360px, 1.15fr);
+  margin-top: 16px;
+}
+
+.libro-card,
+.libro-option-card {
+  border-radius: 22px;
+  padding: 18px;
+}
+
+.libro-option-card {
+  display: flex;
+  min-height: 230px;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.libro-option-card--disabled {
+  opacity: 0.7;
+}
+
+.libro-card--wide {
+  grid-column: 1 / -1;
+}
+
+.libro-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.libro-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.libro-field {
+  display: grid;
+  gap: 7px;
+  color: var(--libro-text);
+  font-weight: 800;
+}
+
+.libro-field input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 13px;
+  border-radius: 14px;
+  border: 1px solid var(--libro-border);
+  background: #ffffff;
+  color: var(--libro-text);
+  outline: none;
+  transition:
+    border-color 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.libro-field input:focus {
+  border-color: var(--libro-primary);
+  box-shadow: 0 0 0 3px rgba(49, 92, 255, 0.12);
+}
+
+.libro-file-zone {
+  display: grid;
+  gap: 6px;
+  margin-top: 14px;
+  padding: 18px;
+  border: 1.5px dashed var(--libro-border-strong);
+  border-radius: 18px;
+  background: var(--libro-card-soft);
+  color: var(--libro-muted);
+  cursor: pointer;
+  transition:
+    border-color 0.16s ease,
+    background-color 0.16s ease,
+    transform 0.16s ease;
+}
+
+.libro-file-zone:hover {
+  transform: translateY(-1px);
+  border-color: var(--libro-primary);
+  background: #f5f8ff;
+}
+
+.libro-file-zone input {
+  width: 100%;
+  color: var(--libro-muted);
+}
+
+.libro-file-zone strong {
+  color: var(--libro-text);
+}
+
+.libro-status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 0.78rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.libro-status-pill.is-pending {
+  background: #f2f5fb;
+  border-color: #e2e9f5;
+  color: #6d7890;
+}
+
+.libro-status-pill.is-ok {
+  background: #ebfff6;
+  border-color: #bfead6;
+  color: var(--libro-success);
+}
+
+.libro-status-pill.is-warning {
+  background: #fff8e7;
+  border-color: #f0d390;
+  color: var(--libro-warning);
+}
+
+.libro-status-pill.is-error {
+  background: #fff0f0;
+  border-color: #efb5b5;
+  color: var(--libro-danger);
+}
+
+.libro-progress {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+  padding: 12px;
+  border-radius: 20px;
+}
+
+.libro-progress__item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 48px;
+  padding: 8px 10px;
+  border-radius: 15px;
+  background: #f7f9fe;
+  color: var(--libro-muted);
+  font-weight: 800;
+}
+
+.libro-progress__item strong {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #e8eefb;
+  color: #61708d;
+}
+
+.libro-progress__item.is-current {
+  background: #eef3ff;
+  color: var(--libro-primary-dark);
+}
+
+.libro-progress__item.is-current strong {
+  background: var(--libro-primary);
+  color: #ffffff;
+}
+
+.libro-checklist {
+  display: grid;
+  gap: 9px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.libro-checklist li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--libro-border);
+  border-radius: 14px;
+  background: #f8fbff;
+  color: var(--libro-muted);
+  font-weight: 700;
+}
+
+.libro-checklist li strong {
+  color: var(--libro-text);
+}
+
+.libro-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.libro-card--preview pre {
+  min-height: 250px;
+  max-height: 420px;
+  overflow: auto;
+  margin: 0;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid var(--libro-border);
+  background: #0f172a;
+  color: #dbeafe;
+  font-family: Consolas, Monaco, "Courier New", monospace;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+@media (max-width: 980px) {
+  .libro-grid--main,
+  .libro-grid--bottom,
+  .libro-card-grid,
+  .libro-form-grid,
+  .libro-progress {
+    grid-template-columns: 1fr;
+  }
+
+  .libro-hero,
+  .libro-topbar {
+    flex-direction: column;
+  }
+
+  .libro-topbar__actions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 620px) {
+  .libro-page {
+    width: min(100%, calc(100% - 12px));
+    padding-top: 8px;
+  }
+
+  .libro-hero,
+  .libro-topbar,
+  .libro-card,
+  .libro-option-card {
+    border-radius: 18px;
+    padding: 14px;
+  }
+
+  .libro-link-btn,
+  .libro-btn {
+    width: 100%;
+  }
+}
