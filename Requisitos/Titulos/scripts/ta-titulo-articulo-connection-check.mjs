@@ -6,6 +6,7 @@
   - Confirmar que estudiante, coordinador y administrador apunten a sus módulos correctos.
   - Confirmar que Electron abra las tres pantallas con Firebase directo.
   - Confirmar que Gemini tenga cliente, endpoint y función de respaldo.
+  - Confirmar que el administrador cargue el normalizador de períodos.
 */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -120,7 +121,7 @@ for (const field of ["titulosEnviados", "tituloPreferidoNumero", "tituloCorregid
 }
 
 const electron = exists("electron/ta-titulo-articulo-main.js") ? read("electron/ta-titulo-articulo-main.js") : "";
-for (const value of ["--estudiante", "--coordinador", "--admin", "taDataMode", "firebase-direct", "loadFile"]) {
+for (const value of ["--estudiante", "--coordinador", "--admin", "taDataMode", "firebase-direct", "loadFile", "ta-titulo-articulo-admin-periodos-normalizados.app.js"]) {
   assert(errors, electron.includes(value), `Electron: falta ${value}`);
 }
 
@@ -150,6 +151,8 @@ for (const id of ["ta-admin-inicio", "ta-admin-estadisticas", "ta-admin-periodo-
   assert(errors, adminPublic.includes(id), `Administrador público: falta bloque ${id}`);
 }
 assert(errors, adminPublic.includes("ta-admin-sidebar") && adminPublic.includes("ta-admin-menu"), "Administrador público: falta panel lateral");
+assert(errors, exists("src/admin/ta-titulo-articulo-admin-periodos-normalizados.app.js"), "Administrador: falta normalizador de períodos");
+assert(errors, adminPublic.includes("ta-titulo-articulo-admin-periodos-normalizados.app.js"), "Administrador público: no carga normalizador de períodos");
 
 if (errors.length) {
   console.error("Títulos: revisión de conexión con errores.");
@@ -164,3 +167,4 @@ console.log("API client conectado con runtime y Firebase directo.");
 console.log("Electron conectado con estudiante, coordinador y administrador.");
 console.log("Netlify Functions y Gemini verificados.");
 console.log("Panel administrador lateral verificado.");
+console.log("Normalizador de períodos verificado.");
