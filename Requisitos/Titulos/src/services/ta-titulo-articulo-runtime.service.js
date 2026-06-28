@@ -4,8 +4,9 @@
   Función o funciones:
   - Detectar el entorno de ejecución del módulo Títulos.
   - Diferenciar doble click, Live Server, Vite, Electron, Netlify Dev y Netlify publicado.
-  - Decidir qué origen de datos debe usar la app: Firebase directo o Netlify Functions.
-  - Mantener una configuración local simple y reutilizable por estudiante, coordinador y administrador.
+  - Usar Firebase directo como origen principal de datos en estudiante, coordinador y administrador.
+  - Permitir Netlify Functions solo cuando se fuerce manualmente por parámetro, global o localStorage.
+  - Mantener Netlify Functions para servicios puntuales como Gemini, sin mezclar el guardado de títulos.
   Se conecta con:
   - ta-titulo-articulo-data-adapter.service.js
   - ta-titulo-articulo-api-client.service.js
@@ -134,7 +135,7 @@ function detectarRuntime() {
     protocol,
     hostname,
     port,
-    esElectron: declarado === "electron",
+    esElectron: declarado === "electron" || declarado.startsWith("electron-"),
     esPublico: declarado === "public",
     esFile: estaEnArchivoLocal(location),
     esHttpLocal: estaEnHttpLocal(location),
@@ -150,14 +151,12 @@ function detectarRuntime() {
 }
 
 function obtenerOrigenDatos() {
-  const runtime = detectarRuntime();
   const configurado = obtenerModoDatosConfigurado();
 
   if (configurado === "firebase-direct" || configurado === "netlify-functions") {
     return configurado;
   }
 
-  if (runtime.esNetlifyPublicado || runtime.esNetlifyDev) return "netlify-functions";
   return "firebase-direct";
 }
 
