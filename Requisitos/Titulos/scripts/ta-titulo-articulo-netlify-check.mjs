@@ -3,15 +3,10 @@
   Ruta o ubicación: /Requisitos/Titulos/scripts/ta-titulo-articulo-netlify-check.mjs
   Función o funciones:
   - Validar configuración mínima antes de publicar en Netlify.
-  - Revisar netlify.toml, funciones, variables ejemplo y build público.
+  - Revisar netlify.toml, funciones, variables ejemplo, build público e índices Firestore.
   - Confirmar rutas públicas de estudiante, coordinador y administrador.
+  - Detectar referencias a colecciones antiguas del módulo Títulos.
   - No valida secretos reales; solo revisa que las claves esperadas estén documentadas.
-  Se conecta con:
-  - netlify.toml
-  - .env.example
-  - package.json
-  - vite.config.js
-  - netlify/functions/*
 */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -27,6 +22,7 @@ const requiredFiles = [
   ".env.example",
   "vite.config.js",
   "package.json",
+  "firestore/ta-titulo-articulo-firestore.indexes.json",
   "public/ta-titulo-articulo-estudiante.html",
   "public/ta-titulo-articulo-coordinador.html",
   "public/ta-titulo-articulo-admin.html",
@@ -54,6 +50,23 @@ const requiredEnv = [
   "VITE_FIREBASE_APP_ID"
 ];
 
+const oldCollectionNames = [
+  "ta_titulo_articulo_config",
+  "ta_titulo_articulo_coordinadores",
+  "ta_titulo_articulo_envios",
+  "ta_titulo_articulo_historial",
+  "ta_titulo_articulo_alertas"
+];
+
+const functionFiles = [
+  "netlify/functions/ta-titulo-articulo-api-security.js",
+  "netlify/functions/ta-titulo-articulo-api-estudiante.js",
+  "netlify/functions/ta-titulo-articulo-api-coordinador.js",
+  "netlify/functions/ta-titulo-articulo-api-admin.js",
+  "netlify/functions/ta-titulo-articulo-api-telegram.js",
+  "netlify/functions/ta-titulo-articulo-gemini.js"
+];
+
 function read(relativePath) {
   return readFileSync(resolve(root, relativePath), "utf8");
 }
@@ -79,7 +92,6 @@ if (existsSync(resolve(root, "netlify.toml"))) {
     'to = "/public/ta-titulo-articulo-coordinador.html"',
     'to = "/public/ta-titulo-articulo-admin.html"'
   ];
-
   for (const value of checks) {
     if (!toml.includes(value)) errors.push(`netlify.toml: falta ${value}`);
   }
@@ -107,6 +119,28 @@ if (existsSync(resolve(root, "vite.config.js"))) {
   }
 }
 
+if (existsSync(resolve(root, "netlify/functions/ta-titulo-articulo-api-security.js"))) {
+  const security = read("netlify/functions/ta-titulo-articulo-api-security.js");
+  for (const value of ["titulos_config", "titulos_coordinadores", "titulos", "titulos_logs", "titulos_alertas", "createEnvioId", "normalizarEstadoTitulo"]) {
+    if (!security.includes(value)) errors.push(`ta-titulo-articulo-api-security.js: falta ${value}.`);
+  }
+}
+
+if (existsSync(resolve(root, "firestore/ta-titulo-articulo-firestore.indexes.json"))) {
+  const indexes = read("firestore/ta-titulo-articulo-firestore.indexes.json");
+  for (const value of ['"collectionGroup": "titulos"', '"collectionGroup": "titulos_logs"']) {
+    if (!indexes.includes(value)) errors.push(`ta-titulo-articulo-firestore.indexes.json: falta ${value}.`);
+  }
+}
+
+for (const file of [...functionFiles, "firestore/ta-titulo-articulo-firestore.indexes.json"]) {
+  if (!existsSync(resolve(root, file))) continue;
+  const content = read(file);
+  for (const oldName of oldCollectionNames) {
+    if (content.includes(oldName)) errors.push(`${file}: contiene colección antigua ${oldName}.`);
+  }
+}
+
 if (errors.length) {
   console.error("Títulos: revisión Netlify con errores.");
   errors.forEach((error) => console.error(`- ${error}`));
@@ -119,3 +153,4 @@ console.log("Build command: npm run build:netlify");
 console.log("Publish directory: dist");
 console.log("Functions directory: netlify/functions");
 console.log("Rutas: /estudiante, /coordinador, /admin");
+console.log("Colecciones verificadas: titulos_config, titulos_coordinadores, titulos, titulos_logs.");
