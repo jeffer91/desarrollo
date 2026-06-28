@@ -56,22 +56,10 @@
     </section>
 
     <section class="ta-summary-grid" id="ta-coordinador-resumen" hidden>
-      <article class="ta-stat-card">
-        <span>Pendientes</span>
-        <strong id="ta-coord-stat-pendientes">0</strong>
-      </article>
-      <article class="ta-stat-card">
-        <span>En revisión</span>
-        <strong id="ta-coord-stat-revision">0</strong>
-      </article>
-      <article class="ta-stat-card">
-        <span>Aprobados</span>
-        <strong id="ta-coord-stat-aprobados">0</strong>
-      </article>
-      <article class="ta-stat-card">
-        <span>Devueltos</span>
-        <strong id="ta-coord-stat-devueltos">0</strong>
-      </article>
+      <article class="ta-stat-card"><span>Pendientes</span><strong id="ta-coord-stat-pendientes">0</strong></article>
+      <article class="ta-stat-card"><span>En revisión</span><strong id="ta-coord-stat-revision">0</strong></article>
+      <article class="ta-stat-card"><span>Aprobados</span><strong id="ta-coord-stat-aprobados">0</strong></article>
+      <article class="ta-stat-card"><span>Devueltos</span><strong id="ta-coord-stat-devueltos">0</strong></article>
     </section>
 
     <section class="ta-card" id="ta-coordinador-tabla-card" hidden>
@@ -83,7 +71,7 @@
 
         <label class="ta-search" for="ta-coordinador-buscar">
           <span>Buscar</span>
-          <input id="ta-coordinador-buscar" type="search" placeholder="Nombre, cédula, carrera o estado" />
+          <input id="ta-coordinador-buscar" type="search" placeholder="Nombre, cédula, carrera, estado o título" />
         </label>
       </div>
 
@@ -99,9 +87,7 @@
             </tr>
           </thead>
           <tbody id="ta-coordinador-tabla-body">
-            <tr>
-              <td colspan="5" class="ta-table-empty">Seleccione su nombre para cargar estudiantes.</td>
-            </tr>
+            <tr><td colspan="5" class="ta-table-empty">Seleccione su nombre para cargar estudiantes.</td></tr>
           </tbody>
         </table>
       </div>
@@ -120,47 +106,33 @@
         </header>
 
         <dl class="ta-data-grid ta-data-grid--modal">
-          <div>
-            <dt>Estudiante</dt>
-            <dd id="ta-revision-estudiante">---</dd>
-          </div>
-          <div>
-            <dt>Cédula</dt>
-            <dd id="ta-revision-cedula">---</dd>
-          </div>
-          <div>
-            <dt>Carrera</dt>
-            <dd id="ta-revision-carrera">---</dd>
-          </div>
-          <div>
-            <dt>Preferido</dt>
-            <dd id="ta-revision-preferido">---</dd>
-          </div>
+          <div><dt>Estudiante</dt><dd id="ta-revision-estudiante">---</dd></div>
+          <div><dt>Cédula</dt><dd id="ta-revision-cedula">---</dd></div>
+          <div><dt>Carrera</dt><dd id="ta-revision-carrera">---</dd></div>
+          <div><dt>Estado actual</dt><dd id="ta-revision-estado-actual">---</dd></div>
+          <div><dt>Preferido por estudiante</dt><dd id="ta-revision-preferido">---</dd></div>
+          <div><dt>Intentos usados</dt><dd id="ta-revision-intentos">---</dd></div>
+          <div><dt>Fecha de envío</dt><dd id="ta-revision-enviado">---</dd></div>
         </dl>
+
+        <div class="ta-state-box ta-state-box--warning" id="ta-revision-devolucion-aviso">
+          Si devuelve el título, escriba una observación clara. El estudiante solo tendrá una oportunidad de reenvío.
+        </div>
 
         <div class="ta-title-list" id="ta-revision-titulos-lista">
           <label class="ta-title-option">
             <input type="radio" name="taTituloElegido" value="1" />
-            <span>
-              <strong>Título 1</strong>
-              <em id="ta-revision-titulo-1">---</em>
-            </span>
+            <span><strong>Título 1</strong><em id="ta-revision-titulo-1">---</em></span>
           </label>
 
           <label class="ta-title-option">
             <input type="radio" name="taTituloElegido" value="2" />
-            <span>
-              <strong>Título 2</strong>
-              <em id="ta-revision-titulo-2">---</em>
-            </span>
+            <span><strong>Título 2</strong><em id="ta-revision-titulo-2">---</em></span>
           </label>
 
           <label class="ta-title-option">
             <input type="radio" name="taTituloElegido" value="3" />
-            <span>
-              <strong>Título 3</strong>
-              <em id="ta-revision-titulo-3">---</em>
-            </span>
+            <span><strong>Título 3</strong><em id="ta-revision-titulo-3">---</em></span>
           </label>
         </div>
 
@@ -169,15 +141,15 @@
             <span>Decisión</span>
             <select id="ta-revision-estado" required>
               <option value="">Seleccione decisión</option>
-              <option value="APROBADO">Aprobar</option>
+              <option value="APROBADO">Aprobar sin cambios</option>
               <option value="APROBADO_CON_CORRECCIONES">Aprobar con correcciones</option>
-              <option value="DEVUELTO">Devolver</option>
+              <option value="DEVUELTO">Devolver para corrección</option>
             </select>
           </label>
 
           <label class="ta-field" for="ta-revision-titulo-corregido">
             <span>Título corregido</span>
-            <input id="ta-revision-titulo-corregido" type="text" placeholder="Solo si aprueba con correcciones" />
+            <input id="ta-revision-titulo-corregido" type="text" placeholder="Obligatorio si aprueba con correcciones" />
           </label>
         </div>
 
