@@ -5,6 +5,7 @@
   - Entregar dos sugerencias de título por etapa sin romper la pantalla del estudiante.
   - Mantener respuesta JSON limpia para Netlify.
   - Servir como respaldo estable mientras se valida la conexión externa de IA.
+  - Generar títulos en fases distintas: una diagnóstica y otra propositiva.
   Se conecta con:
   - Requisitos/Titulos/src/services/ta-titulo-articulo-gemini-client.service.js
   - Requisitos/Titulos/src/estudiante/ta-titulo-articulo-estudiante.app.js
@@ -65,6 +66,32 @@ function depurarTitulo(value) {
     .trim();
 }
 
+function depurarTemaBase(value) {
+  const texto = clean(value || "tema seleccionado")
+    .replace(/^(mejorar|mejora\s+de|mejora\s+del|fortalecer|optimizar|diseñar|implementar)\s+/i, "")
+    .trim();
+  return texto || clean(value || "tema seleccionado");
+}
+
+function conectorDe(value) {
+  const texto = clean(value);
+  const lower = normalize(texto);
+  if (lower.startsWith("el ")) return `del ${texto.slice(3)}`;
+  if (lower.startsWith("la ")) return `de la ${texto.slice(3)}`;
+  if (lower.startsWith("los ")) return `de los ${texto.slice(4)}`;
+  if (lower.startsWith("las ")) return `de las ${texto.slice(4)}`;
+  return `de ${texto}`;
+}
+
+function tomarPrimeroValido(candidatos = [], usados = new Set()) {
+  for (const candidato of candidatos) {
+    const titulo = depurarTitulo(candidato);
+    const key = normalize(titulo);
+    if (titulo && !usados.has(key)) return titulo;
+  }
+  return "";
+}
+
 function depurarSugerencias(sugerencias = [], previos = []) {
   const usados = new Set((previos || []).map(normalize).filter(Boolean));
   const salida = [];
@@ -80,23 +107,30 @@ function depurarSugerencias(sugerencias = [], previos = []) {
 }
 
 function construirSugerencias(payload) {
-  const carrera = clean(payload.carrera);
-  const tema = clean(payload.temaGeneral).toLowerCase();
-  const problema = clean(payload.problemaNecesidad).toLowerCase();
-  const contexto = clean(payload.lugarContexto);
-  const grupo = clean(payload.grupoEstudio).toLowerCase();
-  const resultado = clean(payload.resultadoEsperado).toLowerCase();
-  const manual = clean(payload.tituloManual);
+  const tema = depurarTemaBase(payload.temaGeneral).toLowerCase();
+  const problema = clean(payload.problemaNecesidad || "la necesidad identificada").toLowerCase();
+  const contexto = clean(payload.lugarContexto || "el contexto de estudio");
+  const grupo = clean(payload.grupoEstudio || "el grupo de estudio").toLowerCase();
+  const periodo = clean(payload.anioPeriodoDatos);
+  const carrera = clean(payload.carrera || "la carrera del estudiante");
+  const periodoTexto = periodo ? `, ${periodo}` : "";
+  const usados = new Set((payload.titulosYaGenerados || []).map(normalize).filter(Boolean));
 
-  const candidatos = [
-    manual ? `Análisis de ${manual} desde el enfoque de ${carrera}` : "",
-    `Análisis de ${tema} frente a ${problema} en ${grupo} de ${contexto}`,
-    `Propuesta de mejora para ${tema} en ${grupo} de ${contexto}`,
-    `Evaluación de ${tema} y su relación con ${resultado} en ${contexto}`,
-    `Diseño de una propuesta relacionada con ${tema} para ${grupo} de ${contexto}`
-  ];
+  const diagnostico = tomarPrimeroValido([
+    `Diagnóstico de los factores asociados a ${problema} en ${grupo} de ${contexto}${periodoTexto}`,
+    `Análisis de las causas que afectan ${tema} en ${grupo} de ${contexto}${periodoTexto}`,
+    `Caracterización de la situación actual ${conectorDe(tema)} en ${contexto}${periodoTexto}`
+  ], usados);
 
-  return depurarSugerencias(candidatos, payload.titulosYaGenerados || []);
+  if (diagnostico) usados.add(normalize(diagnostico));
+
+  const propuesta = tomarPrimeroValido([
+    `Propuesta de mejora ${conectorDe(tema)} en ${grupo} de ${contexto}${periodoTexto}`,
+    `Diseño de una estrategia para atender ${problema} en ${grupo} de ${contexto}: enfoque desde ${carrera}`,
+    `Plan de intervención para fortalecer ${tema} en ${contexto}${periodoTexto}`
+  ], usados);
+
+  return depurarSugerencias([diagnostico, propuesta], payload.titulosYaGenerados || []);
 }
 
 export async function handler(event) {
@@ -113,7 +147,7 @@ export async function handler(event) {
   if (sugerencias.length < 2) {
     return jsonResponse(422, {
       ok: false,
-      error: "No se pudieron generar dos sugerencias diferentes. Ajuste la información ingresada."
+      error: "No se pudieron generar dos sugerencias en fases distintas. Ajuste la información ingresada."
     });
   }
 
@@ -121,7 +155,7 @@ export async function handler(event) {
     ok: true,
     bloqueado: false,
     motivo: "",
-    advertencia: "Sugerencias generadas como respaldo estable del servidor.",
+    advertencia: "Sugerencias generadas en fases distintas: diagnóstico y propuesta.",
     sugerencias
   });
 }
