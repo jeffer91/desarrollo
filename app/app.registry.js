@@ -50,7 +50,7 @@ Función o funciones:
       id: "libro",
       title: "Libro",
       group: "Libro",
-      description: "Carga inteligente de materia, unidades, contenidos y actividades para generar libros académicos.",
+      description: "Carga de la materia con carrera, materia, información base, contenidos y actividades.",
       path: "./libro/index.html"
     },
     {
