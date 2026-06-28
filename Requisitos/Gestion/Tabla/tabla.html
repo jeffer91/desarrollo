@@ -10,11 +10,14 @@ Función o funciones:
 - Paginar la tabla para evitar renderizar demasiadas filas.
 - Cargar el generador de mensajes formales para comunicación por Telegram.
 - Mostrar modal individual compacto para preparar contacto por Telegram.
+- Mostrar modal masivo con selección manual de estudiantes filtrados.
 Con qué se conecta:
 - tabla.css
 - tabla.core.js
 - tabla.message.js
 - tabla.telegram.js
+- tabla.selection.js
+- tabla.mass.js
 - tabla.app.js
 - ../Excel/excel-local/excel-local.config.js
 - ../Excel/excel-local/excel-local.storage.js
@@ -55,6 +58,7 @@ Con qué se conecta:
       <label>Buscar<input id="tabla-search" type="search" placeholder="Cédula, nombre, carrera, división, correo..." /></label>
       <label>Filas<select id="tabla-page-size"><option value="50">50</option><option value="100" selected>100</option><option value="200">200</option><option value="300">300</option></select></label>
       <button id="tabla-refresh" type="button">Actualizar</button>
+      <button id="tabla-telegram-masivo" type="button">Telegram masivo</button>
       <button id="tabla-export-csv" type="button">Exportar CSV</button>
       <button id="tabla-export-json" type="button">Exportar JSON</button>
     </section>
@@ -107,6 +111,52 @@ Con qué se conecta:
     </div>
   </section>
 
+  <section id="tabla-mass-modal" class="tabla-modal" hidden aria-hidden="true" aria-label="Telegram masivo">
+    <div class="tabla-modal-card tabla-modal-card-wide" role="dialog" aria-modal="true" aria-labelledby="tabla-mass-title">
+      <header class="tabla-modal-header">
+        <div>
+          <h2 id="tabla-mass-title">Telegram masivo</h2>
+          <p id="tabla-mass-meta" class="tabla-modal-meta">Se usarán los estudiantes filtrados actualmente.</p>
+        </div>
+        <button id="tabla-mass-close" class="icon-btn" type="button" title="Cerrar" aria-label="Cerrar">×</button>
+      </header>
+      <div class="tabla-modal-body tabla-mass-body">
+        <div id="tabla-mass-summary" class="tabla-mass-summary"></div>
+        <div class="tabla-mass-grid">
+          <div class="tabla-mass-config">
+            <label>Tipo de mensaje
+              <select id="tabla-mass-tipo">
+                <option value="requisitos">Requisitos faltantes</option>
+                <option value="cronograma">Cronograma manual</option>
+                <option value="libre">Mensaje libre</option>
+              </select>
+            </label>
+            <label id="tabla-mass-texto-wrap" hidden><span id="tabla-mass-texto-label">Mensaje libre</span>
+              <textarea id="tabla-mass-texto" rows="5" placeholder="Escriba aquí el texto. Puede usar {{NOMBRE}}, {{CEDULA}}, {{CARRERA}}, {{PERIODO}} o {{DIVISION}}."></textarea>
+            </label>
+            <div class="tabla-mass-select-actions">
+              <button id="tabla-mass-select-all" type="button">Seleccionar todos</button>
+              <button id="tabla-mass-select-tg" type="button">Solo con Telegram</button>
+              <button id="tabla-mass-clear" type="button">Limpiar</button>
+            </div>
+            <label class="tabla-check-line"><input id="tabla-mass-confirm" type="checkbox" /> Confirmo que revisé la selección y la vista previa.</label>
+            <label>Vista previa del primer seleccionado
+              <textarea id="tabla-mass-preview" rows="12" readonly></textarea>
+            </label>
+          </div>
+          <div class="tabla-mass-list-wrap">
+            <div id="tabla-mass-list" class="tabla-mass-list"></div>
+          </div>
+        </div>
+      </div>
+      <footer class="tabla-modal-actions">
+        <button id="tabla-mass-cancel" type="button">Cerrar</button>
+        <button id="tabla-mass-copy" type="button">Copiar vista previa</button>
+        <button id="tabla-mass-prepare" type="button">Preparar lote</button>
+      </footer>
+    </div>
+  </section>
+
   <script src="../Excel/excel-local/excel-local.config.js"></script>
   <script src="../Excel/excel-local/excel-local.storage.js"></script>
   <script src="../Excel/excel-local/excel-local.bridge.js"></script>
@@ -123,6 +173,8 @@ Con qué se conecta:
   <script src="tabla.core.js"></script>
   <script src="tabla.message.js"></script>
   <script src="tabla.telegram.js"></script>
+  <script src="tabla.selection.js"></script>
+  <script src="tabla.mass.js"></script>
   <script src="tabla.export.js"></script>
   <script src="tabla.app.js"></script>
 </body>
