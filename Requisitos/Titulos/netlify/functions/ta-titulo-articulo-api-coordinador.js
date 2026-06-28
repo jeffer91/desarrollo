@@ -2,10 +2,9 @@
   Nombre completo: ta-titulo-articulo-api-coordinador.js
   Ruta o ubicación: /Requisitos/Titulos/netlify/functions/ta-titulo-articulo-api-coordinador.js
   Función o funciones:
-  - Atender acciones públicas del coordinador desde Netlify.
-  - Listar coordinadores activos, cargar envíos asignados y guardar revisiones.
-  - Unir envío + datos mínimos del estudiante para no duplicar datos en el envío.
-  - Conectar envíos por equivalencia de período para Primer semestre de 2026.
+  - Atender acciones del coordinador desde Netlify si se fuerza el modo functions.
+  - Leer coordinadores con estructura real carreras/carrerasAsignadas.
+  - Revisar documentos de la colección titulos con estructura limpia.
 */
 
 import {
@@ -13,11 +12,12 @@ import {
   DECISIONES_COORDINADOR,
   ESTADOS,
   badRequest,
-  buscarEstudiantePorCedula,
   cleanString,
   getAdminDb,
   getPeriodoActivo,
   handleOptions,
+  normalizeText,
+  normalizarEstadoTitulo,
   nowIso,
   ok,
   parseBody,
@@ -26,37 +26,78 @@ import {
   validarMetodoPost
 } from "./ta-titulo-articulo-api-security.js";
 
-function limpiarCoordinador(id, data) {
+const MAX_INTENTOS = 2;
+
+function carreraDesdeEntrada(item) {
+  if (typeof item === "string") return { codigoCarrera: "", nombreCarrera: cleanString(item) };
   return {
-    id,
-    nombre: cleanString(data.nombre),
-    carrerasAsignadas: Array.isArray(data.carrerasAsignadas) ? data.carrerasAsignadas : []
+    codigoCarrera: cleanString(item?.codigoCarrera || item?.CodigoCarrera || item?.id || ""),
+    nombreCarrera: cleanString(item?.nombreCarrera || item?.NombreCarrera || item?.nombre || item?.carrera || "")
   };
 }
 
-async function limpiarEnvio(db, id, data) {
-  const estudiante = await buscarEstudiantePorCedula(db, data.cedula);
-  const codigoCarrera = cleanString(data.codigoCarrera || estudiante?.CodigoCarrera || estudiante?.codigoCarrera);
-  const carrera = cleanString(data.carrera || estudiante?.NombreCarrera || estudiante?.nombreCarrera || estudiante?.carrera);
-  const nombres = cleanString(data.nombres || estudiante?.Nombres || estudiante?.nombres);
+function carrerasCoordinador(data = {}) {
+  const directas = Array.isArray(data.carreras) ? data.carreras : [];
+  const asignadas = Array.isArray(data.carrerasAsignadas) ? data.carrerasAsignadas : [];
+  const mapa = new Map();
+  [...directas, ...asignadas].forEach((item) => {
+    const carrera = carreraDesdeEntrada(item);
+    const key = cleanString(carrera.codigoCarrera) || normalizeText(carrera.nombreCarrera);
+    if (key) mapa.set(key, carrera);
+  });
+  return Array.from(mapa.values());
+}
 
+function limpiarCoordinador(id, data = {}) {
+  const carrerasAsignadas = carrerasCoordinador(data);
   return {
-    envioId: id,
-    cedula: cleanString(data.cedula),
-    nombres,
-    carrera,
-    codigoCarrera,
-    periodoId: cleanString(data.periodoId || estudiante?.periodoId || estudiante?.ultimoPeriodoId),
-    estado: cleanString(data.estado),
-    enviadoEn: cleanString(data.enviadoEn),
-    telegramUser: cleanString(data.telegramUser || estudiante?.telegramUser || estudiante?.telegramUsuario),
-    tituloPreferidoNumero: Number(data.tituloPreferidoNumero || 0),
-    propuestas: Array.isArray(data.propuestas) ? data.propuestas.map((p) => ({
-      numero: Number(p.numero),
-      preferido: Boolean(p.preferido),
-      tituloFinal: cleanString(p.tituloFinal),
-      coherencia: p.coherencia || null
-    })) : []
+    id,
+    nombre: cleanString(data.nombre || data.Nombres || id),
+    activo: data.activo !== false,
+    carreras: carrerasAsignadas.map((item) => item.nombreCarrera).filter(Boolean),
+    carrerasAsignadas
+  };
+}
+
+function titulosEnvio(data = {}) {
+  const fuente = Array.isArray(data.titulosEnviados)
+    ? data.titulosEnviados
+    : (Array.isArray(data.propuestas) ? data.propuestas.map((item) => ({ numero: item.numero, titulo: item.titulo || item.tituloFinal, preferido: item.preferido })) : []);
+  return fuente.map((item, index) => ({
+    numero: Number(item.numero || index + 1),
+    titulo: cleanString(item.titulo || item.tituloFinal || item.texto || ""),
+    preferido: Boolean(item.preferido)
+  })).filter((item) => item.numero && item.titulo).slice(0, 3);
+}
+
+function envioParaCoordinador(id, data = {}) {
+  const estado = normalizarEstadoTitulo(data.estado);
+  const intentosUsados = Number(data.intentosUsados || data.intento || 0);
+  const maxIntentos = Number(data.maxIntentos || MAX_INTENTOS);
+  return {
+    envioId: cleanString(data.envioId || data.docId || id),
+    docId: cleanString(data.docId || data.envioId || id),
+    cedula: cleanString(data.cedula || data.numeroIdentificacion),
+    nombres: cleanString(data.nombres || data.Nombres),
+    carrera: cleanString(data.carrera || data.nombreCarrera),
+    codigoCarrera: cleanString(data.codigoCarrera),
+    periodoId: cleanString(data.periodoId),
+    periodoLabel: cleanString(data.periodoLabel),
+    estado,
+    enviadoEn: cleanString(data.enviadoEn || data.fechaEnvio),
+    actualizadoEn: cleanString(data.actualizadoEn),
+    coordinadorId: cleanString(data.coordinadorId),
+    coordinadorNombre: cleanString(data.coordinadorNombre),
+    tituloPreferidoNumero: Number(data.tituloPreferidoNumero || data.propuestaPreferidaNumero || 0),
+    tituloElegidoNumero: data.tituloElegidoNumero || "",
+    tituloElegidoTexto: cleanString(data.tituloElegidoTexto || data.tituloElegido || ""),
+    tituloCorregidoCoordinador: cleanString(data.tituloCorregidoCoordinador || data.tituloCorregido || ""),
+    observacionCoordinador: cleanString(data.observacionCoordinador || data.observacion || ""),
+    intentosUsados,
+    maxIntentos,
+    reenvioDisponible: estado === ESTADOS.devuelto && intentosUsados < maxIntentos,
+    titulosEnviados: titulosEnvio(data),
+    propuestas: titulosEnvio(data).map((item) => ({ numero: item.numero, preferido: item.preferido, tituloFinal: item.titulo, titulo: item.titulo }))
   };
 }
 
@@ -67,31 +108,39 @@ async function obtenerCoordinador(db, coordinadorId) {
   if (!snap.exists) return null;
   const data = snap.data() || {};
   if (data.activo === false) return null;
-  return { ...data, id: snap.id };
+  return limpiarCoordinador(snap.id, data);
+}
+
+function coordinadorPuedeVerEnvio(coordinador, envio) {
+  const carreras = coordinador?.carrerasAsignadas || [];
+  if (!carreras.length) return true;
+  const codigoEnvio = cleanString(envio.codigoCarrera);
+  const nombreEnvio = normalizeText(envio.carrera);
+  return carreras.some((carrera) => {
+    const codigo = cleanString(carrera.codigoCarrera);
+    const nombre = normalizeText(carrera.nombreCarrera);
+    return Boolean((codigo && codigo === codigoEnvio) || (nombre && nombre === nombreEnvio));
+  });
 }
 
 async function listarCoordinadores(db) {
-  const snap = await db.collection(COLLECTIONS.coordinadores).where("activo", "==", true).get();
-  const coordinadores = snap.docs.map((doc) => limpiarCoordinador(doc.id, doc.data())).sort((a, b) => a.nombre.localeCompare(b.nombre));
+  const snap = await db.collection(COLLECTIONS.coordinadores).get();
+  const coordinadores = snap.docs.map((doc) => limpiarCoordinador(doc.id, doc.data() || {})).filter((item) => item.activo !== false).sort((a, b) => a.nombre.localeCompare(b.nombre));
   return ok({ coordinadores });
 }
 
 async function cargarEstudiantes(db, payload) {
   const coordinador = await obtenerCoordinador(db, payload.coordinadorId);
   if (!coordinador) return badRequest("Seleccione un coordinador válido.");
-
   const periodoActivo = await getPeriodoActivo(db);
   if (!periodoActivo) return badRequest("No existe un período activo configurado.");
-
-  const carrerasAsignadas = Array.isArray(coordinador.carrerasAsignadas) ? coordinador.carrerasAsignadas : [];
-  const codigos = carrerasAsignadas.map((c) => cleanString(c.codigoCarrera)).filter(Boolean);
-
   const snap = await db.collection(COLLECTIONS.envios).get();
-  const docsPeriodo = snap.docs.filter((doc) => periodoEquivalente(doc.data()?.periodoId || doc.data()?.periodoLabel, periodoActivo.id));
-  const envios = await Promise.all(docsPeriodo.map((doc) => limpiarEnvio(db, doc.id, doc.data())));
-  const estudiantes = envios.filter((envio) => codigos.includes(envio.codigoCarrera));
-
-  return ok({ coordinador: limpiarCoordinador(coordinador.id, coordinador), periodoActivo, estudiantes });
+  const estudiantes = snap.docs
+    .map((doc) => envioParaCoordinador(doc.id, doc.data() || {}))
+    .filter((envio) => periodoEquivalente(envio.periodoId || envio.periodoLabel, periodoActivo.id))
+    .filter((envio) => envio.estado !== ESTADOS.sinEnvio)
+    .filter((envio) => coordinadorPuedeVerEnvio(coordinador, envio));
+  return ok({ coordinador, periodoActivo, estudiantes });
 }
 
 async function iniciarRevision(db, payload) {
@@ -99,76 +148,67 @@ async function iniciarRevision(db, payload) {
   const coordinador = await obtenerCoordinador(db, payload.coordinadorId);
   if (!envioId) return badRequest("No se recibió el envío a revisar.");
   if (!coordinador) return badRequest("Seleccione un coordinador válido.");
-
   const ref = db.collection(COLLECTIONS.envios).doc(envioId);
   const snap = await ref.get();
   if (!snap.exists) return badRequest("No se encontró el envío seleccionado.");
-
-  const envio = snap.data();
+  const envio = envioParaCoordinador(snap.id, snap.data() || {});
   if (envio.estado === ESTADOS.enviado) {
-    await ref.set({ estado: ESTADOS.enRevision, revisionIniciadaEn: nowIso(), coordinadorId: coordinador.id, coordinadorNombre: cleanString(coordinador.nombre), actualizadoEn: nowIso() }, { merge: true });
+    const fecha = nowIso();
+    await ref.set({ estado: ESTADOS.enRevision, revisionIniciadaEn: fecha, coordinadorId: coordinador.id, coordinadorNombre: cleanString(coordinador.nombre), actualizadoEn: fecha }, { merge: true });
+    await db.collection(COLLECTIONS.historial).add({ tipo: "INICIO_REVISION", docId: envioId, envioId, cedula: envio.cedula, periodoId: envio.periodoId, estado: ESTADOS.enRevision, coordinadorId: coordinador.id, coordinadorNombre: cleanString(coordinador.nombre), creadoEn: fecha });
   }
-
   return ok({ mensaje: "Revisión iniciada." });
 }
 
 async function guardarRevision(db, payload) {
   const envioId = cleanString(payload.envioId);
   const coordinador = await obtenerCoordinador(db, payload.coordinadorId);
-  const estado = cleanString(payload.estado);
+  const estado = normalizarEstadoTitulo(payload.estado);
   const tituloElegidoNumero = Number(payload.tituloElegidoNumero);
-  const tituloCorregido = cleanString(payload.tituloCorregido);
-  const observacion = cleanString(payload.observacion);
-
+  const tituloCorregidoCoordinador = cleanString(payload.tituloCorregidoCoordinador || payload.tituloCorregido || "");
+  const observacionCoordinador = cleanString(payload.observacionCoordinador || payload.observacion || "");
   if (!envioId) return badRequest("No se recibió el envío a revisar.");
   if (!coordinador) return badRequest("Seleccione un coordinador válido.");
   if (!DECISIONES_COORDINADOR.includes(estado)) return badRequest("Seleccione una decisión válida.");
   if (![1, 2, 3].includes(tituloElegidoNumero)) return badRequest("Seleccione uno de los 3 títulos.");
-  if (estado === ESTADOS.devuelto && !observacion) return badRequest("La observación es obligatoria cuando se devuelve al estudiante.");
-  if (estado === ESTADOS.aprobadoConCorrecciones && !tituloCorregido) return badRequest("Debe escribir el título corregido.");
+  if (estado === ESTADOS.devuelto && !observacionCoordinador) return badRequest("La observación es obligatoria cuando se devuelve al estudiante.");
+  if (estado === ESTADOS.aprobadoConCorrecciones && !tituloCorregidoCoordinador) return badRequest("Debe escribir el título corregido.");
 
   const ref = db.collection(COLLECTIONS.envios).doc(envioId);
   const snap = await ref.get();
   if (!snap.exists) return badRequest("No se encontró el envío seleccionado.");
-
-  const envio = snap.data();
-  const propuestaElegida = Array.isArray(envio.propuestas) ? envio.propuestas.find((p) => Number(p.numero) === tituloElegidoNumero) : null;
-  if (!propuestaElegida) return badRequest("No se encontró el título elegido.");
-
+  const envio = envioParaCoordinador(snap.id, snap.data() || {});
+  const elegido = envio.titulosEnviados.find((item) => Number(item.numero) === tituloElegidoNumero);
+  if (!elegido) return badRequest("No se encontró el título elegido.");
   const fecha = nowIso();
   const revision = {
     estado,
     tituloElegidoNumero,
-    tituloElegidoTexto: cleanString(propuestaElegida.tituloFinal),
-    tituloCorregido,
-    observacion,
+    tituloElegidoTexto: cleanString(elegido.titulo),
+    tituloCorregidoCoordinador,
+    observacionCoordinador,
     coordinadorId: coordinador.id,
     coordinadorNombre: cleanString(coordinador.nombre),
     revisadoEn: fecha,
     actualizadoEn: fecha,
-    notificacionPendiente: true
+    reenvioDisponible: estado === ESTADOS.devuelto && Number(envio.intentosUsados || 0) < Number(envio.maxIntentos || MAX_INTENTOS)
   };
-
   await ref.set(revision, { merge: true });
-  await db.collection(COLLECTIONS.historial).add({ tipo: "REVISION_COORDINADOR", envioId, cedula: cleanString(envio.cedula), periodoId: cleanString(envio.periodoId), intento: Number(envio.intento || 1), ...revision, creadoEn: fecha });
-
+  await db.collection(COLLECTIONS.historial).add({ tipo: "REVISION_COORDINADOR", docId: envioId, envioId, cedula: envio.cedula, periodoId: envio.periodoId, periodoLabel: envio.periodoLabel, intentosUsados: Number(envio.intentosUsados || 1), ...revision, creadoEn: fecha });
   return ok({ revision, mensaje: "Revisión guardada correctamente." });
 }
 
 export async function handler(event) {
   const options = handleOptions(event);
   if (options) return options;
-
   try {
     validarMetodoPost(event);
     const { action, payload } = parseBody(event);
     const db = getAdminDb();
-
     if (action === "listarCoordinadores") return await listarCoordinadores(db);
     if (action === "cargarEstudiantes") return await cargarEstudiantes(db, payload);
     if (action === "iniciarRevision") return await iniciarRevision(db, payload);
     if (action === "guardarRevision") return await guardarRevision(db, payload);
-
     return badRequest("Acción de coordinador no reconocida.");
   } catch (error) {
     return serverError(error);
