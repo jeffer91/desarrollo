@@ -5,7 +5,7 @@ Función o funciones:
 1. Mostrar la pantalla Carga de la materia.
 2. Recibir carrera y materia digitadas manualmente.
 3. Recibir información base, contenidos y actividades por archivo o texto pegado.
-4. Mantener ocultos los elementos técnicos de revisión, validación y vista previa.
+4. Mostrar mensajes simples al usuario sin JSON ni códigos técnicos.
 5. Preparar la carga flexible para Excel, PDF o texto.
 ========================================================= -->
 <!doctype html>
@@ -17,6 +17,7 @@ Función o funciones:
   <meta name="description" content="Carga de la materia del módulo Libro." />
   <link rel="icon" href="data:," />
   <link rel="stylesheet" href="./carga-materia.css" />
+  <link rel="stylesheet" href="./carga-materia.user-messages.css" />
 </head>
 <body>
   <main class="libro-page libro-page--simple">
@@ -29,6 +30,10 @@ Función o funciones:
 
     <section class="libro-simple-title">
       <h1>Carga de la materia</h1>
+    </section>
+
+    <section id="user-message" class="libro-user-message is-pending" aria-live="polite">
+      Completa carrera, materia y agrega la información de la materia.
     </section>
 
     <section class="libro-card libro-card--wide libro-simple-card">
@@ -141,5 +146,6 @@ Función o funciones:
   <script src="./carga-materia.preview.js"></script>
   <script src="./carga-materia.storage.js"></script>
   <script src="./carga-materia.main.js"></script>
+  <script src="./carga-materia.user-messages.js"></script>
 </body>
 </html>
