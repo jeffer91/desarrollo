@@ -4,7 +4,7 @@ Ruta o ubicación: /Requisitos/Infor/core/infor.qa.js
 Función o funciones:
 - Revisar dependencias principales de Infor desde la carpeta definitiva /Requisitos/Infor.
 - Validar el estado mínimo antes de procesar/exportar.
-- Mostrar advertencias claras sin romper el flujo.
+- Mostrar advertencias claras sobre Excel, NÚCLEOS, complexivo, supletorios e inconsistencias.
 - Servir como diagnóstico rápido después de cambios grandes.
 Con qué se conecta:
 - infor.state.js
@@ -48,6 +48,12 @@ Con qué se conecta:
     });
   }
 
+  function sheetMessage(snapshot){
+    var sheets = snapshot.excelData && Array.isArray(snapshot.excelData.sheets) ? snapshot.excelData.sheets : [];
+    if(!sheets.length){return "Sin hojas leídas";}
+    return sheets.map(function(s){return s.name + ": " + (s.ignored ? "ignorada" : ((s.detectedStudents || 0) + " filas")) + (s.reason ? " (" + s.reason + ")" : "");}).join(" · ");
+  }
+
   function stateChecks(snapshot){
     snapshot = snapshot || {};
     var checks = [];
@@ -58,11 +64,16 @@ Con qué se conecta:
     var regular = match && match.regularAnalysis ? match.regularAnalysis : null;
     var report = snapshot.reportDraft || null;
     var key = window.InforState && typeof window.InforState.getGeminiKey === "function" ? window.InforState.getGeminiKey() : "";
+    var regularSummary = regular && regular.summary ? regular.summary : {};
+    var nucleos = regular && regular.nucleos ? regular.nucleos : {};
+    var complexivo = regular && regular.complexivo ? regular.complexivo : {};
 
     checks.push({type:hasPeriod ? "ok" : "warn", label:"Período", message:hasPeriod ? "Seleccionado" : "Pendiente de seleccionar"});
-    checks.push({type:excelRows > 0 ? "ok" : "warn", label:"Excel", message:excelRows > 0 ? (excelRows + " filas detectadas") : "Sin filas detectadas"});
-    checks.push({type:regular ? "ok" : "warn", label:"Análisis regular", message:regular ? ((regular.summary.validForReport || 0) + " válidos, " + (regular.summary.excludedByPeriod || 0) + " fuera del período, " + (regular.summary.duplicates || 0) + " duplicados") : "Pendiente de ejecutar"});
-    checks.push({type:matchSummary && matchSummary.total ? (matchSummary.pendientes ? "warn" : "ok") : "warn", label:"Unión BaseLocal", message:matchSummary ? (matchSummary.unidos + " unidos, " + matchSummary.pendientes + " pendientes") : "Sin unión todavía"});
+    checks.push({type:excelRows > 0 ? "ok" : "warn", label:"Excel", message:excelRows > 0 ? (excelRows + " filas detectadas · " + sheetMessage(snapshot)) : "Sin filas detectadas"});
+    checks.push({type:regular ? "ok" : "warn", label:"NÚCLEOS", message:regular ? ((nucleos.total || 0) + " estudiantes · " + (nucleos.aprobados || 0) + " con 4 núcleos aprobados · " + (nucleos.retirados || 0) + " retirados") : "Pendiente de ejecutar"});
+    checks.push({type:regular ? "ok" : "warn", label:"Complexivo", message:regular ? ((complexivo.totalFinal || 0) + " estudiantes únicos · " + (regularSummary.supletorios || 0) + " con supletorio") : "Pendiente de ejecutar"});
+    checks.push({type:regularSummary.inconsistencias ? "warn" : (regular ? "ok" : "warn"), label:"Inconsistencias", message:regular ? ((regularSummary.inconsistencias || 0) + " estudiantes con complexivo sin 4 núcleos aprobados") : "Pendiente de ejecutar"});
+    checks.push({type:matchSummary && matchSummary.total ? (matchSummary.pendientes ? "warn" : "ok") : "warn", label:"Unión BaseLocal", message:matchSummary ? (matchSummary.unidos + " unidos, " + matchSummary.pendientes + " pendientes. La fuente principal sigue siendo Excel.") : "Sin unión todavía"});
     checks.push({type:key ? "ok" : "warn", label:"Gemini", message:key ? "Clave configurada" : "Clave pendiente"});
     checks.push({type:report && report.ok ? "ok" : "warn", label:"Motor informe", message:report && report.ok ? (report.sections.length + " secciones listas") : "Pendiente de procesar"});
     checks.push({type:report && report.ok ? "ok" : "warn", label:"Exportación", message:report && report.ok ? "Word/PDF habilitados" : "Exportación bloqueada hasta procesar"});
@@ -74,40 +85,23 @@ Con qué se conecta:
     var checks = moduleChecks().concat(stateChecks(snapshot));
     var errors = checks.filter(function(x){return x.type === "error";}).length;
     var warnings = checks.filter(function(x){return x.type === "warn";}).length;
-    return {
-      ok:errors === 0,
-      errors:errors,
-      warnings:warnings,
-      checks:checks,
-      generatedAt:new Date().toISOString()
-    };
+    return {ok:errors === 0,errors:errors,warnings:warnings,checks:checks,generatedAt:new Date().toISOString()};
   }
 
-  function badge(type){
-    if(type === "ok"){return "<span class='infor-pill-mini ok'>OK</span>";}
-    if(type === "error"){return "<span class='infor-pill-mini bad'>ERROR</span>";}
-    return "<span class='infor-pill-mini warn'>REVISAR</span>";
-  }
+  function badge(type){if(type === "ok"){return "<span class='infor-pill-mini ok'>OK</span>";}if(type === "error"){return "<span class='infor-pill-mini bad'>ERROR</span>";}return "<span class='infor-pill-mini warn'>REVISAR</span>";}
 
   function render(result){
     var box = document.getElementById("infor-qa-results");
     if(!box){return;}
     result = result || run();
     var html = "<div class='infor-table-wrap'><table class='infor-small-table'><thead><tr><th>Estado</th><th>Elemento</th><th>Detalle</th></tr></thead><tbody>";
-    html += result.checks.map(function(item){
-      return "<tr><td>" + badge(item.type) + "</td><td>" + esc(item.label) + "</td><td>" + esc(item.message) + "</td></tr>";
-    }).join("");
+    html += result.checks.map(function(item){return "<tr><td>" + badge(item.type) + "</td><td>" + esc(item.label) + "</td><td>" + esc(item.message) + "</td></tr>";}).join("");
     html += "</tbody></table></div>";
     html += "<p class='infor-muted'>Errores: " + result.errors + " · Advertencias: " + result.warnings + " · " + esc(result.generatedAt) + "</p>";
     box.innerHTML = html;
   }
 
-  function boot(){
-    var btn = document.getElementById("infor-qa-run");
-    if(btn){btn.addEventListener("click", function(){render(run());});}
-    setTimeout(function(){render(run());}, 350);
-  }
-
+  function boot(){var btn = document.getElementById("infor-qa-run");if(btn){btn.addEventListener("click", function(){render(run());});}setTimeout(function(){render(run());}, 350);}
   if(document.readyState === "loading"){document.addEventListener("DOMContentLoaded", boot);}else{boot();}
-  window.InforQA = {run:run, render:render};
+  window.InforQA = {run:run,render:render};
 })(window, document);
