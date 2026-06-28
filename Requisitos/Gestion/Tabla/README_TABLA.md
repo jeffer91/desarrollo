@@ -115,15 +115,15 @@ Flujo:
 
 1. Filtrar estudiantes en Tabla.
 2. Abrir Telegram masivo.
-3. Revisar resumen: total, con Telegram, sin Telegram, seleccionados y listos.
-4. Seleccionar todos, solo con Telegram o limpiar selección.
+3. Revisar resumen: total, con Telegram, con chatId, seleccionados y listos para bot.
+4. Seleccionar todos, solo con chatId o limpiar selección.
 5. Elegir tipo de mensaje.
 6. Revisar vista previa.
 7. Marcar confirmación.
 8. Preparar lote.
 9. Enviar lote.
 
-El envío masivo solo se hace por Telegram y siempre requiere confirmación.
+El envío masivo solo se hace por Telegram y siempre requiere confirmación. Para envío automático por bot, el estudiante debe tener `chatId`.
 
 ## Mensajes formales
 
@@ -148,7 +148,7 @@ Variables disponibles en mensajes manuales:
 
 `tabla.telegram-api.js` no guarda ni expone el token del bot en el frontend.
 
-Usa la función segura:
+Usa la función segura configurada para Telegram:
 
 ```text
 ta-titulo-articulo-api-telegram
@@ -237,10 +237,10 @@ El historial permite:
 1. Aplicar filtros y abrir Telegram masivo.
 2. Confirmar que el total corresponde a los estudiantes filtrados.
 3. Seleccionar todos.
-4. Seleccionar solo con Telegram.
+4. Seleccionar solo con chatId.
 5. Limpiar selección.
 6. Preparar lote sin marcar confirmación: debe bloquear.
-7. Preparar lote con confirmación: debe crear lote.
+7. Preparar lote con confirmación: debe crear lote solo con estudiantes que tengan chatId.
 8. Enviar lote: debe mostrar enviados, fallidos y omitidos.
 
 ### Historial
