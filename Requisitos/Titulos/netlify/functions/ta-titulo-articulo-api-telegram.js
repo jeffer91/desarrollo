@@ -5,6 +5,7 @@
   - Enviar mensajes de Telegram desde Netlify Functions.
   - Mantener el token del bot fuera del frontend público.
   - Permitir avisos al estudiante cuando su título fue aprobado, corregido o devuelto.
+  - Preservar saltos de línea en mensajes formales enviados desde Tabla.
 */
 
 import {
@@ -23,6 +24,10 @@ function limpiarChatId(value) {
   return cleanString(value).replace(/[^0-9-]/g, "");
 }
 
+function cleanMessage(value) {
+  return String(value ?? "").replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim();
+}
+
 async function enviarMensajeTelegram(chatId, mensaje) {
   const token = cleanString(process.env.TELEGRAM_BOT_TOKEN);
   if (!token) {
@@ -35,7 +40,6 @@ async function enviarMensajeTelegram(chatId, mensaje) {
     body: JSON.stringify({
       chat_id: chatId,
       text: mensaje,
-      parse_mode: "HTML",
       disable_web_page_preview: true
     })
   });
@@ -50,7 +54,7 @@ async function enviarMensajeTelegram(chatId, mensaje) {
 
 async function enviarMensaje(payload) {
   const chatId = limpiarChatId(payload.chatId);
-  const mensaje = cleanString(payload.mensaje);
+  const mensaje = cleanMessage(payload.mensaje);
 
   if (!chatId) return badRequest("Ingrese un chat ID válido.");
   if (!mensaje) return badRequest("Ingrese el mensaje que se enviará por Telegram.");
