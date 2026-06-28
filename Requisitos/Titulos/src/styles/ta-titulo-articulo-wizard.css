@@ -5,6 +5,7 @@
   - Dar formato visual al flujo paginado del estudiante.
   - Mostrar avance paso a paso sin cambiar la lógica de Firebase ni el esquema de títulos.
   - Compactar el menú superior de pasos y destacar la generación/selección de títulos.
+  - Mostrar avisos importantes en modal central para reducir texto en pantalla.
   Se conecta con:
   - Requisitos/Titulos/public/ta-titulo-articulo-estudiante.html
   - Requisitos/Titulos/src/estudiante/ta-titulo-articulo-estudiante-paginacion.app.js
@@ -122,7 +123,9 @@
   gap: 10px;
 }
 
-.ta-wizard-hidden {
+.ta-wizard-hidden,
+.ta-estudiante-wizard-activo #ta-unico-reenvio-aviso,
+.ta-estudiante-wizard-activo #ta-estudiante-propuestas-card > .ta-data-grid {
   display: none !important;
 }
 
@@ -207,6 +210,55 @@ button[data-ta-generar-sugerencias]:focus-visible {
   margin-top: 2px;
 }
 
+.ta-wizard-modal[hidden] {
+  display: none !important;
+}
+
+.ta-wizard-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+}
+
+.ta-wizard-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(7, 21, 39, 0.76);
+  backdrop-filter: blur(4px);
+}
+
+.ta-wizard-modal__dialog {
+  position: relative;
+  width: min(520px, 100%);
+  padding: 26px;
+  border: 1px solid rgba(201, 168, 102, 0.46);
+  border-radius: 22px;
+  background: var(--ta-color-blanco);
+  color: var(--ta-color-texto);
+  box-shadow: 0 24px 70px rgba(2, 8, 23, 0.38);
+}
+
+.ta-wizard-modal__dialog h2 {
+  margin: 4px 0 10px;
+  color: var(--ta-color-azul-marino);
+  font-size: 1.45rem;
+}
+
+.ta-wizard-modal__dialog p {
+  margin: 0 0 18px;
+  color: var(--ta-color-texto);
+  line-height: 1.5;
+}
+
+.ta-wizard-modal__close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+}
+
 @media (max-width: 1180px) {
   .ta-wizard-progress__list {
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -238,5 +290,9 @@ button[data-ta-generar-sugerencias]:focus-visible {
 
   button[data-ta-generar-sugerencias] {
     width: 100%;
+  }
+
+  .ta-wizard-modal__dialog {
+    padding: 22px;
   }
 }
