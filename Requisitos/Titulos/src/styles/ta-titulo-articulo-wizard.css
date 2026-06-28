@@ -1,0 +1,112 @@
+/*
+  Nombre completo: ta-titulo-articulo-wizard.css
+  Ruta o ubicación: /Requisitos/Titulos/src/styles/ta-titulo-articulo-wizard.css
+  Función o funciones:
+  - Dar formato visual al flujo paginado del estudiante.
+  - Mostrar avance paso a paso sin cambiar la lógica de Firebase ni el esquema de títulos.
+  Se conecta con:
+  - Requisitos/Titulos/public/ta-titulo-articulo-estudiante.html
+  - Requisitos/Titulos/src/estudiante/ta-titulo-articulo-estudiante-paginacion.app.js
+*/
+
+.ta-wizard-progress {
+  margin-bottom: 18px;
+}
+
+.ta-wizard-progress__list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ta-wizard-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 9px 10px;
+  border: 1px solid var(--ta-color-gris-borde-2);
+  border-radius: var(--ta-radius-md);
+  background: var(--ta-color-gris-fondo);
+  color: var(--ta-color-texto-suave);
+  transition: var(--ta-transition);
+}
+
+.ta-wizard-step__number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 26px;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--ta-color-blanco);
+  border: 1px solid var(--ta-color-gris-borde);
+  font-weight: 800;
+  font-size: 0.82rem;
+}
+
+.ta-wizard-step__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+  font-size: 0.88rem;
+}
+
+.ta-wizard-step[data-state="active"] {
+  border-color: var(--ta-color-dorado);
+  background: var(--ta-color-dorado-suave);
+  color: var(--ta-color-azul-marino);
+  box-shadow: var(--ta-shadow-soft);
+}
+
+.ta-wizard-step[data-state="active"] .ta-wizard-step__number {
+  background: var(--ta-color-dorado);
+  border-color: var(--ta-color-dorado);
+  color: var(--ta-color-azul-marino);
+}
+
+.ta-wizard-step[data-state="done"] {
+  border-color: var(--ta-color-verde);
+  background: var(--ta-color-verde-suave);
+  color: var(--ta-color-azul-marino);
+}
+
+.ta-wizard-step[data-state="done"] .ta-wizard-step__number {
+  background: var(--ta-color-verde);
+  border-color: var(--ta-color-verde);
+  color: var(--ta-color-blanco);
+}
+
+.ta-wizard-nav {
+  margin-top: 18px;
+}
+
+.ta-wizard-nav__content {
+  display: grid;
+  gap: 12px;
+}
+
+.ta-wizard-hidden {
+  display: none !important;
+}
+
+@media (max-width: 900px) {
+  .ta-wizard-progress__list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .ta-wizard-progress__list {
+    grid-template-columns: 1fr;
+  }
+
+  .ta-wizard-step__label {
+    white-space: normal;
+  }
+}
