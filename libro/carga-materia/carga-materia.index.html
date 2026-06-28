@@ -6,7 +6,7 @@ Función o funciones:
 2. Recibir carrera y materia digitadas manualmente.
 3. Recibir tres archivos fuente: base, contenidos y actividades.
 4. Leer archivos Excel/PDF para detectar información técnica.
-5. Interpretar el Archivo 1 y el Archivo 2 para organizar información base y contenidos por unidad.
+5. Interpretar el Archivo 1, Archivo 2 y Archivo 3 para preparar la materia por unidades.
 ========================================================= -->
 <!doctype html>
 <html lang="es">
@@ -22,11 +22,11 @@ Función o funciones:
   <main class="libro-page">
     <header class="libro-topbar">
       <div>
-        <p class="libro-kicker">Libro · Bloque 4</p>
+        <p class="libro-kicker">Libro · Bloque 5</p>
         <h1>Carga inteligente de materia</h1>
         <p>
           Registra la carrera, la materia y los tres archivos fuente. Esta pantalla ya interpreta
-          el Archivo 1 y organiza los contenidos del Archivo 2 por las cuatro unidades.
+          la información base, los contenidos por unidad y las actividades de la materia.
         </p>
       </div>
 
@@ -47,11 +47,11 @@ Función o funciones:
       </article>
       <article class="libro-progress__item">
         <strong>3</strong>
-        <span>Interpretación base</span>
+        <span>Base</span>
       </article>
       <article class="libro-progress__item is-current">
-        <strong>4</strong>
-        <span>Contenidos</span>
+        <strong>5</strong>
+        <span>Actividades</span>
       </article>
     </section>
 
@@ -130,7 +130,8 @@ Función o funciones:
         </div>
 
         <p>
-          Debe contener las actividades de la materia. Luego se relacionarán con unidad, tema o resultado.
+          Debe contener las actividades de la materia. Se intentará relacionarlas con unidad, tema,
+          semana, tipo de actividad o resultado de aprendizaje.
         </p>
 
         <label class="libro-file-zone">
@@ -153,7 +154,7 @@ Función o funciones:
         <ul id="checklist" class="libro-checklist" aria-live="polite"></ul>
 
         <div class="libro-actions">
-          <button id="analizar-btn" class="libro-btn" type="button" disabled>Analizar contenidos</button>
+          <button id="analizar-btn" class="libro-btn" type="button" disabled>Analizar actividades</button>
           <button id="limpiar-btn" class="libro-btn libro-btn--ghost" type="button">Limpiar</button>
         </div>
       </article>
@@ -162,7 +163,7 @@ Función o funciones:
         <div class="libro-card__head">
           <div>
             <span class="libro-card__step">Vista previa</span>
-            <h2>Contenidos por unidad</h2>
+            <h2>Actividades por unidad</h2>
           </div>
           <span id="expediente-status" class="libro-status-pill is-pending">Sin analizar</span>
         </div>
@@ -179,6 +180,7 @@ Función o funciones:
   <script src="./carga-materia.excel-reader.js"></script>
   <script src="./carga-materia.mapper-base.js"></script>
   <script src="./carga-materia.mapper-contenidos.js"></script>
+  <script src="./carga-materia.mapper-actividades.js"></script>
   <script src="./carga-materia.main.js"></script>
 </body>
 </html>
