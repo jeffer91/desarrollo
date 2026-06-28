@@ -8,10 +8,13 @@ Función o funciones:
 - Paginar resultados para no renderizar toda la base.
 - Usar BL2 cuando esté disponible y mantener ExcelLocalRepo como respaldo.
 - Mostrar acciones compactas por fila: copiar, WhatsApp y Telegram individual.
+- Abrir Telegram masivo con los estudiantes filtrados actualmente.
 Con qué se conecta:
 - tabla.core.js
 - tabla.message.js
 - tabla.telegram.js
+- tabla.selection.js
+- tabla.mass.js
 - tabla.export.js
 ========================================================= */
 (function(window,document){
@@ -82,6 +85,13 @@ Con qué se conecta:
     }catch(e){console.error("[Tabla]",e);status(e.message||String(e),"warn");}
   }
   function resetOptions(){state.division="";state.career="";state.page=1;state.selectKey="";}
+  function massFilters(){return {periodId:state.periodId,division:state.division,matricula:state.matricula,career:state.career,status:state.status,search:state.search,total:state.allRows.length};}
+  function openMass(){
+    var rows=state.allRows.length?state.allRows:state.rows;
+    if(!rows.length){status("No hay estudiantes filtrados para Telegram masivo.","warn");return;}
+    if(window.TablaMass&&typeof window.TablaMass.abrir==="function")window.TablaMass.abrir(rows,massFilters());
+    else status("Módulo de Telegram masivo no disponible.","warn");
+  }
   function bind(){
     el("tabla-periodo").addEventListener("change",function(e){state.periodId=e.target.value;resetOptions();render();});
     el("tabla-division").addEventListener("change",function(e){state.division=e.target.value;state.career="";state.page=1;render();});
@@ -95,10 +105,11 @@ Con qué se conecta:
     el("tabla-page-prev").addEventListener("click",function(){state.page=Math.max(1,state.page-1);render();});
     el("tabla-page-next").addEventListener("click",function(){state.page=Math.min(state.pagination?state.pagination.pages:state.page+1,state.page+1);render();});
     el("tabla-page-last").addEventListener("click",function(){state.page=state.pagination?state.pagination.pages:state.page;render();});
+    el("tabla-telegram-masivo").addEventListener("click",openMass);
     el("tabla-export-csv").addEventListener("click",function(){window.TablaExport.exportCsv(state.allRows.length?state.allRows:state.rows);});
     el("tabla-export-json").addEventListener("click",function(){window.TablaExport.exportJson(state.allRows.length?state.allRows:state.rows);});
   }
   function boot(){if(window.ExcelLocalBridge)window.ExcelLocalBridge.ensureReady();bind();render();}
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",boot);else boot();
-  window.TablaApp={render:render,getState:function(){return Object.assign({},state);}};
+  window.TablaApp={render:render,openMass:openMass,getState:function(){return Object.assign({},state);}};
 })(window,document);
