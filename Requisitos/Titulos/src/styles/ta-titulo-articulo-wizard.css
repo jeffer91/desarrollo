@@ -4,19 +4,47 @@
   Función o funciones:
   - Dar formato visual al flujo paginado del estudiante.
   - Mostrar avance paso a paso sin cambiar la lógica de Firebase ni el esquema de títulos.
+  - Compactar el menú superior de pasos y destacar la generación/selección de títulos.
   Se conecta con:
   - Requisitos/Titulos/public/ta-titulo-articulo-estudiante.html
   - Requisitos/Titulos/src/estudiante/ta-titulo-articulo-estudiante-paginacion.app.js
 */
 
-.ta-wizard-progress {
-  margin-bottom: 18px;
+.ta-wizard-progress.ta-card {
+  margin-bottom: 14px;
+  padding: 14px 16px;
+  border-radius: 18px;
+}
+
+.ta-wizard-progress .ta-section-heading {
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.ta-wizard-progress .ta-section-heading h2 {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.15;
+}
+
+.ta-wizard-progress .ta-section-heading p {
+  margin-top: 3px;
+  font-size: 0.86rem;
+  line-height: 1.25;
+}
+
+.ta-wizard-progress #ta-estudiante-wizard-contador {
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  white-space: nowrap;
 }
 
 .ta-wizard-progress__list {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 6px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -25,11 +53,12 @@
 .ta-wizard-step {
   display: flex;
   align-items: center;
-  gap: 8px;
-  min-height: 44px;
-  padding: 9px 10px;
+  justify-content: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 6px 8px;
   border: 1px solid var(--ta-color-gris-borde-2);
-  border-radius: var(--ta-radius-md);
+  border-radius: 12px;
   background: var(--ta-color-gris-fondo);
   color: var(--ta-color-texto-suave);
   transition: var(--ta-transition);
@@ -39,29 +68,30 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex: 0 0 26px;
-  width: 26px;
-  height: 26px;
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
   border-radius: 999px;
   background: var(--ta-color-blanco);
   border: 1px solid var(--ta-color-gris-borde);
   font-weight: 800;
-  font-size: 0.82rem;
+  font-size: 0.74rem;
 }
 
 .ta-wizard-step__label {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-weight: 700;
-  font-size: 0.88rem;
+  font-weight: 800;
+  font-size: 0.78rem;
+  letter-spacing: -0.01em;
 }
 
 .ta-wizard-step[data-state="active"] {
   border-color: var(--ta-color-dorado);
-  background: var(--ta-color-dorado-suave);
+  background: linear-gradient(135deg, var(--ta-color-dorado-suave), rgba(216, 188, 122, 0.28));
   color: var(--ta-color-azul-marino);
-  box-shadow: var(--ta-shadow-soft);
+  box-shadow: 0 6px 16px rgba(201, 168, 102, 0.18);
 }
 
 .ta-wizard-step[data-state="active"] .ta-wizard-step__number {
@@ -82,31 +112,131 @@
   color: var(--ta-color-blanco);
 }
 
-.ta-wizard-nav {
-  margin-top: 18px;
+.ta-wizard-nav.ta-card {
+  margin-top: 14px;
+  padding: 14px 16px;
 }
 
 .ta-wizard-nav__content {
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .ta-wizard-hidden {
   display: none !important;
 }
 
-@media (max-width: 900px) {
+button[data-ta-generar-sugerencias] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 12px 18px;
+  border: 0;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--ta-color-azul-marino-3), var(--ta-color-azul-marino));
+  color: var(--ta-color-blanco);
+  font-weight: 900;
+  letter-spacing: 0.01em;
+  box-shadow: 0 12px 26px rgba(7, 21, 39, 0.22);
+}
+
+button[data-ta-generar-sugerencias]::before {
+  content: "✦";
+  display: inline-block;
+  margin-right: 8px;
+  color: var(--ta-color-dorado-2);
+  font-size: 1rem;
+}
+
+button[data-ta-generar-sugerencias]:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 30px rgba(7, 21, 39, 0.28);
+}
+
+button[data-ta-generar-sugerencias]:focus-visible {
+  outline: 3px solid var(--ta-color-dorado-2);
+  outline-offset: 3px;
+}
+
+[data-ta-sugerencias] {
+  margin-top: 14px;
+}
+
+[data-ta-sugerencias] .ta-state-box {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 150px;
+  gap: 14px;
+  padding: 18px 18px 16px;
+  border: 1px solid rgba(201, 168, 102, 0.52);
+  border-left: 6px solid var(--ta-color-dorado);
+  border-radius: 18px;
+  background: linear-gradient(180deg, var(--ta-color-blanco), rgba(244, 234, 210, 0.36));
+  box-shadow: 0 12px 28px rgba(7, 21, 39, 0.09);
+}
+
+[data-ta-sugerencias] .ta-state-box p {
+  margin: 0;
+  color: var(--ta-color-azul-marino);
+  font-size: 1.02rem;
+  font-weight: 750;
+  line-height: 1.45;
+  letter-spacing: 0.01em;
+}
+
+[data-ta-sugerencias] .ta-state-box .ta-button {
+  align-self: flex-start;
+  border: 0;
+  border-radius: 12px;
+  background: var(--ta-color-dorado);
+  color: var(--ta-color-azul-marino);
+  font-weight: 900;
+  box-shadow: 0 10px 22px rgba(201, 168, 102, 0.26);
+}
+
+[data-ta-sugerencias] .ta-state-box .ta-button:hover:not(:disabled) {
+  background: var(--ta-color-dorado-2);
+  transform: translateY(-1px);
+}
+
+[data-ta-sugerencias] .ta-help {
+  grid-column: 1 / -1;
+  margin-top: 2px;
+}
+
+@media (max-width: 1180px) {
+  .ta-wizard-progress__list {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
   .ta-wizard-progress__list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 560px) {
+  .ta-wizard-progress.ta-card {
+    padding: 12px;
+  }
+
   .ta-wizard-progress__list {
     grid-template-columns: 1fr;
   }
 
+  .ta-wizard-step {
+    justify-content: flex-start;
+  }
+
   .ta-wizard-step__label {
     white-space: normal;
+  }
+
+  button[data-ta-generar-sugerencias] {
+    width: 100%;
   }
 }
