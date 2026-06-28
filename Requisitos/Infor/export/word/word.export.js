@@ -5,6 +5,7 @@ Función o funciones:
 - Construir el documento Word compatible desde reportDraft en la carpeta definitiva /Requisitos/Infor.
 - Aplicar formato institucional y base APA 7: márgenes, fuente, interlineado, títulos, tablas y figuras.
 - Exportar el informe como archivo Word compatible (.doc).
+- Mostrar control regular y detalle de notas calculadas.
 Con qué se conecta:
 - ../../core/infor.report.js
 - ../../core/infor.state.js
@@ -108,6 +109,8 @@ Con qué se conecta:
     var html = '<section><h2>' + esc(index + '. ' + (section.title || section.id)) + '</h2>';
     if(section.type === 'texto'){
       html += paragraphize(section.content);
+    }else if(section.type === 'control_regular'){
+      html += table([{label:'Indicador', key:'label'}, {label:'Valor', key:'value'}], section.resumen || [], 'Control del Excel regular', 'Excel cargado, BaseLocal/BL2 e InforRegular.');
     }else if(section.type === 'cronograma'){
       html += table([
         {label:'Fecha', key:'fecha'},
@@ -122,6 +125,7 @@ Con qué se conecta:
         {label:'Carrera', key:'carrera'},
         {label:'Título / Artículo', key:'titulo'},
         {label:'Tutor', key:'tutor'},
+        {label:'Detalle nota', key:'detalleNota'},
         {label:'Nota final', key:'notaFinal'},
         {label:'Estado', key:'estado'}
       ], section.rows || [], 'Tabla. ' + section.title, 'Excel/BaseLocal procesado por Infor.');
