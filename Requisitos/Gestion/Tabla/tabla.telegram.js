@@ -6,17 +6,18 @@ Función o funciones:
 - Abrir un modal compacto por estudiante.
 - Generar vista previa usando TablaMessage.
 - Copiar el mensaje y abrir Telegram cuando exista usuario o chat disponible.
-- Dejar preparado el flujo para envío real por bot en el bloque de API segura.
+- Enviar mensaje individual por bot mediante TablaTelegramApi.
 Con qué se conecta:
 - tabla.core.js
 - tabla.message.js
+- tabla.telegram-api.js
 - tabla.app.js
 - tabla.css
 ========================================================= */
 (function(window,document){
   "use strict";
 
-  var state={row:null,type:"requisitos"};
+  var state={row:null,type:"requisitos",sending:false};
 
   function el(id){return document.getElementById(id);}
   function text(value){return String(value==null?"":value).trim();}
@@ -60,15 +61,16 @@ Con qué se conecta:
     if(!state.row)return;
     var d=datos(state.row);
     var tg=info(state.row);
-    var title=el("tabla-tg-title"), meta=el("tabla-tg-meta"), tgBox=el("tabla-tg-dato"), warn=el("tabla-tg-warning");
+    var title=el("tabla-tg-title"), meta=el("tabla-tg-meta"), tgBox=el("tabla-tg-dato"), warn=el("tabla-tg-warning"), send=el("tabla-tg-send");
     if(title)title.textContent="Telegram individual";
     if(meta)meta.innerHTML="<strong>"+esc(d.nombre)+"</strong> · "+esc(d.cedula||"Sin cédula")+" · "+esc(d.carrera||"Sin carrera")+" · "+esc(d.periodo||"Sin período");
     if(tgBox)tgBox.textContent=tg.chatId?"Chat ID: "+tg.chatId:(tg.user?"Usuario: @"+tg.user:"Sin Telegram registrado");
     if(warn){
-      if(tg.canSendByBot)warn.textContent="Listo para envío por bot cuando se conecte la API segura.";
-      else if(tg.user)warn.textContent="Tiene usuario de Telegram. Por ahora se puede abrir el perfil y copiar el mensaje.";
+      if(tg.canSendByBot)warn.textContent="Listo para envío por bot. Revise la vista previa antes de enviar.";
+      else if(tg.user)warn.textContent="Tiene usuario de Telegram, pero no chatId. Puede abrir el perfil y copiar el mensaje.";
       else warn.textContent="Este estudiante no tiene Telegram registrado. Puede copiar el mensaje para usar otro canal.";
     }
+    if(send)send.disabled=!tg.canSendByBot||state.sending;
   }
 
   function actualizarPreview(){
@@ -100,6 +102,29 @@ Con qué se conecta:
     status("Telegram abierto y mensaje copiado.","ok");
   }
 
+  async function enviarPorBot(){
+    if(!state.row||state.sending)return;
+    var tg=info(state.row);
+    var msg=generarMensaje();
+    var d=datos(state.row);
+    if(!tg.chatId){status("No se puede enviar por bot: falta chatId de Telegram.","warn");return;}
+    if(!window.TablaTelegramApi||typeof window.TablaTelegramApi.enviarMensajeTelegram!=="function"){
+      status("No está disponible la API segura de Telegram.","warn");return;
+    }
+    if(!confirm("¿Enviar este mensaje por Telegram a " + (d.nombre||"estudiante") + "?"))return;
+    try{
+      state.sending=true;actualizarInfo();
+      status("Enviando Telegram a "+(d.nombre||"estudiante")+"...","warn");
+      await window.TablaTelegramApi.enviarMensajeTelegram(tg.chatId,msg);
+      status("Mensaje enviado por Telegram a "+(d.nombre||"estudiante")+".","ok");
+    }catch(error){
+      console.error("[TablaTelegram]",error);
+      status(error&&error.message?error.message:String(error),"warn");
+    }finally{
+      state.sending=false;actualizarInfo();
+    }
+  }
+
   function toggleTextoLibre(){
     var tipo=el("tabla-tg-tipo")?el("tabla-tg-tipo").value:"requisitos";
     var box=el("tabla-tg-texto-wrap");
@@ -111,6 +136,7 @@ Con qué se conecta:
   function abrir(row){
     state.row=row||null;
     state.type="requisitos";
+    state.sending=false;
     if(el("tabla-tg-tipo"))el("tabla-tg-tipo").value="requisitos";
     if(el("tabla-tg-texto"))el("tabla-tg-texto").value="";
     toggleTextoLibre();actualizarInfo();actualizarPreview();
@@ -125,13 +151,14 @@ Con qué se conecta:
   }
 
   function bind(){
-    var tipo=el("tabla-tg-tipo"), texto=el("tabla-tg-texto"), cerrarBtn=el("tabla-tg-close"), cancelarBtn=el("tabla-tg-cancel"), copiarBtn=el("tabla-tg-copy"), abrirBtn=el("tabla-tg-open");
-    if(tipo)tipo.addEventListener("change",function(){toggleTextoLibre();actualizarPreview();});
+    var tipo=el("tabla-tg-tipo"), texto=el("tabla-tg-texto"), cerrarBtn=el("tabla-tg-close"), cancelarBtn=el("tabla-tg-cancel"), copiarBtn=el("tabla-tg-copy"), abrirBtn=el("tabla-tg-open"), sendBtn=el("tabla-tg-send");
+    if(tipo)tipo.addEventListener("change",function(){toggleTextoLibre();actualizarPreview();actualizarInfo();});
     if(texto)texto.addEventListener("input",actualizarPreview);
     if(cerrarBtn)cerrarBtn.addEventListener("click",cerrar);
     if(cancelarBtn)cancelarBtn.addEventListener("click",cerrar);
     if(copiarBtn)copiarBtn.addEventListener("click",function(){copiarMensaje();});
     if(abrirBtn)abrirBtn.addEventListener("click",function(){abrirTelegram();});
+    if(sendBtn)sendBtn.addEventListener("click",function(){enviarPorBot();});
     var modal=el("tabla-telegram-modal");
     if(modal)modal.addEventListener("click",function(event){if(event.target===modal)cerrar();});
     document.addEventListener("keydown",function(event){if(event.key==="Escape"&&modal&&!modal.hidden)cerrar();});
@@ -140,5 +167,5 @@ Con qué se conecta:
   function boot(){bind();}
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",boot);else boot();
 
-  window.TablaTelegram={abrir:abrir,cerrar:cerrar,generarMensaje:generarMensaje,copiarMensaje:copiarMensaje,abrirTelegram:abrirTelegram,info:info,url:url};
+  window.TablaTelegram={abrir:abrir,cerrar:cerrar,generarMensaje:generarMensaje,copiarMensaje:copiarMensaje,abrirTelegram:abrirTelegram,enviarPorBot:enviarPorBot,info:info,url:url};
 })(window,document);
