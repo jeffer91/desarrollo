@@ -6,7 +6,7 @@ Función o funciones:
 2. Detectar unidad, actividad, tipo, semana y resultado de aprendizaje aunque las columnas cambien.
 3. Relacionar actividades con las cuatro unidades cuando sea posible.
 4. Separar actividades sin unidad detectada para no perder información.
-5. Entregar advertencias y resumen para el siguiente bloque de unión inteligente.
+5. Evitar asignar unidades por números sueltos de semana o actividad.
 ========================================================= */
 
 (function attachCargaMateriaMapperActividades(window) {
@@ -113,29 +113,35 @@ Función o funciones:
       .join(" | ");
   }
 
-  function detectCode(value) {
+  function detectTopicCode(value) {
     var raw = text(value);
-    var match = raw.match(/(^|\s|\|)([1-4](?:\.\d+){0,5})(?=\s|\||$)/);
+    var match = raw.match(/(^|\s|\|)([1-4](?:\.\d+){1,5})(?=\s|\||$)/);
 
     return match && match[2] ? match[2] : "";
   }
 
-  function detectUnit(value) {
+  function detectUnitFromExplicitText(value) {
     var raw = text(value);
     var normalized = normalize(raw);
+    var code = detectTopicCode(raw);
 
-    if (!raw) return 0;
-
-    var code = detectCode(raw);
     if (code) {
-      var first = Number(String(code).split(".")[0]);
-      if (first >= 1 && first <= 4) return first;
+      return Number(String(code).split(".")[0]);
     }
 
     var matchUnidad = normalized.match(/unidad\s*([1-4])/);
     if (matchUnidad && matchUnidad[1]) return Number(matchUnidad[1]);
 
-    var matchSimple = normalized.match(/^([1-4])$/);
+    return 0;
+  }
+
+  function detectUnitFromUnitColumn(value) {
+    var raw = text(value);
+    var explicit = detectUnitFromExplicitText(raw);
+
+    if (explicit) return explicit;
+
+    var matchSimple = normalize(raw).match(/^([1-4])$/);
     if (matchSimple && matchSimple[1]) return Number(matchSimple[1]);
 
     return 0;
@@ -199,8 +205,8 @@ Función o funciones:
       var tipo = pick(row, columns.tipo);
       var semana = pick(row, columns.semana);
       var resultadoAprendizaje = pick(row, columns.resultadoAprendizaje);
-      var codigoRelacionado = detectCode(temaRaw) || detectCode(rowText);
-      var unidadNumero = detectUnit(unidadRaw) || detectUnit(temaRaw) || detectUnit(rowText);
+      var codigoRelacionado = detectTopicCode(temaRaw) || detectTopicCode(rowText);
+      var unidadNumero = detectUnitFromUnitColumn(unidadRaw) || detectUnitFromExplicitText(temaRaw) || detectUnitFromExplicitText(rowText);
 
       if (!actividad && !tipo && !semana && !resultadoAprendizaje && !temaRaw) return;
 
@@ -258,7 +264,7 @@ Función o funciones:
     }
 
     if (!mapped.columnasDetectadas.unidad) {
-      warnings.push("No se detectó una columna clara de unidad; se intentó inferir desde el texto.");
+      warnings.push("No se detectó una columna clara de unidad; se intentó inferir solo desde códigos académicos o texto tipo Unidad 1.");
     }
 
     if (!mapped.columnasDetectadas.actividad) {
@@ -306,7 +312,7 @@ Función o funciones:
       advertencias: buildWarnings(mapped, rows),
       reglas: {
         unidadesEsperadas: 4,
-        asignacion: "Por columna de unidad, por código relacionado o por texto que mencione Unidad 1 a Unidad 4."
+        asignacion: "Por columna de unidad, por código relacionado 1.1/2.1 o por texto explícito Unidad 1 a Unidad 4."
       }
     };
   }
