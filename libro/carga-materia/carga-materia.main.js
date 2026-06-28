@@ -6,7 +6,7 @@ Función o funciones:
 2. Validar campos manuales y fuentes por archivo o texto pegado.
 3. Leer Excel, PDF, TXT o texto pegado para información base, contenidos y actividades.
 4. Permitir que un solo documento principal sirva como fuente completa cuando no existan archivos separados.
-5. Guardar el resultado consolidado como JSON.
+5. Guardar el resultado consolidado con mensajes simples y sin rutas técnicas visibles.
 ========================================================= */
 
 (function iniciarCargaMateria(window, document) {
@@ -391,7 +391,7 @@ Función o funciones:
   function updatePreviewBeforePrepare(elements) {
     if (state.expediente) return;
     elements.previewBox.textContent = JSON.stringify({
-      bloque: 4,
+      bloque: 6,
       estado: "esperando_proceso",
       carrera: state.carrera || "",
       materia: state.materia || "",
@@ -424,7 +424,7 @@ Función o funciones:
       elements.guardarBtn.textContent = state.isSaving ? "Guardando..." : "Guardar";
     }
 
-    if (!state.expediente) {
+    if (!state.expediente && !state.isSaving) {
       setStatus(elements.expedienteStatus, "is-pending", "Sin procesar");
       updatePreviewBeforePrepare(elements);
     }
@@ -512,7 +512,7 @@ Función o funciones:
     return {
       modulo: "libro",
       pantalla: "carga-materia",
-      bloque: 4,
+      bloque: 6,
       estado: validacion.estado,
       carrera: state.carrera,
       materia: state.materia,
@@ -539,7 +539,7 @@ Función o funciones:
       materiaConsolidada: materiaConsolidada,
       validacion: validacion,
       guardado: null,
-      pendienteBloque5: true,
+      pendienteBloque7: true,
       creadoEn: new Date().toISOString()
     };
   }
@@ -553,12 +553,9 @@ Función o funciones:
   }
 
   function appendSaveResult(elements, result) {
-    var output = elements.previewBox.textContent || "";
-    output += "\n\nGUARDADO";
-    output += "\nEstado: " + (result && result.ok ? "Guardado" : "Error");
-    output += "\nRuta: " + (result && result.path ? result.path : "sin_ruta");
-    output += "\nMensaje: " + (result && result.message ? result.message : "sin_mensaje");
-    elements.previewBox.textContent = output;
+    elements.previewBox.textContent = result && result.ok
+      ? "Materia guardada correctamente."
+      : "No se pudo guardar la materia.";
   }
 
   function statusFromValidation(validacion) {
@@ -631,12 +628,17 @@ Función o funciones:
     }
 
     state.isSaving = true;
+    setStatus(elements.expedienteStatus, "is-warning", "Guardando");
     refresh(elements);
 
     try {
       var result = await Storage.save(state.expediente);
       state.guardado = result;
-      state.expediente.guardado = result;
+      state.expediente.guardado = {
+        ok: Boolean(result && result.ok),
+        modo: result && result.modo ? result.modo : "desconocido",
+        guardadoEn: new Date().toISOString()
+      };
       setStatus(elements.expedienteStatus, result.ok ? "is-ok" : "is-error", result.ok ? "Guardado" : "Error");
       appendSaveResult(elements, result);
     } catch (error) {
