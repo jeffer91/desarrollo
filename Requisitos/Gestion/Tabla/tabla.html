@@ -8,9 +8,11 @@ Función o funciones:
 - Mostrar ACTIVO por defecto y permitir ver RETIRADO cuando se seleccione.
 - Usar BL2 cuando esté disponible y ExcelLocalRepo como respaldo.
 - Paginar la tabla para evitar renderizar demasiadas filas.
+- Cargar el generador de mensajes formales para comunicación por Telegram.
 Con qué se conecta:
 - tabla.css
 - tabla.core.js
+- tabla.message.js
 - tabla.app.js
 - ../Excel/excel-local/excel-local.config.js
 - ../Excel/excel-local/excel-local.storage.js
@@ -80,6 +82,7 @@ Con qué se conecta:
   <script src="../../BaseLocal2/services/bl2-pagination.service.js"></script>
   <script src="../../BaseLocal2/repositories/bl2-estudiantes.repo.js"></script>
   <script src="tabla.core.js"></script>
+  <script src="tabla.message.js"></script>
   <script src="tabla.export.js"></script>
   <script src="tabla.app.js"></script>
 </body>
