@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "libro/carga-materia/schema/materia-consolidada.schema.json",
+  "title": "Materia consolidada - Módulo Libro",
+  "description": "Estructura base generada por la pantalla Carga inteligente de materia del módulo Libro.",
+  "type": "object",
+  "required": [
+    "idLocal",
+    "modulo",
+    "pantalla",
+    "estado",
+    "bloque",
+    "carrera",
+    "materia",
+    "unidades",
+    "creadoEn"
+  ],
+  "properties": {
+    "idLocal": {
+      "type": "string"
+    },
+    "modulo": {
+      "const": "libro"
+    },
+    "pantalla": {
+      "const": "carga-materia"
+    },
+    "estado": {
+      "type": "string",
+      "enum": [
+        "consolidado_completo",
+        "consolidado_con_alertas",
+        "completo",
+        "con_advertencias",
+        "incompleto"
+      ]
+    },
+    "bloque": {
+      "type": "integer",
+      "minimum": 6
+    },
+    "carrera": {
+      "type": "string"
+    },
+    "materia": {
+      "type": "string"
+    },
+    "descripcion": {
+      "type": "string"
+    },
+    "objetivo": {
+      "type": "string"
+    },
+    "unidades": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "required": ["numero", "nombre", "competencia", "resultadoAprendizaje", "contenidos", "actividades"],
+        "properties": {
+          "numero": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "competencia": {
+            "type": "string"
+          },
+          "resultadoAprendizaje": {
+            "type": "string"
+          },
+          "contenidos": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "orden": { "type": ["integer", "number", "null"] },
+                "unidad": { "type": ["integer", "number", "null"] },
+                "codigo": { "type": "string" },
+                "nivel": { "type": ["integer", "number", "null"] },
+                "contenido": { "type": "string" },
+                "textoOriginal": { "type": "string" },
+                "reubicadoAutomaticamente": { "type": "boolean" }
+              },
+              "additionalProperties": true
+            }
+          },
+          "actividades": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "orden": { "type": ["integer", "number", "null"] },
+                "unidad": { "type": ["integer", "number", "null"] },
+                "codigoRelacionado": { "type": "string" },
+                "temaRelacionado": { "type": "string" },
+                "actividad": { "type": "string" },
+                "tipo": { "type": "string" },
+                "semana": { "type": "string" },
+                "resultadoAprendizaje": { "type": "string" },
+                "textoOriginal": { "type": "string" },
+                "reubicadoAutomaticamente": { "type": "boolean" }
+              },
+              "additionalProperties": true
+            }
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "bibliografia": {
+      "type": "string"
+    },
+    "justificacionBibliografia": {
+      "type": "string"
+    },
+    "elementosSinUnidad": {
+      "type": "object",
+      "properties": {
+        "contenidos": { "type": "array" },
+        "actividades": { "type": "array" }
+      },
+      "additionalProperties": true
+    },
+    "resumen": {
+      "type": "object"
+    },
+    "advertencias": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "origen": {
+      "type": "object"
+    },
+    "listoParaValidacion": {
+      "type": "boolean"
+    },
+    "pendienteBloque7": {
+      "type": "boolean"
+    },
+    "pendienteBloque8": {
+      "type": "boolean"
+    },
+    "creadoEn": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": true
+}
