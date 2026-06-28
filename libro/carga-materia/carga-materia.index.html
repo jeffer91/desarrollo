@@ -5,8 +5,8 @@ Función o funciones:
 1. Mostrar la primera pantalla del módulo Libro.
 2. Recibir carrera y materia digitadas manualmente.
 3. Recibir tres archivos fuente: base, contenidos y actividades.
-4. Interpretar los tres archivos fuente.
-5. Unir información base, contenidos y actividades en una materia consolidada.
+4. Consolidar información base, contenidos y actividades.
+5. Validar y mostrar una vista previa legible de la materia consolidada.
 ========================================================= -->
 <!doctype html>
 <html lang="es">
@@ -22,11 +22,11 @@ Función o funciones:
   <main class="libro-page">
     <header class="libro-topbar">
       <div>
-        <p class="libro-kicker">Libro · Bloque 6</p>
+        <p class="libro-kicker">Libro · Bloque 7</p>
         <h1>Carga inteligente de materia</h1>
         <p>
-          Registra la carrera, la materia y los tres archivos fuente. Esta pantalla ya consolida
-          información base, contenidos y actividades en una sola estructura por cuatro unidades.
+          Registra la carrera, la materia y los tres archivos fuente. Esta pantalla ya consolida,
+          valida y muestra una vista previa legible antes de guardar.
         </p>
       </div>
 
@@ -39,19 +39,19 @@ Función o funciones:
     <section class="libro-progress" aria-label="Estado del bloque actual">
       <article class="libro-progress__item">
         <strong>1</strong>
-        <span>Pantalla</span>
-      </article>
-      <article class="libro-progress__item">
-        <strong>3</strong>
-        <span>Base</span>
+        <span>Carga</span>
       </article>
       <article class="libro-progress__item">
         <strong>5</strong>
         <span>Actividades</span>
       </article>
-      <article class="libro-progress__item is-current">
+      <article class="libro-progress__item">
         <strong>6</strong>
         <span>Unión</span>
+      </article>
+      <article class="libro-progress__item is-current">
+        <strong>7</strong>
+        <span>Validación</span>
       </article>
     </section>
 
@@ -154,7 +154,7 @@ Función o funciones:
         <ul id="checklist" class="libro-checklist" aria-live="polite"></ul>
 
         <div class="libro-actions">
-          <button id="analizar-btn" class="libro-btn" type="button" disabled>Consolidar materia</button>
+          <button id="analizar-btn" class="libro-btn" type="button" disabled>Validar materia</button>
           <button id="limpiar-btn" class="libro-btn libro-btn--ghost" type="button">Limpiar</button>
         </div>
       </article>
@@ -163,9 +163,9 @@ Función o funciones:
         <div class="libro-card__head">
           <div>
             <span class="libro-card__step">Vista previa</span>
-            <h2>Materia consolidada</h2>
+            <h2>Validación y materia consolidada</h2>
           </div>
-          <span id="expediente-status" class="libro-status-pill is-pending">Sin consolidar</span>
+          <span id="expediente-status" class="libro-status-pill is-pending">Sin validar</span>
         </div>
 
         <pre id="preview-box">Completa carrera, materia y selecciona los tres archivos.</pre>
@@ -183,6 +183,8 @@ Función o funciones:
   <script src="./carga-materia.mapper-actividades.js"></script>
   <script src="./carga-materia.matcher.js"></script>
   <script src="./carga-materia.builder.js"></script>
+  <script src="./carga-materia.validator.js"></script>
+  <script src="./carga-materia.preview.js"></script>
   <script src="./carga-materia.main.js"></script>
 </body>
 </html>
