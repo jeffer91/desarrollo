@@ -2,15 +2,15 @@
 Nombre completo: carga-materia.css
 Ruta o ubicación: /desarrollo/libro/carga-materia/carga-materia.css
 Función o funciones:
-1. Definir el diseño visual del módulo Libro.
-2. Mantener una interfaz clara, blanca, compacta y ordenada.
-3. Estilizar la pantalla base de carga de materia.
-4. Servir también para la entrada /desarrollo/libro/index.html.
+1. Definir una pantalla limpia para Carga de la materia.
+2. Quitar ruido visual, tarjetas innecesarias y textos largos.
+3. Mantener visibles solo carrera, materia, archivos y acciones principales.
+4. Ocultar elementos técnicos que necesita el controlador JavaScript.
 ========================================================= */
 
 :root {
   --libro-bg: #f4f7fb;
-  --libro-card: rgba(255, 255, 255, 0.94);
+  --libro-card: #ffffff;
   --libro-card-soft: #f8fbff;
   --libro-border: #d9e3f1;
   --libro-border-strong: #aec2e4;
@@ -21,7 +21,7 @@ Función o funciones:
   --libro-success: #1f8f5f;
   --libro-warning: #a86900;
   --libro-danger: #bc2d2d;
-  --libro-shadow: 0 14px 36px rgba(28, 46, 91, 0.08);
+  --libro-shadow: 0 12px 28px rgba(28, 46, 91, 0.07);
 }
 
 * {
@@ -35,9 +35,7 @@ body {
 
 body {
   margin: 0;
-  background:
-    radial-gradient(circle at top left, rgba(49, 92, 255, 0.08), transparent 34%),
-    linear-gradient(180deg, #f8fbff 0%, var(--libro-bg) 100%);
+  background: linear-gradient(180deg, #f8fbff 0%, var(--libro-bg) 100%);
   color: var(--libro-text);
   font-family: Arial, Helvetica, sans-serif;
 }
@@ -53,183 +51,110 @@ a {
 }
 
 .libro-page {
-  width: min(1240px, calc(100% - 24px));
+  width: min(1180px, calc(100% - 24px));
   margin: 0 auto;
-  padding: 18px 0 28px;
+  padding: 14px 0 24px;
 }
 
-.libro-page--home {
-  min-height: 100vh;
+.libro-page--simple {
+  display: grid;
+  gap: 14px;
+}
+
+.libro-simple-topbar {
   display: flex;
-  flex-direction: column;
-  gap: 18px;
-  justify-content: center;
-}
-
-.libro-hero,
-.libro-topbar,
-.libro-progress,
-.libro-card,
-.libro-option-card {
-  border: 1px solid var(--libro-border);
-  background: var(--libro-card);
-  box-shadow: var(--libro-shadow);
-  backdrop-filter: blur(8px);
-}
-
-.libro-hero,
-.libro-topbar {
-  display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 18px;
-  padding: 22px;
-  border-radius: 26px;
+  min-height: 48px;
+  padding: 8px 12px;
+  border: 1px solid var(--libro-border);
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: var(--libro-shadow);
 }
 
-.libro-kicker,
-.libro-card__step,
-.libro-option-card__step {
+.libro-simple-menu {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.libro-simple-menu a {
   display: inline-flex;
   align-items: center;
-  width: fit-content;
-  min-height: 26px;
-  margin: 0 0 9px;
-  padding: 0 11px;
+  min-height: 34px;
+  padding: 0 13px;
   border-radius: 999px;
-  background: #eef3ff;
-  border: 1px solid #dbe6ff;
-  color: #506ba8;
-  font-size: 0.76rem;
+  border: 1px solid transparent;
+  color: var(--libro-muted);
+  font-size: 0.92rem;
   font-weight: 800;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
 }
 
-.libro-hero h1,
-.libro-topbar h1,
-.libro-option-card h2,
-.libro-card h2 {
-  margin: 0;
+.libro-simple-menu a.is-active {
+  background: #eef3ff;
+  border-color: #dbe6ff;
+  color: var(--libro-primary-dark);
+}
+
+.libro-simple-title h1 {
+  margin: 2px 0 0;
   color: var(--libro-text);
+  font-size: clamp(1.45rem, 1.1rem + 0.9vw, 2rem);
+  line-height: 1.1;
   letter-spacing: -0.035em;
 }
 
-.libro-hero h1,
-.libro-topbar h1 {
-  font-size: clamp(2rem, 1.6rem + 1.4vw, 3rem);
-  line-height: 1;
-}
-
-.libro-option-card h2,
-.libro-card h2 {
-  font-size: clamp(1.06rem, 1rem + 0.35vw, 1.32rem);
-  line-height: 1.14;
-}
-
-.libro-hero p,
-.libro-topbar p,
-.libro-option-card p,
-.libro-card p {
-  margin: 9px 0 0;
-  color: var(--libro-muted);
-  line-height: 1.5;
-}
-
-.libro-topbar__actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
-.libro-link-btn,
-.libro-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 40px;
-  padding: 0 16px;
-  border-radius: 14px;
-  border: 1px solid var(--libro-primary);
-  background: linear-gradient(180deg, #456fff 0%, var(--libro-primary) 100%);
-  color: #ffffff;
-  font-weight: 800;
-  cursor: pointer;
-  transition:
-    transform 0.16s ease,
-    box-shadow 0.16s ease,
-    border-color 0.16s ease,
-    background-color 0.16s ease;
-}
-
-.libro-link-btn:hover,
-.libro-btn:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 10px 22px rgba(49, 92, 255, 0.18);
-}
-
-.libro-link-btn--ghost,
-.libro-btn--ghost {
-  background: #ffffff;
-  color: var(--libro-text);
-  border-color: var(--libro-border-strong);
-}
-
-.libro-btn:disabled {
-  opacity: 0.48;
-  cursor: not-allowed;
-}
-
-.libro-card-grid,
 .libro-grid {
   display: grid;
-  gap: 16px;
-}
-
-.libro-card-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
 }
 
 .libro-grid--main {
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin-top: 16px;
 }
 
-.libro-grid--bottom {
-  grid-template-columns: minmax(320px, 0.85fr) minmax(360px, 1.15fr);
-  margin-top: 16px;
+.libro-grid--simple {
+  margin-top: 0;
 }
 
-.libro-card,
-.libro-option-card {
-  border-radius: 22px;
-  padding: 18px;
-}
-
-.libro-option-card {
-  display: flex;
-  min-height: 230px;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: space-between;
-}
-
-.libro-option-card--disabled {
-  opacity: 0.7;
+.libro-card {
+  border: 1px solid var(--libro-border);
+  border-radius: 18px;
+  background: var(--libro-card);
+  box-shadow: var(--libro-shadow);
+  padding: 16px;
 }
 
 .libro-card--wide {
   grid-column: 1 / -1;
 }
 
+.libro-simple-card {
+  margin-top: 0;
+}
+
 .libro-card__head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 14px;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.libro-card h2 {
+  margin: 0;
+  color: var(--libro-text);
+  font-size: clamp(1.02rem, 0.95rem + 0.25vw, 1.18rem);
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+}
+
+.libro-card p {
+  margin: 8px 0 0;
+  color: var(--libro-muted);
+  line-height: 1.45;
 }
 
 .libro-form-grid {
@@ -249,14 +174,12 @@ a {
   width: 100%;
   min-height: 44px;
   padding: 0 13px;
-  border-radius: 14px;
+  border-radius: 13px;
   border: 1px solid var(--libro-border);
   background: #ffffff;
   color: var(--libro-text);
   outline: none;
-  transition:
-    border-color 0.16s ease,
-    box-shadow 0.16s ease;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
 }
 
 .libro-field input:focus {
@@ -267,17 +190,14 @@ a {
 .libro-file-zone {
   display: grid;
   gap: 6px;
-  margin-top: 14px;
-  padding: 18px;
+  min-height: 118px;
+  padding: 16px;
   border: 1.5px dashed var(--libro-border-strong);
-  border-radius: 18px;
+  border-radius: 16px;
   background: var(--libro-card-soft);
   color: var(--libro-muted);
   cursor: pointer;
-  transition:
-    border-color 0.16s ease,
-    background-color 0.16s ease,
-    transform 0.16s ease;
+  transition: border-color 0.16s ease, background-color 0.16s ease, transform 0.16s ease;
 }
 
 .libro-file-zone:hover {
@@ -332,46 +252,55 @@ a {
   color: var(--libro-danger);
 }
 
-.libro-progress {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-  margin-top: 16px;
-  padding: 12px;
-  border-radius: 20px;
-}
-
-.libro-progress__item {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  min-height: 48px;
-  padding: 8px 10px;
-  border-radius: 15px;
-  background: #f7f9fe;
-  color: var(--libro-muted);
-  font-weight: 800;
-}
-
-.libro-progress__item strong {
+.libro-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: #e8eefb;
-  color: #61708d;
-}
-
-.libro-progress__item.is-current {
-  background: #eef3ff;
-  color: var(--libro-primary-dark);
-}
-
-.libro-progress__item.is-current strong {
-  background: var(--libro-primary);
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 13px;
+  border: 1px solid var(--libro-primary);
+  background: linear-gradient(180deg, #456fff 0%, var(--libro-primary) 100%);
   color: #ffffff;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+
+.libro-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(49, 92, 255, 0.18);
+}
+
+.libro-btn--ghost {
+  background: #ffffff;
+  color: var(--libro-text);
+  border-color: var(--libro-border-strong);
+}
+
+.libro-btn:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+.libro-simple-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 14px;
+  border: 1px solid var(--libro-border);
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: var(--libro-shadow);
+}
+
+.libro-simple-actions .libro-status-pill {
+  margin-left: auto;
+}
+
+.libro-hidden-technical {
+  display: none !important;
 }
 
 .libro-checklist {
@@ -382,62 +311,14 @@ a {
   list-style: none;
 }
 
-.libro-checklist li {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 12px;
-  border: 1px solid var(--libro-border);
-  border-radius: 14px;
-  background: #f8fbff;
-  color: var(--libro-muted);
-  font-weight: 700;
-}
-
-.libro-checklist li strong {
-  color: var(--libro-text);
-}
-
-.libro-actions {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-top: 16px;
-}
-
-.libro-card--preview pre {
-  min-height: 250px;
-  max-height: 420px;
-  overflow: auto;
-  margin: 0;
-  padding: 14px;
-  border-radius: 16px;
-  border: 1px solid var(--libro-border);
-  background: #0f172a;
-  color: #dbeafe;
-  font-family: Consolas, Monaco, "Courier New", monospace;
-  font-size: 0.88rem;
-  line-height: 1.5;
-  white-space: pre-wrap;
-}
-
 @media (max-width: 980px) {
   .libro-grid--main,
-  .libro-grid--bottom,
-  .libro-card-grid,
-  .libro-form-grid,
-  .libro-progress {
+  .libro-form-grid {
     grid-template-columns: 1fr;
   }
 
-  .libro-hero,
-  .libro-topbar {
-    flex-direction: column;
-  }
-
-  .libro-topbar__actions {
-    justify-content: flex-start;
+  .libro-simple-actions .libro-status-pill {
+    margin-left: 0;
   }
 }
 
@@ -447,16 +328,22 @@ a {
     padding-top: 8px;
   }
 
-  .libro-hero,
-  .libro-topbar,
+  .libro-simple-topbar,
   .libro-card,
-  .libro-option-card {
-    border-radius: 18px;
-    padding: 14px;
+  .libro-simple-actions {
+    border-radius: 16px;
+    padding: 12px;
   }
 
-  .libro-link-btn,
+  .libro-simple-menu,
+  .libro-simple-actions,
   .libro-btn {
     width: 100%;
+  }
+
+  .libro-simple-menu a,
+  .libro-btn {
+    justify-content: center;
+    flex: 1 1 100%;
   }
 }
