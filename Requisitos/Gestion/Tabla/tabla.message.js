@@ -73,7 +73,7 @@ Con qué se conecta:
     var clean = norm(value);
     if(!clean){return "pendiente";}
     if(["si","s","ok","cumple","aprobado","aprobada","1","true","x","validado","completo"].indexOf(clean) >= 0){return "cumple";}
-    if(clean.indexOf("no cumple") >= 0 || ["no","n","reprobado","reprobada","0","false","falta","incompleto","pendiente","sin dato"].indexOf(clean) >= 0){return "no_cumple";}
+    if(clean.indexOf("no cumple") >= 0 || ["no","n","reprobado","reprobada","0","false","falta","incompleto"].indexOf(clean) >= 0){return "no_cumple";}
     return "pendiente";
   }
 
