@@ -9,28 +9,18 @@ Función o funciones:
 - Usar BL2 cuando esté disponible y ExcelLocalRepo como respaldo.
 - Paginar la tabla para evitar renderizar demasiadas filas.
 - Cargar el generador de mensajes formales para comunicación por Telegram.
-- Mostrar modal individual compacto para preparar contacto por Telegram.
+- Mostrar modal individual compacto para contacto por Telegram.
 - Mostrar modal masivo con selección manual de estudiantes filtrados.
+- Enviar Telegram individual y masivo mediante API segura.
 Con qué se conecta:
 - tabla.css
 - tabla.core.js
 - tabla.message.js
+- tabla.telegram-api.js
 - tabla.telegram.js
 - tabla.selection.js
 - tabla.mass.js
 - tabla.app.js
-- ../Excel/excel-local/excel-local.config.js
-- ../Excel/excel-local/excel-local.storage.js
-- ../Excel/excel-local.repo.js
-- ../../BaseLocal/services/bl-periodos-canon.service.js
-- ../../BaseLocal/services/bl-divisiones.service.js
-- ../../BaseLocal2/bl2-config.js
-- ../../BaseLocal2/bl2-detect-runtime.js
-- ../../BaseLocal2/bl2-legacy-adapter.js
-- ../../BaseLocal2/bl2-api.js
-- ../../BaseLocal2/services/bl2-search.service.js
-- ../../BaseLocal2/services/bl2-pagination.service.js
-- ../../BaseLocal2/repositories/bl2-estudiantes.repo.js
 ========================================================= -->
 <html lang="es">
 <head>
@@ -107,6 +97,7 @@ Con qué se conecta:
         <button id="tabla-tg-cancel" type="button">Cerrar</button>
         <button id="tabla-tg-copy" type="button">Copiar mensaje</button>
         <button id="tabla-tg-open" type="button">Abrir Telegram</button>
+        <button id="tabla-tg-send" type="button">Enviar por bot</button>
       </footer>
     </div>
   </section>
@@ -153,6 +144,7 @@ Con qué se conecta:
         <button id="tabla-mass-cancel" type="button">Cerrar</button>
         <button id="tabla-mass-copy" type="button">Copiar vista previa</button>
         <button id="tabla-mass-prepare" type="button">Preparar lote</button>
+        <button id="tabla-mass-send" type="button">Enviar lote</button>
       </footer>
     </div>
   </section>
@@ -172,6 +164,7 @@ Con qué se conecta:
   <script src="../../BaseLocal2/repositories/bl2-estudiantes.repo.js"></script>
   <script src="tabla.core.js"></script>
   <script src="tabla.message.js"></script>
+  <script src="tabla.telegram-api.js"></script>
   <script src="tabla.telegram.js"></script>
   <script src="tabla.selection.js"></script>
   <script src="tabla.mass.js"></script>
