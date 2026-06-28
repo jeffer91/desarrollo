@@ -4,7 +4,7 @@ Ruta o ubicación: /Requisitos/Gestion/Tabla/tabla.mass.js
 Función o funciones:
 - Controlar el modal de Telegram masivo desde la pantalla Tabla.
 - Usar los estudiantes filtrados actualmente.
-- Permitir selección manual, seleccionar con Telegram y limpiar selección.
+- Permitir selección manual, seleccionar con chatId para bot y limpiar selección.
 - Generar vista previa del primer estudiante seleccionado.
 - Preparar y enviar lote por API segura de Telegram.
 - Registrar resultados del lote en el historial local.
@@ -54,20 +54,27 @@ Con qué se conecta:
       box.innerHTML=[
         '<span>Total: <strong>'+esc(s.total)+'</strong></span>',
         '<span>Con Telegram: <strong>'+esc(s.conTelegram)+'</strong></span>',
-        '<span>Sin Telegram: <strong>'+esc(s.sinTelegram)+'</strong></span>',
+        '<span>Con chatId: <strong>'+esc(s.conChatId||0)+'</strong></span>',
         '<span>Seleccionados: <strong>'+esc(s.seleccionados)+'</strong></span>',
-        '<span>Listos: <strong>'+esc(s.seleccionadosConTelegram)+'</strong></span>'
+        '<span>Listos para bot: <strong>'+esc(s.seleccionadosConChatId||0)+'</strong></span>'
       ].join("");
     }
     var meta=el("tabla-mass-meta");
-    if(meta)meta.textContent="Se usarán los estudiantes filtrados actualmente en la tabla. Revise la selección antes de enviar.";
+    if(meta)meta.textContent="Se usarán los estudiantes filtrados actualmente. Para envío por bot solo entran los que tienen chatId.";
   }
 
+  function rowTelegramInfo(row){return (selection()&&selection().telegramInfo)?selection().telegramInfo(row):{user:row._telegramUser,chatId:row._telegramChatId,hasTelegram:!!(row._telegramUser||row._telegramChatId),canSendByBot:!!row._telegramChatId};}
   function rowTelegramLabel(row){
-    var tg=(selection()&&selection().telegramInfo)?selection().telegramInfo(row):{user:row._telegramUser,chatId:row._telegramChatId,hasTelegram:!!(row._telegramUser||row._telegramChatId)};
+    var tg=rowTelegramInfo(row);
     if(tg.chatId)return "Chat ID";
-    if(tg.user)return "@"+tg.user;
+    if(tg.user)return "@"+tg.user+" · sin chatId";
     return "Sin Telegram";
+  }
+  function rowTelegramClass(row){
+    var tg=rowTelegramInfo(row);
+    if(tg.chatId)return "pill-ok";
+    if(tg.user)return "pill-warn";
+    return "pill-bad";
   }
 
   function renderList(){
@@ -84,7 +91,7 @@ Con qué se conecta:
       var key=row._tablaSelectionKey;
       var checked=selected[key]?"checked":"";
       var estado=row._estadoGeneral&&row._estadoGeneral.label?row._estadoGeneral.label:"—";
-      var tgClass=(row._tablaTelegramInfo&&row._tablaTelegramInfo.hasTelegram)?"pill-ok":"pill-bad";
+      var tgClass=rowTelegramClass(row);
       return '<tr><td><input class="tabla-mass-check" type="checkbox" data-mass-key="'+esc(key)+'" '+checked+' /></td><td><strong>'+esc(row._nombres||"Estudiante")+'</strong><br><small>'+esc(row._cedula||"Sin cédula")+'</small></td><td>'+esc(row._carrera||"—")+'</td><td>'+esc(estado)+'</td><td><span class="pill '+tgClass+'">'+esc(rowTelegramLabel(row))+'</span></td></tr>';
     }).join("");
     html+='</tbody></table>';
@@ -109,7 +116,7 @@ Con qué se conecta:
     state.type="requisitos";
     state.prepared=null;
     state.sending=false;
-    if(selection())selection().create(state.rows,{selectWithTelegram:true});
+    if(selection())selection().create(state.rows,{selectWithBot:true});
     if(el("tabla-mass-tipo"))el("tabla-mass-tipo").value="requisitos";
     if(el("tabla-mass-texto"))el("tabla-mass-texto").value="";
     if(el("tabla-mass-confirm"))el("tabla-mass-confirm").checked=false;
@@ -134,9 +141,9 @@ Con qué se conecta:
     if(!selection())return null;
     var confirmBox=el("tabla-mass-confirm");
     if(confirmBox&&!confirmBox.checked){status("Confirme la revisión antes de preparar el lote masivo.","warn");return null;}
-    var selected=selection().selectedWithTelegram();
-    var sin=selection().selectedWithoutTelegram();
-    if(!selected.length){status("No hay estudiantes seleccionados con Telegram.","warn");return null;}
+    var selected=typeof selection().selectedWithBot==="function"?selection().selectedWithBot():selection().selectedWithTelegram();
+    var sinChatId=typeof selection().selectedWithoutBot==="function"?selection().selectedWithoutBot():selection().selectedWithoutTelegram();
+    if(!selected.length){status("No hay estudiantes seleccionados con chatId para envío por bot.","warn");return null;}
     var lote=selected.map(function(row){
       var tg=selection().telegramInfo(row);
       return {
@@ -150,8 +157,8 @@ Con qué se conecta:
         estado:"pendiente"
       };
     });
-    state.prepared={tipo:state.type,total:lote.length,sinTelegram:sin.length,lote:lote,creadoEn:new Date().toISOString()};
-    status("Lote preparado: "+lote.length+" mensaje(s). Ya puede enviarlo por Telegram.","ok");
+    state.prepared={tipo:state.type,total:lote.length,sinChatId:sinChatId.length,lote:lote,creadoEn:new Date().toISOString()};
+    status("Lote preparado: "+lote.length+" mensaje(s) con chatId. Omitidos por falta de chatId: "+sinChatId.length+".","ok");
     return state.prepared;
   }
 
@@ -216,7 +223,7 @@ Con qué se conecta:
     if(close)close.addEventListener("click",cerrar);
     if(cancel)cancel.addEventListener("click",cerrar);
     if(all)all.addEventListener("click",function(){selection().selectAll();refresh();});
-    if(tg)tg.addEventListener("click",function(){selection().selectWithTelegram();refresh();});
+    if(tg)tg.addEventListener("click",function(){if(selection().selectWithBot)selection().selectWithBot();else selection().selectWithTelegram();refresh();});
     if(clear)clear.addEventListener("click",function(){selection().clear();refresh();});
     if(copy)copy.addEventListener("click",function(){copiarPreview();});
     if(prepare)prepare.addEventListener("click",function(){prepararLote();});
