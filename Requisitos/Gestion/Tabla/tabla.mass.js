@@ -7,7 +7,7 @@ Función o funciones:
 - Permitir selección manual, seleccionar con chatId para bot y limpiar selección.
 - Generar vista previa del primer estudiante seleccionado.
 - Preparar y enviar lote por API segura de Telegram.
-- Registrar resultados del lote en el historial local.
+- Registrar resultados del lote en el historial local, incluyendo omitidos por falta de chatId.
 Con qué se conecta:
 - tabla.core.js
 - tabla.message.js
@@ -137,6 +137,21 @@ Con qué se conecta:
     status("Vista previa masiva copiada.","ok");
   }
 
+  function omitidoSinChatId(row){
+    var tg=selection().telegramInfo(row);
+    return {
+      cedula:row._cedula||"",
+      nombre:row._nombres||"",
+      carrera:row._carrera||"",
+      periodo:row._periodo||"",
+      telegramUser:tg.user||"",
+      telegramChatId:tg.chatId||"",
+      mensaje:generarMensaje(row),
+      estado:"omitido",
+      error:"Sin chatId para envío por bot"
+    };
+  }
+
   function prepararLote(){
     if(!selection())return null;
     var confirmBox=el("tabla-mass-confirm");
@@ -157,7 +172,8 @@ Con qué se conecta:
         estado:"pendiente"
       };
     });
-    state.prepared={tipo:state.type,total:lote.length,sinChatId:sinChatId.length,lote:lote,creadoEn:new Date().toISOString()};
+    var omitidos=sinChatId.map(omitidoSinChatId);
+    state.prepared={tipo:state.type,total:lote.length,sinChatId:sinChatId.length,lote:lote,omitidosSinChatId:omitidos,creadoEn:new Date().toISOString()};
     status("Lote preparado: "+lote.length+" mensaje(s) con chatId. Omitidos por falta de chatId: "+sinChatId.length+".","ok");
     return state.prepared;
   }
@@ -189,6 +205,7 @@ Con qué se conecta:
     add(resultado&&resultado.enviados,"enviado");
     add(resultado&&resultado.fallidos,"fallido");
     add(resultado&&resultado.omitidos,"omitido");
+    add(prepared&&prepared.omitidosSinChatId,"omitido");
     if(items.length)window.TablaHistory.guardarMuchos(items);
   }
 
@@ -206,7 +223,8 @@ Con qué se conecta:
       var resultado=await window.TablaTelegramApi.enviarLoteTelegram(prepared.lote);
       state.prepared.resultado=resultado;
       guardarHistorialMasivo(resultado,prepared);
-      status("Telegram masivo finalizado. Enviados: "+resultado.resumen.enviados+", fallidos: "+resultado.resumen.fallidos+", omitidos: "+resultado.resumen.omitidos+".",resultado.resumen.fallidos?"warn":"ok");
+      var omitidosTotal=(resultado.resumen.omitidos||0)+(prepared.omitidosSinChatId?prepared.omitidosSinChatId.length:0);
+      status("Telegram masivo finalizado. Enviados: "+resultado.resumen.enviados+", fallidos: "+resultado.resumen.fallidos+", omitidos: "+omitidosTotal+".",resultado.resumen.fallidos?"warn":"ok");
     }catch(error){
       console.error("[TablaMass]",error);
       status(error&&error.message?error.message:String(error),"warn");
