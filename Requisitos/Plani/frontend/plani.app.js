@@ -2,100 +2,98 @@
 Nombre completo: plani.app.js
 Ruta o ubicación: /Requisitos/Plani/frontend/plani.app.js
 Función o funciones:
-- Orquestar la pantalla inicial de Plani.
-- Mantener estado temporal del bloque 1.
-- Conectar constantes, UI y eventos.
+- Orquestar la pantalla Plani con estado interno robusto.
+- Conectar período, tipo de documento, almacenamiento, validación y QA.
+- Mantener Plani separado de Infor y del menú principal hasta la integración final.
 Con qué se conecta:
 - plani.html
 - plani.ui.js
 - plani.events.js
 - ../core/plani.constants.js
+- ../core/plani.periodo.js
+- ../core/plani.tipo-documento.js
+- ../core/plani.state.js
+- ../core/plani.validator.js
+- ../core/plani.qa.js
 ========================================================= */
 (function(window, document){
   "use strict";
 
-  var state = null;
-
-  function cfg(){return window.PlaniConstants || {};}
   function ui(){return window.PlaniUI || null;}
   function ev(){return window.PlaniEvents || null;}
+  function st(){return window.PlaniState || null;}
+  function periodo(){return window.PlaniPeriodo || null;}
+  function validator(){return window.PlaniValidator || null;}
+  function qa(){return window.PlaniQA || null;}
   function text(value){return String(value == null ? "" : value).trim();}
-  function clone(value){return JSON.parse(JSON.stringify(value == null ? null : value));}
+  function el(id){return document.getElementById(id);}
+  function esc(value){return text(value).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;").replace(/'/g,"&#039;");}
 
-  function baseState(){
-    return clone(cfg().EMPTY_STATE || {
-      periodId:"",
-      periodLabel:"",
-      periodType:null,
-      documentType:"",
-      cronogramaRaw:"",
-      cronogramaFileName:"",
-      sectionAssets:{},
-      previewReady:false,
-      exportReady:false,
-      diagnostics:[]
-    });
+  function option(value, label, selected){
+    return '<option value="' + esc(value) + '" ' + (selected ? 'selected' : '') + '>' + esc(label) + '</option>';
   }
 
-  function addDiagnostic(kind, message){
-    state.diagnostics = Array.isArray(state.diagnostics) ? state.diagnostics : [];
-    state.diagnostics.unshift({kind:kind, message:message, at:new Date().toISOString()});
-    state.diagnostics = state.diagnostics.slice(0, 30);
-  }
-
-  function classifyPeriod(label){
-    var raw = text(label);
-    if(!raw){return null;}
-    var source = raw.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-    var regular = (source.indexOf("octubre") >= 0 && source.indexOf("marzo") >= 0) || (source.indexOf("abril") >= 0 && source.indexOf("septiembre") >= 0);
-    return {id:regular ? "REGULAR" : "PVC", label:regular ? "Regular" : "PVC", raw:raw};
-  }
-
-  function refresh(){
-    state.previewReady = !!(text(state.documentType) || text(state.cronogramaRaw));
-    state.exportReady = false;
-    return state;
+  function fillPeriods(current){
+    var select = el("plani-periodo");
+    if(!select){return;}
+    var list = periodo() && typeof periodo().list === "function" ? periodo().list() : [];
+    select.innerHTML = option("", "Selecciona un período", !current) + list.map(function(item){
+      return option(item.id, item.label, current === item.id);
+    }).join("");
   }
 
   function render(message, cls){
-    refresh();
-    if(ui()){ui().renderAll(getState(), message, cls);}
+    var snapshot = st() ? st().getState() : {};
+    if(ui()){ui().renderAll(snapshot, message, cls);}
+    if(qa()){qa().render(qa().run());}
+  }
+
+  function syncReadiness(){
+    var node = el("plani-readiness");
+    var snapshot = st() ? st().getState() : {};
+    var result = validator() ? validator().validate(snapshot) : {ok:false,message:"Validador no disponible."};
+    if(node){
+      node.textContent = result.message;
+      node.className = "plani-muted " + (result.ok ? "ok" : "warn");
+    }
+    return result;
   }
 
   function onPeriodChange(periodId, periodLabel){
-    state.periodId = text(periodId);
-    state.periodLabel = text(periodLabel || periodId);
-    state.periodType = classifyPeriod(state.periodLabel || state.periodId);
-    addDiagnostic("periodo", "Período actualizado.");
-    render(state.periodLabel ? "Período registrado para Plani." : "Selecciona un período para continuar.", state.periodLabel ? "ok" : "warn");
+    if(st()){st().setPeriod(periodId, periodLabel);}
+    var snapshot = st() ? st().getState() : {};
+    var selectDoc = el("plani-document-type");
+    if(selectDoc && snapshot.documentType){selectDoc.value = snapshot.documentType;}
+    syncReadiness();
+    render(snapshot.periodLabel ? "Período registrado para Plani." : "Selecciona un período para continuar.", snapshot.periodLabel ? "ok" : "warn");
   }
 
   function onDocumentTypeChange(documentType){
-    state.documentType = text(documentType).toUpperCase();
-    addDiagnostic("documento", "Tipo de planificación actualizado.");
-    render(state.documentType ? "Tipo de planificación seleccionado." : "Selecciona el tipo de planificación.", state.documentType ? "ok" : "warn");
+    if(st()){st().setDocumentType(documentType);}
+    syncReadiness();
+    render(documentType ? "Tipo de planificación seleccionado." : "Selecciona el tipo de planificación.", documentType ? "ok" : "warn");
   }
 
   function onCronogramaInput(value, fileName){
-    state.cronogramaRaw = text(value);
-    if(fileName !== undefined){state.cronogramaFileName = text(fileName);}
-    addDiagnostic("cronograma", "Cronograma actualizado.");
-    render(state.cronogramaRaw ? "Cronograma registrado en Plani." : "Cronograma vacío.", state.cronogramaRaw ? "ok" : "warn");
+    if(st()){st().setCronograma(value, fileName);}
+    syncReadiness();
+    render(text(value) ? "Cronograma registrado en Plani." : "Cronograma vacío.", text(value) ? "ok" : "warn");
   }
 
   function onPrepareBase(){
-    var missing = [];
-    if(!text(state.documentType)){missing.push("tipo de planificación");}
-    if(!text(state.cronogramaRaw)){missing.push("cronograma");}
-    var message = missing.length ? "Falta: " + missing.join(", ") + "." : "Base preparada para el siguiente bloque.";
-    addDiagnostic("preparar", message);
-    render(message, missing.length ? "warn" : "ok");
+    var snapshot = st() ? st().getState() : {};
+    var result = validator() ? validator().validate(snapshot) : {ok:false,message:"Validador no disponible."};
+    if(st()){st().pushDiagnostic("validacion", result.message);st().save();}
+    syncReadiness();
+    render(result.message, result.ok ? "ok" : "warn");
   }
 
   function boot(){
     try{
-      state = baseState();
-      if(ui()){ui().fillDocumentTypes(state.documentType);}
+      if(st()){st().init();}
+      var snapshot = st() ? st().getState() : {};
+      fillPeriods(snapshot.periodId);
+      if(ui()){ui().fillDocumentTypes(snapshot.documentType);}
       if(ev()){
         ev().bind({
           onPeriodChange:onPeriodChange,
@@ -104,15 +102,15 @@ Con qué se conecta:
           onPrepareBase:onPrepareBase
         });
       }
-      addDiagnostic("boot", "Plani bloque 1 iniciado.");
-      render("Plani listo. Bloque 1 cargado correctamente.", "ok");
+      syncReadiness();
+      render("Plani listo. Bloque 2 cargado correctamente.", "ok");
     }catch(error){
       console.error("[Plani boot]", error);
       if(ui()){ui().status(error.message || String(error), "bad");}
     }
   }
 
-  function getState(){return clone(state || {});}
+  function getState(){return st() ? st().getState() : {};}
 
   if(document.readyState === "loading"){
     document.addEventListener("DOMContentLoaded", boot);
