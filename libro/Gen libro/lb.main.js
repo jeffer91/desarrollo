@@ -6,6 +6,7 @@ Función o funciones:
 2. Conectar selector de carrera y selector de materia con el almacenamiento local.
 3. Ejecutar validación flexible, plan maestro, IA, secciones iniciales, unidades, recursos visuales, referencias, glosario y anexos.
 4. Construir y exportar el Word del libro.
+5. Exponer diagnóstico y revisión final para soporte.
 ========================================================= */
 
 (function iniciarGenLibro(window, document) {
@@ -31,6 +32,9 @@ Función o funciones:
   var AppendixBuilder = window.LibroGenLibroAppendixBuilder || null;
   var DocxBuilder = window.LibroGenLibroDocxBuilder || null;
   var DocxExporter = window.LibroGenLibroDocxExporter || null;
+  var ErrorHandler = window.LibroGenLibroErrorHandler || null;
+  var DiagnosticsBuilder = window.LibroGenLibroDiagnosticsBuilder || null;
+  var FinalReview = window.LibroGenLibroFinalReview || null;
 
   function refreshModules() {
     Storage = window.LibroGenLibroStorage || Storage;
@@ -49,6 +53,9 @@ Función o funciones:
     AppendixBuilder = window.LibroGenLibroAppendixBuilder || AppendixBuilder;
     DocxBuilder = window.LibroGenLibroDocxBuilder || DocxBuilder;
     DocxExporter = window.LibroGenLibroDocxExporter || DocxExporter;
+    ErrorHandler = window.LibroGenLibroErrorHandler || ErrorHandler;
+    DiagnosticsBuilder = window.LibroGenLibroDiagnosticsBuilder || DiagnosticsBuilder;
+    FinalReview = window.LibroGenLibroFinalReview || FinalReview;
   }
 
   function setInitialData() {
@@ -76,9 +83,7 @@ Función o funciones:
     var validation = Validator.validate(selected);
     var message = typeof Validator.message === "function" ? Validator.message(validation) : "Materia validada.";
 
-    if (State && typeof State.addMessage === "function") {
-      State.addMessage(validation.ok ? "ok" : "warning", message);
-    }
+    if (State && typeof State.addMessage === "function") State.addMessage(validation.ok ? "ok" : "warning", message);
 
     if (!validation.ok) {
       UI.setMessage("is-error", message);
@@ -117,7 +122,6 @@ Función o funciones:
 
   async function prepareAi(plan) {
     refreshModules();
-
     if (!plan) return null;
 
     if (!AiOrchestrator || typeof AiOrchestrator.prepare !== "function") {
@@ -128,73 +132,51 @@ Función o funciones:
     }
 
     var prepared = await AiOrchestrator.prepare(plan);
-
     State.addMessage("ok", "Motor IA preparado con " + prepared.tasks.length + " tareas.");
     UI.setMessage("is-ok", "Motor IA preparado. Generando secciones iniciales.");
     UI.setStatus("IA preparada");
     Progress.render("presentation", "Motor IA preparado", 18);
-
     return prepared;
   }
 
   async function buildInitialSections(plan) {
     refreshModules();
-
     if (!plan || !InitialSectionsBuilder) return null;
 
     Progress.render("presentation", "Generando secciones iniciales", 22);
-
-    var initialSections = typeof InitialSectionsBuilder.buildWithAi === "function"
-      ? await InitialSectionsBuilder.buildWithAi(plan)
-      : InitialSectionsBuilder.buildBase(plan);
-
+    var initialSections = typeof InitialSectionsBuilder.buildWithAi === "function" ? await InitialSectionsBuilder.buildWithAi(plan) : InitialSectionsBuilder.buildBase(plan);
     State.addMessage("ok", "Secciones iniciales creadas.");
     UI.setMessage("is-ok", "Secciones iniciales creadas. Desarrollando unidades.");
     UI.setStatus("Secciones iniciales listas");
     Progress.render("diagnostic", "Secciones iniciales listas", 30);
-
     return initialSections;
   }
 
   async function buildUnits(plan) {
     refreshModules();
-
     if (!plan || !UnitBuilder || typeof UnitBuilder.buildAll !== "function") return null;
 
     Progress.render("units", "Desarrollando unidades", 52);
-
     var units = await UnitBuilder.buildAll(plan);
-
     State.addMessage("ok", "Unidades desarrolladas: " + units.units.length + ".");
     UI.setMessage("is-ok", "Unidades desarrolladas. Preparando figuras y tablas.");
     UI.setStatus("Unidades listas");
     Progress.render("units", "Unidades listas", 52);
-
     return units;
   }
 
   function buildVisualResources(units) {
     refreshModules();
-
     if (!units) return null;
 
     Progress.render("visuals", "Preparando tablas y figuras", 78);
-
-    var figures = FigurePlanner && typeof FigurePlanner.planAll === "function" ? FigurePlanner.planAll(units) : null;
-    var tables = TablePlanner && typeof TablePlanner.planAll === "function" ? TablePlanner.planAll(units) : null;
-    var diagrams = DiagramBuilder && typeof DiagramBuilder.planAll === "function" ? DiagramBuilder.planAll(units) : null;
-
     var visuals = {
       id: "visual-resources",
       title: "Recursos visuales didácticos",
-      figures: figures,
-      tables: tables,
-      diagrams: diagrams,
-      rules: {
-        onlyIfUseful: true,
-        noDecorativeImages: true,
-        appGeneratedResources: true
-      },
+      figures: FigurePlanner && typeof FigurePlanner.planAll === "function" ? FigurePlanner.planAll(units) : null,
+      tables: TablePlanner && typeof TablePlanner.planAll === "function" ? TablePlanner.planAll(units) : null,
+      diagrams: DiagramBuilder && typeof DiagramBuilder.planAll === "function" ? DiagramBuilder.planAll(units) : null,
+      rules: { onlyIfUseful: true, noDecorativeImages: true, appGeneratedResources: true },
       createdAt: new Date().toISOString()
     };
 
@@ -202,17 +184,14 @@ Función o funciones:
     UI.setMessage("is-ok", "Figuras, tablas y diagramas planificados. Buscando referencias APA 7.");
     UI.setStatus("Recursos visuales listos");
     Progress.render("visuals", "Recursos visuales listos", 78);
-
     return visuals;
   }
 
   async function buildReferences(plan, draft) {
     refreshModules();
-
     if (!plan || !ReferencesBuilder || typeof ReferencesBuilder.build !== "function") return null;
 
     Progress.render("references", "Buscando referencias APA 7", 68);
-
     var references = await ReferencesBuilder.build(plan, draft);
 
     if (references.ok) {
@@ -226,7 +205,6 @@ Función o funciones:
     }
 
     Progress.render("references", "Referencias procesadas", 68);
-
     return references;
   }
 
@@ -242,22 +220,16 @@ Función o funciones:
     UI.setMessage("is-ok", "Glosario y anexos preparados. Construyendo Word.");
     UI.setStatus("Glosario y anexos listos");
     Progress.render("docx", "Construyendo Word", 88);
-
     return { glossary: glossary, appendix: appendix };
   }
 
   async function buildAndExportWord(bookDraft) {
     refreshModules();
-
     if (!bookDraft || !DocxBuilder || typeof DocxBuilder.build !== "function") return null;
 
     Progress.render("docx", "Armando Word", 90);
-
     var model = DocxBuilder.build(bookDraft);
-    var exportResult = DocxExporter && typeof DocxExporter.exportDocx === "function"
-      ? await DocxExporter.exportDocx(model)
-      : { ok: false, error: "No existe exportador Word." };
-
+    var exportResult = DocxExporter && typeof DocxExporter.exportDocx === "function" ? await DocxExporter.exportDocx(model) : { ok: false, error: "No existe exportador Word." };
     var wordInfo = {
       id: "libro-" + Date.now(),
       carrera: bookDraft.plan && bookDraft.plan.carrera,
@@ -308,12 +280,10 @@ Función o funciones:
 
     var validation = runFlexibleValidation(selected);
     window.LibroGenLibro.lastValidation = validation;
-
     if (validation && validation.ok === false) return null;
 
     var plan = buildPlan(selected, validation);
     window.LibroGenLibro.lastPlan = plan;
-
     if (!plan) return null;
 
     var prepared = await prepareAi(plan);
@@ -328,13 +298,7 @@ Función o funciones:
     var visualResources = buildVisualResources(units);
     window.LibroGenLibro.lastVisualResources = visualResources;
 
-    var draft = {
-      plan: plan,
-      initialSections: initialSections,
-      units: units,
-      visualResources: visualResources
-    };
-
+    var draft = { plan: plan, initialSections: initialSections, units: units, visualResources: visualResources };
     var references = await buildReferences(plan, draft);
     window.LibroGenLibro.lastReferences = references;
     draft.references = references;
@@ -358,8 +322,19 @@ Función o funciones:
 
     var wordInfo = await buildAndExportWord(draft);
     window.LibroGenLibro.lastWordInfo = wordInfo;
-
     return plan;
+  }
+
+  function runFinalReview() {
+    refreshModules();
+    if (FinalReview && typeof FinalReview.runAndStore === "function") return FinalReview.runAndStore();
+    return null;
+  }
+
+  function runDiagnostics() {
+    refreshModules();
+    if (DiagnosticsBuilder && typeof DiagnosticsBuilder.build === "function") return DiagnosticsBuilder.build();
+    return null;
   }
 
   function boot() {
@@ -374,6 +349,7 @@ Función o funciones:
     UI.renderInitial();
     Progress.reset();
     setInitialData();
+    runFinalReview();
 
     var carreraSelect = UI.byId("lb-carrera-select");
     var materiaSelect = UI.byId("lb-materia-select");
@@ -388,10 +364,7 @@ Función o funciones:
         State.setLibroGenerado(null);
         UI.setGenerateEnabled(false);
         Progress.render("load", carrera ? "Cargando materias" : "Esperando selección de materia", carrera ? 5 : 0);
-
-        if (MateriaSelector && typeof MateriaSelector.loadMaterias === "function") {
-          MateriaSelector.loadMaterias(carrera);
-        }
+        if (MateriaSelector && typeof MateriaSelector.loadMaterias === "function") MateriaSelector.loadMaterias(carrera);
       });
     }
 
@@ -402,7 +375,6 @@ Función o funciones:
         State.setSelection(carrera, materiaId);
         State.setPlanLibro(null);
         State.setLibroGenerado(null);
-
         if (MateriaSelector && typeof MateriaSelector.selectMateria === "function") {
           var selected = MateriaSelector.selectMateria(carrera, materiaId);
           Progress.render(selected ? "load" : "idle", selected ? "Materia cargada" : "Esperando selección de materia", selected ? 8 : 0);
@@ -412,6 +384,10 @@ Función o funciones:
 
     if (generateButton) {
       generateButton.addEventListener("click", function onGenerateClick() {
+        if (ErrorHandler && typeof ErrorHandler.safeAsync === "function") {
+          ErrorHandler.safeAsync(prepareBookPlan, "gen-libro.generate");
+          return;
+        }
         prepareBookPlan();
       });
     }
@@ -422,7 +398,9 @@ Función o funciones:
       validateSelected: function validateSelected() {
         return runFlexibleValidation(State.getState().materiaSeleccionada);
       },
-      buildPlan: prepareBookPlan
+      buildPlan: prepareBookPlan,
+      diagnostics: runDiagnostics,
+      finalReview: runFinalReview
     };
   }
 
