@@ -1,27 +1,23 @@
 /* =========================================================
 Nombre completo: bl-estudiantes.service.js
 Ruta o ubicación: /Requisitos/BaseLocal/services/bl-estudiantes.service.js
-Función o funciones:
+Función:
 - Leer la colección Estudiantes desde Firestore.
 - Normalizar estudiantes con cédula como clave principal.
-- Conservar todos los campos originales de Firestore.
-- Fusionar duplicados por cédula sin perder campos útiles.
-- Preparar soporte para documentos antiguos tipo cedula_periodo.
-Con qué se conecta:
-- bl-campos.js
-- bl-normalizador.js
-- bl-divisiones.service.js
-- baselocal.firebase.js
+- Conservar campos originales.
+- Fusionar duplicados por cédula.
+- Leer por lotes para evitar congelar Electron.
 ========================================================= */
 (function(window){
   "use strict";
 
   var COLLECTION = "Estudiantes";
+  var DEFAULT_BATCH_SIZE = 250;
 
   function campos(){if(!window.BLCampos){throw new Error("BLCampos no disponible.");}return window.BLCampos;}
   function normalizador(){if(!window.BLNormalizador){throw new Error("BLNormalizador no disponible.");}return window.BLNormalizador;}
   function text(value){return campos().text(value);}
-  function clone(value){try{return JSON.parse(JSON.stringify(value == null ? null : value));}catch(error){return value;}}
+  function delay(ms){return new Promise(function(resolve){setTimeout(resolve, ms || 0);});}
 
   function safeDate(value){
     try{
@@ -74,6 +70,36 @@ Con qué se conecta:
     return dedupeByCedula(rows);
   }
 
+  async function readInBatches(db, options){
+    if(!db || typeof db.collection !== "function"){throw new Error("Firestore no disponible para leer Estudiantes por lotes.");}
+    options = options || {};
+    var batchSize = Math.max(50, Math.min(500, Number(options.batchSize || DEFAULT_BATCH_SIZE) || DEFAULT_BATCH_SIZE));
+    var rows = [];
+    var lastDoc = null;
+    var total = 0;
+    var index = 0;
+    var fieldPath = window.firebase && window.firebase.firestore && window.firebase.firestore.FieldPath ? window.firebase.firestore.FieldPath.documentId() : null;
+
+    while(true){
+      var query = db.collection(COLLECTION);
+      if(fieldPath && typeof query.orderBy === "function"){query = query.orderBy(fieldPath);}
+      query = query.limit(batchSize);
+      if(lastDoc && typeof query.startAfter === "function"){query = query.startAfter(lastDoc);}
+      var snap = await query.get();
+      var docs = snap && Array.isArray(snap.docs) ? snap.docs : [];
+      if(!docs.length){break;}
+      docs.forEach(function(doc){rows.push(docToStudent(doc, index));index += 1;});
+      total += docs.length;
+      lastDoc = docs[docs.length - 1];
+      if(typeof options.onBatch === "function"){
+        try{options.onBatch({batchRows:docs.length,total:total});}catch(error){}
+      }
+      await delay(20);
+      if(docs.length < batchSize){break;}
+    }
+    return dedupeByCedula(rows);
+  }
+
   function updatedTime(row){
     row = row || {};
     var raw = text(campos().getValue(row, "updatedAt", "") || row.ultimaSincronizacion || row.actualizadoEn || row.createdAt || row.creadoEn || "");
@@ -82,14 +108,7 @@ Con qué se conecta:
   }
 
   function normalizeDivisiones(value){return normalizador().normalizeDivisiones(value);}
-
-  function valueHasData(value){
-    if(value === undefined || value === null){return false;}
-    if(Array.isArray(value)){return value.length > 0;}
-    if(typeof value === "object"){return Object.keys(value).length > 0;}
-    return text(value) !== "";
-  }
-
+  function valueHasData(value){if(value === undefined || value === null){return false;}if(Array.isArray(value)){return value.length > 0;}if(typeof value === "object"){return Object.keys(value).length > 0;}return text(value) !== "";}
   function mergeValue(current, incoming, incomingNewer){
     if(!valueHasData(incoming)){return current;}
     if(!valueHasData(current)){return incoming;}
@@ -113,7 +132,6 @@ Con qué se conecta:
     var incomingNewer = updatedTime(next) >= updatedTime(base);
     var out = Object.assign({}, base);
     Object.keys(next).forEach(function(key){out[key] = mergeValue(out[key], next[key], incomingNewer);});
-
     var cedula = text(base.cedula || next.cedula || base.numeroIdentificacion || next.numeroIdentificacion);
     if(cedula){out.cedula = cedula;out.numeroIdentificacion = text(out.numeroIdentificacion || cedula);}
     out.divisiones = normalizeDivisiones([].concat(normalizeDivisiones(base.divisiones || base.division), normalizeDivisiones(next.divisiones || next.division)));
@@ -140,6 +158,7 @@ Con qué se conecta:
   window.BLEstudiantesService = {
     collection:COLLECTION,
     read:read,
+    readInBatches:readInBatches,
     dedupeByCedula:dedupeByCedula,
     normalizeLocalList:normalizeLocalList,
     mergeStudents:mergeStudents,
