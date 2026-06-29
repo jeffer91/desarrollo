@@ -7,6 +7,7 @@
   - Confirmar que las pruebas IA se ejecuten por función protegida con token administrativo.
   - Probar el motor local sin consumir internet ni claves reales.
   - Verificar que los resultados IA se pinten con nodos de texto y no como HTML.
+  - Verificar que el motor local convierta frases informales en lenguaje académico.
   Se conecta con:
   - package.json
   - src/services/ta-titulo-articulo-motor-local.service.js
@@ -75,6 +76,8 @@ requireIncludes("src/services/ta-titulo-articulo-motor-local.service.js", [
   "generarSugerenciasTitulo",
   "local-inteligente",
   "No se pudo conectar con Gemini",
+  "academizar",
+  "bajo nivel de ventas",
   "sugerencias"
 ]);
 
@@ -146,6 +149,23 @@ try {
   assert(resultado.sugerencias.length === 2, "Motor local: debe devolver exactamente 2 sugerencias.");
   assert(resultado.sugerencias.every((item) => typeof item === "string" && item.length > 20), "Motor local: las sugerencias deben estar redactadas y no vacías.");
   assert(new Set(resultado.sugerencias.map((item) => item.toLowerCase())).size === 2, "Motor local: las sugerencias deben ser diferentes.");
+
+  const fraseInformal = ["no", "venden"].join(" ");
+  const informal = mod.TaTituloArticuloMotorLocal.generarSugerenciasTitulo({
+    carrera: "Administración de Empresas",
+    temaGeneral: fraseInformal,
+    problemaNecesidad: fraseInformal,
+    lugarContexto: "Quito",
+    grupoEstudio: "microemprendimientos",
+    anioPeriodoDatos: "2026",
+    objetivoArticulo: "Analizar el problema comercial para proponer una mejora.",
+    resultadoEsperado: "Propuesta de mejora comercial.",
+    numeroTitulo: 1,
+    titulosYaGenerados: []
+  });
+  const informalTexto = informal.sugerencias.join(" ").toLowerCase();
+  assert(!informalTexto.includes(fraseInformal), "Motor local: no debe copiar frases informales en el título final.");
+  assert(informalTexto.includes("bajo nivel de ventas"), "Motor local: debe convertir la frase informal en lenguaje académico.");
 } catch (error) {
   errors.push(`Motor local: prueba fallida. ${error.message || error}`);
 }
@@ -162,3 +182,4 @@ console.log("- Fallback conectado al cliente Gemini.");
 console.log("- Administrador con IA y conexiones.");
 console.log("- Pruebas IA protegidas por token administrativo.");
 console.log("- Resultados IA renderizados de forma segura.");
+console.log("- Frases informales convertidas en lenguaje académico.");
