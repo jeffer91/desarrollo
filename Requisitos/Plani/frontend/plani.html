@@ -5,7 +5,7 @@ Ruta o ubicación: /Requisitos/Plani/frontend/plani.html
 Función o funciones:
 - Mostrar la pantalla Plani para planificación de titulación.
 - Guiar el flujo: Período -> Insumos -> Documento.
-- Conectar estado, período, tipo de documento, cronograma, recursos por sección y motor documental.
+- Conectar estado, período, tipo de documento, cronograma, recursos, motor documental y exportación.
 - Mantener el módulo separado de Infor hasta integración final.
 Con qué se conecta:
 - plani.css
@@ -28,6 +28,7 @@ Con qué se conecta:
 - ../core/plani.document-model.js
 - ../core/plani.builder.js
 - ../core/plani.preview.js
+- ../core/plani.export.gateway.js
 - ../core/plani.qa.js
 - ../templates/layout/layout.config.js
 - ../templates/layout/typography.config.js
@@ -38,6 +39,12 @@ Con qué se conecta:
 - ../templates/layout/table.template.js
 - ../templates/layout/section.template.js
 - ../templates/layout/page.template.js
+- ../export/shared/plani.export.filename.js
+- ../export/shared/plani.export.helpers.js
+- ../export/shared/plani.export.styles.js
+- ../export/html/plani.html.export.js
+- ../export/word/plani.word.export.js
+- ../export/pdf/plani.pdf.export.js
 - plani.ui.js
 - plani.events.js
 - plani.assets.ui.js
@@ -60,7 +67,7 @@ Con qué se conecta:
         <p class="plani-lead">Selecciona el período, define el tipo de planificación, carga el cronograma y prepara el documento institucional.</p>
       </div>
       <div class="plani-hero-actions">
-        <span id="plani-module-state" class="plani-chip warn">Bloque 5</span>
+        <span id="plani-module-state" class="plani-chip warn">Bloque 6</span>
       </div>
     </section>
 
@@ -158,7 +165,7 @@ Con qué se conecta:
     <section class="plani-card plani-process-card">
       <div>
         <h2>5. Procesar y exportar</h2>
-        <p>En el bloque 5 ya existe motor constructor y vista previa del documento interno.</p>
+        <p>En el bloque 6 ya existen exportadores HTML, Word y PDF desde una sola fuente documental.</p>
         <p id="plani-readiness" class="plani-muted">Estado base listo.</p>
       </div>
       <div class="plani-process-actions">
@@ -202,6 +209,13 @@ Con qué se conecta:
   <script src="../templates/layout/table.template.js"></script>
   <script src="../templates/layout/section.template.js"></script>
   <script src="../templates/layout/page.template.js"></script>
+  <script src="../export/shared/plani.export.filename.js"></script>
+  <script src="../export/shared/plani.export.helpers.js"></script>
+  <script src="../export/shared/plani.export.styles.js"></script>
+  <script src="../export/html/plani.html.export.js"></script>
+  <script src="../export/word/plani.word.export.js"></script>
+  <script src="../export/pdf/plani.pdf.export.js"></script>
+  <script src="../core/plani.export.gateway.js"></script>
   <script src="plani.ui.js"></script>
   <script src="plani.events.js"></script>
   <script src="plani.assets.ui.js"></script>
