@@ -5,7 +5,7 @@ Función o funciones:
 1. Inicializar la pantalla Gen libro.
 2. Conectar selector de carrera y selector de materia con el almacenamiento local.
 3. Cargar la materia consolidada seleccionada desde Carga de la materia.
-4. Ejecutar validación flexible, crear el plan maestro y preparar el motor IA.
+4. Ejecutar validación flexible, crear el plan maestro, preparar IA y secciones iniciales.
 ========================================================= */
 
 (function iniciarGenLibro(window, document) {
@@ -20,6 +20,7 @@ Función o funciones:
   var Validator = window.LibroGenLibroValidator || null;
   var BookPlan = window.LibroGenLibroBookPlan || null;
   var AiOrchestrator = window.LibroGenLibroAiOrchestrator || null;
+  var InitialSectionsBuilder = window.LibroGenLibroInitialSectionsBuilder || null;
 
   function refreshModules() {
     CarreraSelector = window.LibroGenLibroCarreraSelector || CarreraSelector;
@@ -27,6 +28,7 @@ Función o funciones:
     Validator = window.LibroGenLibroValidator || Validator;
     BookPlan = window.LibroGenLibroBookPlan || BookPlan;
     AiOrchestrator = window.LibroGenLibroAiOrchestrator || AiOrchestrator;
+    InitialSectionsBuilder = window.LibroGenLibroInitialSectionsBuilder || InitialSectionsBuilder;
   }
 
   function setInitialData() {
@@ -108,11 +110,30 @@ Función o funciones:
     var prepared = await AiOrchestrator.prepare(plan);
 
     State.addMessage("ok", "Motor IA preparado con " + prepared.tasks.length + " tareas.");
-    UI.setMessage("is-ok", "Motor IA preparado. Listo para generar secciones del libro.");
+    UI.setMessage("is-ok", "Motor IA preparado. Generando secciones iniciales.");
     UI.setStatus("IA preparada");
-    Progress.render("plan", "Motor IA preparado", 18);
+    Progress.render("presentation", "Motor IA preparado", 18);
 
     return prepared;
+  }
+
+  async function buildInitialSections(plan) {
+    refreshModules();
+
+    if (!plan || !InitialSectionsBuilder) return null;
+
+    Progress.render("presentation", "Generando secciones iniciales", 22);
+
+    var initialSections = typeof InitialSectionsBuilder.buildWithAi === "function"
+      ? await InitialSectionsBuilder.buildWithAi(plan)
+      : InitialSectionsBuilder.buildBase(plan);
+
+    State.addMessage("ok", "Secciones iniciales creadas.");
+    UI.setMessage("is-ok", "Secciones iniciales creadas. Listo para desarrollar unidades.");
+    UI.setStatus("Secciones iniciales listas");
+    Progress.render("diagnostic", "Secciones iniciales listas", 30);
+
+    return initialSections;
   }
 
   async function prepareBookPlan() {
@@ -141,6 +162,9 @@ Función o funciones:
 
     var prepared = await prepareAi(plan);
     window.LibroGenLibro.lastAiPreparation = prepared;
+
+    var initialSections = await buildInitialSections(plan);
+    window.LibroGenLibro.lastInitialSections = initialSections;
 
     return plan;
   }
