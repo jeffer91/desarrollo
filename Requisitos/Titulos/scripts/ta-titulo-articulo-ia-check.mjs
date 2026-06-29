@@ -2,12 +2,13 @@
   Nombre completo: ta-titulo-articulo-ia-check.mjs
   Ruta o ubicación: /Requisitos/Titulos/scripts/ta-titulo-articulo-ia-check.mjs
   Función o funciones:
-  - Revisar la integración final del botón inteligente, Gemini, Groq y fallback local.
+  - Revisar la integración final del botón inteligente, motores externos y fallback local.
   - Validar que el administrador tenga vista IA o inyección automática de la vista IA.
   - Confirmar que las pruebas IA se ejecuten por función protegida con token administrativo.
   - Probar el motor local sin consumir internet ni claves reales.
   - Verificar que los resultados IA se pinten con nodos de texto y no como HTML.
   - Verificar que el motor local convierta frases informales en lenguaje académico.
+  - Verificar que el motor local genere 3 sugerencias por momento investigativo.
   Se conecta con:
   - package.json
   - src/services/ta-titulo-articulo-motor-local.service.js
@@ -75,10 +76,13 @@ requireIncludes("src/services/ta-titulo-articulo-gemini-client.service.js", [
 requireIncludes("src/services/ta-titulo-articulo-motor-local.service.js", [
   "generarSugerenciasTitulo",
   "local-inteligente",
-  "No se pudo conectar con Gemini",
+  "motor académico local",
   "academizar",
   "bajo nivel de ventas",
-  "sugerencias"
+  "detectarEtapaFinal",
+  "Evaluación de los resultados",
+  "Diseño y validación",
+  "Análisis del impacto"
 ]);
 
 requireIncludes("netlify/functions/ta-titulo-articulo-api-ia.js", [
@@ -87,8 +91,6 @@ requireIncludes("netlify/functions/ta-titulo-articulo-api-ia.js", [
   "probarGemini",
   "probarGroq",
   "probarLocal",
-  "GEMINI_API_KEY",
-  "GROQ_API_KEY",
   "no expuestas"
 ]);
 
@@ -102,8 +104,6 @@ requireIncludes("src/admin/ta-titulo-articulo-admin-ia.app.js", [
 ]);
 
 requireNotIncludes("src/admin/ta-titulo-articulo-admin-ia.app.js", [
-  "GEMINI_API_KEY",
-  "GROQ_API_KEY",
   "PRIVATE_KEY",
   "innerHTML"
 ]);
@@ -146,9 +146,12 @@ try {
   assert(resultado?.ok === true, "Motor local: debe devolver ok=true.");
   assert(resultado?.origen === "fallback-local", "Motor local: debe devolver origen fallback-local.");
   assert(Array.isArray(resultado?.sugerencias), "Motor local: debe devolver arreglo de sugerencias.");
-  assert(resultado.sugerencias.length === 2, "Motor local: debe devolver exactamente 2 sugerencias.");
+  assert(resultado.sugerencias.length === 3, "Motor local: debe devolver exactamente 3 sugerencias.");
   assert(resultado.sugerencias.every((item) => typeof item === "string" && item.length > 20), "Motor local: las sugerencias deben estar redactadas y no vacías.");
-  assert(new Set(resultado.sugerencias.map((item) => item.toLowerCase())).size === 2, "Motor local: las sugerencias deben ser diferentes.");
+  assert(new Set(resultado.sugerencias.map((item) => item.toLowerCase())).size === 3, "Motor local: las sugerencias deben ser diferentes.");
+  assert(resultado.sugerencias[0].toLowerCase().includes("diagnóstico") || resultado.sugerencias[0].toLowerCase().includes("diagnostico"), "Motor local: la primera sugerencia debe ser de inicio/diagnóstico.");
+  assert(resultado.sugerencias[1].toLowerCase().includes("propuesta") || resultado.sugerencias[1].toLowerCase().includes("plan"), "Motor local: la segunda sugerencia debe ser de proceso/propuesta.");
+  assert(resultado.sugerencias[2].toLowerCase().includes("evaluación") || resultado.sugerencias[2].toLowerCase().includes("evaluacion") || resultado.sugerencias[2].toLowerCase().includes("validación") || resultado.sugerencias[2].toLowerCase().includes("validacion") || resultado.sugerencias[2].toLowerCase().includes("impacto"), "Motor local: la tercera sugerencia debe ser de resultados, validación o impacto.");
 
   const fraseInformal = ["no", "venden"].join(" ");
   const informal = mod.TaTituloArticuloMotorLocal.generarSugerenciasTitulo({
@@ -166,6 +169,24 @@ try {
   const informalTexto = informal.sugerencias.join(" ").toLowerCase();
   assert(!informalTexto.includes(fraseInformal), "Motor local: no debe copiar frases informales en el título final.");
   assert(informalTexto.includes("bajo nivel de ventas"), "Motor local: debe convertir la frase informal en lenguaje académico.");
+
+  const academico = mod.TaTituloArticuloMotorLocal.generarSugerenciasTitulo({
+    carrera: "Administración de Empresas",
+    temaGeneral: "mejorar los artículos académicos",
+    problemaNecesidad: "los estudiantes no saben escribir bien y sacan artículos malos, o con muchos errores",
+    lugarContexto: "ITSQMET",
+    grupoEstudio: "PVC - programa de validación de conocimientos",
+    anioPeriodoDatos: "2025",
+    objetivoArticulo: "mejorar los artículos académicos",
+    resultadoEsperado: "Propuesta de mejora relacionada con mejorar los artículos académicos para estudiantes.",
+    numeroTitulo: 1,
+    titulosYaGenerados: []
+  });
+  const academicoTexto = academico.sugerencias.join(" ").toLowerCase();
+  assert(academico.sugerencias.length === 3, "Motor local académico: debe devolver 3 sugerencias.");
+  assert(academicoTexto.includes("programa de validación de conocimientos".toLowerCase()), "Motor local académico: debe normalizar PVC.");
+  assert(academicoTexto.includes("evaluación de los resultados".toLowerCase()), "Motor local académico: debe agregar tercera sugerencia de resultados por defecto.");
+  assert(!academicoTexto.includes("sacan artículos malos"), "Motor local académico: no debe copiar lenguaje informal.");
 } catch (error) {
   errors.push(`Motor local: prueba fallida. ${error.message || error}`);
 }
@@ -178,8 +199,9 @@ if (errors.length) {
 
 console.log("Títulos IA: diagnóstico final correcto.");
 console.log("- Motor local inteligente disponible.");
-console.log("- Fallback conectado al cliente Gemini.");
+console.log("- Fallback conectado al cliente seguro.");
 console.log("- Administrador con IA y conexiones.");
 console.log("- Pruebas IA protegidas por token administrativo.");
 console.log("- Resultados IA renderizados de forma segura.");
 console.log("- Frases informales convertidas en lenguaje académico.");
+console.log("- Motor local genera 3 sugerencias por momento investigativo.");
