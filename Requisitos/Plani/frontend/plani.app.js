@@ -3,26 +3,13 @@ Nombre completo: plani.app.js
 Ruta o ubicación: /Requisitos/Plani/frontend/plani.app.js
 Función o funciones:
 - Orquestar la pantalla Plani con estado interno robusto.
-- Conectar período, tipo de documento, almacenamiento, validación, QA, cronograma y recursos.
+- Conectar período, tipo de documento, almacenamiento, validación, QA, cronograma, recursos y motor documental.
 - Mantener Plani separado de Infor y del menú principal hasta la integración final.
-Con qué se conecta:
-- plani.html
-- plani.ui.js
-- plani.events.js
-- plani.assets.ui.js
-- ../core/plani.constants.js
-- ../core/plani.periodo.js
-- ../core/plani.tipo-documento.js
-- ../core/plani.state.js
-- ../core/plani.validator.js
-- ../core/plani.cronograma.parser.js
-- ../core/plani.cronograma.mapper.js
-- ../core/plani.section-assets.js
-- ../core/plani.charts.js
-- ../core/plani.qa.js
 ========================================================= */
 (function(window, document){
   "use strict";
+
+  var currentModel = null;
 
   function ui(){return window.PlaniUI || null;}
   function ev(){return window.PlaniEvents || null;}
@@ -31,6 +18,8 @@ Con qué se conecta:
   function validator(){return window.PlaniValidator || null;}
   function qa(){return window.PlaniQA || null;}
   function assetsUI(){return window.PlaniAssetsUI || null;}
+  function previewUI(){return window.PlaniPreviewUI || null;}
+  function builder(){return window.PlaniBuilder || null;}
   function parser(){return window.PlaniCronogramaParser || null;}
   function mapper(){return window.PlaniCronogramaMapper || null;}
   function charts(){return window.PlaniCharts || null;}
@@ -72,11 +61,18 @@ Con qué se conecta:
     }
   }
 
+  function renderPreview(model){
+    if(previewUI()){
+      previewUI().render(model || currentModel);
+    }
+  }
+
   function render(message, cls){
     var snapshot = st() ? st().getState() : {};
     snapshot = enrichCronograma(snapshot);
     if(ui()){ui().renderAll(snapshot, message, cls);}
     renderAssets(snapshot);
+    if(currentModel){renderPreview(currentModel);}
     if(qa()){qa().render(qa().run());}
   }
 
@@ -92,6 +88,7 @@ Con qué se conecta:
   }
 
   function onPeriodChange(periodId, periodLabel){
+    currentModel = null;
     if(st()){st().setPeriod(periodId, periodLabel);}
     var snapshot = st() ? st().getState() : {};
     var selectDoc = el("plani-document-type");
@@ -101,12 +98,14 @@ Con qué se conecta:
   }
 
   function onDocumentTypeChange(documentType){
+    currentModel = null;
     if(st()){st().setDocumentType(documentType);}
     syncReadiness();
     render(documentType ? "Tipo de planificación seleccionado." : "Selecciona el tipo de planificación.", documentType ? "ok" : "warn");
   }
 
   function onCronogramaInput(value, fileName){
+    currentModel = null;
     if(st()){st().setCronograma(value, fileName);}
     syncReadiness();
     render(text(value) ? "Cronograma interpretado en Plani." : "Cronograma vacío.", text(value) ? "ok" : "warn");
@@ -116,8 +115,12 @@ Con qué se conecta:
     var snapshot = st() ? st().getState() : {};
     var result = validator() ? validator().validate(snapshot) : {ok:false,message:"Validador no disponible."};
     if(st()){st().pushDiagnostic("validacion", result.message);st().save();}
+    if(result.ok && builder()){
+      currentModel = builder().build(enrichCronograma(snapshot));
+      renderPreview(currentModel);
+    }
     syncReadiness();
-    render(result.message, result.ok ? "ok" : "warn");
+    render(result.ok ? "Documento interno construido correctamente." : result.message, result.ok ? "ok" : "warn");
   }
 
   function boot(){
@@ -135,7 +138,7 @@ Con qué se conecta:
         });
       }
       syncReadiness();
-      render("Plani listo. Bloque 4 cargado correctamente.", "ok");
+      render("Plani listo. Bloque 5 cargado correctamente.", "ok");
     }catch(error){
       console.error("[Plani boot]", error);
       if(ui()){ui().status(error.message || String(error), "bad");}
@@ -143,6 +146,7 @@ Con qué se conecta:
   }
 
   function getState(){return st() ? st().getState() : {};}
+  function getCurrentModel(){return currentModel;}
 
   if(document.readyState === "loading"){
     document.addEventListener("DOMContentLoaded", boot);
@@ -152,6 +156,7 @@ Con qué se conecta:
 
   window.PlaniApp = {
     getState:getState,
+    getCurrentModel:getCurrentModel,
     render:render,
     onPeriodChange:onPeriodChange,
     onDocumentTypeChange:onDocumentTypeChange,
