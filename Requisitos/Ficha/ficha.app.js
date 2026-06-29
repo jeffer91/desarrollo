@@ -10,6 +10,7 @@ Función o funciones:
 - Renderizar notas finales Nart, Ndef y Nfin.
 - Mostrar encabezado en filas: cédula, carrera y período normalizado.
 - Renderizar y guardar modalidadTitulacion para Infor.
+- Evitar construcción pesada duplicada al abrir la pantalla.
 Con qué se conecta:
 - ficha.core.js
 - ficha.export.js
@@ -111,7 +112,7 @@ Con qué se conecta:
     bindIf("ficha-copy-correo", "click", function(){var row = selectedFromRows();if(row){copyText(row._correo, "Correo copiado.");}});
   }
 
-  function boot(){if(window.ExcelLocalBridge){window.ExcelLocalBridge.ensureReady();}bind();render("boot");}
+  function boot(){if(window.BL2 && typeof window.BL2.status === "function"){window.BL2.status({deep:false});}bind();render("boot");}
   if(document.readyState === "loading"){document.addEventListener("DOMContentLoaded", boot);}else{boot();}
   window.FichaApp = {render:render, scheduleRender:scheduleRender, getState:function(){return Object.assign({}, state);}};
 })(window, document);
