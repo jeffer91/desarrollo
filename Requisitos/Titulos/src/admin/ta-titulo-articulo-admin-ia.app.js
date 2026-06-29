@@ -185,6 +185,8 @@ function registrarEventos() {
 }
 
 function init() {
+  if (window.__taTituloArticuloAdminIAInicializado) return;
+  window.__taTituloArticuloAdminIAInicializado = true;
   registrarEventos();
   pintarResultado({});
 }
