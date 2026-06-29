@@ -6,6 +6,7 @@
   - Validar que el administrador tenga vista IA o inyección automática de la vista IA.
   - Confirmar que las pruebas IA se ejecuten por función protegida con token administrativo.
   - Probar el motor local sin consumir internet ni claves reales.
+  - Verificar que los resultados IA se pinten con nodos de texto y no como HTML.
   Se conecta con:
   - package.json
   - src/services/ta-titulo-articulo-motor-local.service.js
@@ -93,13 +94,15 @@ requireIncludes("src/admin/ta-titulo-articulo-admin-ia.app.js", [
   "x-ta-admin-token",
   "ta-admin-ia-gemini-btn",
   "ta-admin-ia-groq-btn",
-  "ta-admin-ia-local-btn"
+  "ta-admin-ia-local-btn",
+  "document.createTextNode"
 ]);
 
 requireNotIncludes("src/admin/ta-titulo-articulo-admin-ia.app.js", [
   "GEMINI_API_KEY",
   "GROQ_API_KEY",
-  "PRIVATE_KEY"
+  "PRIVATE_KEY",
+  "innerHTML"
 ]);
 
 requireIncludes("src/admin/ta-titulo-articulo-admin-navegacion.app.js", [
@@ -158,3 +161,4 @@ console.log("- Motor local inteligente disponible.");
 console.log("- Fallback conectado al cliente Gemini.");
 console.log("- Administrador con IA y conexiones.");
 console.log("- Pruebas IA protegidas por token administrativo.");
+console.log("- Resultados IA renderizados de forma segura.");
