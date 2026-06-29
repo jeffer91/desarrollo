@@ -8,20 +8,25 @@
   - Cargar HTML local sin depender primero de Netlify.
   - Bloquear navegación externa dentro de la ventana.
   - Cargar normalización visual de períodos en el administrador Electron.
+  - Conectar Gemini por IPC seguro sin exponer GEMINI_API_KEY al navegador.
   Se conecta con:
   - Requisitos/Titulos/package.json
   - Requisitos/Titulos/public/ta-titulo-articulo-estudiante.html
   - Requisitos/Titulos/public/ta-titulo-articulo-coordinador.html
   - Requisitos/Titulos/electron/admin/ta-titulo-articulo-administrador.html
+  - Requisitos/Titulos/electron/ta-titulo-articulo-preload.js
+  - Requisitos/Titulos/electron/ta-titulo-articulo-gemini.service.js
 */
 
-import { app, BrowserWindow, shell } from "electron";
+import { app, BrowserWindow, shell, ipcMain } from "electron";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { generarSugerenciasTituloElectron } from "./ta-titulo-articulo-gemini.service.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const ROOT_DIR = join(__dirname, "..");
+const PRELOAD_FILE = join(__dirname, "ta-titulo-articulo-preload.js");
 
 const SCREENS = Object.freeze({
   estudiante: {
@@ -70,6 +75,22 @@ function detectarPantalla() {
   return "admin";
 }
 
+function registrarCanalesElectron() {
+  ipcMain.handle("ta-titulo-articulo:gemini:generar-sugerencias", async (_event, payload) => {
+    try {
+      return await generarSugerenciasTituloElectron(payload, ROOT_DIR);
+    } catch (error) {
+      return {
+        ok: false,
+        origen: "gemini-electron-error",
+        bloqueado: true,
+        motivo: error.message || "Gemini no pudo generar sugerencias en Electron.",
+        error: error.message || "Gemini no pudo generar sugerencias en Electron."
+      };
+    }
+  });
+}
+
 function cargarComplementosAdmin(win, screenName) {
   if (screenName !== "admin") return;
   win.webContents.once("did-finish-load", () => {
@@ -94,9 +115,10 @@ function createWindow() {
     backgroundColor: "#f6f7fb",
     show: false,
     webPreferences: {
+      preload: PRELOAD_FILE,
       nodeIntegration: false,
       contextIsolation: true,
-      sandbox: true,
+      sandbox: false,
       webSecurity: true
     }
   });
@@ -134,6 +156,7 @@ function createWindow() {
 app.setName("Títulos Académicos");
 
 app.whenReady().then(() => {
+  registrarCanalesElectron();
   createWindow();
 
   app.on("activate", () => {
