@@ -5,7 +5,7 @@ Ruta o ubicación: /Requisitos/Plani/frontend/plani.html
 Función o funciones:
 - Mostrar la pantalla Plani para planificación de titulación.
 - Guiar el flujo: Período -> Insumos -> Documento.
-- Conectar estado, período, tipo de documento, cronograma, recursos, motor documental y exportación.
+- Conectar estado, período, tipo de documento, cronograma, recursos, motor documental, exportación y plantilla Complexivo.
 - Mantener el módulo separado de Infor hasta integración final.
 Con qué se conecta:
 - plani.css
@@ -24,6 +24,13 @@ Con qué se conecta:
 - ../core/plani.charts.js
 - ../core/plani.numbering.js
 - ../core/plani.index-builder.js
+- ../sections/complexivo/complexivo.content.js
+- ../sections/complexivo/complexivo.rules.js
+- ../sections/complexivo/complexivo.tables.js
+- ../sections/complexivo/complexivo.charts.js
+- ../sections/complexivo/complexivo.assets.config.js
+- ../sections/complexivo/complexivo.sections.js
+- ../templates/documents/complexivo.config.js
 - ../core/plani.section-builder.js
 - ../core/plani.document-model.js
 - ../core/plani.builder.js
@@ -67,7 +74,7 @@ Con qué se conecta:
         <p class="plani-lead">Selecciona el período, define el tipo de planificación, carga el cronograma y prepara el documento institucional.</p>
       </div>
       <div class="plani-hero-actions">
-        <span id="plani-module-state" class="plani-chip warn">Bloque 6</span>
+        <span id="plani-module-state" class="plani-chip warn">Bloque 7</span>
       </div>
     </section>
 
@@ -100,18 +107,9 @@ Con qué se conecta:
         </label>
 
         <div class="plani-mini-grid plani-mini-grid-3">
-          <article>
-            <span>Tipo período</span>
-            <strong id="plani-period-type-label">—</strong>
-          </article>
-          <article>
-            <span>Documento</span>
-            <strong id="plani-document-label">—</strong>
-          </article>
-          <article>
-            <span>Código base</span>
-            <strong id="plani-document-code">—</strong>
-          </article>
+          <article><span>Tipo período</span><strong id="plani-period-type-label">—</strong></article>
+          <article><span>Documento</span><strong id="plani-document-label">—</strong></article>
+          <article><span>Código base</span><strong id="plani-document-code">—</strong></article>
         </div>
       </article>
 
@@ -124,48 +122,31 @@ Con qué se conecta:
           <span id="plani-cronograma-chip" class="plani-chip warn">Sin cronograma</span>
         </div>
 
-        <label class="plani-field">
-          Archivo de cronograma
-          <input id="plani-cronograma-file" type="file" accept=".txt,.csv,.tsv,.md" />
-        </label>
-
-        <label class="plani-field">
-          Cronograma pegado
-          <textarea id="plani-cronograma-raw" placeholder="Pega aquí el cronograma de planificación..."></textarea>
-        </label>
+        <label class="plani-field">Archivo de cronograma<input id="plani-cronograma-file" type="file" accept=".txt,.csv,.tsv,.md" /></label>
+        <label class="plani-field">Cronograma pegado<textarea id="plani-cronograma-raw" placeholder="Pega aquí el cronograma de planificación..."></textarea></label>
       </article>
     </section>
 
     <section class="plani-card">
       <div class="plani-card-head">
-        <div>
-          <h2>3. Recursos por sección</h2>
-          <p>La estructura queda preparada para que cada sección tenga sus propias imágenes, gráficos y tablas.</p>
-        </div>
+        <div><h2>3. Recursos por sección</h2><p>La estructura queda preparada para que cada sección tenga sus propias imágenes, gráficos y tablas.</p></div>
         <span id="plani-assets-chip" class="plani-chip">0 recursos</span>
       </div>
-      <div id="plani-assets-preview" class="plani-preview-box">
-        <div class="plani-empty">Todavía no hay recursos cargados por sección.</div>
-      </div>
+      <div id="plani-assets-preview" class="plani-preview-box"><div class="plani-empty">Todavía no hay recursos cargados por sección.</div></div>
     </section>
 
     <section class="plani-card">
       <div class="plani-card-head">
-        <div>
-          <h2>4. Vista previa documental</h2>
-          <p>Resumen del modelo interno que luego se usará para Word y PDF.</p>
-        </div>
+        <div><h2>4. Vista previa documental</h2><p>Resumen del modelo interno que luego se usará para Word y PDF.</p></div>
         <span id="plani-preview-chip" class="plani-chip warn">Sin vista previa</span>
       </div>
-      <div id="plani-preview" class="plani-preview-box">
-        <div class="plani-empty">Selecciona un tipo de planificación y agrega un cronograma.</div>
-      </div>
+      <div id="plani-preview" class="plani-preview-box"><div class="plani-empty">Selecciona un tipo de planificación y agrega un cronograma.</div></div>
     </section>
 
     <section class="plani-card plani-process-card">
       <div>
         <h2>5. Procesar y exportar</h2>
-        <p>En el bloque 6 ya existen exportadores HTML, Word y PDF desde una sola fuente documental.</p>
+        <p>En el bloque 7 ya existe plantilla específica para Planificación de Examen Complexivo.</p>
         <p id="plani-readiness" class="plani-muted">Estado base listo.</p>
       </div>
       <div class="plani-process-actions">
@@ -175,10 +156,7 @@ Con qué se conecta:
       </div>
     </section>
 
-    <details class="plani-card plani-advanced">
-      <summary>Diagnóstico avanzado</summary>
-      <pre id="plani-diagnostics">Sin diagnóstico.</pre>
-    </details>
+    <details class="plani-card plani-advanced"><summary>Diagnóstico avanzado</summary><pre id="plani-diagnostics">Sin diagnóstico.</pre></details>
   </main>
 
   <script src="../core/plani.constants.js"></script>
@@ -196,6 +174,13 @@ Con qué se conecta:
   <script src="../core/plani.charts.js"></script>
   <script src="../core/plani.numbering.js"></script>
   <script src="../core/plani.index-builder.js"></script>
+  <script src="../sections/complexivo/complexivo.content.js"></script>
+  <script src="../sections/complexivo/complexivo.rules.js"></script>
+  <script src="../sections/complexivo/complexivo.tables.js"></script>
+  <script src="../sections/complexivo/complexivo.charts.js"></script>
+  <script src="../sections/complexivo/complexivo.assets.config.js"></script>
+  <script src="../sections/complexivo/complexivo.sections.js"></script>
+  <script src="../templates/documents/complexivo.config.js"></script>
   <script src="../core/plani.section-builder.js"></script>
   <script src="../core/plani.document-model.js"></script>
   <script src="../core/plani.builder.js"></script>
