@@ -1,10 +1,10 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="Pantalla de coordinador para revisiÃ³n de tÃ­tulos de artÃ­culos acadÃ©micos." />
-  <title>Coordinador | TÃ­tulos de ArtÃ­culos AcadÃ©micos</title>
+  <meta name="description" content="Pantalla de coordinador para revisi&oacute;n de t&iacute;tulos de art&iacute;culos acad&eacute;micos." />
+  <title>Coordinador | T&iacute;tulos de Art&iacute;culos Acad&eacute;micos</title>
   <link rel="stylesheet" href="../src/styles/ta-titulo-articulo-base.css" />
   <link rel="stylesheet" href="../src/styles/ta-titulo-articulo-layout.css" />
   <link rel="stylesheet" href="../src/styles/ta-titulo-articulo-components.css" />
@@ -26,8 +26,8 @@
           <span class="ta-brand__fallback">ITSQMET</span>
         </div>
         <div>
-          <p class="ta-brand__eyebrow">TitulaciÃ³n</p>
-          <h1 class="ta-brand__title">RevisiÃ³n de tÃ­tulos</h1>
+          <p class="ta-brand__eyebrow">Titulaci&oacute;n</p>
+          <h1 class="ta-brand__title">Revisi&oacute;n de t&iacute;tulos</h1>
           <p class="ta-brand__subtitle">Pantalla del coordinador</p>
         </div>
       </div>
@@ -38,7 +38,7 @@
       <div class="ta-section-heading">
         <div>
           <h2>Seleccione su nombre</h2>
-          <p>Al seleccionar su nombre se mostrarÃ¡n solo las carreras asignadas por administraciÃ³n.</p>
+          <p>Al seleccionar su nombre se mostrar&aacute;n solo las carreras asignadas por administraci&oacute;n.</p>
         </div>
       </div>
 
@@ -57,7 +57,7 @@
 
     <section class="ta-summary-grid" id="ta-coordinador-resumen" hidden>
       <article class="ta-stat-card"><span>Pendientes</span><strong id="ta-coord-stat-pendientes">0</strong></article>
-      <article class="ta-stat-card"><span>En revisiÃ³n</span><strong id="ta-coord-stat-revision">0</strong></article>
+      <article class="ta-stat-card"><span>En revisi&oacute;n</span><strong id="ta-coord-stat-revision">0</strong></article>
       <article class="ta-stat-card"><span>Aprobados</span><strong id="ta-coord-stat-aprobados">0</strong></article>
       <article class="ta-stat-card"><span>Devueltos</span><strong id="ta-coord-stat-devueltos">0</strong></article>
     </section>
@@ -66,12 +66,12 @@
       <div class="ta-section-heading">
         <div>
           <h2>Estudiantes asignados</h2>
-          <p>Revise Ãºnicamente los tÃ­tulos finales. Los campos guÃ­a no se muestran al coordinador.</p>
+          <p>Revise &uacute;nicamente los t&iacute;tulos finales. Los campos gu&iacute;a no se muestran al coordinador.</p>
         </div>
 
         <label class="ta-search" for="ta-coordinador-buscar">
           <span>Buscar</span>
-          <input id="ta-coordinador-buscar" type="search" placeholder="Nombre, cÃ©dula, carrera, estado o tÃ­tulo" />
+          <input id="ta-coordinador-buscar" type="search" placeholder="Nombre, c&eacute;dula, carrera, estado o t&iacute;tulo" />
         </label>
       </div>
 
@@ -80,10 +80,10 @@
           <thead>
             <tr>
               <th>Estudiante</th>
-              <th>CÃ©dula</th>
+              <th>C&eacute;dula</th>
               <th>Carrera</th>
               <th>Estado</th>
-              <th>AcciÃ³n</th>
+              <th>Acci&oacute;n</th>
             </tr>
           </thead>
           <tbody id="ta-coordinador-tabla-body">
@@ -99,68 +99,68 @@
       <article class="ta-modal__dialog ta-modal__dialog--wide" role="dialog" aria-modal="true" aria-labelledby="ta-modal-revision-title">
         <header class="ta-modal__header">
           <div>
-            <p class="ta-brand__eyebrow">RevisiÃ³n compacta</p>
-            <h2 id="ta-modal-revision-title">TÃ­tulos del estudiante</h2>
+            <p class="ta-brand__eyebrow">Revisi&oacute;n compacta</p>
+            <h2 id="ta-modal-revision-title">T&iacute;tulos del estudiante</h2>
           </div>
-          <button class="ta-icon-button" type="button" data-ta-close-modal aria-label="Cerrar">Ã—</button>
+          <button class="ta-icon-button" type="button" data-ta-close-modal aria-label="Cerrar">&times;</button>
         </header>
 
         <dl class="ta-data-grid ta-data-grid--modal">
           <div><dt>Estudiante</dt><dd id="ta-revision-estudiante">---</dd></div>
-          <div><dt>CÃ©dula</dt><dd id="ta-revision-cedula">---</dd></div>
+          <div><dt>C&eacute;dula</dt><dd id="ta-revision-cedula">---</dd></div>
           <div><dt>Carrera</dt><dd id="ta-revision-carrera">---</dd></div>
           <div><dt>Estado actual</dt><dd id="ta-revision-estado-actual">---</dd></div>
           <div><dt>Preferido por estudiante</dt><dd id="ta-revision-preferido">---</dd></div>
           <div><dt>Intentos usados</dt><dd id="ta-revision-intentos">---</dd></div>
-          <div><dt>Fecha de envÃ­o</dt><dd id="ta-revision-enviado">---</dd></div>
+          <div><dt>Fecha de env&iacute;o</dt><dd id="ta-revision-enviado">---</dd></div>
         </dl>
 
         <div class="ta-state-box ta-state-box--warning" id="ta-revision-devolucion-aviso">
-          Si devuelve el tÃ­tulo, escriba una observaciÃ³n clara. El estudiante solo tendrÃ¡ una oportunidad de reenvÃ­o.
+          Si devuelve el t&iacute;tulo, escriba una observaci&oacute;n clara. El estudiante solo tendr&aacute; una oportunidad de reenv&iacute;o.
         </div>
 
         <div class="ta-title-list" id="ta-revision-titulos-lista">
           <label class="ta-title-option">
             <input type="radio" name="taTituloElegido" value="1" />
-            <span><strong>TÃ­tulo 1</strong><em id="ta-revision-titulo-1">---</em></span>
+            <span><strong>T&iacute;tulo 1</strong><em id="ta-revision-titulo-1">---</em></span>
           </label>
 
           <label class="ta-title-option">
             <input type="radio" name="taTituloElegido" value="2" />
-            <span><strong>TÃ­tulo 2</strong><em id="ta-revision-titulo-2">---</em></span>
+            <span><strong>T&iacute;tulo 2</strong><em id="ta-revision-titulo-2">---</em></span>
           </label>
 
           <label class="ta-title-option">
             <input type="radio" name="taTituloElegido" value="3" />
-            <span><strong>TÃ­tulo 3</strong><em id="ta-revision-titulo-3">---</em></span>
+            <span><strong>T&iacute;tulo 3</strong><em id="ta-revision-titulo-3">---</em></span>
           </label>
         </div>
 
         <div class="ta-grid ta-grid--2">
           <label class="ta-field" for="ta-revision-estado">
-            <span>DecisiÃ³n</span>
+            <span>Decisi&oacute;n</span>
             <select id="ta-revision-estado" required>
-              <option value="">Seleccione decisiÃ³n</option>
+              <option value="">Seleccione decisi&oacute;n</option>
               <option value="APROBADO">Aprobar sin cambios</option>
               <option value="APROBADO_CON_CORRECCIONES">Aprobar con correcciones</option>
-              <option value="DEVUELTO">Devolver para correcciÃ³n</option>
+              <option value="DEVUELTO">Devolver para correcci&oacute;n</option>
             </select>
           </label>
 
           <label class="ta-field" for="ta-revision-titulo-corregido">
-            <span>TÃ­tulo corregido</span>
+            <span>T&iacute;tulo corregido</span>
             <input id="ta-revision-titulo-corregido" type="text" placeholder="Obligatorio si aprueba con correcciones" />
           </label>
         </div>
 
         <label class="ta-field" for="ta-revision-observacion">
-          <span>ObservaciÃ³n</span>
+          <span>Observaci&oacute;n</span>
           <textarea id="ta-revision-observacion" rows="3" placeholder="Obligatoria si devuelve. Opcional si aprueba o corrige."></textarea>
         </label>
 
         <footer class="ta-actions ta-actions--end">
           <button class="ta-button ta-button--secondary" type="button" data-ta-close-modal>Cancelar</button>
-          <button class="ta-button ta-button--primary" type="button" id="ta-revision-guardar-btn">Guardar revisiÃ³n</button>
+          <button class="ta-button ta-button--primary" type="button" id="ta-revision-guardar-btn">Guardar revisi&oacute;n</button>
         </footer>
       </article>
     </section>
@@ -169,4 +169,3 @@
   <script type="module" src="../src/coordinador/ta-titulo-articulo-coordinador.app.js"></script>
 </body>
 </html>
-
