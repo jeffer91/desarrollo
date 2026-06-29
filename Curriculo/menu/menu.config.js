@@ -24,8 +24,8 @@ Función o funciones:
     {
       id: "base-local",
       title: "Base local",
-      shortTitle: "Base local",
-      icon: "BL",
+      shortTitle: "Base",
+      icon: "B",
       hint: "Centro de control local de Currículo",
       description: "Guardar, comparar, diagnosticar, respaldar y sincronizar la información local de Currículo.",
       routeFromMenu: "../Base%20local/bl.index.html",
@@ -96,7 +96,7 @@ Función o funciones:
   window.CurriculoMenuConfig = {
     appId: "curriculo",
     appTitle: "Currículo",
-    appSubtitle: "Menú principal",
+    appSubtitle: "",
     defaultItemId: "inicio",
     storageKey: "curriculo_menu_last_id",
     items: items
