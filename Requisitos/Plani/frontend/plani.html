@@ -5,7 +5,7 @@ Ruta o ubicación: /Requisitos/Plani/frontend/plani.html
 Función o funciones:
 - Mostrar la pantalla Plani para planificación de titulación.
 - Guiar el flujo: Período -> Insumos -> Documento.
-- Conectar estado, período, tipo de documento, cronograma, recursos, motor documental, exportación y plantilla Complexivo.
+- Conectar estado, período, tipo de documento, cronograma, recursos, motor documental, exportación y plantillas Complexivo/Articulo.
 - Mantener el módulo separado de Infor hasta integración final.
 Con qué se conecta:
 - plani.css
@@ -31,6 +31,13 @@ Con qué se conecta:
 - ../sections/complexivo/complexivo.assets.config.js
 - ../sections/complexivo/complexivo.sections.js
 - ../templates/documents/complexivo.config.js
+- ../sections/articulo/articulo.content.js
+- ../sections/articulo/articulo.rules.js
+- ../sections/articulo/articulo.tables.js
+- ../sections/articulo/articulo.charts.js
+- ../sections/articulo/articulo.assets.config.js
+- ../sections/articulo/articulo.sections.js
+- ../templates/documents/articulo.config.js
 - ../core/plani.section-builder.js
 - ../core/plani.document-model.js
 - ../core/plani.builder.js
@@ -74,7 +81,7 @@ Con qué se conecta:
         <p class="plani-lead">Selecciona el período, define el tipo de planificación, carga el cronograma y prepara el documento institucional.</p>
       </div>
       <div class="plani-hero-actions">
-        <span id="plani-module-state" class="plani-chip warn">Bloque 7</span>
+        <span id="plani-module-state" class="plani-chip warn">Bloque 8</span>
       </div>
     </section>
 
@@ -146,7 +153,7 @@ Con qué se conecta:
     <section class="plani-card plani-process-card">
       <div>
         <h2>5. Procesar y exportar</h2>
-        <p>En el bloque 7 ya existe plantilla específica para Planificación de Examen Complexivo.</p>
+        <p>En el bloque 8 ya existen plantillas específicas para Complexivo y Artículo Académico.</p>
         <p id="plani-readiness" class="plani-muted">Estado base listo.</p>
       </div>
       <div class="plani-process-actions">
@@ -181,6 +188,13 @@ Con qué se conecta:
   <script src="../sections/complexivo/complexivo.assets.config.js"></script>
   <script src="../sections/complexivo/complexivo.sections.js"></script>
   <script src="../templates/documents/complexivo.config.js"></script>
+  <script src="../sections/articulo/articulo.content.js"></script>
+  <script src="../sections/articulo/articulo.rules.js"></script>
+  <script src="../sections/articulo/articulo.tables.js"></script>
+  <script src="../sections/articulo/articulo.charts.js"></script>
+  <script src="../sections/articulo/articulo.assets.config.js"></script>
+  <script src="../sections/articulo/articulo.sections.js"></script>
+  <script src="../templates/documents/articulo.config.js"></script>
   <script src="../core/plani.section-builder.js"></script>
   <script src="../core/plani.document-model.js"></script>
   <script src="../core/plani.builder.js"></script>
