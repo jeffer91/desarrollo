@@ -1,10 +1,36 @@
 /*
   Nombre completo: ta-titulo-articulo-motor-local.service.js
   Ruta o ubicación: /Requisitos/Titulos/src/services/ta-titulo-articulo-motor-local.service.js
-  Función: generar sugerencias académicas locales de títulos sin depender de Gemini.
+  Función o funciones:
+  - Generar dos sugerencias académicas locales de títulos sin depender de Gemini.
+  - Usar carrera, tema, problema, contexto, grupo, período, objetivo y resultado esperado.
+  - Separar enfoques: diagnóstico/análisis y propuesta/estrategia.
+  - Evitar que el estudiante quede bloqueado si Gemini no responde.
+  Se conecta con:
+  - Requisitos/Titulos/src/services/ta-titulo-articulo-gemini-client.service.js
+  - Requisitos/Titulos/src/estudiante/ta-titulo-articulo-estudiante.app.js
 */
 
 const FILE_PATH = "Requisitos/Titulos/src/services/ta-titulo-articulo-motor-local.service.js";
+
+const AREA_CONFIG = Object.freeze({
+  salud: ["enfermer", "salud", "medicina", "laboratorio", "fisioterapia"],
+  tecnologia: ["software", "sistema", "informatica", "tecnologia", "electronica", "redes", "ciber"],
+  automotriz: ["automotriz", "mecanica", "mantenimiento automotriz", "electricidad automotriz"],
+  educacion: ["educacion", "pedagog", "docencia", "desarrollo infantil", "parvularia"],
+  gastronomia: ["gastronomia", "alimentos", "cocina", "culinaria"],
+  estetica: ["estetica", "belleza", "cosmetologia"]
+});
+
+const TEXTOS_AREA = Object.freeze({
+  salud: ["Análisis de", "Estrategia de mejora para", "la atención sanitaria"],
+  tecnologia: ["Evaluación de", "Diseño de una solución para", "el proceso tecnológico"],
+  automotriz: ["Diagnóstico de", "Plan de mejora técnica para", "el sistema automotriz"],
+  educacion: ["Análisis de", "Estrategia didáctica para", "el proceso de aprendizaje"],
+  gastronomia: ["Evaluación de", "Propuesta de mejora para", "el proceso alimentario"],
+  estetica: ["Análisis de", "Protocolo de mejora para", "el procedimiento estético"],
+  administracion: ["Diagnóstico de", "Plan de mejora para", "la gestión organizacional"]
+});
 
 function clean(value) {
   return String(value ?? "").replace(/\s+/g, " ").trim();
@@ -14,35 +40,68 @@ function normalizar(value) {
   return clean(value).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
+function quitarFinal(value) {
+  return clean(value).replace(/[.;,:]+$/g, "").trim();
+}
+
 function limpiarFrase(value) {
-  return clean(value)
-    .replace(/^(tema|problema|objetivo|resultado)\s*[:.-]\s*/i, "")
-    .replace(/^(analisis|análisis|diagnostico|diagnóstico|propuesta|estrategia|plan|diseño|diseno)\s+de\s+/i, "")
-    .replace(/[.;,:]+$/g, "")
+  return quitarFinal(value)
+    .replace(/^(tema|problema|objetivo|resultado|titulo)\s*[:.-]\s*/i, "")
+    .replace(/^(analisis|análisis|diagnostico|diagnóstico|evaluacion|evaluación|propuesta|estrategia|plan|diseño|diseno)\s+de\s+/i, "")
+    .replace(/^(mejora|fortalecimiento|implementacion|implementación)\s+de\s+/i, "")
     .trim();
 }
 
-function minusculaInicial(value) {
+function frase(value) {
   const texto = limpiarFrase(value);
   return texto ? texto.charAt(0).toLowerCase() + texto.slice(1) : "";
 }
 
 function detectarArea(carrera = "") {
   const texto = normalizar(carrera);
-  if (texto.includes("enfermer") || texto.includes("salud")) return "salud";
-  if (texto.includes("software") || texto.includes("sistema") || texto.includes("informatica") || texto.includes("electronica")) return "tecnologia";
-  if (texto.includes("automotriz") || texto.includes("mecanica")) return "automotriz";
-  if (texto.includes("educacion") || texto.includes("docencia")) return "educacion";
-  if (texto.includes("gastronomia") || texto.includes("alimentos")) return "gastronomia";
-  if (texto.includes("estetica") || texto.includes("belleza")) return "estetica";
+  for (const [area, palabras] of Object.entries(AREA_CONFIG)) {
+    if (palabras.some((palabra) => texto.includes(palabra))) return area;
+  }
   return "administracion";
 }
 
-function contexto(payload = {}) {
+function esGenerico(value) {
+  const texto = normalizar(value);
+  return !texto || ["tema", "problema", "objetivo", "resultado", "ninguno", "ninguna", "n/a", "na"].includes(texto);
+}
+
+function obtenerTema(payload, temaBase) {
+  const tema = frase(payload.temaGeneral);
+  if (!esGenerico(tema)) return tema;
+  const objetivo = frase(payload.objetivoArticulo);
+  return esGenerico(objetivo) ? temaBase : objetivo;
+}
+
+function obtenerProblema(payload) {
+  const problema = frase(payload.problemaNecesidad);
+  if (!esGenerico(problema)) return problema;
+  const objetivo = frase(payload.objetivoArticulo);
+  return esGenerico(objetivo) ? "la problemática identificada" : objetivo;
+}
+
+function obtenerResultado(payload, tema) {
+  const resultado = frase(payload.resultadoEsperado);
+  const base = normalizar(resultado);
+  if (!resultado || base.includes("propuesta de mejora relacionada con") || base.includes("propuesta de mejora para")) {
+    return `la mejora de ${tema}`;
+  }
+  return resultado;
+}
+
+function construirContexto(payload = {}) {
   const grupo = limpiarFrase(payload.grupoEstudio);
   const lugar = limpiarFrase(payload.lugarContexto);
   const periodo = limpiarFrase(payload.anioPeriodoDatos || payload.anioPeriodo);
-  let salida = grupo && lugar ? `en ${grupo} de ${lugar}` : grupo ? `en ${grupo}` : lugar ? `en ${lugar}` : "en el contexto seleccionado";
+  let salida = "en el contexto seleccionado";
+
+  if (grupo && lugar) salida = `en ${grupo} de ${lugar}`;
+  else if (grupo) salida = `en ${grupo}`;
+  else if (lugar) salida = `en ${lugar}`;
   if (periodo) salida += `, ${periodo}`;
   return salida;
 }
@@ -51,34 +110,36 @@ function limpiarTitulo(value) {
   const texto = clean(value)
     .replace(/\s+([,.;:])/g, "$1")
     .replace(/\ben\s+en\b/gi, "en")
+    .replace(/\s+de\s+de\s+/gi, " de ")
     .replace(/[.;]+$/g, "")
     .trim();
   return texto ? texto.charAt(0).toUpperCase() + texto.slice(1) : "";
+}
+
+function contarPalabras(value) {
+  return clean(value).split(/\s+/).filter(Boolean).length;
+}
+
+function acortar(value) {
+  let titulo = limpiarTitulo(value);
+  if (contarPalabras(titulo) <= 30) return titulo;
+  titulo = titulo
+    .replace(/\s+orientado\s+a\s+la\s+mejora\s+de\s+/i, " para ")
+    .replace(/\s+relacionada\s+con\s+/i, " sobre ")
+    .replace(/\s+para\s+proponer\s+una\s+mejora\s+alineada\s+con\s+[^,]+/i, "");
+  return limpiarTitulo(titulo);
 }
 
 function dedupe(titulos = [], previos = []) {
   const usados = new Set(previos.map(normalizar).filter(Boolean));
   const salida = [];
   titulos.forEach((titulo) => {
-    const limpio = limpiarTitulo(titulo);
+    const limpio = acortar(titulo);
     const key = normalizar(limpio);
     if (!limpio || usados.has(key) || salida.some((item) => normalizar(item) === key)) return;
     salida.push(limpio);
   });
   return salida;
-}
-
-function areaTextos(area) {
-  const mapa = {
-    salud: ["Análisis de", "Estrategia de mejora para", "la atención sanitaria"],
-    tecnologia: ["Evaluación de", "Diseño de una solución para", "el proceso tecnológico"],
-    automotriz: ["Diagnóstico de", "Plan de mejora técnica para", "el sistema automotriz"],
-    educacion: ["Análisis de", "Estrategia didáctica para", "el proceso de aprendizaje"],
-    gastronomia: ["Evaluación de", "Propuesta de mejora para", "el proceso alimentario"],
-    estetica: ["Análisis de", "Protocolo de mejora para", "el procedimiento estético"],
-    administracion: ["Diagnóstico de", "Plan de mejora para", "la gestión organizacional"]
-  };
-  return mapa[area] || mapa.administracion;
 }
 
 function validar(payload = {}) {
@@ -98,11 +159,11 @@ function validar(payload = {}) {
 function generarSugerenciasTitulo(payload = {}, options = {}) {
   validar(payload);
   const area = detectarArea(payload.carrera);
-  const [prefijoDiagnostico, prefijoPropuesta, temaBase] = areaTextos(area);
-  const tema = minusculaInicial(payload.temaGeneral) || temaBase;
-  const problema = minusculaInicial(payload.problemaNecesidad) || "la problemática identificada";
-  const resultado = minusculaInicial(payload.resultadoEsperado) || "la mejora del proceso";
-  const donde = contexto(payload);
+  const [prefijoDiagnostico, prefijoPropuesta, temaBase] = TEXTOS_AREA[area] || TEXTOS_AREA.administracion;
+  const tema = obtenerTema(payload, temaBase);
+  const problema = obtenerProblema(payload);
+  const resultado = obtenerResultado(payload, tema);
+  const donde = construirContexto(payload);
   const previos = Array.isArray(payload.titulosYaGenerados) ? payload.titulosYaGenerados : [];
 
   const sugerencias = dedupe([
