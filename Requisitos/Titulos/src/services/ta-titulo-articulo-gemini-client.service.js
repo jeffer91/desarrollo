@@ -3,18 +3,20 @@
   Ruta o ubicación: /Requisitos/Titulos/src/services/ta-titulo-articulo-gemini-client.service.js
   Función o funciones:
   - Solicitar sugerencias de títulos académicos exclusivamente a Gemini.
-  - En Electron, llamar al puente seguro IPC sin exponer GEMINI_API_KEY al navegador.
+  - En Electron, llamar al puente seguro IPC o al protocolo interno seguro sin exponer GEMINI_API_KEY al navegador.
   - En Netlify, llamar a la Netlify Function segura.
   - No generar sugerencias locales cuando Gemini no esté disponible.
   - Mostrar errores con el archivo responsable para facilitar diagnóstico.
   Se conecta con:
   - Requisitos/Titulos/src/estudiante/ta-titulo-articulo-estudiante.app.js
   - Requisitos/Titulos/electron/ta-titulo-articulo-preload.cjs
+  - Requisitos/Titulos/electron/ta-titulo-articulo-main.js
   - Requisitos/Titulos/electron/ta-titulo-articulo-gemini.service.js
   - Requisitos/Titulos/netlify/functions/ta-titulo-articulo-gemini.js
 */
 
 const ENDPOINT = "/.netlify/functions/ta-titulo-articulo-gemini";
+const ELECTRON_PROTOCOL_ENDPOINT = "ta-titulos://gemini/generar-sugerencias";
 const FILE_PATH = "Requisitos/Titulos/src/services/ta-titulo-articulo-gemini-client.service.js";
 const PRELOAD_PATH = "Requisitos/Titulos/electron/ta-titulo-articulo-preload.cjs";
 const MAIN_PATH = "Requisitos/Titulos/electron/ta-titulo-articulo-main.js";
@@ -93,6 +95,26 @@ function validarRespuestaGemini(data, body) {
   };
 }
 
+async function llamarPorProtocoloElectron(body) {
+  let response;
+  try {
+    response = await fetch(ELECTRON_PROTOCOL_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+  } catch (error) {
+    throw errorEnArchivo(`No se pudo conectar con el protocolo interno ${ELECTRON_PROTOCOL_ENDPOINT}. Revise ${MAIN_PATH}. Detalle: ${error.message || error}`);
+  }
+
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw errorEnArchivo(data?.error || data?.motivo || `Error HTTP ${response.status} en protocolo interno de Electron. Revise ${MAIN_PATH}.`);
+  }
+
+  return validarRespuestaGemini(data, body);
+}
+
 async function generarSugerenciasTitulo(payload = {}) {
   const body = buildBody(payload);
 
@@ -102,7 +124,7 @@ async function generarSugerenciasTitulo(payload = {}) {
   }
 
   if (estaEnElectronFile()) {
-    throw errorEnArchivo(`No se detectó el puente de Electron window.taTituloArticuloElectron. Revise ${PRELOAD_PATH} y que ${MAIN_PATH} cargue ese preload.`);
+    return llamarPorProtocoloElectron(body);
   }
 
   let response;
