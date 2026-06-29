@@ -5,6 +5,7 @@ Función o funciones:
 - Guardar resultados calculados de Stats, Coordi y Reportes por filtros.
 - Evitar recalcular la misma vista varias veces al cambiar pantallas.
 - Mantener caché liviano en memoria y copia opcional en localStorage.
+- Permitir invalidar también la copia persistente cuando Base Local cambia.
 Con qué se conecta:
 - repositories/bl2-stats.repo.js
 - repositories/bl2-reportes.repo.js
@@ -31,6 +32,16 @@ Con qué se conecta:
   function key(scope, filters){return String(scope || "general") + "::" + stable(filters || {});}
   function readStorage(cacheKey){try{var raw=window.localStorage.getItem(PREFIX + cacheKey);return raw?JSON.parse(raw):null;}catch(error){return null;}}
   function writeStorage(cacheKey, payload){try{window.localStorage.setItem(PREFIX + cacheKey, JSON.stringify(payload));}catch(error){}return payload;}
+
+  function removeStorage(scope){
+    try{
+      for(var i = window.localStorage.length - 1; i >= 0; i -= 1){
+        var k = window.localStorage.key(i) || "";
+        if(k.indexOf(PREFIX) !== 0){continue;}
+        if(!scope || k.indexOf(PREFIX + scope + "::") === 0){window.localStorage.removeItem(k);}
+      }
+    }catch(error){}
+  }
 
   function get(scope, filters, options){
     options = options || {};
@@ -60,11 +71,12 @@ Con qué se conecta:
   }
 
   function invalidate(scope){
-    if(!scope){memory = Object.create(null);return;}
+    if(!scope){memory = Object.create(null);removeStorage("");return;}
     Object.keys(memory).forEach(function(k){if(k.indexOf(scope + "::") === 0){delete memory[k];}});
+    removeStorage(scope);
   }
 
   function status(){return {ok:true, mode:"bl2_cache_resumen", items:Object.keys(memory).length, updatedAt:iso()};}
 
-  window.BL2CacheResumen = {version:"2.0.0-alpha.1",key:key,get:get,set:set,getOrSet:getOrSet,invalidate:invalidate,status:status};
+  window.BL2CacheResumen = {version:"2.0.0-alpha.2-invalidate-storage",key:key,get:get,set:set,getOrSet:getOrSet,invalidate:invalidate,status:status};
 })(window);
