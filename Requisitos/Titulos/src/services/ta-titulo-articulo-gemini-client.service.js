@@ -6,14 +6,18 @@
   - En Electron, llamar al puente seguro IPC sin exponer GEMINI_API_KEY al navegador.
   - En Netlify, llamar a la Netlify Function segura.
   - No generar sugerencias locales cuando Gemini no esté disponible.
+  - Mostrar errores con el archivo responsable para facilitar diagnóstico.
   Se conecta con:
   - Requisitos/Titulos/src/estudiante/ta-titulo-articulo-estudiante.app.js
-  - Requisitos/Titulos/electron/ta-titulo-articulo-preload.js
+  - Requisitos/Titulos/electron/ta-titulo-articulo-preload.cjs
   - Requisitos/Titulos/electron/ta-titulo-articulo-gemini.service.js
   - Requisitos/Titulos/netlify/functions/ta-titulo-articulo-gemini.js
 */
 
 const ENDPOINT = "/.netlify/functions/ta-titulo-articulo-gemini";
+const FILE_PATH = "Requisitos/Titulos/src/services/ta-titulo-articulo-gemini-client.service.js";
+const PRELOAD_PATH = "Requisitos/Titulos/electron/ta-titulo-articulo-preload.cjs";
+const MAIN_PATH = "Requisitos/Titulos/electron/ta-titulo-articulo-main.js";
 const ORIGENES_GEMINI_VALIDOS = new Set(["gemini-netlify", "gemini-electron"]);
 
 function clean(value) {
@@ -22,6 +26,14 @@ function clean(value) {
 
 function normalizar(value) {
   return clean(value).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+function errorEnArchivo(message) {
+  return new Error(`[Archivo: ${FILE_PATH}] ${message}`);
+}
+
+function estaEnElectronFile() {
+  return window.location.protocol === "file:" || new URLSearchParams(window.location.search).get("taRuntime")?.startsWith("electron");
 }
 
 function dedupeTitulos(titulos = [], titulosYaGenerados = []) {
@@ -58,21 +70,22 @@ function buildBody(payload = {}) {
 
 function validarRespuestaGemini(data, body) {
   if (!data || data.ok === false) {
-    throw new Error(data?.error || data?.motivo || "Gemini no pudo generar sugerencias.");
+    throw errorEnArchivo(data?.error || data?.motivo || "Gemini no pudo generar sugerencias.");
   }
 
   if (!ORIGENES_GEMINI_VALIDOS.has(data.origen)) {
-    throw new Error("Las sugerencias no fueron generadas por Gemini. Revise la configuración de GEMINI_API_KEY.");
+    throw errorEnArchivo(`Las sugerencias no fueron generadas por Gemini. Origen recibido: ${clean(data.origen) || "sin origen"}.`);
   }
 
   const sugerencias = dedupeTitulos(data.sugerencias || [], body.titulosYaGenerados);
   if (sugerencias.length < 2) {
-    throw new Error("Gemini no generó dos sugerencias diferentes. Ajuste la información ingresada.");
+    throw errorEnArchivo("Gemini no generó dos sugerencias diferentes. Ajuste la información ingresada.");
   }
 
   return {
     ok: true,
     origen: data.origen,
+    archivo: data.archivo || FILE_PATH,
     sugerencias,
     advertencia: clean(data.advertencia),
     bloqueado: Boolean(data.bloqueado),
@@ -88,15 +101,24 @@ async function generarSugerenciasTitulo(payload = {}) {
     return validarRespuestaGemini(data, body);
   }
 
-  const response = await fetch(ENDPOINT, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body)
-  });
+  if (estaEnElectronFile()) {
+    throw errorEnArchivo(`No se detectó el puente de Electron window.taTituloArticuloElectron. Revise ${PRELOAD_PATH} y que ${MAIN_PATH} cargue ese preload.`);
+  }
+
+  let response;
+  try {
+    response = await fetch(ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+  } catch (error) {
+    throw errorEnArchivo(`No se pudo conectar con ${ENDPOINT}. Si está en Electron, use npm run electron:estudiante. Detalle: ${error.message || error}`);
+  }
 
   const data = await response.json().catch(() => null);
   if (!response.ok) {
-    throw new Error(data?.error || data?.motivo || `Error HTTP ${response.status}`);
+    throw errorEnArchivo(data?.error || data?.motivo || `Error HTTP ${response.status}`);
   }
 
   return validarRespuestaGemini(data, body);
