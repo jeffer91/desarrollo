@@ -5,7 +5,7 @@ Función o funciones:
 - Inicializar el menú Currículo
 - Conectar configuración, router, render y frame principal
 - Cargar pantalla Inicio o módulos dentro del iframe
-- Permitir refrescar y abrir la vista actual en pestaña nueva
+- Permitir refrescar, abrir la vista actual y volver a Desarrollo
 - Recordar la última pantalla usada
 - Actualizar estado de guardado local
 ========================================================= */
@@ -177,6 +177,12 @@ Función o funciones:
     setHint("Vista abierta en una pestaña nueva.", "ok");
   }
 
+  function goToDesarrollo() {
+    var targetUrl = new URL("../../index.html", window.location.href).href;
+    setHint("Volviendo a Desarrollo...", "normal");
+    window.location.assign(targetUrl);
+  }
+
   function bindNavClicks() {
     var nav = byId("menuNav");
     if (!nav) return;
@@ -200,6 +206,12 @@ Función o funciones:
     var btn = byId("menuOpenCurrent");
     if (!btn) return;
     btn.addEventListener("click", openCurrent);
+  }
+
+  function bindBackDesarrollo() {
+    var btn = byId("menuBackDesarrollo");
+    if (!btn) return;
+    btn.addEventListener("click", goToDesarrollo);
   }
 
   function bindBrand() {
@@ -271,6 +283,7 @@ Función o funciones:
     bindNavClicks();
     bindRefresh();
     bindOpen();
+    bindBackDesarrollo();
     bindBrand();
     bindRouter();
     bindFrameEvents();
