@@ -5,7 +5,7 @@ Función o funciones:
 1. Inicializar la pantalla Gen libro.
 2. Conectar selector de carrera y selector de materia con el almacenamiento local.
 3. Cargar la materia consolidada seleccionada desde Carga de la materia.
-4. Ejecutar validación flexible antes de pasar al plan del libro.
+4. Ejecutar validación flexible y crear el plan maestro del libro.
 ========================================================= */
 
 (function iniciarGenLibro(window, document) {
@@ -18,11 +18,13 @@ Función o funciones:
   var CarreraSelector = window.LibroGenLibroCarreraSelector || null;
   var MateriaSelector = window.LibroGenLibroMateriaSelector || null;
   var Validator = window.LibroGenLibroValidator || null;
+  var BookPlan = window.LibroGenLibroBookPlan || null;
 
   function refreshModules() {
     CarreraSelector = window.LibroGenLibroCarreraSelector || CarreraSelector;
     MateriaSelector = window.LibroGenLibroMateriaSelector || MateriaSelector;
     Validator = window.LibroGenLibroValidator || Validator;
+    BookPlan = window.LibroGenLibroBookPlan || BookPlan;
   }
 
   function setInitialData() {
@@ -41,7 +43,7 @@ Función o funciones:
     refreshModules();
 
     if (!Validator || typeof Validator.validate !== "function") {
-      UI.setMessage("is-warning", "Materia cargada. El plan del libro se conectará en el siguiente bloque.");
+      UI.setMessage("is-warning", "Materia cargada. Se continuará con la planificación base.");
       UI.setStatus("Materia lista");
       Progress.render("validate", "Materia lista para planificación", 10);
       return null;
@@ -68,6 +70,49 @@ Función o funciones:
     return validation;
   }
 
+  function buildPlan(selected, validation) {
+    refreshModules();
+
+    if (!BookPlan || typeof BookPlan.build !== "function") {
+      UI.setMessage("is-warning", "Materia validada. El constructor de secciones se conectará en el siguiente bloque.");
+      UI.setStatus("Plan pendiente");
+      Progress.render("plan", "Plan pendiente de constructor", 15);
+      return null;
+    }
+
+    var plan = BookPlan.build(selected, validation);
+
+    State.setPlanLibro(plan);
+    State.addMessage("ok", "Plan maestro creado para " + (plan.materia || "la asignatura") + ".");
+    UI.setMessage("is-ok", "Plan maestro del libro creado. Listo para conectar IA y secciones.");
+    UI.setStatus("Plan creado");
+    Progress.render("plan", "Plan maestro creado", 15);
+
+    return plan;
+  }
+
+  function prepareBookPlan() {
+    var currentState = State.getState();
+    var selected = currentState.materiaSeleccionada;
+
+    if (!selected) {
+      UI.setMessage("is-warning", "Selecciona una materia guardada antes de generar el libro.");
+      UI.setStatus("Sin materia");
+      Progress.reset();
+      return null;
+    }
+
+    var validation = runFlexibleValidation(selected);
+
+    window.LibroGenLibro.lastValidation = validation;
+
+    if (validation && validation.ok === false) {
+      return null;
+    }
+
+    return buildPlan(selected, validation);
+  }
+
   function boot() {
     if (!State || !Progress || !UI) {
       console.error("Gen libro no pudo iniciar: faltan módulos base lb.");
@@ -90,6 +135,7 @@ Función o funciones:
         var carrera = UI.getSelectedCarrera();
         State.setSelection(carrera, "");
         State.setMateriaSeleccionada(null);
+        State.setPlanLibro(null);
         UI.setGenerateEnabled(false);
         Progress.render("load", carrera ? "Cargando materias" : "Esperando selección de materia", carrera ? 5 : 0);
 
@@ -104,6 +150,7 @@ Función o funciones:
         var carrera = UI.getSelectedCarrera();
         var materiaId = UI.getSelectedMateria();
         State.setSelection(carrera, materiaId);
+        State.setPlanLibro(null);
 
         if (MateriaSelector && typeof MateriaSelector.selectMateria === "function") {
           var selected = MateriaSelector.selectMateria(carrera, materiaId);
@@ -114,19 +161,8 @@ Función o funciones:
 
     if (generateButton) {
       generateButton.addEventListener("click", function onGenerateClick() {
-        var currentState = State.getState();
-        var selected = currentState.materiaSeleccionada;
-
-        if (!selected) {
-          UI.setMessage("is-warning", "Selecciona una materia guardada antes de generar el libro.");
-          UI.setStatus("Sin materia");
-          Progress.reset();
-          return;
-        }
-
-        var validation = runFlexibleValidation(selected);
-
-        window.LibroGenLibro.lastValidation = validation;
+        var plan = prepareBookPlan();
+        window.LibroGenLibro.lastPlan = plan;
       });
     }
 
@@ -135,7 +171,8 @@ Función o funciones:
       reloadMaterias: setInitialData,
       validateSelected: function validateSelected() {
         return runFlexibleValidation(State.getState().materiaSeleccionada);
-      }
+      },
+      buildPlan: prepareBookPlan
     };
   }
 
