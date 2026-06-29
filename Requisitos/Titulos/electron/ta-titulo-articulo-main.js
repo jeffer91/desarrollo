@@ -9,12 +9,13 @@
   - Bloquear navegación externa dentro de la ventana.
   - Cargar normalización visual de períodos en el administrador Electron.
   - Conectar Gemini por IPC seguro sin exponer GEMINI_API_KEY al navegador.
+  - Devolver errores indicando el archivo responsable.
   Se conecta con:
   - Requisitos/Titulos/package.json
   - Requisitos/Titulos/public/ta-titulo-articulo-estudiante.html
   - Requisitos/Titulos/public/ta-titulo-articulo-coordinador.html
   - Requisitos/Titulos/electron/admin/ta-titulo-articulo-administrador.html
-  - Requisitos/Titulos/electron/ta-titulo-articulo-preload.js
+  - Requisitos/Titulos/electron/ta-titulo-articulo-preload.cjs
   - Requisitos/Titulos/electron/ta-titulo-articulo-gemini.service.js
 */
 
@@ -23,10 +24,11 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { generarSugerenciasTituloElectron } from "./ta-titulo-articulo-gemini.service.js";
 
+const FILE_PATH = "Requisitos/Titulos/electron/ta-titulo-articulo-main.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const ROOT_DIR = join(__dirname, "..");
-const PRELOAD_FILE = join(__dirname, "ta-titulo-articulo-preload.js");
+const PRELOAD_FILE = join(__dirname, "ta-titulo-articulo-preload.cjs");
 
 const SCREENS = Object.freeze({
   estudiante: {
@@ -75,18 +77,25 @@ function detectarPantalla() {
   return "admin";
 }
 
+function errorPayload(error) {
+  const detalle = error?.message || "Gemini no pudo generar sugerencias en Electron.";
+  return {
+    ok: false,
+    origen: "gemini-electron-error",
+    bloqueado: true,
+    archivo: FILE_PATH,
+    motivo: `[Archivo: ${FILE_PATH}] ${detalle}`,
+    error: `[Archivo: ${FILE_PATH}] ${detalle}`
+  };
+}
+
 function registrarCanalesElectron() {
   ipcMain.handle("ta-titulo-articulo:gemini:generar-sugerencias", async (_event, payload) => {
     try {
       return await generarSugerenciasTituloElectron(payload, ROOT_DIR);
     } catch (error) {
-      return {
-        ok: false,
-        origen: "gemini-electron-error",
-        bloqueado: true,
-        motivo: error.message || "Gemini no pudo generar sugerencias en Electron.",
-        error: error.message || "Gemini no pudo generar sugerencias en Electron."
-      };
+      console.error(`[${FILE_PATH}]`, error);
+      return errorPayload(error);
     }
   });
 }
@@ -128,6 +137,10 @@ function createWindow() {
   win.once("ready-to-show", () => {
     win.show();
     if (IS_DEV) win.webContents.openDevTools({ mode: "detach" });
+  });
+
+  win.webContents.on("preload-error", (_event, preloadPath, error) => {
+    console.error(`[${FILE_PATH}] Error cargando preload ${preloadPath}:`, error);
   });
 
   win.webContents.setWindowOpenHandler(({ url }) => {
