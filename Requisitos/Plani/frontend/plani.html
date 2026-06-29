@@ -5,7 +5,7 @@ Ruta o ubicación: /Requisitos/Plani/frontend/plani.html
 Función o funciones:
 - Mostrar la pantalla Plani para planificación de titulación.
 - Guiar el flujo: Período -> Insumos -> Documento.
-- Conectar estado, período, tipo de documento, validación, diagnóstico y QA.
+- Conectar estado, período, tipo de documento, validación, diagnóstico, QA y plantillas institucionales.
 - Mantener el módulo separado de Infor hasta integración final.
 Con qué se conecta:
 - plani.css
@@ -17,6 +17,15 @@ Con qué se conecta:
 - ../core/plani.validator.js
 - ../core/plani.diagnostics.js
 - ../core/plani.qa.js
+- ../templates/layout/layout.config.js
+- ../templates/layout/typography.config.js
+- ../templates/layout/header.template.js
+- ../templates/layout/signatures.template.js
+- ../templates/layout/cover.template.js
+- ../templates/layout/index.template.js
+- ../templates/layout/table.template.js
+- ../templates/layout/section.template.js
+- ../templates/layout/page.template.js
 - plani.ui.js
 - plani.events.js
 - plani.app.js
@@ -37,7 +46,7 @@ Con qué se conecta:
         <p class="plani-lead">Selecciona el período, define el tipo de planificación, carga el cronograma y prepara el documento institucional.</p>
       </div>
       <div class="plani-hero-actions">
-        <span id="plani-module-state" class="plani-chip warn">Bloque 2</span>
+        <span id="plani-module-state" class="plani-chip warn">Bloque 3</span>
       </div>
     </section>
 
@@ -135,7 +144,7 @@ Con qué se conecta:
     <section class="plani-card plani-process-card">
       <div>
         <h2>5. Procesar y exportar</h2>
-        <p>En el bloque 2 se valida el estado base. La exportación se habilitará cuando exista motor documental.</p>
+        <p>En el bloque 3 ya existe base institucional de portada, encabezado, firmas, índice, secciones, tablas y página.</p>
         <p id="plani-readiness" class="plani-muted">Estado base listo.</p>
       </div>
       <div class="plani-process-actions">
@@ -158,6 +167,15 @@ Con qué se conecta:
   <script src="../core/plani.state.js"></script>
   <script src="../core/plani.validator.js"></script>
   <script src="../core/plani.diagnostics.js"></script>
+  <script src="../templates/layout/layout.config.js"></script>
+  <script src="../templates/layout/typography.config.js"></script>
+  <script src="../templates/layout/header.template.js"></script>
+  <script src="../templates/layout/signatures.template.js"></script>
+  <script src="../templates/layout/cover.template.js"></script>
+  <script src="../templates/layout/index.template.js"></script>
+  <script src="../templates/layout/table.template.js"></script>
+  <script src="../templates/layout/section.template.js"></script>
+  <script src="../templates/layout/page.template.js"></script>
   <script src="plani.ui.js"></script>
   <script src="plani.events.js"></script>
   <script src="../core/plani.qa.js"></script>
