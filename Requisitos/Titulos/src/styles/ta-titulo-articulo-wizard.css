@@ -253,6 +253,40 @@ button[data-ta-generar-sugerencias]:focus-visible {
   line-height: 1.5;
 }
 
+.ta-wizard-modal__list {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 14px;
+  padding: 0;
+  list-style: none;
+}
+
+.ta-wizard-modal__list li {
+  position: relative;
+  padding: 10px 12px 10px 34px;
+  border: 1px solid rgba(201, 168, 102, 0.34);
+  border-radius: 14px;
+  background: rgba(244, 234, 210, 0.32);
+  color: var(--ta-color-azul-marino);
+  font-weight: 750;
+  line-height: 1.35;
+}
+
+.ta-wizard-modal__list li::before {
+  content: "✓";
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  color: var(--ta-color-verde);
+  font-weight: 900;
+}
+
+.ta-wizard-modal__note {
+  margin-bottom: 16px !important;
+  font-weight: 800;
+  color: var(--ta-color-azul-marino) !important;
+}
+
 .ta-wizard-modal__close {
   position: absolute;
   top: 14px;
