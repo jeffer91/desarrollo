@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Gen libro</title>
+  <link rel="stylesheet" href="./lb.css" />
+</head>
+<body>
+  <main class="lb-page">
+    <header class="lb-topbar">
+      <nav class="lb-menu">
+        <a href="../carga-materia/carga-materia.index.html">Carga de la materia</a>
+        <a class="is-active" href="./lb.index.html">Gen libro</a>
+        <a href="../../index.html">Panel principal</a>
+      </nav>
+    </header>
+
+    <section class="lb-title">
+      <h1>Gen libro</h1>
+    </section>
+
+    <section id="lb-message" class="lb-message is-pending">Selecciona una carrera y una materia para generar el libro.</section>
+
+    <section class="lb-card">
+      <div class="lb-card__head">
+        <div>
+          <h2>Materia para generar libro</h2>
+          <p class="lb-note">La pantalla leerá la información guardada por Carga de la materia.</p>
+        </div>
+        <span id="lb-status" class="lb-pill">Sin materia</span>
+      </div>
+
+      <div class="lb-grid">
+        <label class="lb-field">
+          <span>Carrera</span>
+          <select id="lb-carrera-select"><option value="">Primero se cargarán las carreras guardadas</option></select>
+        </label>
+
+        <label class="lb-field">
+          <span>Materia</span>
+          <select id="lb-materia-select"><option value="">Selecciona una carrera</option></select>
+        </label>
+      </div>
+    </section>
+
+    <section class="lb-card">
+      <div class="lb-card__head">
+        <div>
+          <h2>Generación automatizada</h2>
+          <p class="lb-note">Se generará el libro completo con tabla de contenidos, unidades, referencias, glosario y anexos si aplican.</p>
+        </div>
+      </div>
+      <div class="lb-actions"><button id="lb-generate-btn" class="lb-btn" type="button" disabled>Generar libro</button></div>
+    </section>
+
+    <section class="lb-card lb-progress">
+      <div class="lb-progress__meta"><span id="lb-progress-text">Esperando selección de materia</span><span id="lb-progress-percent">0%</span></div>
+      <div class="lb-progress__track"><div id="lb-progress-bar" class="lb-progress__bar"></div></div>
+    </section>
+  </main>
+
+  <script src="./lb.constants.js"></script>
+  <script src="./lb.state.js"></script>
+  <script src="./lb.progress.js"></script>
+  <script src="./lb.ui.js"></script>
+  <script src="./lb.main.js"></script>
+</body>
+</html>
