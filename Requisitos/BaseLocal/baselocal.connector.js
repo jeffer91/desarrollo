@@ -8,6 +8,7 @@ Función o funciones:
 - Exponer APIs simples: RequisitosBL, BaseLocalBridge.
 - Reconstruir colecciones espejo solo cuando la foto local cambió.
 - Reflejar estudiantes también en tabla, fichas, stats, coordi, reportes y defensas.
+- Evitar duplicación pesada de estudiantes en localStorage.
 ========================================================= */
 (function(window){
   "use strict";
@@ -17,9 +18,12 @@ Función o funciones:
   var SNAPSHOT_KEY = "REQ_EXCEL_LOCAL_V1:snapshot";
   var STATUS_KEY = "REQ_BL_CONNECTOR_STATUS_V1";
   var MIRROR_SIGNATURE_KEY = "REQ_BL_MIRROR_SIGNATURE_V1";
+  var MIRROR_STORAGE_VERSION_KEY = "REQ_BL_MIRROR_STORAGE_VERSION_V1";
+  var MIRROR_STORAGE_VERSION = "light-v2";
 
   var COLLECTIONS = ["periodos","estudiantes","requisitos","observaciones","fichas","tabla","stats","coordi","reportes","defensas","archivos_referencias","metadata"];
   var MIRROR_COLLECTIONS = ["periodos","estudiantes","requisitos","fichas","tabla","stats","coordi","reportes","defensas"];
+  var LIGHT_MIRROR_COLLECTIONS = ["requisitos","fichas","tabla","stats","coordi","reportes","defensas"];
 
   var MODULE_COLLECTIONS = {requisito:"requisitos",excel:"requisitos",carga:"requisitos",tabla:"tabla",ficha:"fichas",stats:"stats",coordi:"coordi",repor:"reportes",reportes:"reportes",repo:"reportes",defensas:"defensas",defart:"defensas"};
   var mirrorState = {running:false,lastSignature:"",lastAt:""};
@@ -30,6 +34,11 @@ Función o funciones:
   function safeParse(value, fallback){try{return value ? JSON.parse(value) : fallback;}catch(error){return fallback;}}
   function clone(value){try{return JSON.parse(JSON.stringify(value == null ? null : value));}catch(error){return value;}}
 
+  function isQuotaError(error){
+    var msg = text(error && (error.message || error.name || error));
+    return !!(error && (error.name === "QuotaExceededError" || error.name === "NS_ERROR_DOM_QUOTA_REACHED" || error.code === 22 || error.code === 1014 || /quota|exceeded/i.test(msg)));
+  }
+
   function getSession(){
     try{if(window.parent && window.parent !== window && window.parent.MAQ_BASELOCAL_SESSION){return window.parent.MAQ_BASELOCAL_SESSION;}}catch(error){}
     try{if(window.top && window.top !== window && window.top.MAQ_BASELOCAL_SESSION){return window.top.MAQ_BASELOCAL_SESSION;}}catch(error){}
@@ -39,6 +48,8 @@ Función o funciones:
 
   function getSavedMirrorSignature(){try{return window.sessionStorage.getItem(MIRROR_SIGNATURE_KEY) || "";}catch(error){return "";}}
   function saveMirrorSignature(signature){try{window.sessionStorage.setItem(MIRROR_SIGNATURE_KEY, signature || "");}catch(error){}}
+  function getMirrorStorageVersion(){try{return window.localStorage.getItem(MIRROR_STORAGE_VERSION_KEY) || "";}catch(error){return "";}}
+  function saveMirrorStorageVersion(){try{window.localStorage.setItem(MIRROR_STORAGE_VERSION_KEY, MIRROR_STORAGE_VERSION);}catch(error){}}
 
   function normalizeId(value, fallback){
     var raw = text(value || fallback || "");
@@ -82,7 +93,7 @@ Función o funciones:
     var storage = getStorage();
     var clean = canonicalizeSnapshot(snapshot || {});
     if(storage && typeof storage.writeSnapshot === "function"){storage.writeSnapshot(clean);}
-    else{window.localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(clean));}
+    else{safeSetItem(SNAPSHOT_KEY, JSON.stringify(clean));}
     try{
       var session = getSession();
       if(session && typeof session.setSnapshot === "function"){session.setSnapshot(clean,{source:"RequisitosBL.writeSnapshot",alreadyStored:true,clone:false});}
@@ -91,8 +102,76 @@ Función o funciones:
     return clean;
   }
 
+  function purgeGeneratedCopies(keepCollection){
+    var removed = 0;
+    try{
+      for(var i = window.localStorage.length - 1; i >= 0; i--){
+        var key = window.localStorage.key(i) || "";
+        var isMirror = key.indexOf(DB_PREFIX) === 0;
+        var isBackup = key.indexOf("REQ_EXCEL_LOCAL_V1:beforeFirebaseSync:") === 0;
+        if(isMirror){
+          var collection = key.slice(DB_PREFIX.length);
+          if(collection === keepCollection || collection === "metadata"){continue;}
+        }
+        if(isMirror || isBackup){try{window.localStorage.removeItem(key);removed += 1;}catch(error){}}
+      }
+    }catch(error){}
+    try{window.sessionStorage.removeItem(MIRROR_SIGNATURE_KEY);}catch(error){}
+    return removed;
+  }
+
+  function purgeMirrorCollections(){
+    MIRROR_COLLECTIONS.forEach(function(collection){try{window.localStorage.removeItem(dbKey(collection));}catch(error){}});
+    try{window.sessionStorage.removeItem(MIRROR_SIGNATURE_KEY);}catch(error){}
+  }
+
+  function safeSetItem(key, raw, keepCollection){
+    try{window.localStorage.setItem(key, raw);return true;}catch(error){
+      if(!isQuotaError(error)){throw error;}
+      purgeGeneratedCopies(keepCollection || "");
+      try{window.localStorage.setItem(key, raw);return true;}catch(secondError){
+        if(!isQuotaError(secondError)){throw secondError;}
+        return false;
+      }
+    }
+  }
+
+  function isLightCollection(collection){return LIGHT_MIRROR_COLLECTIONS.indexOf(collection) >= 0;}
+
+  function compactForStorage(row){
+    var source = row && typeof row === "object" ? row : {};
+    var out = Array.isArray(source) ? [] : {};
+    Object.keys(source).forEach(function(key){
+      var value = source[key];
+      var low = key.toLowerCase();
+      if(low.indexOf("base64") >= 0 || low.indexOf("buffer") >= 0 || low.indexOf("blob") >= 0 || low === "raw" || low === "_raw"){return;}
+      if(typeof value === "string" && value.length > 5000){out[key] = value.slice(0,5000) + "…";return;}
+      out[key] = value;
+    });
+    return out;
+  }
+
+  function lightRecord(record, collection){
+    if(!record || typeof record !== "object"){return record;}
+    if(collection === "periodos" || collection === "metadata"){return compactForStorage(record);}
+    var fields = ["cedula","Cedula","CEDULA","numeroIdentificacion","numeroidentificacion","identificacion","docId","_docId","id","codigo","nombres","Nombres","nombresCompletos","apellidos","nombrecarrera","nombreCarrera","NombreCarrera","carrera","Carrera","programa","sede","Sede","modalidad","jornada","periodoId","periodoLabel","periodo","ultimoPeriodoId","estadoMatricula","retiradoEn","historialEstadoMatricula","division","divisiones","updatedAt","createdAt","creadoEn","actualizadoEn","fechaDefensa","horaDefensa","tribunal","presidente","vocal","secretario","tutor","nota","notaFinal","nart","ndef","complexivo","supletorio"];
+    var out = {};
+    fields.forEach(function(field){if(Object.prototype.hasOwnProperty.call(record, field)){out[field] = record[field];}});
+    out._mirrorRef = "estudiantes";
+    out._mirrorCollection = collection || "mirror";
+    out._mirrorLight = true;
+    out._mirrorUpdatedAt = now();
+    return compactForStorage(out);
+  }
+
   function readCollection(collection){var rows = safeParse(window.localStorage.getItem(dbKey(collection)), []);return Array.isArray(rows) ? rows : [];}
-  function writeCollection(collection, rows){window.localStorage.setItem(dbKey(collection), JSON.stringify(Array.isArray(rows) ? rows : []));}
+  function writeCollection(collection, rows){
+    var list = Array.isArray(rows) ? rows : [];
+    var raw = JSON.stringify(list);
+    if(safeSetItem(dbKey(collection), raw, collection)){return;}
+    var light = list.map(function(row){return lightRecord(row, collection);});
+    safeSetItem(dbKey(collection), JSON.stringify(light), collection);
+  }
 
   function getRecordId(record, collection){
     if(!record || typeof record !== "object"){return normalizeId("", collection);}
@@ -116,7 +195,7 @@ Función o funciones:
     options = options || {};
     if(!collection || !record || typeof record !== "object"){return null;}
     var rows = readCollection(collection);
-    var copy = normalizeRecord(collection, record, source);
+    var copy = normalizeRecord(collection, isLightCollection(collection) ? lightRecord(record, collection) : record, source);
     var index = rows.findIndex(function(row){return row && row._blId === copy._blId;});
     if(index >= 0){copy._blCreatedAt = rows[index]._blCreatedAt || copy._blCreatedAt;rows[index] = copy;}else{rows.push(copy);}
     writeCollection(collection, rows);
@@ -133,7 +212,8 @@ Función o funciones:
     var saved = [];
     records.forEach(function(record){
       if(!record || typeof record !== "object"){return;}
-      var copy = normalizeRecord(collection, record, source || "module_many");
+      var sourceRecord = isLightCollection(collection) ? lightRecord(record, collection) : record;
+      var copy = normalizeRecord(collection, sourceRecord, source || "module_many");
       var index = Object.prototype.hasOwnProperty.call(indexById, copy._blId) ? indexById[copy._blId] : -1;
       if(index >= 0){copy._blCreatedAt = rows[index]._blCreatedAt || copy._blCreatedAt;rows[index] = copy;}
       else{indexById[copy._blId] = rows.length;rows.push(copy);}
@@ -165,7 +245,7 @@ Función o funciones:
     var students = Array.isArray(snapshot.students) ? snapshot.students : [];
     var first = students[0] && (students[0].cedula || students[0].numeroIdentificacion || students[0]._docId || students[0].docId || "");
     var last = students[students.length - 1] && (students[students.length - 1].cedula || students[students.length - 1].numeroIdentificacion || students[students.length - 1]._docId || students[students.length - 1].docId || "");
-    return [meta.updatedAt || meta.pulledAt || meta.createdAt || "", periods.length, students.length, first, last].join("|");
+    return [meta.updatedAt || meta.pulledAt || meta.createdAt || "", periods.length, students.length, first, last, MIRROR_STORAGE_VERSION].join("|");
   }
 
   function mirrorSnapshotToCollections(options){
@@ -176,21 +256,25 @@ Función o funciones:
     var students = Array.isArray(snapshot.students) ? snapshot.students : [];
     var signature = snapshotSignature(snapshot);
     var savedSignature = getSavedMirrorSignature();
-    if(options.force !== true && options.rebuild !== true && signature && (signature === mirrorState.lastSignature || signature === savedSignature)){
+    var mustRebuildForStorage = getMirrorStorageVersion() !== MIRROR_STORAGE_VERSION;
+    if(!mustRebuildForStorage && options.force !== true && options.rebuild !== true && signature && (signature === mirrorState.lastSignature || signature === savedSignature)){
       mirrorState.lastSignature = signature;
       return {periods:periods.length, students:students.length, defensas:students.length, skipped:true, reason:"same_snapshot_session"};
     }
     mirrorState.running = true;
     try{
-      var replace = options.rebuild === true || options.replace === true || options.force === true;
+      var replace = options.rebuild === true || options.replace === true || options.force === true || mustRebuildForStorage;
+      if(replace){purgeMirrorCollections();}
       guardarMuchos("periodos", periods, "snapshot_mirror", {silent:true, replace:replace});
-      ["estudiantes","requisitos","fichas","tabla","stats","coordi","reportes","defensas"].forEach(function(collection){guardarMuchos(collection, students, "snapshot_mirror", {silent:true, replace:replace});});
-      guardar("metadata", {id:"snapshot_mirror_status", totalPeriods:periods.length, totalStudents:students.length, totalDefensas:students.length, updatedAt:now(), signature:signature, rebuild:replace}, "snapshot_mirror", {silent:true});
+      guardarMuchos("estudiantes", students, "snapshot_mirror", {silent:true, replace:replace});
+      LIGHT_MIRROR_COLLECTIONS.forEach(function(collection){guardarMuchos(collection, students, "snapshot_mirror_light", {silent:true, replace:true});});
+      guardar("metadata", {id:"snapshot_mirror_status", totalPeriods:periods.length, totalStudents:students.length, totalDefensas:students.length, updatedAt:now(), signature:signature, rebuild:replace, storageVersion:MIRROR_STORAGE_VERSION, lightMirrors:true}, "snapshot_mirror", {silent:true});
       mirrorState.lastSignature = signature;
       mirrorState.lastAt = now();
       saveMirrorSignature(signature);
-      if(options.silent !== true){signal("mirror-complete", {periods:periods.length, students:students.length, defensas:students.length, updatedAt:mirrorState.lastAt, rebuild:replace});}
-      return {periods:periods.length, students:students.length, defensas:students.length, skipped:false, rebuild:replace};
+      saveMirrorStorageVersion();
+      if(options.silent !== true){signal("mirror-complete", {periods:periods.length, students:students.length, defensas:students.length, updatedAt:mirrorState.lastAt, rebuild:replace, storageVersion:MIRROR_STORAGE_VERSION});}
+      return {periods:periods.length, students:students.length, defensas:students.length, skipped:false, rebuild:replace, storageVersion:MIRROR_STORAGE_VERSION};
     }finally{mirrorState.running = false;}
   }
 
@@ -244,11 +328,11 @@ Función o funciones:
   }
 
   function getStatus(){return safeParse(window.localStorage.getItem(STATUS_KEY), {ok:true, mode:"local", updatedAt:now()});}
-  function saveStatus(status){var next = Object.assign({}, getStatus(), status || {}, {updatedAt:now(), today:today()});window.localStorage.setItem(STATUS_KEY, JSON.stringify(next));return next;}
+  function saveStatus(status){var next = Object.assign({}, getStatus(), status || {}, {updatedAt:now(), today:today()});try{window.localStorage.setItem(STATUS_KEY, JSON.stringify(next));}catch(error){}return next;}
 
-  window.RequisitosBL = {version:"1.2.0",collections:COLLECTIONS.slice(),mirrorCollections:MIRROR_COLLECTIONS.slice(),today:today,collectionFor:collectionFor,readSnapshot:readRawSnapshot,writeSnapshot:writeRawSnapshot,mirrorSnapshotToCollections:mirrorSnapshotToCollections,rebuildSnapshotToCollections:rebuildSnapshotToCollections,replaceCollection:replaceCollection,guardar:guardar,guardarMuchos:guardarMuchos,listar:listar,buscarPorId:buscarPorId,marcarEliminado:marcarEliminado,conteos:conteos,capturarGlobales:capturarGlobales,conectarModulo:conectarModulo,notificar:signal,getStatus:getStatus,saveStatus:saveStatus};
-  window.BaseLocalBridge = {version:"1.2.0",counts:conteos,getSnapshot:readRawSnapshot,writeSnapshot:writeRawSnapshot,mirrorSnapshotToCollections:mirrorSnapshotToCollections,rebuildSnapshotToCollections:rebuildSnapshotToCollections,list:listar,upsert:guardar,upsertMany:guardarMuchos,replace:replaceCollection,status:getStatus};
+  window.RequisitosBL = {version:"1.3.0",collections:COLLECTIONS.slice(),mirrorCollections:MIRROR_COLLECTIONS.slice(),today:today,collectionFor:collectionFor,readSnapshot:readRawSnapshot,writeSnapshot:writeRawSnapshot,mirrorSnapshotToCollections:mirrorSnapshotToCollections,rebuildSnapshotToCollections:rebuildSnapshotToCollections,replaceCollection:replaceCollection,guardar:guardar,guardarMuchos:guardarMuchos,listar:listar,buscarPorId:buscarPorId,marcarEliminado:marcarEliminado,conteos:conteos,capturarGlobales:capturarGlobales,conectarModulo:conectarModulo,notificar:signal,getStatus:getStatus,saveStatus:saveStatus,purgeGeneratedCopies:purgeGeneratedCopies};
+  window.BaseLocalBridge = {version:"1.3.0",counts:conteos,getSnapshot:readRawSnapshot,writeSnapshot:writeRawSnapshot,mirrorSnapshotToCollections:mirrorSnapshotToCollections,rebuildSnapshotToCollections:rebuildSnapshotToCollections,list:listar,upsert:guardar,upsertMany:guardarMuchos,replace:replaceCollection,status:getStatus};
 
-  try{var mirrorResult = mirrorSnapshotToCollections({silent:true});saveStatus({ok:true, mode:"connector_ready", optimized:true, sessionReady:!!getSession(), defensasMirror:true, rebuildReady:true, mirrorSkipped:mirrorResult.skipped === true, mirrorReason:mirrorResult.reason || "updated"});}
+  try{var mirrorResult = mirrorSnapshotToCollections({silent:true});saveStatus({ok:true, mode:"connector_ready", optimized:true, sessionReady:!!getSession(), defensasMirror:true, rebuildReady:true, lightMirrors:true, storageVersion:MIRROR_STORAGE_VERSION, mirrorSkipped:mirrorResult.skipped === true, mirrorReason:mirrorResult.reason || "updated"});}
   catch(error){saveStatus({ok:false, mode:"connector_error", errorMessage:error.message || String(error)});}
 })(window);
