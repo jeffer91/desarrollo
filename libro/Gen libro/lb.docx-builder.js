@@ -5,6 +5,7 @@ Función o funciones:
 1. Convertir el borrador interno del libro en un modelo Word ordenado.
 2. Aplicar estructura oficial, estilos, tabla de contenidos y secciones.
 3. Preparar el contenido para exportación DOCX desde Electron o navegador.
+4. Evitar secciones duplicadas en el documento final.
 ========================================================= */
 
 (function attachLbDocxBuilder(window) {
@@ -58,6 +59,8 @@ Función o funciones:
 
   function addInitialSections(nodes, bookDraft) {
     asArray(bookDraft && bookDraft.initialSections && bookDraft.initialSections.sections).forEach(function eachSection(section) {
+      if (!section || !section.title) return;
+
       nodes.push(heading(section.title, 1));
 
       if (section.content) nodes.push(paragraph(section.content, "normal"));
@@ -151,6 +154,15 @@ Función o funciones:
     });
   }
 
+  function safeFileName(value) {
+    return (text(value) || "libro-asignatura")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9ñ]+/gi, "-")
+      .replace(/^-+|-+$/g, "") + ".docx";
+  }
+
   function build(bookDraft) {
     refresh();
 
@@ -161,8 +173,6 @@ Función o funciones:
 
     nodes.push(paragraph("Tabla de contenidos", "heading1"));
     nodes.push({ type: "toc", entries: tocEntries, instruction: Toc && Toc.buildWordFieldInstruction ? Toc.buildWordFieldInstruction() : "TOC" });
-    nodes.push(heading("Nombre de la asignatura", 1));
-    nodes.push(paragraph(plan.materia || "", "normal"));
 
     addInitialSections(nodes, bookDraft);
     asArray(bookDraft && bookDraft.units && bookDraft.units.units).forEach(function eachUnit(unit) {
@@ -176,7 +186,7 @@ Función o funciones:
     return {
       id: "docx-model",
       title: plan.materia ? "Libro de asignatura - " + plan.materia : "Libro de asignatura",
-      fileName: (plan.materia || "libro-asignatura").toLowerCase().replace(/[^a-z0-9áéíóúñ]+/gi, "-").replace(/^-+|-+$/g, "") + ".docx",
+      fileName: safeFileName(plan.materia),
       styles: styles,
       nodes: nodes,
       meta: {
