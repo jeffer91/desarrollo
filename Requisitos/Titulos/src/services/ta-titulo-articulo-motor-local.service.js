@@ -2,12 +2,13 @@
   Nombre completo: ta-titulo-articulo-motor-local.service.js
   Ruta o ubicación: /Requisitos/Titulos/src/services/ta-titulo-articulo-motor-local.service.js
   Función o funciones:
-  - Generar dos sugerencias académicas locales de títulos sin depender de Gemini.
+  - Generar tres sugerencias académicas locales de títulos sin depender de IA externa.
   - Crear una capa previa de normalización académica antes de construir títulos.
   - Convertir frases informales en conceptos académicos mediante un diccionario interno.
-  - Separar enfoques: diagnóstico/análisis y propuesta/plan de mejora.
+  - Separar enfoques por momento investigativo: inicio, desarrollo/proceso y final/resultados.
+  - Decidir si la tercera sugerencia debe ser evaluación de resultados, validación o impacto.
   - Validar títulos finales para evitar frases mal construidas, repeticiones y lenguaje informal.
-  - Evitar que el estudiante quede bloqueado si Gemini no responde.
+  - Evitar que el estudiante quede bloqueado si un servicio externo no responde.
   Se conecta con:
   - Requisitos/Titulos/src/services/ta-titulo-articulo-gemini-client.service.js
   - Requisitos/Titulos/src/estudiante/ta-titulo-articulo-estudiante.app.js
@@ -95,10 +96,43 @@ const FRASES_PROHIBIDAS = Object.freeze([
   "para mejorar los artículos académicos para",
   "para mejorar los articulos academicos para",
   "propuesta de mejora relacionada con",
-  "orientada a la mejora de propuesta"
+  "orientada a la mejora de propuesta",
+  "impacto de mejorar",
+  "análisis de impacto de mejorar",
+  "analisis de impacto de mejorar"
 ]);
 
 const PALABRAS_REPETICION_CONTROLADA = Object.freeze(["mejorar", "mejora", "académicos", "academicos", "artículos", "articulos"]);
+
+const INDICADORES_IMPACTO = Object.freeze([
+  "antes y después",
+  "antes y despues",
+  "pretest",
+  "postest",
+  "pre test",
+  "post test",
+  "pre-test",
+  "post-test",
+  "impacto",
+  "incidencia",
+  "comparar resultados",
+  "comparación de resultados",
+  "comparacion de resultados"
+]);
+
+const INDICADORES_VALIDACION = Object.freeze([
+  "validación",
+  "validacion",
+  "validar",
+  "diseño y validación",
+  "diseno y validacion",
+  "no se implementa",
+  "sin implementar",
+  "propuesta no implementada",
+  "solo propuesta",
+  "diseñar propuesta",
+  "disenar propuesta"
+]);
 
 function clean(value) {
   return String(value ?? "").replace(/\s+/g, " ").trim();
@@ -135,11 +169,6 @@ function academizar(value, tipo = "tema") {
 
 function limpiarFrase(value) {
   return quitarEtiquetas(value);
-}
-
-function frase(value) {
-  const texto = limpiarFrase(value);
-  return texto ? texto.charAt(0).toLowerCase() + texto.slice(1) : "";
 }
 
 function detectarArea(carrera = "") {
@@ -351,7 +380,7 @@ function contarPalabras(value) {
 
 function acortar(value) {
   let titulo = limpiarTitulo(value);
-  if (contarPalabras(titulo) <= 32) return titulo;
+  if (contarPalabras(titulo) <= 36) return titulo;
 
   titulo = titulo
     .replace(/\s+orientad[oa]\s+a\s+la\s+mejora\s+de\s+/i, " para ")
@@ -410,6 +439,88 @@ function validar(payload = {}) {
   if (faltante) throw new Error(`[Archivo: ${FILE_PATH}] Complete el campo ${faltante[0]} antes de generar sugerencias.`);
 }
 
+function textoCompletoPayload(payload = {}) {
+  return [
+    payload.temaGeneral,
+    payload.problemaNecesidad,
+    payload.objetivoArticulo,
+    payload.resultadoEsperado,
+    payload.tituloManual
+  ].map(clean).filter(Boolean).join(" ");
+}
+
+function detectarEtapaFinal(payload = {}) {
+  const texto = normalizar(textoCompletoPayload(payload));
+  if (INDICADORES_IMPACTO.some((item) => texto.includes(normalizar(item)))) return "impacto";
+  if (INDICADORES_VALIDACION.some((item) => texto.includes(normalizar(item)))) return "validacion";
+  return "resultados";
+}
+
+function construirObjetoImpacto(temaAcademico = "", problemaAcademico = "") {
+  const tema = normalizar(temaAcademico);
+  const problema = normalizar(problemaAcademico);
+
+  if (tema.includes("articulos academicos") || problema.includes("articulos academicos")) {
+    return "la calidad de los artículos académicos elaborados por estudiantes";
+  }
+
+  if (tema.includes("redaccion academica") || problema.includes("redaccion academica")) {
+    return "la redacción académica de los estudiantes";
+  }
+
+  if (tema.includes("captacion de clientes") || problema.includes("captacion de clientes")) {
+    return "la captación de clientes";
+  }
+
+  if (tema.includes("ventas") || problema.includes("ventas")) {
+    return "el nivel de ventas";
+  }
+
+  return quitarArticuloInicial(temaAcademico) || "la mejora propuesta";
+}
+
+function construirEstrategiaFinal(temaAcademico = "", problemaAcademico = "") {
+  const tema = normalizar(temaAcademico);
+  const problema = normalizar(problemaAcademico);
+
+  if (tema.includes("articulos academicos") || problema.includes("redaccion academica") || problema.includes("articulos academicos")) {
+    return "una estrategia de fortalecimiento de la redacción académica";
+  }
+
+  if (tema.includes("captacion de clientes") || problema.includes("captacion de clientes")) {
+    return "una estrategia de fortalecimiento de la captación de clientes";
+  }
+
+  if (tema.includes("ventas") || problema.includes("ventas")) {
+    return "una estrategia de mejora del nivel de ventas";
+  }
+
+  if (tema.includes("atencion") || problema.includes("atencion")) {
+    return "una estrategia de mejora de la calidad de la atención";
+  }
+
+  const base = quitarArticuloInicial(temaAcademico);
+  return base ? `una estrategia de fortalecimiento relacionada con ${base}` : "una estrategia de fortalecimiento de la mejora propuesta";
+}
+
+function construirTituloFinal(payload, datos) {
+  const etapaFinal = detectarEtapaFinal(payload);
+  const contextoGeneral = construirContextoEn(datos.grupoEstudio, datos.lugarContexto);
+  const contextoPropuesta = construirContextoPropuesta(datos.objetivoAcademico, datos.grupoEstudio, datos.lugarContexto);
+  const estrategia = construirEstrategiaFinal(datos.temaAcademico, datos.problemaAcademico);
+  const objetoImpacto = construirObjetoImpacto(datos.temaAcademico, datos.problemaAcademico);
+
+  if (etapaFinal === "impacto") {
+    return agregarPeriodo(`Análisis del impacto de una estrategia de mejora en ${objetoImpacto} ${contextoPropuesta || contextoGeneral}`, datos.anio);
+  }
+
+  if (etapaFinal === "validacion") {
+    return agregarPeriodo(`Diseño y validación de una propuesta para ${datos.objetivoAcademico} ${contextoPropuesta}`, datos.anio);
+  }
+
+  return agregarPeriodo(`Evaluación de los resultados de ${estrategia} ${contextoGeneral}`, datos.anio);
+}
+
 function construirCandidatos(payload = {}) {
   const area = detectarArea(payload.carrera);
   const temaAcademico = normalizarTema(payload.temaGeneral, area, payload);
@@ -420,14 +531,16 @@ function construirCandidatos(payload = {}) {
   const objetivoAcademico = normalizarObjetivo(payload.objetivoArticulo || payload.resultadoEsperado, temaAcademico, problemaAcademico, grupoEstudio);
   const contextoDiagnostico = construirContextoEn(grupoEstudio, lugarContexto);
   const contextoPropuesta = construirContextoPropuesta(objetivoAcademico, grupoEstudio, lugarContexto);
+  const datos = { temaAcademico, problemaAcademico, grupoEstudio, lugarContexto, anio, objetivoAcademico };
 
   return [
     agregarPeriodo(`Diagnóstico de ${problemaAcademico} ${contextoDiagnostico}`, anio),
     agregarPeriodo(`Propuesta de mejora para ${objetivoAcademico} ${contextoPropuesta}`, anio),
+    construirTituloFinal(payload, datos),
     agregarPeriodo(`Análisis de ${problemaAcademico} ${contextoDiagnostico}`, anio),
     agregarPeriodo(`Plan de mejora para ${objetivoAcademico} ${contextoPropuesta}`, anio),
-    agregarPeriodo(`Evaluación de ${temaAcademico} ${contextoDiagnostico}`, anio),
-    agregarPeriodo(`Estrategia de fortalecimiento para ${objetivoAcademico} ${contextoPropuesta}`, anio)
+    agregarPeriodo(`Valoración de los resultados de ${construirEstrategiaFinal(temaAcademico, problemaAcademico)} ${contextoDiagnostico}`, anio),
+    agregarPeriodo(`Diseño y validación de una propuesta para ${objetivoAcademico} ${contextoPropuesta}`, anio)
   ];
 }
 
@@ -435,14 +548,14 @@ function generarSugerenciasTitulo(payload = {}, options = {}) {
   validar(payload);
 
   const previos = Array.isArray(payload.titulosYaGenerados) ? payload.titulosYaGenerados : [];
-  const sugerencias = dedupe(construirCandidatos(payload), previos).slice(0, 2);
+  const sugerencias = dedupe(construirCandidatos(payload), previos).slice(0, 3);
 
-  if (sugerencias.length < 2) throw new Error(`[Archivo: ${FILE_PATH}] No se pudieron generar dos sugerencias académicas aprobadas.`);
+  if (sugerencias.length < 3) throw new Error(`[Archivo: ${FILE_PATH}] No se pudieron generar tres sugerencias académicas aprobadas.`);
 
   const errorOriginal = clean(options.errorOriginal || "");
   const aviso = errorOriginal
-    ? "No se pudo conectar con Gemini. Se generaron sugerencias con el motor académico local."
-    : "Sugerencias generadas con motor académico local.";
+    ? "No se pudo conectar con el servicio externo. Se generaron 3 sugerencias con el motor académico local."
+    : "3 sugerencias generadas con motor académico local.";
 
   return {
     ok: true,
@@ -464,5 +577,6 @@ export const TaTituloArticuloMotorLocal = Object.freeze({
   normalizarProblema,
   normalizarObjetivo,
   tituloAprobado,
-  tieneRepeticionExcesiva
+  tieneRepeticionExcesiva,
+  detectarEtapaFinal
 });
