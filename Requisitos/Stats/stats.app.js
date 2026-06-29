@@ -7,6 +7,7 @@ Función o funciones:
 - Mostrar aprobación por período solo cuando exista período seleccionado.
 - Separar requisitos normales de aprobación final.
 - Eliminar dependencia visual de exportación y diagnóstico.
+- Invalidar cachés BL2/Stats al actualizar para evitar leer requisitos antiguos o reducidos.
 Con qué se conecta:
 - stats.rules.js
 - stats.core.js
@@ -32,6 +33,14 @@ Con qué se conecta:
   function setHtml(id,value){var node=el(id);if(node)node.innerHTML=value;}
   function setVisible(node,visible){if(node)node.style.display=visible?"":"none";}
   function on(id,event,handler){var node=el(id);if(node)node.addEventListener(event,handler);}
+
+  function invalidateDataCaches(reason){
+    try{if(window.BL2CacheResumen&&typeof window.BL2CacheResumen.invalidate==="function"){window.BL2CacheResumen.invalidate("stats");}}catch(error){}
+    try{if(window.BL2&&typeof window.BL2.invalidate==="function"){window.BL2.invalidate();}}catch(error){}
+    try{if(window.BL2LegacyAdapter&&typeof window.BL2LegacyAdapter.invalidate==="function"){window.BL2LegacyAdapter.invalidate();}}catch(error){}
+    try{if(window.ExcelLocalStorage&&typeof window.ExcelLocalStorage.invalidate==="function"){window.ExcelLocalStorage.invalidate();}}catch(error){}
+    try{window.dispatchEvent(new CustomEvent("stats:cache-invalidated",{detail:{reason:reason||"manual",at:new Date().toISOString()}}));}catch(error){}
+  }
 
   function periodValue(item){if(typeof item==="string")return item;item=item||{};return text(item.id||item.periodoId||item.periodId||item.value||item.key||item.label||item.periodoLabel||item.nombre||"");}
   function periodLabel(item){if(typeof item==="string")return item;item=item||{};return text(item.label||item.periodoLabel||item.nombre||item.name||item.id||item.periodoId||item.periodId||item.value||"");}
@@ -125,7 +134,9 @@ Con qué se conecta:
   function renderStudents(data){if(window.StatsStudents&&typeof window.StatsStudents.render==="function")window.StatsStudents.render(data,"stats-estudiantes",{search:state.studentSearch});}
   function bindSortableTables(){if(window.StatsTables&&typeof window.StatsTables.bindAll==="function")window.StatsTables.bindAll(document);}
 
-  function render(){
+  function render(options){
+    options=options||{};
+    if(options.force === true){invalidateDataCaches(options.reason||"force-render");}
     try{
       if(!window.StatsCore||typeof window.StatsCore.resumen!=="function")throw new Error("StatsCore no disponible.");
       state.data=window.StatsCore.resumen({periodId:state.periodId,division:state.division,matricula:state.matricula,career:state.career,status:state.status,requirementKey:state.requirementKey});
@@ -147,16 +158,18 @@ Con qué se conecta:
   }
 
   function bind(){
-    on("stats-periodo","change",function(e){state.periodId=e.target.value;state.division="";state.career="";render();});
+    on("stats-periodo","change",function(e){state.periodId=e.target.value;state.division="";state.career="";render({force:true,reason:"period-change"});});
     on("stats-division","change",function(e){state.division=e.target.value;state.career="";render();});
-    on("stats-matricula","change",function(e){state.matricula=e.target.value;state.division="";state.career="";render();});
+    on("stats-matricula","change",function(e){state.matricula=e.target.value;state.division="";state.career="";render({force:true,reason:"matricula-change"});});
     on("stats-carrera","change",function(e){state.career=e.target.value;render();});
     on("stats-estado","change",function(e){state.status=e.target.value;render();});
     on("stats-requisito","change",function(e){state.requirementKey=e.target.value;render();});
     on("stats-student-search","input",function(e){state.studentSearch=e.target.value;render();});
-    on("stats-refresh","click",render);
+    on("stats-refresh","click",function(){render({force:true,reason:"refresh-button"});});
+    window.addEventListener("requisitos:bl:snapshot-changed",function(){render({force:true,reason:"snapshot-changed"});});
+    window.addEventListener("bl2:invalidated",function(){render();});
   }
 
-  function boot(){if(window.ExcelLocalBridge&&typeof window.ExcelLocalBridge.ensureReady==="function")window.ExcelLocalBridge.ensureReady();bind();render();}
+  function boot(){if(window.ExcelLocalBridge&&typeof window.ExcelLocalBridge.ensureReady==="function")window.ExcelLocalBridge.ensureReady();invalidateDataCaches("boot");bind();render({force:true,reason:"boot"});}
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",boot);else boot();
 })(window,document);
