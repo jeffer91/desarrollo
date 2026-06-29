@@ -6,6 +6,7 @@
   - Confirmar que estudiante, coordinador y administrador apunten a sus módulos correctos.
   - Confirmar que Electron abra las tres pantallas con Firebase directo.
   - Confirmar que Gemini funcione únicamente mediante Electron IPC seguro o Netlify Function segura.
+  - Confirmar que los errores de Gemini indiquen archivo responsable.
   - Confirmar que el administrador cargue el normalizador de períodos.
 */
 
@@ -121,20 +122,24 @@ for (const field of ["titulosEnviados", "tituloPreferidoNumero", "tituloCorregid
 }
 
 const electron = exists("electron/ta-titulo-articulo-main.js") ? read("electron/ta-titulo-articulo-main.js") : "";
-for (const value of ["--estudiante", "--coordinador", "--admin", "taDataMode", "firebase-direct", "loadFile", "ta-titulo-articulo-admin-periodos-normalizados.app.js", "ipcMain", "ta-titulo-articulo-preload.js", "generarSugerenciasTituloElectron"]) {
+for (const value of ["--estudiante", "--coordinador", "--admin", "taDataMode", "firebase-direct", "loadFile", "ta-titulo-articulo-admin-periodos-normalizados.app.js", "ipcMain", "ta-titulo-articulo-preload.cjs", "generarSugerenciasTituloElectron", "preload-error"]) {
   assert(errors, electron.includes(value), `Electron: falta ${value}`);
 }
-assert(errors, exists("electron/ta-titulo-articulo-preload.js"), "Electron: falta preload seguro");
+assert(errors, !electron.includes("ta-titulo-articulo-preload.js"), "Electron: no debe apuntar al preload .js en proyecto type=module");
+assert(errors, exists("electron/ta-titulo-articulo-preload.cjs"), "Electron: falta preload seguro CJS");
+assert(errors, !exists("electron/ta-titulo-articulo-preload.js"), "Electron: existe preload JS incompatible con type=module");
 assert(errors, exists("electron/ta-titulo-articulo-gemini.service.js"), "Electron: falta servicio Gemini");
 
-const preload = exists("electron/ta-titulo-articulo-preload.js") ? read("electron/ta-titulo-articulo-preload.js") : "";
+const preload = exists("electron/ta-titulo-articulo-preload.cjs") ? read("electron/ta-titulo-articulo-preload.cjs") : "";
 assert(errors, preload.includes("contextBridge") && preload.includes("ipcRenderer.invoke"), "Electron preload: falta puente IPC seguro");
 assert(errors, preload.includes("taTituloArticuloElectron"), "Electron preload: falta API pública controlada");
+assert(errors, preload.includes("Requisitos/Titulos/electron/ta-titulo-articulo-preload.cjs"), "Electron preload: falta archivo en diagnóstico");
 
 const electronGemini = exists("electron/ta-titulo-articulo-gemini.service.js") ? read("electron/ta-titulo-articulo-gemini.service.js") : "";
 assert(errors, electronGemini.includes("GEMINI_API_KEY"), "Electron Gemini: falta GEMINI_API_KEY");
 assert(errors, electronGemini.includes("generativelanguage.googleapis.com"), "Electron Gemini: no llama a Gemini");
 assert(errors, electronGemini.includes('origen: "gemini-electron"'), "Electron Gemini: no confirma origen Gemini");
+assert(errors, electronGemini.includes("[Archivo: ${FILE_PATH}]"), "Electron Gemini: errores no indican archivo");
 assert(errors, !electronGemini.includes("fallbackSugerencias"), "Electron Gemini: no debe tener fallback de sugerencias");
 
 const netlifyFunctions = [
@@ -155,7 +160,9 @@ const geminiClient = exists("src/services/ta-titulo-articulo-gemini-client.servi
 const geminiFunction = exists("netlify/functions/ta-titulo-articulo-gemini.js") ? read("netlify/functions/ta-titulo-articulo-gemini.js") : "";
 assert(errors, geminiClient.includes("/.netlify/functions/ta-titulo-articulo-gemini"), "Gemini client: endpoint Netlify incorrecto");
 assert(errors, geminiClient.includes("taTituloArticuloElectron"), "Gemini client: no detecta Electron");
+assert(errors, geminiClient.includes("ta-titulo-articulo-preload.cjs"), "Gemini client: no diagnostica preload CJS");
 assert(errors, geminiClient.includes("gemini-electron") && geminiClient.includes("gemini-netlify"), "Gemini client: falta validar orígenes Gemini");
+assert(errors, geminiClient.includes("[Archivo: ${FILE_PATH}]"), "Gemini client: errores no indican archivo");
 assert(errors, !geminiClient.includes("fallbackLocal"), "Gemini client: no debe tener fallback local");
 assert(errors, geminiFunction.includes("GEMINI_API_KEY"), "Gemini function: falta GEMINI_API_KEY");
 assert(errors, geminiFunction.includes("generativelanguage.googleapis.com"), "Gemini function: no llama a Gemini");
@@ -181,7 +188,8 @@ console.log("Títulos: revisión de conexión correcta.");
 console.log("HTML conectado con sus apps.");
 console.log("Apps conectadas con API client.");
 console.log("API client conectado con runtime y Firebase directo.");
-console.log("Electron conectado con estudiante, coordinador, administrador y Gemini seguro.");
+console.log("Electron conectado con estudiante, coordinador, administrador, preload CJS y Gemini seguro.");
 console.log("Netlify Functions y Gemini exclusivo verificados.");
+console.log("Errores con archivo responsable verificados.");
 console.log("Panel administrador lateral verificado.");
 console.log("Normalizador de períodos verificado.");
