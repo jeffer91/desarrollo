@@ -3,17 +3,22 @@ Nombre completo: plani.app.js
 Ruta o ubicación: /Requisitos/Plani/frontend/plani.app.js
 Función o funciones:
 - Orquestar la pantalla Plani con estado interno robusto.
-- Conectar período, tipo de documento, almacenamiento, validación y QA.
+- Conectar período, tipo de documento, almacenamiento, validación, QA, cronograma y recursos.
 - Mantener Plani separado de Infor y del menú principal hasta la integración final.
 Con qué se conecta:
 - plani.html
 - plani.ui.js
 - plani.events.js
+- plani.assets.ui.js
 - ../core/plani.constants.js
 - ../core/plani.periodo.js
 - ../core/plani.tipo-documento.js
 - ../core/plani.state.js
 - ../core/plani.validator.js
+- ../core/plani.cronograma.parser.js
+- ../core/plani.cronograma.mapper.js
+- ../core/plani.section-assets.js
+- ../core/plani.charts.js
 - ../core/plani.qa.js
 ========================================================= */
 (function(window, document){
@@ -25,6 +30,11 @@ Con qué se conecta:
   function periodo(){return window.PlaniPeriodo || null;}
   function validator(){return window.PlaniValidator || null;}
   function qa(){return window.PlaniQA || null;}
+  function assetsUI(){return window.PlaniAssetsUI || null;}
+  function parser(){return window.PlaniCronogramaParser || null;}
+  function mapper(){return window.PlaniCronogramaMapper || null;}
+  function charts(){return window.PlaniCharts || null;}
+  function sectionAssets(){return window.PlaniSectionAssets || null;}
   function text(value){return String(value == null ? "" : value).trim();}
   function el(id){return document.getElementById(id);}
   function esc(value){return text(value).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;").replace(/'/g,"&#039;");}
@@ -42,9 +52,31 @@ Con qué se conecta:
     }).join("");
   }
 
+  function enrichCronograma(snapshot){
+    if(!snapshot || !text(snapshot.cronogramaRaw) || !parser()){return snapshot;}
+    var parsed = parser().parse(snapshot.cronogramaRaw);
+    var mapped = mapper() ? mapper().mapRows(parsed, snapshot.documentType) : null;
+    snapshot.cronogramaParsed = parsed;
+    snapshot.cronogramaMapped = mapped;
+    if(mapped && charts() && sectionAssets()){
+      var chart = charts().chartAsset(charts().fromCronogramaGroups(mapped), "cronograma");
+      var map = snapshot.sectionAssets || {};
+      snapshot.sectionAssets = sectionAssets().addAsset(map, "cronograma", chart);
+    }
+    return snapshot;
+  }
+
+  function renderAssets(snapshot){
+    if(assetsUI()){
+      assetsUI().renderSummary((snapshot && snapshot.sectionAssets) || {});
+    }
+  }
+
   function render(message, cls){
     var snapshot = st() ? st().getState() : {};
+    snapshot = enrichCronograma(snapshot);
     if(ui()){ui().renderAll(snapshot, message, cls);}
+    renderAssets(snapshot);
     if(qa()){qa().render(qa().run());}
   }
 
@@ -77,7 +109,7 @@ Con qué se conecta:
   function onCronogramaInput(value, fileName){
     if(st()){st().setCronograma(value, fileName);}
     syncReadiness();
-    render(text(value) ? "Cronograma registrado en Plani." : "Cronograma vacío.", text(value) ? "ok" : "warn");
+    render(text(value) ? "Cronograma interpretado en Plani." : "Cronograma vacío.", text(value) ? "ok" : "warn");
   }
 
   function onPrepareBase(){
@@ -103,7 +135,7 @@ Con qué se conecta:
         });
       }
       syncReadiness();
-      render("Plani listo. Bloque 2 cargado correctamente.", "ok");
+      render("Plani listo. Bloque 4 cargado correctamente.", "ok");
     }catch(error){
       console.error("[Plani boot]", error);
       if(ui()){ui().status(error.message || String(error), "bad");}
