@@ -5,6 +5,7 @@ Función o funciones:
 1. Capturar errores controlados y no controlados durante la generación.
 2. Mostrar mensajes simples al usuario sin exponer detalles técnicos innecesarios.
 3. Guardar el error en el estado central para diagnóstico posterior.
+4. Permitir reintento cuando la generación falle.
 ========================================================= */
 
 (function attachLbErrorHandler(window) {
@@ -20,6 +21,10 @@ Función o funciones:
 
   function getProgress() {
     return window.LibroGenLibroProgress || null;
+  }
+
+  function getConstants() {
+    return window.LibroGenLibroConstants || {};
   }
 
   function text(value) {
@@ -43,6 +48,8 @@ Función o funciones:
     var State = getState();
     var UI = getUI();
     var Progress = getProgress();
+    var Constants = getConstants();
+    var lastErrorKey = Constants.STORAGE && Constants.STORAGE.lastErrorKey ? Constants.STORAGE.lastErrorKey : "libro.genLibro.lastError";
 
     if (State && typeof State.setError === "function") {
       State.setError(normalized);
@@ -60,12 +67,16 @@ Función o funciones:
       UI.setStatus("Error en generación");
     }
 
+    if (UI && typeof UI.setGenerateEnabled === "function") {
+      UI.setGenerateEnabled(true);
+    }
+
     if (Progress && typeof Progress.render === "function") {
       Progress.render("error", "Error en generación", 0);
     }
 
     try {
-      window.localStorage.setItem("libro.genLibro.lastError", JSON.stringify(normalized));
+      window.localStorage.setItem(lastErrorKey, JSON.stringify(normalized));
     } catch (_error) {}
 
     return normalized;
