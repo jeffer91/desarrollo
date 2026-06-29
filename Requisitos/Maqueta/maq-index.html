@@ -9,6 +9,7 @@ Función o funciones:
 - Preparar Base Local solo cuando una pantalla la necesita.
 - Mantener Firebase automático pausado para no bloquear pantallas.
 - Mantener pantallas en memoria mediante iframes para no recargar desde cero.
+- Cargar el registro de módulos antes de cualquier puente local para evitar pantallas en blanco.
 - Cargar el puente BL2 para migración segura hacia SQLite/IndexedDB.
 - Cargar el motor local BL2 sin usarlo todavía como fuente principal síncrona.
 - Cargar migrador V1 a BL2 sin ejecutarlo automáticamente.
@@ -17,6 +18,7 @@ Con qué se conecta:
 - maq-ui.css
 - maq-utils.js
 - maq-baselocal-session.js
+- maq-modulos-registry.js
 - ../BaseLocal2/bl2-config.js
 - ../BaseLocal2/bl2-detect-runtime.js
 - ../BaseLocal2/db/bl2-schema.js
@@ -29,7 +31,6 @@ Con qué se conecta:
 - ../BaseLocal2/migration/bl2-migrate-from-v1.js
 - ../BaseLocal2/bl2-api.js
 - maq-baselocal-background-sync.js
-- maq-modulos-registry.js
 - maq-config-service.js
 - maq-core.js
 - maq-menu.js
@@ -67,6 +68,7 @@ Con qué se conecta:
   </div>
   <script src="maq-utils.js"></script>
   <script src="maq-baselocal-session.js"></script>
+  <script src="maq-modulos-registry.js"></script>
   <script src="../BaseLocal2/bl2-config.js"></script>
   <script src="../BaseLocal2/bl2-detect-runtime.js"></script>
   <script src="../BaseLocal2/db/bl2-schema.js"></script>
@@ -78,7 +80,6 @@ Con qué se conecta:
   <script src="../BaseLocal2/migration/bl2-migration-report.js"></script>
   <script src="../BaseLocal2/migration/bl2-migrate-from-v1.js"></script>
   <script src="../BaseLocal2/bl2-api.js"></script>
-  <script src="maq-modulos-registry.js"></script>
   <script src="maq-config-service.js"></script>
   <script src="maq-core.js"></script>
   <script src="maq-menu.js"></script>
