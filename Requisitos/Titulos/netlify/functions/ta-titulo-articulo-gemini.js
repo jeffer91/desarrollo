@@ -6,6 +6,7 @@
   - Construir dos prompts académicos separados en servidor.
   - Enviar los dos prompts a Gemini usando GEMINI_API_KEY.
   - Devolver error si Gemini no está configurado o no responde, sin generar sugerencias locales.
+  - Devolver errores indicando el archivo responsable.
   Se conecta con:
   - Requisitos/Titulos/src/services/ta-titulo-articulo-gemini-client.service.js
   - Requisitos/Titulos/src/estudiante/ta-titulo-articulo-estudiante.app.js
@@ -13,6 +14,7 @@
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+const FILE_PATH = "Requisitos/Titulos/netlify/functions/ta-titulo-articulo-gemini.js";
 
 function clean(value) {
   return String(value ?? "").replace(/\s+/g, " ").trim();
@@ -20,6 +22,10 @@ function clean(value) {
 
 function normalize(value) {
   return clean(value).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+function errorEnArchivo(message) {
+  return new Error(`[Archivo: ${FILE_PATH}] ${message}`);
 }
 
 function jsonResponse(statusCode, body) {
@@ -56,9 +62,9 @@ function validarPayload(payload) {
   ];
 
   const faltante = campos.find(([, value]) => !clean(value));
-  if (faltante) return `Complete el campo ${faltante[0]} antes de generar sugerencias.`;
+  if (faltante) return `[Archivo: ${FILE_PATH}] Complete el campo ${faltante[0]} antes de generar sugerencias.`;
 
-  if (![1, 2, 3].includes(Number(payload.numeroTitulo || 0))) return "Número de título inválido.";
+  if (![1, 2, 3].includes(Number(payload.numeroTitulo || 0))) return `[Archivo: ${FILE_PATH}] Número de título inválido.`;
   return "";
 }
 
@@ -172,27 +178,32 @@ function extraerTextoGemini(data = {}) {
 }
 
 async function llamarGemini(prompt) {
-  if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY no está configurada en Netlify.");
+  if (!GEMINI_API_KEY) throw errorEnArchivo("GEMINI_API_KEY no está configurada en Netlify.");
 
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent?key=${encodeURIComponent(GEMINI_API_KEY)}`;
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.35,
-        topP: 0.9,
-        maxOutputTokens: 120
-      }
-    })
-  });
+  let response;
+  try {
+    response = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.35,
+          topP: 0.9,
+          maxOutputTokens: 120
+        }
+      })
+    });
+  } catch (error) {
+    throw errorEnArchivo(`No se pudo conectar con Gemini: ${error.message || error}`);
+  }
 
   const data = await response.json().catch(() => null);
-  if (!response.ok) throw new Error(data?.error?.message || `Gemini HTTP ${response.status}`);
+  if (!response.ok) throw errorEnArchivo(data?.error?.message || `Gemini HTTP ${response.status}`);
 
   const titulo = depurarTitulo(extraerTextoGemini(data));
-  if (!titulo) throw new Error("Gemini no devolvió un título válido.");
+  if (!titulo) throw errorEnArchivo("Gemini no devolvió un título válido.");
   return titulo;
 }
 
@@ -218,22 +229,23 @@ async function generarConGemini(payload = {}) {
 
 export async function handler(event) {
   if (event.httpMethod === "OPTIONS") return jsonResponse(200, { ok: true });
-  if (event.httpMethod !== "POST") return jsonResponse(405, { ok: false, error: "Método no permitido." });
+  if (event.httpMethod !== "POST") return jsonResponse(405, { ok: false, error: `[Archivo: ${FILE_PATH}] Método no permitido.` });
 
   const payload = parsePayload(event);
-  if (!payload) return jsonResponse(400, { ok: false, error: "El cuerpo de la solicitud no es JSON válido." });
+  if (!payload) return jsonResponse(400, { ok: false, error: `[Archivo: ${FILE_PATH}] El cuerpo de la solicitud no es JSON válido.` });
 
   const errorPayload = validarPayload(payload);
   if (errorPayload) return jsonResponse(400, { ok: false, error: errorPayload });
 
   try {
     const sugerencias = await generarConGemini(payload);
-    if (sugerencias.length < 2) throw new Error("Gemini no generó dos sugerencias diferentes.");
+    if (sugerencias.length < 2) throw errorEnArchivo("Gemini no generó dos sugerencias diferentes.");
 
     return jsonResponse(200, {
       ok: true,
       origen: "gemini-netlify",
       bloqueado: false,
+      archivo: FILE_PATH,
       motivo: "",
       advertencia: "Sugerencias generadas únicamente por Gemini.",
       sugerencias
@@ -243,8 +255,9 @@ export async function handler(event) {
       ok: false,
       origen: "gemini-error",
       bloqueado: true,
-      motivo: error.message || "Gemini no pudo generar sugerencias.",
-      error: error.message || "Gemini no pudo generar sugerencias."
+      archivo: FILE_PATH,
+      motivo: error.message || `[Archivo: ${FILE_PATH}] Gemini no pudo generar sugerencias.`,
+      error: error.message || `[Archivo: ${FILE_PATH}] Gemini no pudo generar sugerencias.`
     });
   }
 }
