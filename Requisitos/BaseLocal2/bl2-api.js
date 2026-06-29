@@ -3,27 +3,28 @@ Nombre completo: bl2-api.js
 Ruta o ubicación: /Requisitos/BaseLocal2/bl2-api.js
 Función o funciones:
 - Exponer una API única BL2 para las pantallas de Requisitos.
-- Usar por ahora el adaptador legado sin romper Base Local V1.
-- Preparar la ruta para SQLite en Electron e IndexedDB en navegador.
+- Usar BL2DataEngine cuando el motor central esté cargado.
+- Mantener BL2LegacyAdapter como respaldo para no romper pantallas existentes.
 - Entregar consultas rápidas de estudiantes, períodos, resumen y diagnóstico.
-- No leer el snapshot pesado durante el arranque de Maqueta.
-- Mantener SQLite/IndexedDB como motor asíncrono hasta migrar pantallas en bloques siguientes.
-- Exponer migración manual de Base Local V1 hacia BL2.
 - Invalidar caché sin disparar render reentrante por defecto.
 Con qué se conecta:
 - bl2-config.js
 - bl2-detect-runtime.js
 - bl2-legacy-adapter.js
+- core/bl2-student-normalizer.js
+- core/bl2-requirements-engine.js
+- core/bl2-memory-index.js
+- core/bl2-data-engine.js
+- core/bl2-screen-adapter.js
 - db/bl2-storage.js
 - migration/bl2-migrate-from-v1.js
-- futuras capas SQLite/IndexedDB
 ========================================================= */
 (function(window){
   "use strict";
 
-  var VERSION = "2.0.0-alpha.2";
+  var VERSION = "2.0.0-alpha.3-core";
   var bootedAt = new Date().toISOString();
-  var state = {ready:false, mode:"initializing", storage:"legacy", runtime:null, lastError:"", adapterName:"legacy"};
+  var state = {ready:false, mode:"initializing", storage:"legacy", runtime:null, lastError:"", adapterName:"legacy", coreReady:false};
 
   function now(){return new Date().toISOString();}
   function safe(label, fn, fallback){try{return typeof fn === "function" ? fn() : fallback;}catch(error){state.lastError = error && error.message ? error.message : String(error);console.warn("[BL2 " + label + "]", error);return fallback;}}
@@ -35,6 +36,8 @@ Con qué se conecta:
   function storage(){return window.BL2Storage || null;}
   function migrator(){return window.BL2Migrator || null;}
   function migrationReport(){return window.BL2MigrationReport || null;}
+  function dataEngine(){return window.BL2DataEngine || null;}
+  function screenAdapter(){return window.BL2ScreenAdapter || null;}
   function canServeSync(ad){return !!(ad && typeof ad.canServeSync === "function" && ad.canServeSync());}
 
   function resolveAdapter(){
@@ -43,6 +46,7 @@ Con qué se conecta:
     state.runtime = rt;
     state.storage = preferred;
 
+    if(dataEngine()){state.mode="core_engine";state.adapterName="BL2DataEngine";state.coreReady=true;return dataEngine();}
     if(preferred === "sqlite" && canServeSync(window.BL2SQLiteAdapter)){state.mode="sqlite";state.adapterName="sqlite";return window.BL2SQLiteAdapter;}
     if(preferred === "indexeddb" && canServeSync(window.BL2IndexedDBAdapter)){state.mode="indexeddb";state.adapterName="indexeddb";return window.BL2IndexedDBAdapter;}
     if(legacy()){state.mode="legacy_bridge";state.adapterName="legacy";return legacy();}
@@ -52,18 +56,45 @@ Con qué se conecta:
 
   function adapter(){var ad = resolveAdapter();if(!ad){throw new Error("BL2 no tiene adaptador disponible.");}return ad;}
 
+  function listPeriods(){
+    if(dataEngine() && typeof dataEngine().listPeriods === "function"){return dataEngine().listPeriods();}
+    return adapter().listPeriods ? adapter().listPeriods() : [];
+  }
+  function listStudents(options){
+    options = options || {};
+    if(dataEngine() && typeof dataEngine().listStudents === "function"){return dataEngine().listStudents(options);}
+    return adapter().listStudents ? adapter().listStudents(options) : {rows:[], total:0};
+  }
+  function searchStudents(query, options){
+    options = Object.assign({}, options || {}, {search:query || (options && (options.search || options.q)) || ""});
+    return listStudents(options);
+  }
+  function getStudentById(cedula, options){
+    if(dataEngine() && typeof dataEngine().getStudentById === "function"){return dataEngine().getStudentById(cedula, options || {});}
+    return adapter().getStudentById ? adapter().getStudentById(cedula, options || {}) : null;
+  }
+  function statsResumen(options){
+    options = options || {};
+    if(screenAdapter() && typeof screenAdapter().forStats === "function"){return screenAdapter().forStats(options);}
+    if(dataEngine() && typeof dataEngine().statsSummary === "function"){return dataEngine().statsSummary(options);}
+    return adapter().resumen ? adapter().resumen(options) : {total:0, activos:0, retirados:0, carreras:{}, periodos:{}};
+  }
+
   function status(options){
     options = options || {};
     var adStatus = safe("adapter.status", function(){return adapter().status ? adapter().status({deep:options.deep === true}) : {ok:true};}, {ok:false, mode:"sin_adapter"});
+    var engineStatus = safe("engine.status", function(){return dataEngine() && typeof dataEngine().status === "function" ? dataEngine().status({force:options.force === true}) : {ok:false, mode:"sin_motor_central"};}, {ok:false, mode:"sin_motor_central"});
+    var screenStatus = safe("screen.status", function(){return screenAdapter() && typeof screenAdapter().status === "function" ? screenAdapter().status() : {ok:false, mode:"sin_screen_adapter"};}, {ok:false, mode:"sin_screen_adapter"});
     var storageStatus = safe("storage.status", function(){return storage() && typeof storage().status === "function" ? storage().status() : {ok:false, mode:"sin_storage"};}, {ok:false, mode:"sin_storage"});
     var migrationStatus = safe("migration.status", function(){return migrator() && typeof migrator().status === "function" ? migrator().status() : {ok:true, mode:"sin_migrador"};}, {ok:false, mode:"sin_migrador"});
-    var data = {ok:adStatus.ok !== false && !state.lastError, version:VERSION, ready:state.ready, mode:state.mode, storage:state.storage, adapter:state.adapterName, bootedAt:bootedAt, runtime:state.runtime, lastError:state.lastError, adapterStatus:adStatus, storageStatus:storageStatus, migrationStatus:migrationStatus, updatedAt:now()};
+    var data = {ok:adStatus.ok !== false && !state.lastError, version:VERSION, ready:state.ready, coreReady:!!dataEngine(), mode:state.mode, storage:state.storage, adapter:state.adapterName, bootedAt:bootedAt, runtime:state.runtime, lastError:state.lastError, adapterStatus:adStatus, engineStatus:engineStatus, screenStatus:screenStatus, storageStatus:storageStatus, migrationStatus:migrationStatus, updatedAt:now()};
     if(config() && typeof config().saveStatus === "function"){config().saveStatus(data);}
     return data;
   }
 
   function invalidate(options){
     options = options || {};
+    safe("engine.invalidate", function(){if(dataEngine() && dataEngine().invalidate){dataEngine().invalidate();}}, null);
     safe("adapter.invalidate", function(){if(adapter().invalidate){adapter().invalidate();}}, null);
     var current = status({deep:false});
     if(options.emit === true){emit("invalidated", current);}
@@ -81,13 +112,20 @@ Con qué se conecta:
     status:status,
     invalidate:invalidate,
     runtime:function(){return state.runtime || (runtime() && runtime().detect ? runtime().detect(true) : null);},
-    periodos:{listar:function(){return safe("periodos.listar", function(){return adapter().listPeriods ? adapter().listPeriods() : [];}, []);}},
-    estudiantes:{
-      buscar:function(options){return safe("estudiantes.buscar", function(){return adapter().searchStudents ? adapter().searchStudents((options && (options.search || options.q)) || "", options || {}) : {rows:[], total:0};}, {rows:[], total:0});},
-      listarPagina:function(options){return safe("estudiantes.listarPagina", function(){return adapter().listStudents ? adapter().listStudents(options || {}) : {rows:[], total:0};}, {rows:[], total:0});},
-      obtenerPorCedula:function(cedula, options){return safe("estudiantes.obtenerPorCedula", function(){return adapter().getStudentById ? adapter().getStudentById(cedula, options || {}) : null;}, null);}
+    core:{
+      listo:function(){return !!dataEngine();},
+      estado:function(options){return status(Object.assign({}, options || {}, {deep:true}));},
+      motor:function(){return dataEngine();},
+      pantallas:function(){return screenAdapter();},
+      reconstruir:function(){invalidate({emit:false});return dataEngine() && dataEngine().build ? dataEngine().build({force:true}) : null;}
     },
-    stats:{resumen:function(options){return safe("stats.resumen", function(){return adapter().resumen ? adapter().resumen(options || {}) : {total:0, activos:0, retirados:0, carreras:{}, periodos:{}};}, {total:0, activos:0, retirados:0, carreras:{}, periodos:{}});}},
+    periodos:{listar:function(){return safe("periodos.listar", listPeriods, []);}},
+    estudiantes:{
+      buscar:function(options){return safe("estudiantes.buscar", function(){return searchStudents((options && (options.search || options.q)) || "", options || {});}, {rows:[], total:0});},
+      listarPagina:function(options){return safe("estudiantes.listarPagina", function(){return listStudents(options || {});}, {rows:[], total:0});},
+      obtenerPorCedula:function(cedula, options){return safe("estudiantes.obtenerPorCedula", function(){return getStudentById(cedula, options || {});}, null);}
+    },
+    stats:{resumen:function(options){return safe("stats.resumen", function(){return statsResumen(options || {});}, {total:0, activos:0, retirados:0, carreras:{}, periodos:{}});}},
     storage:{
       estado:function(){return safe("storage.estado", function(){return storage() && typeof storage().status === "function" ? storage().status() : {ok:false, mode:"sin_storage"};}, {ok:false, mode:"sin_storage"});},
       inicializar:function(options){return storage() && typeof storage().initialize === "function" ? storage().initialize(options || {}) : Promise.resolve({ok:false, mode:"sin_storage"});},
@@ -99,8 +137,8 @@ Con qué se conecta:
       ejecutar:function(options){return migrator() && typeof migrator().run === "function" ? migrator().run(options || {}) : Promise.resolve({ok:false, mode:"sin_migrador"});},
       reporte:function(){return safe("migracion.reporte", function(){return migrationReport() && typeof migrationReport().read === "function" ? migrationReport().read() : null;}, null);}
     },
-    sync:{estado:function(){return {ok:true, mode:"pendiente_bloque_10", message:"Firebase incremental se implementará en el bloque 10.", updatedAt:now()};}},
-    compat:{snapshot:function(options){return safe("compat.snapshot", function(){return adapter().readSnapshot ? adapter().readSnapshot(options || {}) : null;}, null);},legacyAdapter:function(){return legacy();}}
+    sync:{estado:function(){return {ok:true, mode:"pendiente_bloque_10", message:"Firebase incremental se implementará después de estabilizar Requisitos.", updatedAt:now()};}},
+    compat:{snapshot:function(options){return safe("compat.snapshot", function(){return dataEngine() && dataEngine().snapshot ? dataEngine().snapshot(options || {}) : (adapter().readSnapshot ? adapter().readSnapshot(options || {}) : null);}, null);},legacyAdapter:function(){return legacy();}}
   };
 
   window.BL2 = api;
