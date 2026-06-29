@@ -3,15 +3,8 @@ Nombre completo: plani.diagnostics.js
 Ruta o ubicación: /Requisitos/Plani/core/plani.diagnostics.js
 Función o funciones:
 - Construir un diagnóstico técnico legible del módulo Plani.
-- Revisar módulos cargados, estado actual, validación base, cronograma y recursos.
+- Revisar módulos cargados, estado actual, validación base, cronograma, recursos y motor documental.
 - Servir como apoyo para detectar errores en bloques posteriores.
-Con qué se conecta:
-- plani.state.js
-- plani.validator.js
-- plani.cronograma.parser.js
-- plani.assets.js
-- plani.qa.js
-- ../frontend/plani.ui.js
 ========================================================= */
 (function(window){
   "use strict";
@@ -29,9 +22,16 @@ Con qué se conecta:
     {name:"PlaniSectionAssets", value:"PlaniSectionAssets", required:true},
     {name:"PlaniImages", value:"PlaniImages", required:true},
     {name:"PlaniCharts", value:"PlaniCharts", required:true},
+    {name:"PlaniNumbering", value:"PlaniNumbering", required:true},
+    {name:"PlaniIndexBuilder", value:"PlaniIndexBuilder", required:true},
+    {name:"PlaniSectionBuilder", value:"PlaniSectionBuilder", required:true},
+    {name:"PlaniDocumentModel", value:"PlaniDocumentModel", required:true},
+    {name:"PlaniBuilder", value:"PlaniBuilder", required:true},
+    {name:"PlaniPreview", value:"PlaniPreview", required:true},
     {name:"PlaniUI", value:"PlaniUI", required:true},
     {name:"PlaniEvents", value:"PlaniEvents", required:true},
-    {name:"PlaniAssetsUI", value:"PlaniAssetsUI", required:true}
+    {name:"PlaniAssetsUI", value:"PlaniAssetsUI", required:true},
+    {name:"PlaniPreviewUI", value:"PlaniPreviewUI", required:true}
   ];
 
   function moduleChecks(){
@@ -54,6 +54,9 @@ Con qué se conecta:
     if(state.sectionAssets && window.PlaniSectionAssets){
       checks.push({type:"ok", label:"sectionAssets", message:"Secciones con recursos: " + window.PlaniSectionAssets.summary(state.sectionAssets).length});
     }
+    if(window.PlaniBuilder){
+      checks.push({type:"ok", label:"builder", message:"Motor documental disponible."});
+    }
     return checks;
   }
 
@@ -61,18 +64,8 @@ Con qué se conecta:
     var checks = moduleChecks().concat(stateChecks(state));
     var errors = checks.filter(function(x){return x.type === "error";}).length;
     var warnings = checks.filter(function(x){return x.type === "warn";}).length;
-    return {
-      ok:errors === 0,
-      errors:errors,
-      warnings:warnings,
-      checks:checks,
-      generatedAt:new Date().toISOString()
-    };
+    return {ok:errors === 0, errors:errors, warnings:warnings, checks:checks, generatedAt:new Date().toISOString()};
   }
 
-  window.PlaniDiagnostics = {
-    run:run,
-    moduleChecks:moduleChecks,
-    stateChecks:stateChecks
-  };
+  window.PlaniDiagnostics = {run:run, moduleChecks:moduleChecks, stateChecks:stateChecks};
 })(window);
