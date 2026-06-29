@@ -5,7 +5,7 @@ Función o funciones:
 1. Inicializar la pantalla Gen libro.
 2. Conectar selector de carrera y selector de materia con el almacenamiento local.
 3. Cargar la materia consolidada seleccionada desde Carga de la materia.
-4. Ejecutar validación flexible y crear el plan maestro del libro.
+4. Ejecutar validación flexible, crear el plan maestro y preparar el motor IA.
 ========================================================= */
 
 (function iniciarGenLibro(window, document) {
@@ -19,12 +19,14 @@ Función o funciones:
   var MateriaSelector = window.LibroGenLibroMateriaSelector || null;
   var Validator = window.LibroGenLibroValidator || null;
   var BookPlan = window.LibroGenLibroBookPlan || null;
+  var AiOrchestrator = window.LibroGenLibroAiOrchestrator || null;
 
   function refreshModules() {
     CarreraSelector = window.LibroGenLibroCarreraSelector || CarreraSelector;
     MateriaSelector = window.LibroGenLibroMateriaSelector || MateriaSelector;
     Validator = window.LibroGenLibroValidator || Validator;
     BookPlan = window.LibroGenLibroBookPlan || BookPlan;
+    AiOrchestrator = window.LibroGenLibroAiOrchestrator || AiOrchestrator;
   }
 
   function setInitialData() {
@@ -84,14 +86,36 @@ Función o funciones:
 
     State.setPlanLibro(plan);
     State.addMessage("ok", "Plan maestro creado para " + (plan.materia || "la asignatura") + ".");
-    UI.setMessage("is-ok", "Plan maestro del libro creado. Listo para conectar IA y secciones.");
+    UI.setMessage("is-ok", "Plan maestro del libro creado. Preparando motor IA.");
     UI.setStatus("Plan creado");
     Progress.render("plan", "Plan maestro creado", 15);
 
     return plan;
   }
 
-  function prepareBookPlan() {
+  async function prepareAi(plan) {
+    refreshModules();
+
+    if (!plan) return null;
+
+    if (!AiOrchestrator || typeof AiOrchestrator.prepare !== "function") {
+      UI.setMessage("is-warning", "Plan creado. El desarrollo de secciones se conectará en el siguiente bloque.");
+      UI.setStatus("IA pendiente");
+      Progress.render("plan", "Plan creado sin motor IA", 15);
+      return null;
+    }
+
+    var prepared = await AiOrchestrator.prepare(plan);
+
+    State.addMessage("ok", "Motor IA preparado con " + prepared.tasks.length + " tareas.");
+    UI.setMessage("is-ok", "Motor IA preparado. Listo para generar secciones del libro.");
+    UI.setStatus("IA preparada");
+    Progress.render("plan", "Motor IA preparado", 18);
+
+    return prepared;
+  }
+
+  async function prepareBookPlan() {
     var currentState = State.getState();
     var selected = currentState.materiaSeleccionada;
 
@@ -110,7 +134,15 @@ Función o funciones:
       return null;
     }
 
-    return buildPlan(selected, validation);
+    var plan = buildPlan(selected, validation);
+    window.LibroGenLibro.lastPlan = plan;
+
+    if (!plan) return null;
+
+    var prepared = await prepareAi(plan);
+    window.LibroGenLibro.lastAiPreparation = prepared;
+
+    return plan;
   }
 
   function boot() {
@@ -161,8 +193,7 @@ Función o funciones:
 
     if (generateButton) {
       generateButton.addEventListener("click", function onGenerateClick() {
-        var plan = prepareBookPlan();
-        window.LibroGenLibro.lastPlan = plan;
+        prepareBookPlan();
       });
     }
 
