@@ -9,6 +9,7 @@ Función o funciones:
 - Migrar datos antiguos sin borrar campos nuevos de Firebase.
 - Asegurar soporte para estadoMatricula, historialEstadoMatricula y divisiones.
 - Proteger el guardado cuando localStorage supera la cuota.
+- Mantener la Base Local operativa en memoria si el navegador ya no permite guardar más datos.
 Con qué se conecta:
 - maq-baselocal-session.js
 - excel-local.bridge.js
@@ -19,7 +20,7 @@ Con qué se conecta:
 (function(window){
   "use strict";
 
-  var VERSION = "1.4.2";
+  var VERSION = "1.4.3";
   var STATUS_KEY = "REQ_EXCEL_LOCAL_V1:storageStatus";
   var memory = {loaded:false,raw:"",snapshot:null,source:"none"};
 
@@ -78,6 +79,28 @@ Con qué se conecta:
     return out;
   }
 
+  function minimalStudent(student){
+    student = student && typeof student === "object" ? student : {};
+    return {
+      cedula:text(student.cedula || student.Cedula || student.CEDULA || student.numeroIdentificacion || student.numeroidentificacion || student.identificacion || student.docId || student._docId || student.id),
+      numeroIdentificacion:text(student.numeroIdentificacion || student.numeroidentificacion || student.cedula || student.Cedula || student.docId || student._docId || student.id),
+      docId:text(student.docId || student._docId || student.cedula || student.numeroIdentificacion || student.id),
+      nombres:text(student.nombres || student.Nombres || student.nombresCompletos || student.nombre || student.Nombre),
+      apellidos:text(student.apellidos || student.Apellidos || ""),
+      nombrecarrera:text(student.nombrecarrera || student.nombreCarrera || student.NombreCarrera || student.carrera || student.Carrera || student.programa || student.Programa),
+      sede:text(student.sede || student.Sede || ""),
+      modalidad:text(student.modalidad || student.Modalidad || ""),
+      jornada:text(student.jornada || student.Jornada || ""),
+      periodoId:text(student.periodoId || student.periodoLabel || student.periodo || student.ultimoPeriodoId || ""),
+      periodoLabel:text(student.periodoLabel || student.periodo || student.periodoId || ""),
+      ultimoPeriodoId:text(student.ultimoPeriodoId || student.periodoId || student.periodoLabel || ""),
+      estadoMatricula:text(student.estadoMatricula || "ACTIVO").toUpperCase() === "RETIRADO" ? "RETIRADO" : "ACTIVO",
+      division:text(student.division || ""),
+      divisiones:Array.isArray(student.divisiones) ? student.divisiones.slice(0,3) : normalizeDivisiones(student.division || student.Division || student.División),
+      updatedAt:text(student.updatedAt || student.actualizadoEn || student.createdAt || student.creadoEn || now())
+    };
+  }
+
   function compactSnapshotForStorage(snapshot){
     var snap = normalizeSnapshot(snapshot || emptySnapshot());
     snap.meta = Object.assign({}, snap.meta || {}, {compactedForStorage:true,compactedAt:now(),version:VERSION,schemaVersion:4});
@@ -86,6 +109,30 @@ Con qué se conecta:
     snap.students = Array.isArray(snap.students) ? snap.students.map(compactRecord) : [];
     snap.periods = Array.isArray(snap.periods) ? snap.periods.map(compactRecord) : [];
     return snap;
+  }
+
+  function emergencySnapshotForStorage(snapshot){
+    var snap = normalizeSnapshot(snapshot || emptySnapshot());
+    var totalStudents = Array.isArray(snap.students) ? snap.students.length : 0;
+    var totalPeriods = Array.isArray(snap.periods) ? snap.periods.length : 0;
+    return {
+      meta:Object.assign({}, snap.meta || {}, {app:"Requisitos",module:"ExcelLocal",version:VERSION,schemaVersion:4,updatedAt:now(),totalStudents:totalStudents,totalPeriods:totalPeriods,emergencyStored:true,storageMode:"minimal_localStorage",message:"Snapshot reducido porque localStorage estaba lleno. Usa Solo bajar Firebase para reconstruir la sesión completa."}),
+      periods:Array.isArray(snap.periods) ? snap.periods.map(compactRecord) : [],
+      students:Array.isArray(snap.students) ? snap.students.map(minimalStudent) : [],
+      history:Array.isArray(snap.history) ? snap.history.slice(0,20) : [],
+      diagnostics:[]
+    };
+  }
+
+  function markerSnapshotForStorage(snapshot){
+    var snap = normalizeSnapshot(snapshot || emptySnapshot());
+    return {
+      meta:Object.assign({}, snap.meta || {}, {app:"Requisitos",module:"ExcelLocal",version:VERSION,schemaVersion:4,updatedAt:now(),totalStudents:Array.isArray(snap.students)?snap.students.length:0,totalPeriods:Array.isArray(snap.periods)?snap.periods.length:0,memoryOnly:true,storageMode:"memory_only",message:"La Base Local completa quedó en memoria porque localStorage está lleno. Al recargar, baja Firebase nuevamente."}),
+      periods:Array.isArray(snap.periods) ? snap.periods.slice(0,10).map(compactRecord) : [],
+      students:[],
+      history:[],
+      diagnostics:[]
+    };
   }
 
   function normalizeDivisiones(value){
@@ -191,44 +238,65 @@ Con qué se conecta:
     localStorage.setItem(key(), raw);
   }
 
+  function tryPersistSnapshot(candidate){
+    var raw = JSON.stringify(candidate);
+    persistRaw(raw);
+    return raw;
+  }
+
+  function activateMemorySnapshot(snapshot, raw, source){
+    memory.loaded=true;memory.raw=raw||"";memory.snapshot=snapshot;memory.source=source||"writeSnapshot";
+    try{
+      var api=sessionApi();
+      if(api&&typeof api.setSnapshot==="function"){api.setSnapshot(snapshot,{source:"ExcelLocalStorage."+(source||"writeSnapshot"),alreadyStored:true,clone:false});}
+    }catch(error){}
+  }
+
   function writeSnapshot(snapshot){
     var snap=normalizeSnapshot(snapshot);
     snap.meta.updatedAt=now();
     snap.meta.version=VERSION;
     snap.meta.schemaVersion=4;
     var savedSnap=snap;
-    var raw=JSON.stringify(savedSnap);
+    var raw="";
     var purged={removed:0,freedChars:0};
     var compacted=false;
+    var emergency=false;
+    var memoryOnly=false;
 
     try{
-      persistRaw(raw);
+      raw=tryPersistSnapshot(savedSnap);
     }catch(error){
       if(!isQuotaError(error)){throw error;}
       purged=purgeHeavyLocalCopies();
       try{
-        persistRaw(raw);
+        raw=tryPersistSnapshot(savedSnap);
       }catch(secondError){
         if(!isQuotaError(secondError)){throw secondError;}
         savedSnap=compactSnapshotForStorage(snap);
-        raw=JSON.stringify(savedSnap);
         compacted=true;
-        purgeHeavyLocalCopies();
         try{
-          persistRaw(raw);
+          raw=tryPersistSnapshot(savedSnap);
         }catch(thirdError){
-          saveStorageStatus({ok:false,mode:"quota_error",message:"Base Local supera la cuota del navegador incluso después de limpiar copias pesadas.",errorMessage:thirdError&&thirdError.message?thirdError.message:String(thirdError),bytes:raw.length,purged:purged,compacted:compacted});
-          throw new Error("Base Local no pudo guardarse porque el almacenamiento local está lleno. Se limpiaron copias pesadas; recarga e intenta Solo bajar Firebase nuevamente.");
+          if(!isQuotaError(thirdError)){throw thirdError;}
+          savedSnap=emergencySnapshotForStorage(snap);
+          emergency=true;
+          purgeHeavyLocalCopies();
+          try{
+            raw=tryPersistSnapshot(savedSnap);
+          }catch(fourthError){
+            if(!isQuotaError(fourthError)){throw fourthError;}
+            memoryOnly=true;
+            savedSnap=snap;
+            var marker=markerSnapshotForStorage(snap);
+            try{raw=JSON.stringify(marker);persistRaw(raw);}catch(markerError){raw="";try{localStorage.removeItem(key());}catch(removeError){}}
+          }
         }
       }
     }
 
-    memory.loaded=true;memory.raw=raw;memory.snapshot=savedSnap;memory.source=compacted?"writeSnapshot_compacted":"writeSnapshot";
-    saveStorageStatus({ok:true,mode:compacted?"saved_compacted":"saved",bytes:raw.length,purged:purged,compacted:compacted,totalStudents:savedSnap.students.length,totalPeriods:savedSnap.periods.length});
-    try{
-      var api=sessionApi();
-      if(api&&typeof api.setSnapshot==="function"){api.setSnapshot(savedSnap,{source:"ExcelLocalStorage.writeSnapshot",alreadyStored:true,clone:false});}
-    }catch(error){}
+    activateMemorySnapshot(savedSnap, raw, memoryOnly?"memory_only":(emergency?"writeSnapshot_emergency":(compacted?"writeSnapshot_compacted":"writeSnapshot")));
+    saveStorageStatus({ok:true,mode:memoryOnly?"memory_only":(emergency?"saved_emergency":(compacted?"saved_compacted":"saved")),bytes:raw.length,purged:purged,compacted:compacted,emergency:emergency,memoryOnly:memoryOnly,totalStudents:snap.students.length,totalPeriods:snap.periods.length,message:memoryOnly?"Base Local activa en memoria. Si recargas, usa Solo bajar Firebase nuevamente.":"Base Local guardada."});
     return clone(savedSnap);
   }
 
