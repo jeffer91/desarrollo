@@ -4,8 +4,8 @@ Ruta o ubicación: /desarrollo/libro/Gen libro/lb.main.js
 Función o funciones:
 1. Inicializar la pantalla Gen libro.
 2. Conectar selector de carrera y selector de materia con el almacenamiento local.
-3. Ejecutar validación flexible, plan maestro, IA, secciones iniciales, unidades, recursos visuales y referencias APA 7.
-4. Preparar el libro para glosario, anexos y Word.
+3. Ejecutar validación flexible, plan maestro, IA, secciones iniciales, unidades, recursos visuales, referencias, glosario y anexos.
+4. Preparar el libro para Word.
 ========================================================= */
 
 (function iniciarGenLibro(window, document) {
@@ -26,6 +26,8 @@ Función o funciones:
   var TablePlanner = window.LibroGenLibroTablePlanner || null;
   var DiagramBuilder = window.LibroGenLibroDiagramBuilder || null;
   var ReferencesBuilder = window.LibroGenLibroReferencesBuilder || null;
+  var GlossaryBuilder = window.LibroGenLibroGlossaryBuilder || null;
+  var AppendixBuilder = window.LibroGenLibroAppendixBuilder || null;
 
   function refreshModules() {
     CarreraSelector = window.LibroGenLibroCarreraSelector || CarreraSelector;
@@ -39,6 +41,8 @@ Función o funciones:
     TablePlanner = window.LibroGenLibroTablePlanner || TablePlanner;
     DiagramBuilder = window.LibroGenLibroDiagramBuilder || DiagramBuilder;
     ReferencesBuilder = window.LibroGenLibroReferencesBuilder || ReferencesBuilder;
+    GlossaryBuilder = window.LibroGenLibroGlossaryBuilder || GlossaryBuilder;
+    AppendixBuilder = window.LibroGenLibroAppendixBuilder || AppendixBuilder;
   }
 
   function setInitialData() {
@@ -207,7 +211,7 @@ Función o funciones:
 
     if (references.ok) {
       State.addMessage("ok", "Referencias APA 7 verificables: " + references.totalUsable + ".");
-      UI.setMessage("is-ok", "Referencias APA 7 verificables creadas. Listo para glosario y anexos.");
+      UI.setMessage("is-ok", "Referencias APA 7 verificables creadas. Generando glosario y anexos.");
       UI.setStatus("Referencias listas");
     } else {
       State.addMessage("warning", references.message || "Faltan referencias verificables.");
@@ -218,6 +222,30 @@ Función o funciones:
     Progress.render("references", "Referencias procesadas", 68);
 
     return references;
+  }
+
+  function buildGlossaryAndAppendix(draft) {
+    refreshModules();
+
+    var glossary = GlossaryBuilder && typeof GlossaryBuilder.build === "function" ? GlossaryBuilder.build(draft) : null;
+    var appendix = AppendixBuilder && typeof AppendixBuilder.build === "function" ? AppendixBuilder.build(draft) : null;
+
+    if (glossary) {
+      State.addMessage("ok", "Glosario creado con " + glossary.total + " términos.");
+    }
+
+    if (appendix) {
+      State.addMessage("ok", appendix.include ? "Anexos creados cuando aplican." : "Anexos evaluados: no son necesarios.");
+    }
+
+    UI.setMessage("is-ok", "Glosario y anexos preparados. Listo para construir Word.");
+    UI.setStatus("Glosario y anexos listos");
+    Progress.render("docx", "Listo para construir Word", 88);
+
+    return {
+      glossary: glossary,
+      appendix: appendix
+    };
   }
 
   async function prepareBookPlan() {
@@ -263,13 +291,20 @@ Función o funciones:
     var references = await buildReferences(plan, draft);
     window.LibroGenLibro.lastReferences = references;
 
+    draft.references = references;
+
+    var endingSections = buildGlossaryAndAppendix(draft);
+    window.LibroGenLibro.lastEndingSections = endingSections;
+
     State.setLibroGenerado({
       plan: plan,
       initialSections: initialSections,
       units: units,
       visualResources: visualResources,
       references: references,
-      status: "references_ready",
+      glossary: endingSections ? endingSections.glossary : null,
+      appendix: endingSections ? endingSections.appendix : null,
+      status: "ending_sections_ready",
       updatedAt: new Date().toISOString()
     });
 
