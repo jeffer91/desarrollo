@@ -4,8 +4,8 @@ Ruta o ubicación: /desarrollo/libro/Gen libro/lb.main.js
 Función o funciones:
 1. Inicializar la pantalla Gen libro.
 2. Conectar selector de carrera y selector de materia con el almacenamiento local.
-3. Ejecutar validación flexible, plan maestro, IA, secciones iniciales, unidades y recursos visuales.
-4. Preparar el libro para referencias y Word.
+3. Ejecutar validación flexible, plan maestro, IA, secciones iniciales, unidades, recursos visuales y referencias APA 7.
+4. Preparar el libro para glosario, anexos y Word.
 ========================================================= */
 
 (function iniciarGenLibro(window, document) {
@@ -25,6 +25,7 @@ Función o funciones:
   var FigurePlanner = window.LibroGenLibroFigurePlanner || null;
   var TablePlanner = window.LibroGenLibroTablePlanner || null;
   var DiagramBuilder = window.LibroGenLibroDiagramBuilder || null;
+  var ReferencesBuilder = window.LibroGenLibroReferencesBuilder || null;
 
   function refreshModules() {
     CarreraSelector = window.LibroGenLibroCarreraSelector || CarreraSelector;
@@ -37,6 +38,7 @@ Función o funciones:
     FigurePlanner = window.LibroGenLibroFigurePlanner || FigurePlanner;
     TablePlanner = window.LibroGenLibroTablePlanner || TablePlanner;
     DiagramBuilder = window.LibroGenLibroDiagramBuilder || DiagramBuilder;
+    ReferencesBuilder = window.LibroGenLibroReferencesBuilder || ReferencesBuilder;
   }
 
   function setInitialData() {
@@ -187,11 +189,35 @@ Función o funciones:
     };
 
     State.addMessage("ok", "Recursos visuales planificados.");
-    UI.setMessage("is-ok", "Figuras, tablas y diagramas planificados. Listo para referencias APA 7.");
+    UI.setMessage("is-ok", "Figuras, tablas y diagramas planificados. Buscando referencias APA 7.");
     UI.setStatus("Recursos visuales listos");
     Progress.render("visuals", "Recursos visuales listos", 78);
 
     return visuals;
+  }
+
+  async function buildReferences(plan, draft) {
+    refreshModules();
+
+    if (!plan || !ReferencesBuilder || typeof ReferencesBuilder.build !== "function") return null;
+
+    Progress.render("references", "Buscando referencias APA 7", 68);
+
+    var references = await ReferencesBuilder.build(plan, draft);
+
+    if (references.ok) {
+      State.addMessage("ok", "Referencias APA 7 verificables: " + references.totalUsable + ".");
+      UI.setMessage("is-ok", "Referencias APA 7 verificables creadas. Listo para glosario y anexos.");
+      UI.setStatus("Referencias listas");
+    } else {
+      State.addMessage("warning", references.message || "Faltan referencias verificables.");
+      UI.setMessage("is-warning", references.message || "Faltan referencias verificables para completar APA 7.");
+      UI.setStatus("Referencias pendientes");
+    }
+
+    Progress.render("references", "Referencias procesadas", 68);
+
+    return references;
   }
 
   async function prepareBookPlan() {
@@ -227,16 +253,25 @@ Función o funciones:
     var visualResources = buildVisualResources(units);
     window.LibroGenLibro.lastVisualResources = visualResources;
 
-    if (initialSections || units || visualResources) {
-      State.setLibroGenerado({
-        plan: plan,
-        initialSections: initialSections,
-        units: units,
-        visualResources: visualResources,
-        status: "visual_resources_ready",
-        updatedAt: new Date().toISOString()
-      });
-    }
+    var draft = {
+      plan: plan,
+      initialSections: initialSections,
+      units: units,
+      visualResources: visualResources
+    };
+
+    var references = await buildReferences(plan, draft);
+    window.LibroGenLibro.lastReferences = references;
+
+    State.setLibroGenerado({
+      plan: plan,
+      initialSections: initialSections,
+      units: units,
+      visualResources: visualResources,
+      references: references,
+      status: "references_ready",
+      updatedAt: new Date().toISOString()
+    });
 
     return plan;
   }
