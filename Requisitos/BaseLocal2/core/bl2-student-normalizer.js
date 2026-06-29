@@ -15,21 +15,21 @@ Con qué se conecta:
 (function(window){
   "use strict";
 
-  var VERSION = "2.0.0-core.1";
+  var VERSION = "2.0.0-core.2";
 
   var FIELD_ALIASES = {
     cedula:["cedula","Cedula","Cédula","CEDULA","numeroIdentificacion","numeroidentificacion","NumeroIdentificacion","identificacion","Identificacion","_docId","docId","id"],
     nombres:["nombres","Nombres","nombre","Nombre","estudiante","Estudiante","nombresCompletos","apellidosNombres","ApellidosNombres"],
     carrera:["nombrecarrera","nombreCarrera","NombreCarrera","carrera","Carrera","programa","Programa"],
-    codigoCarrera:["CodigoCarrera","codigoCarrera","codigocarrera","codigo","Código"],
+    codigocarrera:["CodigoCarrera","codigoCarrera","codigocarrera","codigo","Código"],
     periodo:["periodoLabel","periodo","Periodo","periodoId","ultimoPeriodoId","idPeriodo","periodId","_periodo","_bl2Periodo"],
-    periodoId:["periodoId","ultimoPeriodoId","idPeriodo","periodId","periodoLabel","periodo","Periodo","_bl2Periodo"],
+    periodoid:["periodoId","ultimoPeriodoId","idPeriodo","periodId","periodoLabel","periodo","Periodo","_bl2Periodo"],
     division:["division","Division","División","_bl2Division"],
-    estadoMatricula:["estadoMatricula","EstadoMatricula","matricula","Matrícula","estado","Estado"],
+    estadomatricula:["estadoMatricula","EstadoMatricula","matricula","Matrícula","estado","Estado"],
     sede:["Sede","sede"],
     jornada:["jornada","Jornada","HorarioComplexivo","horarioComplexivo","horariocomplexivo","horario","Horario"],
-    correoPersonal:["CorreoPersonal","correoPersonal","correopersonal","email","correo"],
-    correoInstitucional:["CorreoInstitucional","correoInstitucional","correoinstitucional"],
+    correopersonal:["CorreoPersonal","correoPersonal","correopersonal","email","correo"],
+    correoinstitucional:["CorreoInstitucional","correoInstitucional","correoinstitucional"],
     celular:["Celular","celular","Telefono","telefono","Teléfono","whatsapp","Whatsapp"]
   };
 
@@ -47,11 +47,7 @@ Con qué se conecta:
     aprobacioncomplexivoproyecto:["AprobacionComplexivoProyecto","AprobaciónComplexivoProyecto","Aprobacion Complexivo Proyecto","Aprobacion Complexivo/Proyecto","aprobacionComplexivoProyecto","aprobacioncomplexivoproyecto"]
   };
 
-  var NOTE_ALIASES = {
-    nart:["Notart","Nart","nart","N_ART","N-ART","NotaArt","notaArticulo","notaArtículo"],
-    ndef:["Notdef","Ndef","ndef","N_DEF","N-DEF","NotaDef","notaDefensa"],
-    nfin:["Notafinal","NotaFinal","Nfin","nfin","N_FIN","N-FIN","notaFinal"]
-  };
+  var NOTE_ALIASES = {nart:["Notart","Nart","nart","N_ART","N-ART","NotaArt","notaArticulo","notaArtículo"],ndef:["Notdef","Ndef","ndef","N_DEF","N-DEF","NotaDef","notaDefensa"],nfin:["Notafinal","NotaFinal","Nfin","nfin","N_FIN","N-FIN","notaFinal"]};
 
   function text(value){return String(value == null ? "" : value).trim();}
   function norm(value){return text(value).normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").trim().toLowerCase();}
@@ -59,16 +55,10 @@ Con qué se conecta:
   function clone(value){try{return JSON.parse(JSON.stringify(value == null ? null : value));}catch(error){return value;}}
 
   function ownValue(row, aliases){
-    row = row || {};
-    aliases = aliases || [];
-    var keys = Object.keys(row);
-    var wanted = aliases.map(compact);
-    for(var i = 0; i < aliases.length; i += 1){
-      if(Object.prototype.hasOwnProperty.call(row, aliases[i]) && text(row[aliases[i]]) !== ""){return row[aliases[i]];}
-    }
-    for(var j = 0; j < keys.length; j += 1){
-      if(wanted.indexOf(compact(keys[j])) >= 0 && text(row[keys[j]]) !== ""){return row[keys[j]];}
-    }
+    row = row || {}; aliases = aliases || [];
+    var keys = Object.keys(row), wanted = aliases.map(compact);
+    for(var i = 0; i < aliases.length; i += 1){if(Object.prototype.hasOwnProperty.call(row, aliases[i]) && text(row[aliases[i]]) !== ""){return row[aliases[i]];}}
+    for(var j = 0; j < keys.length; j += 1){if(wanted.indexOf(compact(keys[j])) >= 0 && text(row[keys[j]]) !== ""){return row[keys[j]];}}
     return "";
   }
 
@@ -81,18 +71,8 @@ Con qué se conecta:
   }
 
   function estadoMatricula(row){return norm(value(row,"estadoMatricula") || "ACTIVO") === "retirado" ? "RETIRADO" : "ACTIVO";}
-  function divisiones(row){
-    var original = row || {};
-    if(Array.isArray(original.divisiones)){return original.divisiones.map(text).filter(Boolean);}
-    var single = text(value(original,"division"));
-    return single && norm(single) !== "sin division" ? [single] : [];
-  }
-  function numberOrNull(value){
-    var raw = text(value).replace(",", ".");
-    if(!raw){return null;}
-    var n = Number(raw);
-    return Number.isFinite(n) ? n : null;
-  }
+  function divisiones(row){var source=row||{};if(Array.isArray(source.divisiones)){return source.divisiones.map(text).filter(Boolean);}var single=text(value(source,"division"));return single && norm(single) !== "sin division" ? [single] : [];}
+  function numberOrNull(value){var raw=text(value).replace(",", ".");if(!raw){return null;}var n=Number(raw);return Number.isFinite(n) ? n : null;}
 
   function normalize(row, options){
     options = options || {};
@@ -118,12 +98,7 @@ Con qué se conecta:
     out.divisiones = divs;
     if(divs.length){out.division = divs[0];}
 
-    Object.keys(REQUIREMENT_ALIASES).forEach(function(key){
-      var reqValue = value(source, key);
-      if(text(reqValue) !== ""){
-        out[key] = reqValue;
-      }
-    });
+    Object.keys(REQUIREMENT_ALIASES).forEach(function(key){var reqValue = value(source, key);if(text(reqValue) !== ""){out[key] = reqValue;}});
 
     out._bl2Id = cedula || text(out._docId || out.docId || out.id);
     out._bl2Nombre = nombres;
@@ -146,12 +121,7 @@ Con qué se conecta:
 
   function normalizeList(rows, options){return (Array.isArray(rows) ? rows : []).map(function(row){return normalize(row, options || {});});}
   function hasRequirementValues(row){return Object.keys(REQUIREMENT_ALIASES).filter(function(key){return text(value(row,key)) !== "";}).length;}
-  function signature(rows){
-    rows = Array.isArray(rows) ? rows : [];
-    var first = rows[0] || {};
-    var last = rows[rows.length - 1] || {};
-    return [rows.length, text(value(first,"cedula")), text(value(last,"cedula")), hasRequirementValues(first), hasRequirementValues(last)].join("|");
-  }
+  function signature(rows){rows = Array.isArray(rows) ? rows : [];var first = rows[0] || {}, last = rows[rows.length - 1] || {};return [rows.length, text(value(first,"cedula")), text(value(last,"cedula")), hasRequirementValues(first), hasRequirementValues(last)].join("|");}
 
   window.BL2StudentNormalizer = {version:VERSION,FIELD_ALIASES:FIELD_ALIASES,REQUIREMENT_ALIASES:REQUIREMENT_ALIASES,NOTE_ALIASES:NOTE_ALIASES,text:text,norm:norm,compact:compact,value:value,normalize:normalize,normalizeList:normalizeList,hasRequirementValues:hasRequirementValues,signature:signature};
 })(window);
