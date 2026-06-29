@@ -37,14 +37,26 @@ Función:
     return { ok: true, errors: [], warnings: [], stats: {} };
   }
 
+  function getDefaultLoadType() {
+    if (MAT.selectores && MAT.selectores.tipoCarga && typeof MAT.selectores.tipoCarga.getDefaultValue === "function") {
+      return MAT.selectores.tipoCarga.getDefaultValue();
+    }
+
+    return clean(
+      (MAT.config && MAT.config.defaultLoadType) ||
+      (MAT.config && MAT.config.loadTypes && MAT.config.loadTypes[0] && MAT.config.loadTypes[0].value) ||
+      "materias-carrera"
+    );
+  }
+
   MAT.main = {
     init: function () {
       this.bindEvents();
       this.renderSelectors();
       this.setCareerTypeDisplay("");
-      this.resetProcessedArea("Aquí podrás editar los datos después de importarlos o cargarlos desde la base.");
+      this.resetProcessedArea("Selecciona una carrera.");
       if (MAT.ui && typeof MAT.ui.clearCareerQuickSummary === "function") {
-        MAT.ui.clearCareerQuickSummary("Selecciona una carrera para ver qué está cargado.");
+        MAT.ui.clearCareerQuickSummary("Selecciona una carrera.");
       }
       this.boot();
     },
@@ -85,14 +97,31 @@ Función:
 
     renderSelectors: function () {
       MAT.selectores.tipoCarga.render();
+      this.ensureDefaultLoadType();
       MAT.selectores.carreras.render([]);
+    },
+
+    ensureDefaultLoadType: function () {
+      var current = clean(MAT.state && MAT.state.data && MAT.state.data.selectedLoadType);
+      var fallback = getDefaultLoadType();
+      var selected = current || fallback;
+
+      if (!current && selected && MAT.state && typeof MAT.state.setLoadType === "function") {
+        MAT.state.setLoadType(selected);
+      }
+
+      if (MAT.selectores && MAT.selectores.tipoCarga && typeof MAT.selectores.tipoCarga.setValue === "function") {
+        MAT.selectores.tipoCarga.setValue(selected);
+      }
+
+      return selected;
     },
 
     boot: function () {
       var db = MAT.firebase.init();
-      MAT.ui.clearSummary("Aún no has guardado cambios.");
+      MAT.ui.clearSummary("Sin cambios guardados.");
       if (!db) {
-        MAT.ui.setStatus("Firebase no está disponible. Se intentará usar la base local si existe.", "warn");
+        MAT.ui.setStatus("Firebase no disponible. Se usará local si existe.", "warn");
       }
       this.loadCareers(false);
     },
@@ -100,15 +129,20 @@ Función:
     loadCareers: async function (manual) {
       var list = [];
       var rememberedCareerId = MAT.state.data.selectedCareerId;
-      var rememberedLoadType = MAT.state.data.selectedLoadType;
+      var rememberedLoadType = MAT.state.data.selectedLoadType || getDefaultLoadType();
 
       try {
-        MAT.ui.setStatus("Cargando carreras desde local/Firebase...", "");
+        MAT.ui.setStatus("Cargando carreras...", "");
         list = await MAT.carreras.listar();
         MAT.state.setCareers(list);
         MAT.state.setReady(true);
         MAT.selectores.carreras.render(list);
         MAT.selectores.tipoCarga.render();
+
+        if (rememberedLoadType) {
+          MAT.state.setLoadType(rememberedLoadType);
+          MAT.selectores.tipoCarga.setValue(rememberedLoadType);
+        }
 
         if (rememberedCareerId && MAT.state.getCareerById(rememberedCareerId)) {
           MAT.selectores.carreras.setValue(rememberedCareerId);
@@ -122,19 +156,19 @@ Función:
 
         if (!list.length) {
           this.setCareerTypeDisplay("");
-          this.resetProcessedArea("No se encontraron carreras.");
-          MAT.ui.clearCareerQuickSummary("No hay carreras disponibles.");
-          MAT.ui.setStatus("No se encontraron carreras en local/Firebase.", "warn");
+          this.resetProcessedArea("No hay carreras.");
+          MAT.ui.clearCareerQuickSummary("No hay carreras.");
+          MAT.ui.setStatus("No se encontraron carreras.", "warn");
           return;
         }
 
-        MAT.ui.setStatus("Carreras cargadas correctamente: " + list.length, manual ? "ok" : "");
+        MAT.ui.setStatus(manual ? "Carreras recargadas." : "Listo.", manual ? "ok" : "");
         await MAT.ui.refreshSyncStatus();
       } catch (error) {
         console.error(error);
         this.setCareerTypeDisplay("");
-        MAT.ui.clearCareerQuickSummary("No se pudo cargar el resumen.");
-        MAT.ui.setStatus("Ocurrió un error al leer carreras.", "error");
+        MAT.ui.clearCareerQuickSummary("No se pudo leer el resumen.");
+        MAT.ui.setStatus("Error al leer carreras.", "error");
       }
     },
 
@@ -145,17 +179,18 @@ Función:
       if (!career) {
         MAT.state.clearCareer();
         this.setCareerTypeDisplay("");
-        this.resetProcessedArea("Selecciona una carrera para continuar.");
-        MAT.ui.clearCareerQuickSummary("Selecciona una carrera para ver qué está cargado.");
-        if (!silent) MAT.ui.setStatus("Selecciona una carrera para continuar.", "");
+        this.resetProcessedArea("Selecciona una carrera.");
+        MAT.ui.clearCareerQuickSummary("Selecciona una carrera.");
+        if (!silent) MAT.ui.setStatus("Selecciona una carrera.", "");
         return;
       }
 
       MAT.state.setCareer(career);
+      this.ensureDefaultLoadType();
       this.setCareerTypeDisplay(career.tipo || "");
-      this.resetProcessedArea("La carrera cambió. Selecciona un tipo de carga o abre carga masiva.");
+      this.resetProcessedArea("Cargando datos...");
       this.updateEditorHint();
-      if (!silent) MAT.ui.setStatus("Carrera seleccionada: " + career.nombre, "ok");
+      if (!silent) MAT.ui.setStatus("Carrera: " + career.nombre, "ok");
       this.loadCareerQuickSummary(selectedId, career);
     },
 
@@ -189,19 +224,21 @@ Función:
     },
 
     onLoadTypeChange: function (value, silent) {
-      MAT.state.setLoadType(value);
-      this.resetProcessedArea("El tipo de carga cambió. Se puede cargar desde base o usar carga masiva.");
+      var nextValue = clean(value) || getDefaultLoadType();
+      MAT.state.setLoadType(nextValue);
+      MAT.selectores.tipoCarga.setValue(nextValue);
+      this.resetProcessedArea("Cargando datos...");
       this.updateEditorHint();
-      if (!silent && value) MAT.ui.setStatus("Tipo de carga seleccionado.", "ok");
+      if (!silent && nextValue) MAT.ui.setStatus("Mostrando tipo seleccionado.", "ok");
     },
 
     updateEditorHint: function () {
       var type = MAT.state.data.selectedLoadType;
-      var text = "Primero elige una carrera y luego el tipo de carga. Después usa Abrir carga masiva.";
-      if (type === "materias-carrera") text = "Carga materias por niveles. Puedes pegar texto desde Word, PDF o Excel.";
-      else if (type === "transversales") text = "Carga materias transversales por niveles o sin nivel.";
-      else if (type === "nucleos") text = "Deben ser 4 núcleos.";
-      else if (type === "ejes") text = "Universitaria espera 6 ejes; superior o técnica espera 4.";
+      var text = "Selecciona una carrera.";
+      if (type === "materias-carrera") text = "Materias de carrera.";
+      else if (type === "transversales") text = "Materias transversales.";
+      else if (type === "nucleos") text = "Núcleos.";
+      else if (type === "ejes") text = "Ejes.";
       MAT.ui.setEditorHint(text);
     },
 
@@ -215,9 +252,9 @@ Función:
       MAT.state.setDirty(false);
       MAT.ui.clearPreview();
       MAT.ui.setSaveEnabled(false);
-      MAT.editor.base.renderEmpty(editorMessage || "Aquí podrás editar los datos después de importarlos.");
+      MAT.editor.base.renderEmpty(editorMessage || "Sin datos.");
       if (MAT.tabla && MAT.tabla.render && typeof MAT.tabla.render.empty === "function") {
-        MAT.tabla.render.empty(editorMessage || "Aún no hay datos para mostrar.");
+        MAT.tabla.render.empty(editorMessage || "Sin datos.");
       }
       if (MAT.masiva && MAT.masiva.modal && typeof MAT.masiva.modal.resetTemp === "function") {
         MAT.masiva.modal.resetTemp();
@@ -227,7 +264,7 @@ Función:
     applyImportedPreview: function (analysis) {
       var validation;
       if (!analysis || typeof analysis !== "object") {
-        MAT.ui.setStatus("No hay una importación válida para aplicar.", "warn");
+        MAT.ui.setStatus("No hay importación válida.", "warn");
         return null;
       }
 
@@ -240,16 +277,16 @@ Función:
       MAT.ui.setSaveEnabled(!!validation.ok);
       if (MAT.ui.resumen && typeof MAT.ui.resumen.renderValidation === "function") MAT.ui.resumen.renderValidation(validation);
 
-      if (!validation.ok) MAT.ui.setStatus(validation.errors[0] || "La estructura no es válida.", "error");
-      else if (validation.warnings.length) MAT.ui.setStatus("Importación aplicada con advertencias. Revisa el resumen.", "warn");
-      else MAT.ui.setStatus("Importación aplicada correctamente. Ahora puedes revisar y guardar.", "ok");
+      if (!validation.ok) MAT.ui.setStatus(validation.errors[0] || "Estructura no válida.", "error");
+      else if (validation.warnings.length) MAT.ui.setStatus("Aplicado con advertencias.", "warn");
+      else MAT.ui.setStatus("Importación aplicada.", "ok");
 
       return { preview: analysis, validation: validation };
     },
 
     openMassive: function () {
       if (!MAT.state.data.selectedCareerId || !MAT.state.data.selectedLoadType) {
-        MAT.ui.setStatus("Primero selecciona carrera y tipo de carga.", "warn");
+        MAT.ui.setStatus("Selecciona carrera.", "warn");
         return;
       }
       if (MAT.ui.modal && typeof MAT.ui.modal.open === "function") {
@@ -265,12 +302,11 @@ Función:
 
       try {
         if (!MAT.state.data.selectedCareerId) {
-          MAT.ui.setStatus("Primero selecciona una carrera.", "warn");
+          MAT.ui.setStatus("Selecciona una carrera.", "warn");
           return null;
         }
         if (!MAT.state.data.selectedLoadType) {
-          MAT.ui.setStatus("Primero selecciona qué vas a subir.", "warn");
-          return null;
+          MAT.state.setLoadType(getDefaultLoadType());
         }
         if (!preview && MAT.editor.base && typeof MAT.editor.base.collectPreview === "function") {
           preview = MAT.editor.base.collectPreview(MAT.state.data.preview || { kind: MAT.state.data.selectedLoadType, summary: {} });
@@ -289,12 +325,12 @@ Función:
         }
 
         MAT.ui.setSaveEnabled(false);
-        MAT.ui.setStatus("Guardando en base local/Firebase...", "");
+        MAT.ui.setStatus("Guardando...", "");
         result = await MAT.carga.guardarDesdePreview({ careerId: MAT.state.data.selectedCareerId, preview: preview });
         MAT.state.setPreview(result && result.preview ? result.preview : preview);
         MAT.state.setSaved();
         MAT.ui.resumen.renderSaveResult(result);
-        MAT.ui.setStatus(result.mensaje || "Cambios guardados correctamente.", "ok");
+        MAT.ui.setStatus(result.mensaje || "Guardado.", "ok");
         await this.loadCareerQuickSummary(MAT.state.data.selectedCareerId, MAT.state.getCareerById(MAT.state.data.selectedCareerId));
         await MAT.ui.refreshSyncStatus();
         return result;
