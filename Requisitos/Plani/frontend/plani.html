@@ -3,13 +3,20 @@
 Nombre completo: plani.html
 Ruta o ubicación: /Requisitos/Plani/frontend/plani.html
 Función o funciones:
-- Mostrar la pantalla inicial de Plani para planificación de titulación.
+- Mostrar la pantalla Plani para planificación de titulación.
 - Guiar el flujo: Período -> Insumos -> Documento.
-- Preparar la base visual para seleccionar período, tipo de planificación y cronograma.
+- Conectar estado, período, tipo de documento, validación, diagnóstico y QA.
 - Mantener el módulo separado de Infor hasta integración final.
 Con qué se conecta:
 - plani.css
 - ../core/plani.constants.js
+- ../core/plani.storage.js
+- ../core/plani.periodo.js
+- ../core/plani.tipo-documento.js
+- ../core/plani.state.js
+- ../core/plani.validator.js
+- ../core/plani.diagnostics.js
+- ../core/plani.qa.js
 - plani.ui.js
 - plani.events.js
 - plani.app.js
@@ -30,7 +37,7 @@ Con qué se conecta:
         <p class="plani-lead">Selecciona el período, define el tipo de planificación, carga el cronograma y prepara el documento institucional.</p>
       </div>
       <div class="plani-hero-actions">
-        <span id="plani-module-state" class="plani-chip warn">Bloque 1</span>
+        <span id="plani-module-state" class="plani-chip warn">Bloque 2</span>
       </div>
     </section>
 
@@ -51,7 +58,7 @@ Con qué se conecta:
         <label class="plani-field">
           Período
           <select id="plani-periodo">
-            <option value="">Pendiente de conectar períodos</option>
+            <option value="">Cargando períodos...</option>
           </select>
         </label>
 
@@ -128,11 +135,11 @@ Con qué se conecta:
     <section class="plani-card plani-process-card">
       <div>
         <h2>5. Procesar y exportar</h2>
-        <p>En el bloque 1 solo se prepara la base. La exportación se habilitará cuando exista motor documental.</p>
-        <p id="plani-readiness" class="plani-muted">Pantalla base lista.</p>
+        <p>En el bloque 2 se valida el estado base. La exportación se habilitará cuando exista motor documental.</p>
+        <p id="plani-readiness" class="plani-muted">Estado base listo.</p>
       </div>
       <div class="plani-process-actions">
-        <button id="plani-process" class="plani-primary" type="button">Preparar base</button>
+        <button id="plani-process" class="plani-primary" type="button">Validar base</button>
         <button id="plani-export-word" type="button" disabled>Exportar Word</button>
         <button id="plani-export-pdf" type="button" disabled>Exportar PDF</button>
       </div>
@@ -145,8 +152,15 @@ Con qué se conecta:
   </main>
 
   <script src="../core/plani.constants.js"></script>
+  <script src="../core/plani.storage.js"></script>
+  <script src="../core/plani.periodo.js"></script>
+  <script src="../core/plani.tipo-documento.js"></script>
+  <script src="../core/plani.state.js"></script>
+  <script src="../core/plani.validator.js"></script>
+  <script src="../core/plani.diagnostics.js"></script>
   <script src="plani.ui.js"></script>
   <script src="plani.events.js"></script>
+  <script src="../core/plani.qa.js"></script>
   <script src="plani.app.js"></script>
 </body>
 </html>
