@@ -5,6 +5,7 @@ Función o funciones:
 - Detectar la pantalla actual de Requisitos.
 - Conectar automáticamente cada módulo con RequisitosBL.
 - Evitar tener que modificar todos los HTML manualmente.
+- Limpiar colecciones espejo antiguas antes de conectar para evitar cuelgues por localStorage pesado.
 ========================================================= */
 (function(window){
   "use strict";
@@ -17,6 +18,20 @@ Función o funciones:
     return String(value || "").toLowerCase();
   }
 
+  function cleanHeavyMirrorsOnce(){
+    if(window.__REQ_BL_AUTOCLEANED__){
+      return;
+    }
+    window.__REQ_BL_AUTOCLEANED__ = true;
+    try{
+      if(window.RequisitosBL && typeof window.RequisitosBL.purgeGeneratedCopies === "function"){
+        window.RequisitosBL.purgeGeneratedCopies("");
+      }
+    }catch(error){
+      console.warn("[baselocal.autoconnect] Limpieza liviana omitida", error);
+    }
+  }
+
   function connectOnce(){
     if(!hasBL()){
       return false;
@@ -25,6 +40,8 @@ Función o funciones:
     if(window.__REQ_BL_AUTOCONNECTED__){
       return true;
     }
+
+    cleanHeavyMirrorsOnce();
 
     var path = lower(window.location.pathname);
     var cfg = null;
@@ -95,7 +112,8 @@ Función o funciones:
       window.RequisitosBL.notificar("autoconnect", {
         module:cfg.module,
         collection:cfg.collection,
-        globalName:cfg.globalName
+        globalName:cfg.globalName,
+        lazyMirror:true
       });
     }catch(error){}
 
