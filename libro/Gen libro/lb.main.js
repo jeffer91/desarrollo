@@ -5,7 +5,7 @@ Función o funciones:
 1. Inicializar la pantalla Gen libro.
 2. Conectar selector de carrera y selector de materia con el almacenamiento local.
 3. Ejecutar validación flexible, plan maestro, IA, secciones iniciales, unidades, recursos visuales, referencias, glosario y anexos.
-4. Preparar el libro para Word.
+4. Construir y exportar el Word del libro.
 ========================================================= */
 
 (function iniciarGenLibro(window, document) {
@@ -15,6 +15,7 @@ Función o funciones:
   var State = window.LibroGenLibroState || null;
   var Progress = window.LibroGenLibroProgress || null;
   var UI = window.LibroGenLibroUI || null;
+  var Storage = window.LibroGenLibroStorage || null;
   var CarreraSelector = window.LibroGenLibroCarreraSelector || null;
   var MateriaSelector = window.LibroGenLibroMateriaSelector || null;
   var Validator = window.LibroGenLibroValidator || null;
@@ -28,8 +29,11 @@ Función o funciones:
   var ReferencesBuilder = window.LibroGenLibroReferencesBuilder || null;
   var GlossaryBuilder = window.LibroGenLibroGlossaryBuilder || null;
   var AppendixBuilder = window.LibroGenLibroAppendixBuilder || null;
+  var DocxBuilder = window.LibroGenLibroDocxBuilder || null;
+  var DocxExporter = window.LibroGenLibroDocxExporter || null;
 
   function refreshModules() {
+    Storage = window.LibroGenLibroStorage || Storage;
     CarreraSelector = window.LibroGenLibroCarreraSelector || CarreraSelector;
     MateriaSelector = window.LibroGenLibroMateriaSelector || MateriaSelector;
     Validator = window.LibroGenLibroValidator || Validator;
@@ -43,6 +47,8 @@ Función o funciones:
     ReferencesBuilder = window.LibroGenLibroReferencesBuilder || ReferencesBuilder;
     GlossaryBuilder = window.LibroGenLibroGlossaryBuilder || GlossaryBuilder;
     AppendixBuilder = window.LibroGenLibroAppendixBuilder || AppendixBuilder;
+    DocxBuilder = window.LibroGenLibroDocxBuilder || DocxBuilder;
+    DocxExporter = window.LibroGenLibroDocxExporter || DocxExporter;
   }
 
   function setInitialData() {
@@ -230,22 +236,63 @@ Función o funciones:
     var glossary = GlossaryBuilder && typeof GlossaryBuilder.build === "function" ? GlossaryBuilder.build(draft) : null;
     var appendix = AppendixBuilder && typeof AppendixBuilder.build === "function" ? AppendixBuilder.build(draft) : null;
 
-    if (glossary) {
-      State.addMessage("ok", "Glosario creado con " + glossary.total + " términos.");
-    }
+    if (glossary) State.addMessage("ok", "Glosario creado con " + glossary.total + " términos.");
+    if (appendix) State.addMessage("ok", appendix.include ? "Anexos creados cuando aplican." : "Anexos evaluados: no son necesarios.");
 
-    if (appendix) {
-      State.addMessage("ok", appendix.include ? "Anexos creados cuando aplican." : "Anexos evaluados: no son necesarios.");
-    }
-
-    UI.setMessage("is-ok", "Glosario y anexos preparados. Listo para construir Word.");
+    UI.setMessage("is-ok", "Glosario y anexos preparados. Construyendo Word.");
     UI.setStatus("Glosario y anexos listos");
-    Progress.render("docx", "Listo para construir Word", 88);
+    Progress.render("docx", "Construyendo Word", 88);
 
-    return {
-      glossary: glossary,
-      appendix: appendix
+    return { glossary: glossary, appendix: appendix };
+  }
+
+  async function buildAndExportWord(bookDraft) {
+    refreshModules();
+
+    if (!bookDraft || !DocxBuilder || typeof DocxBuilder.build !== "function") return null;
+
+    Progress.render("docx", "Armando Word", 90);
+
+    var model = DocxBuilder.build(bookDraft);
+    var exportResult = DocxExporter && typeof DocxExporter.exportDocx === "function"
+      ? await DocxExporter.exportDocx(model)
+      : { ok: false, error: "No existe exportador Word." };
+
+    var wordInfo = {
+      id: "libro-" + Date.now(),
+      carrera: bookDraft.plan && bookDraft.plan.carrera,
+      materia: bookDraft.plan && bookDraft.plan.materia,
+      fileName: model.fileName,
+      model: model,
+      exportResult: exportResult,
+      createdAt: new Date().toISOString()
     };
+
+    State.setUltimoWord(wordInfo);
+
+    if (Storage && typeof Storage.saveLibroRecord === "function") {
+      Storage.saveLibroRecord({
+        id: wordInfo.id,
+        carrera: wordInfo.carrera,
+        materia: wordInfo.materia,
+        fileName: wordInfo.fileName,
+        status: exportResult && exportResult.ok ? "exportado" : "pendiente_exportacion",
+        mode: exportResult && exportResult.mode,
+        createdAt: wordInfo.createdAt
+      });
+    }
+
+    if (exportResult && exportResult.ok) {
+      UI.setMessage("is-ok", "Word generado. Revisa la descarga y actualiza la tabla de contenidos en Word si lo solicita.");
+      UI.setStatus("Word generado");
+      Progress.complete();
+    } else {
+      UI.setMessage("is-warning", exportResult && exportResult.error ? exportResult.error : "Word preparado, pero no se pudo exportar.");
+      UI.setStatus("Word pendiente");
+      Progress.render("docx", "Word pendiente de exportación", 90);
+    }
+
+    return wordInfo;
   }
 
   async function prepareBookPlan() {
@@ -290,11 +337,12 @@ Función o funciones:
 
     var references = await buildReferences(plan, draft);
     window.LibroGenLibro.lastReferences = references;
-
     draft.references = references;
 
     var endingSections = buildGlossaryAndAppendix(draft);
     window.LibroGenLibro.lastEndingSections = endingSections;
+    draft.glossary = endingSections ? endingSections.glossary : null;
+    draft.appendix = endingSections ? endingSections.appendix : null;
 
     State.setLibroGenerado({
       plan: plan,
@@ -302,11 +350,14 @@ Función o funciones:
       units: units,
       visualResources: visualResources,
       references: references,
-      glossary: endingSections ? endingSections.glossary : null,
-      appendix: endingSections ? endingSections.appendix : null,
-      status: "ending_sections_ready",
+      glossary: draft.glossary,
+      appendix: draft.appendix,
+      status: "word_building",
       updatedAt: new Date().toISOString()
     });
+
+    var wordInfo = await buildAndExportWord(draft);
+    window.LibroGenLibro.lastWordInfo = wordInfo;
 
     return plan;
   }
