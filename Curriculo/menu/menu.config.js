@@ -3,34 +3,14 @@ Nombre completo: menu.config.js
 Ruta o ubicación: /Curriculo/menu/menu.config.js
 Función o funciones:
 - Definir la configuración central del menú Currículo
-- Registrar Inicio, Base local, Carreras, Materias, PEA, Fichas, Actas y Control
-- Centralizar rutas, títulos, descripciones y orden del menú
-- Evitar rutas dispersas dentro del resto de archivos del menú
+- Registrar solo los módulos activos del menú superior
+- Iniciar Currículo directamente en Carreras
+- Mantener Base al final del menú
 ========================================================= */
 (function attachCurriculoMenuConfig(window) {
   "use strict";
 
   var items = [
-    {
-      id: "inicio",
-      title: "Inicio",
-      shortTitle: "Inicio",
-      icon: "⌂",
-      hint: "Pantalla inicial de Currículo",
-      description: "Acceso rápido a los módulos principales del área Currículo.",
-      routeFromMenu: "internal:home",
-      type: "internal"
-    },
-    {
-      id: "base-local",
-      title: "Base local",
-      shortTitle: "Base",
-      icon: "B",
-      hint: "Centro de control local de Currículo",
-      description: "Guardar, comparar, diagnosticar, respaldar y sincronizar la información local de Currículo.",
-      routeFromMenu: "../Base%20local/bl.index.html",
-      type: "frame"
-    },
     {
       id: "carreras",
       title: "Carreras",
@@ -72,23 +52,13 @@ Función o funciones:
       type: "frame"
     },
     {
-      id: "actas",
-      title: "Actas",
-      shortTitle: "Actas",
-      icon: "A",
-      hint: "Gestión de actas curriculares",
-      description: "Construir y guardar actas de análisis curricular.",
-      routeFromMenu: "../actas/act.index.html",
-      type: "frame"
-    },
-    {
-      id: "control",
-      title: "Control",
-      shortTitle: "Control",
-      icon: "✓",
-      hint: "Control general de PEA, fichas y actas",
-      description: "Revisar el estado general de la información curricular.",
-      routeFromMenu: "../control/ctl.index.html",
+      id: "base-local",
+      title: "Base local",
+      shortTitle: "Base",
+      icon: "B",
+      hint: "Centro de control local de Currículo",
+      description: "Guardar, comparar, diagnosticar, respaldar y sincronizar la información local de Currículo.",
+      routeFromMenu: "../Base%20local/bl.index.html",
       type: "frame"
     }
   ];
@@ -97,7 +67,7 @@ Función o funciones:
     appId: "curriculo",
     appTitle: "Currículo",
     appSubtitle: "",
-    defaultItemId: "inicio",
+    defaultItemId: "carreras",
     storageKey: "curriculo_menu_last_id",
     items: items
   };
