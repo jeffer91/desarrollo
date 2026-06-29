@@ -32,21 +32,33 @@
       </section>
 
       <section class="pea-card">
-        <h2 class="pea-card-title">Tipo de carga</h2>
-        <div class="pea-radio-row">
-          <label class="pea-radio"><input type="radio" name="peaModoCarga" value="triple" checked /><span>3 archivos</span></label>
-          <label class="pea-radio"><input type="radio" name="peaModoCarga" value="consolidado" /><span>1 archivo consolidado</span></label>
+        <h2 class="pea-card-title">Carga inteligente</h2>
+
+        <div id="peaSmartDropzone" class="pea-smart-dropzone" role="button" tabindex="0" aria-label="Arrastrar archivos Excel del PEA">
+          <div class="pea-smart-icon">Excel</div>
+          <div>
+            <div class="pea-smart-title">Arrastra aquí el PEA</div>
+            <div class="pea-smart-subtitle">Puedes soltar 1 Excel consolidado o 3 Excel separados. El sistema detecta hojas y clasifica Base, Unidades y Actividades.</div>
+          </div>
+          <button id="peaSmartSelectBtn" class="pea-btn pea-btn-secondary" type="button">Seleccionar archivos</button>
+          <input id="peaSmartFiles" class="pea-hidden" type="file" accept=".xlsx,.xls" multiple />
         </div>
-        <div id="peaCargaTriple" class="pea-upload-group">
-          <div class="pea-grid pea-grid-3">
-            <div class="pea-field"><label for="peaFileBase">PEA Base</label><input id="peaFileBase" type="file" accept=".xlsx,.xls" /></div>
-            <div class="pea-field"><label for="peaFileUnidades">PEA Unidades</label><input id="peaFileUnidades" type="file" accept=".xlsx,.xls" /></div>
-            <div class="pea-field"><label for="peaFileActividades">PEA Actividades</label><input id="peaFileActividades" type="file" accept=".xlsx,.xls" /></div>
+
+        <div class="pea-hidden" aria-hidden="true">
+          <label><input type="radio" name="peaModoCarga" value="triple" checked />3 archivos</label>
+          <label><input type="radio" name="peaModoCarga" value="consolidado" />1 archivo consolidado</label>
+          <div id="peaCargaTriple">
+            <input id="peaFileBase" type="file" accept=".xlsx,.xls" />
+            <input id="peaFileUnidades" type="file" accept=".xlsx,.xls" />
+            <input id="peaFileActividades" type="file" accept=".xlsx,.xls" />
+          </div>
+          <div id="peaCargaConsolidado">
+            <input id="peaFileConsolidado" type="file" accept=".xlsx,.xls" />
           </div>
         </div>
-        <div id="peaCargaConsolidado" class="pea-upload-group pea-hidden">
-          <div class="pea-field"><label for="peaFileConsolidado">Archivo consolidado</label><input id="peaFileConsolidado" type="file" accept=".xlsx,.xls" /></div>
-        </div>
+
+        <div id="peaSmartSummary" class="pea-smart-summary" aria-live="polite">Arrastra 1 Excel consolidado o 3 Excel separados.</div>
+
         <div class="pea-actions">
           <button id="peaBtnGuardar" class="pea-btn pea-btn-primary" type="button">Guardar en local</button>
           <button id="peaBtnHistorial" class="pea-btn pea-btn-secondary" type="button">Cargar historial</button>
@@ -106,6 +118,7 @@
 
   <script src="./pea.firebase.js"></script>
   <script src="./pea.parser.js"></script>
+  <script src="./pea.smart-upload.js"></script>
   <script src="./pea.store.js"></script>
   <script src="./ccc.validator.js"></script>
   <script src="./ccc.patch.js"></script>
