@@ -59,6 +59,20 @@ button { cursor: pointer; }
 .pea-btn-secondary { background: #fff; color: var(--pea-text); border-color: var(--pea-border-strong); }
 .pea-btn-secondary:hover { background: #eef4ff; }
 
+.pea-smart-dropzone { display: grid; grid-template-columns: auto minmax(0,1fr) auto; gap: 14px; align-items: center; border: 2px dashed var(--pea-border-strong); border-radius: 16px; padding: 18px; background: linear-gradient(180deg,#ffffff 0%,#f8fbff 100%); transition: border-color .18s ease, background .18s ease, box-shadow .18s ease; }
+.pea-smart-dropzone.is-dragover { border-color: var(--pea-primary); background: #eef4ff; box-shadow: 0 0 0 4px rgba(37,99,235,.10); }
+.pea-smart-icon { display: inline-flex; align-items: center; justify-content: center; width: 52px; height: 52px; border-radius: 16px; background: #eef4ff; color: #1d4ed8; font-size: 12px; font-weight: 900; }
+.pea-smart-title { font-size: 17px; font-weight: 900; margin-bottom: 4px; }
+.pea-smart-subtitle { color: var(--pea-muted); font-size: 13px; line-height: 1.4; }
+.pea-smart-summary { margin-top: 12px; border: 1px dashed var(--pea-border-strong); background: #f8fafc; color: var(--pea-muted); border-radius: 12px; padding: 12px; font-size: 13px; line-height: 1.45; }
+.pea-smart-summary.is-ok { background: var(--pea-success-bg); border-color: var(--pea-success-border); color: var(--pea-success-text); }
+.pea-smart-summary.is-error { background: var(--pea-error-bg); border-color: var(--pea-error-border); color: var(--pea-error-text); }
+.pea-smart-summary.is-warn { background: var(--pea-warn-bg); border-color: var(--pea-warn-border); color: var(--pea-warn-text); }
+.pea-smart-files { display: grid; grid-template-columns: repeat(auto-fit,minmax(210px,1fr)); gap: 8px; margin-top: 10px; }
+.pea-smart-file { display: grid; gap: 3px; border: 1px solid var(--pea-border); background: rgba(255,255,255,.72); border-radius: 10px; padding: 9px 10px; }
+.pea-smart-file strong { color: var(--pea-text); font-size: 12px; }
+.pea-smart-file span { color: var(--pea-muted); font-size: 12px; }
+
 .pea-status { min-height: 42px; margin-top: 12px; padding: 10px 12px; border-radius: 10px; border: 1px dashed var(--pea-border-strong); background: #f8fafc; color: var(--pea-muted); display: flex; align-items: center; line-height: 1.4; font-size: 13px; }
 .pea-status.is-ok { background: var(--pea-success-bg); border-color: var(--pea-success-border); color: var(--pea-success-text); }
 .pea-status.is-error { background: var(--pea-error-bg); border-color: var(--pea-error-border); color: var(--pea-error-text); }
@@ -80,6 +94,7 @@ button { cursor: pointer; }
 
 @media (max-width: 980px) {
   .pea-grid-2, .pea-grid-3 { grid-template-columns: 1fr; }
+  .pea-smart-dropzone { grid-template-columns: 1fr; }
   .pea-app { padding: 12px; }
   .pea-panel { padding: 14px; }
   .pea-title { font-size: 22px; }
