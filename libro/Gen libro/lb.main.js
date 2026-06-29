@@ -60,77 +60,63 @@ Función o funciones:
 
   function setInitialData() {
     refreshModules();
-
     if (CarreraSelector && typeof CarreraSelector.loadCarreras === "function") {
       CarreraSelector.loadCarreras();
       return;
     }
-
     UI.fillSelect("lb-carrera-select", [], "No se pudo leer carreras guardadas", null, null);
     UI.fillSelect("lb-materia-select", [], "Selecciona una carrera", null, null);
   }
 
   function runFlexibleValidation(selected) {
     refreshModules();
-
     if (!Validator || typeof Validator.validate !== "function") {
       UI.setMessage("is-warning", "Materia cargada. Se continuará con la planificación base.");
       UI.setStatus("Materia lista");
       Progress.render("validate", "Materia lista para planificación", 10);
       return null;
     }
-
     var validation = Validator.validate(selected);
     var message = typeof Validator.message === "function" ? Validator.message(validation) : "Materia validada.";
-
     if (State && typeof State.addMessage === "function") State.addMessage(validation.ok ? "ok" : "warning", message);
-
     if (!validation.ok) {
       UI.setMessage("is-error", message);
       UI.setStatus("Falta asignatura");
       Progress.render("validate", "Validación con error", 10);
       return validation;
     }
-
     UI.setMessage(validation.advertencias.length ? "is-warning" : "is-ok", message);
     UI.setStatus(validation.advertencias.length ? "Validada con advertencias" : "Materia validada");
     Progress.render("validate", "Validación flexible completa", 10);
-
     return validation;
   }
 
   function buildPlan(selected, validation) {
     refreshModules();
-
     if (!BookPlan || typeof BookPlan.build !== "function") {
       UI.setMessage("is-warning", "Materia validada. El constructor de secciones se conectará después.");
       UI.setStatus("Plan pendiente");
       Progress.render("plan", "Plan pendiente de constructor", 15);
       return null;
     }
-
     var plan = BookPlan.build(selected, validation);
-
     State.setPlanLibro(plan);
     State.addMessage("ok", "Plan maestro creado para " + (plan.materia || "la asignatura") + ".");
     UI.setMessage("is-ok", "Plan maestro del libro creado. Preparando motor IA.");
     UI.setStatus("Plan creado");
     Progress.render("plan", "Plan maestro creado", 15);
-
     return plan;
   }
 
   async function prepareAi(plan) {
     refreshModules();
     if (!plan) return null;
-
     if (!AiOrchestrator || typeof AiOrchestrator.prepare !== "function") {
       UI.setMessage("is-warning", "Plan creado. El desarrollo de secciones se conectará después.");
       UI.setStatus("IA pendiente");
       Progress.render("plan", "Plan creado sin motor IA", 15);
       return null;
     }
-
     var prepared = await AiOrchestrator.prepare(plan);
     State.addMessage("ok", "Motor IA preparado con " + prepared.tasks.length + " tareas.");
     UI.setMessage("is-ok", "Motor IA preparado. Generando secciones iniciales.");
@@ -142,7 +128,6 @@ Función o funciones:
   async function buildInitialSections(plan) {
     refreshModules();
     if (!plan || !InitialSectionsBuilder) return null;
-
     Progress.render("presentation", "Generando secciones iniciales", 22);
     var initialSections = typeof InitialSectionsBuilder.buildWithAi === "function" ? await InitialSectionsBuilder.buildWithAi(plan) : InitialSectionsBuilder.buildBase(plan);
     State.addMessage("ok", "Secciones iniciales creadas.");
@@ -155,7 +140,6 @@ Función o funciones:
   async function buildUnits(plan) {
     refreshModules();
     if (!plan || !UnitBuilder || typeof UnitBuilder.buildAll !== "function") return null;
-
     Progress.render("units", "Desarrollando unidades", 52);
     var units = await UnitBuilder.buildAll(plan);
     State.addMessage("ok", "Unidades desarrolladas: " + units.units.length + ".");
@@ -168,8 +152,7 @@ Función o funciones:
   function buildVisualResources(units) {
     refreshModules();
     if (!units) return null;
-
-    Progress.render("visuals", "Preparando tablas y figuras", 78);
+    Progress.render("visuals", "Preparando tablas y figuras", 68);
     var visuals = {
       id: "visual-resources",
       title: "Recursos visuales didácticos",
@@ -179,21 +162,18 @@ Función o funciones:
       rules: { onlyIfUseful: true, noDecorativeImages: true, appGeneratedResources: true },
       createdAt: new Date().toISOString()
     };
-
     State.addMessage("ok", "Recursos visuales planificados.");
     UI.setMessage("is-ok", "Figuras, tablas y diagramas planificados. Buscando referencias APA 7.");
     UI.setStatus("Recursos visuales listos");
-    Progress.render("visuals", "Recursos visuales listos", 78);
+    Progress.render("visuals", "Recursos visuales listos", 68);
     return visuals;
   }
 
   async function buildReferences(plan, draft) {
     refreshModules();
     if (!plan || !ReferencesBuilder || typeof ReferencesBuilder.build !== "function") return null;
-
-    Progress.render("references", "Buscando referencias APA 7", 68);
+    Progress.render("references", "Buscando referencias APA 7", 78);
     var references = await ReferencesBuilder.build(plan, draft);
-
     if (references.ok) {
       State.addMessage("ok", "Referencias APA 7 verificables: " + references.totalUsable + ".");
       UI.setMessage("is-ok", "Referencias APA 7 verificables creadas. Generando glosario y anexos.");
@@ -203,30 +183,26 @@ Función o funciones:
       UI.setMessage("is-warning", references.message || "Faltan referencias verificables para completar APA 7.");
       UI.setStatus("Referencias pendientes");
     }
-
-    Progress.render("references", "Referencias procesadas", 68);
+    Progress.render("references", "Referencias procesadas", 78);
     return references;
   }
 
   function buildGlossaryAndAppendix(draft) {
     refreshModules();
-
+    Progress.render("ending", "Preparando glosario y anexos", 86);
     var glossary = GlossaryBuilder && typeof GlossaryBuilder.build === "function" ? GlossaryBuilder.build(draft) : null;
     var appendix = AppendixBuilder && typeof AppendixBuilder.build === "function" ? AppendixBuilder.build(draft) : null;
-
     if (glossary) State.addMessage("ok", "Glosario creado con " + glossary.total + " términos.");
     if (appendix) State.addMessage("ok", appendix.include ? "Anexos creados cuando aplican." : "Anexos evaluados: no son necesarios.");
-
     UI.setMessage("is-ok", "Glosario y anexos preparados. Construyendo Word.");
     UI.setStatus("Glosario y anexos listos");
-    Progress.render("docx", "Construyendo Word", 88);
+    Progress.render("ending", "Glosario y anexos listos", 86);
     return { glossary: glossary, appendix: appendix };
   }
 
   async function buildAndExportWord(bookDraft) {
     refreshModules();
     if (!bookDraft || !DocxBuilder || typeof DocxBuilder.build !== "function") return null;
-
     Progress.render("docx", "Armando Word", 90);
     var model = DocxBuilder.build(bookDraft);
     var exportResult = DocxExporter && typeof DocxExporter.exportDocx === "function" ? await DocxExporter.exportDocx(model) : { ok: false, error: "No existe exportador Word." };
@@ -239,10 +215,9 @@ Función o funciones:
       exportResult: exportResult,
       createdAt: new Date().toISOString()
     };
-
     State.setUltimoWord(wordInfo);
-
     if (Storage && typeof Storage.saveLibroRecord === "function") {
+      Progress.render("save", "Guardando copia local", 96);
       Storage.saveLibroRecord({
         id: wordInfo.id,
         carrera: wordInfo.carrera,
@@ -253,7 +228,6 @@ Función o funciones:
         createdAt: wordInfo.createdAt
       });
     }
-
     if (exportResult && exportResult.ok) {
       UI.setMessage("is-ok", "Word generado. Revisa la descarga y actualiza la tabla de contenidos en Word si lo solicita.");
       UI.setStatus("Word generado");
@@ -263,51 +237,48 @@ Función o funciones:
       UI.setStatus("Word pendiente");
       Progress.render("docx", "Word pendiente de exportación", 90);
     }
-
     return wordInfo;
   }
 
   async function prepareBookPlan() {
+    UI.setGenerateEnabled(false);
     var currentState = State.getState();
     var selected = currentState.materiaSeleccionada;
-
     if (!selected) {
       UI.setMessage("is-warning", "Selecciona una materia guardada antes de generar el libro.");
       UI.setStatus("Sin materia");
+      UI.setGenerateEnabled(false);
       Progress.reset();
       return null;
     }
-
     var validation = runFlexibleValidation(selected);
     window.LibroGenLibro.lastValidation = validation;
-    if (validation && validation.ok === false) return null;
-
+    if (validation && validation.ok === false) {
+      UI.setGenerateEnabled(true);
+      return null;
+    }
     var plan = buildPlan(selected, validation);
     window.LibroGenLibro.lastPlan = plan;
-    if (!plan) return null;
-
+    if (!plan) {
+      UI.setGenerateEnabled(true);
+      return null;
+    }
     var prepared = await prepareAi(plan);
     window.LibroGenLibro.lastAiPreparation = prepared;
-
     var initialSections = await buildInitialSections(plan);
     window.LibroGenLibro.lastInitialSections = initialSections;
-
     var units = await buildUnits(plan);
     window.LibroGenLibro.lastUnits = units;
-
     var visualResources = buildVisualResources(units);
     window.LibroGenLibro.lastVisualResources = visualResources;
-
     var draft = { plan: plan, initialSections: initialSections, units: units, visualResources: visualResources };
     var references = await buildReferences(plan, draft);
     window.LibroGenLibro.lastReferences = references;
     draft.references = references;
-
     var endingSections = buildGlossaryAndAppendix(draft);
     window.LibroGenLibro.lastEndingSections = endingSections;
     draft.glossary = endingSections ? endingSections.glossary : null;
     draft.appendix = endingSections ? endingSections.appendix : null;
-
     State.setLibroGenerado({
       plan: plan,
       initialSections: initialSections,
@@ -319,9 +290,9 @@ Función o funciones:
       status: "word_building",
       updatedAt: new Date().toISOString()
     });
-
     var wordInfo = await buildAndExportWord(draft);
     window.LibroGenLibro.lastWordInfo = wordInfo;
+    UI.setGenerateEnabled(true);
     return plan;
   }
 
@@ -342,7 +313,6 @@ Función o funciones:
       console.error("Gen libro no pudo iniciar: faltan módulos base lb.");
       return;
     }
-
     State.setStatus(Constants.STATUS ? Constants.STATUS.idle : "idle");
     State.setSelection("", "");
     State.setMateriaSeleccionada(null);
@@ -350,11 +320,9 @@ Función o funciones:
     Progress.reset();
     setInitialData();
     runFinalReview();
-
     var carreraSelect = UI.byId("lb-carrera-select");
     var materiaSelect = UI.byId("lb-materia-select");
     var generateButton = UI.byId("lb-generate-btn");
-
     if (carreraSelect) {
       carreraSelect.addEventListener("change", function onCarreraChange() {
         var carrera = UI.getSelectedCarrera();
@@ -367,7 +335,6 @@ Función o funciones:
         if (MateriaSelector && typeof MateriaSelector.loadMaterias === "function") MateriaSelector.loadMaterias(carrera);
       });
     }
-
     if (materiaSelect) {
       materiaSelect.addEventListener("change", function onMateriaChange() {
         var carrera = UI.getSelectedCarrera();
@@ -381,7 +348,6 @@ Función o funciones:
         }
       });
     }
-
     if (generateButton) {
       generateButton.addEventListener("click", function onGenerateClick() {
         if (ErrorHandler && typeof ErrorHandler.safeAsync === "function") {
@@ -391,7 +357,6 @@ Función o funciones:
         prepareBookPlan();
       });
     }
-
     window.LibroGenLibro = {
       getState: State.getState,
       reloadMaterias: setInitialData,
