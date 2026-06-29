@@ -1,0 +1,44 @@
+/*
+  Nombre completo: ta-titulo-articulo-admin-vistas.css
+  Ruta o ubicación: /Requisitos/Titulos/src/styles/ta-titulo-articulo-admin-vistas.css
+  Función: estilos para que el administrador muestre solo la sección seleccionada.
+*/
+
+.ta-admin-menu__link--active {
+  border-color: rgba(201, 168, 102, 0.72);
+  background: linear-gradient(135deg, rgba(201, 168, 102, 0.18), rgba(255, 255, 255, 0.98));
+  box-shadow: var(--ta-shadow-soft);
+}
+
+.ta-admin-menu__link--active::after {
+  content: "•";
+}
+
+.ta-admin-current-view {
+  padding: 16px;
+  border: 1px solid rgba(201, 168, 102, 0.24);
+  border-radius: var(--ta-radius-xl);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: var(--ta-shadow-card);
+}
+
+.ta-admin-current-view h2 {
+  margin: 0;
+  color: var(--ta-color-azul-marino);
+  font-size: 1.22rem;
+}
+
+.ta-admin-current-view p {
+  margin: 6px 0 0;
+  color: var(--ta-color-texto-suave);
+  font-size: 0.92rem;
+}
+
+.ta-admin-view {
+  display: grid;
+  gap: 16px;
+}
+
+.ta-admin-view[hidden] {
+  display: none !important;
+}
