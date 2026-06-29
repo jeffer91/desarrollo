@@ -21,6 +21,7 @@ Función:
     moduleName: "Currículo · Materias",
     collectionName: "carreras",
     localStorageKey: "curriculo_materias_state_v1",
+    defaultLoadType: "materias-carrera",
 
     selectors: {
       status: "#mat-status",
@@ -29,6 +30,7 @@ Función:
       careerTypeDisplay: "#mat-career-type-display",
       careerQuickSummary: "#mat-career-quick-summary",
       loadTypeSelect: "#mat-load-type-select",
+      loadTypeMenu: "#mat-load-type-menu",
       refreshButton: "#mat-refresh-btn",
       saveButton: "#mat-save-btn",
       openMassiveButton: "#mat-open-massive-btn",
@@ -47,8 +49,8 @@ Función:
     },
 
     loadTypes: [
-      { value: "materias-carrera", label: "Materias de carrera" },
-      { value: "transversales", label: "Materias transversales" },
+      { value: "materias-carrera", label: "De carrera" },
+      { value: "transversales", label: "Transversales" },
       { value: "nucleos", label: "Núcleos" },
       { value: "ejes", label: "Ejes" }
     ],
