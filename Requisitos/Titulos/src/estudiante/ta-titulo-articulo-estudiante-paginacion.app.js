@@ -4,7 +4,7 @@
   Función o funciones:
   - Convertir la pantalla del estudiante en un flujo paginado tipo asistente.
   - Mostrar una sola acción por paso: cédula, datos, Telegram, título 1, título 2, título 3, resumen y estado.
-  - Mostrar avisos importantes en modal para no saturar la pantalla principal.
+  - Mostrar el aviso importante apenas el estudiante consulta su cédula, mientras Firebase carga sus datos.
   - Reutilizar la lógica existente de guardado, validación, sugerencias y envío sin cambiar el esquema de Firebase.
   Se conecta con:
   - Requisitos/Titulos/public/ta-titulo-articulo-estudiante.html
@@ -142,10 +142,15 @@ function crearModalAviso() {
     <article class="ta-wizard-modal__dialog">
       <button class="ta-icon-button ta-wizard-modal__close" type="button" data-ta-aviso-cerrar aria-label="Cerrar aviso">×</button>
       <p class="ta-brand__eyebrow">Aviso importante</p>
-      <h2 id="ta-estudiante-aviso-title">Antes de continuar</h2>
-      <p>Revise bien sus propuestas. Si el coordinador devuelve los títulos, tendrá solo una oportunidad de reenvío.</p>
+      <h2 id="ta-estudiante-aviso-title">Sus títulos serán revisados</h2>
+      <ul class="ta-wizard-modal__list">
+        <li>Elija 3 títulos claros y relacionados con su carrera.</li>
+        <li>El coordinador validará y aprobará el título final.</li>
+        <li>Si le devuelven, solo tendrá 1 intento de corrección.</li>
+      </ul>
+      <p class="ta-wizard-modal__note">Revise bien antes de enviar.</p>
       <div class="ta-actions ta-actions--end">
-        <button class="ta-button ta-button--primary" type="button" id="ta-estudiante-aviso-continuar-btn">Entendido, continuar</button>
+        <button class="ta-button ta-button--primary" type="button" id="ta-estudiante-aviso-continuar-btn">Entendido</button>
       </div>
     </article>
   `;
@@ -174,6 +179,14 @@ function cerrarAvisoImportante() {
     state.pasoActual = Math.max(state.pasoActual + 1, 3);
     aplicarPaso();
   }
+}
+
+function mostrarAvisoAlConsultarCedula() {
+  const cedula = clean(byId("ta-estudiante-cedula")?.value);
+  if (!cedula) return;
+  state.avisoLeido = false;
+  state.modalContinuar = false;
+  abrirAvisoImportante({ continuarAlCerrar: false });
 }
 
 function crearPaginacion() {
@@ -406,11 +419,6 @@ function validarAntesDeContinuar() {
     return false;
   }
 
-  if (state.pasoActual === 2 && !state.avisoLeido) {
-    abrirAvisoImportante({ continuarAlCerrar: true });
-    return false;
-  }
-
   const numero = numeroPropuestaDesdePaso();
   if (numero && !validarPropuesta(numero)) return false;
   if (state.pasoActual === 6 && !validarTitulosDiferentes()) return false;
@@ -434,7 +442,6 @@ function sincronizarCargaEstudiante() {
 
   if (!state.estudianteCargado && estudianteVisibleDesdeApp()) {
     state.estudianteCargado = true;
-    state.avisoLeido = false;
     state.pasoActual = 2;
     aplicarPaso();
     return;
@@ -465,6 +472,8 @@ function observarCambiosApp() {
 }
 
 function registrarEventos() {
+  byId("ta-estudiante-busqueda-form")?.addEventListener("submit", mostrarAvisoAlConsultarCedula, { capture: true });
+
   byId("ta-estudiante-enviar-btn")?.addEventListener("click", () => {
     window.setTimeout(() => {
       const enviar = byId("ta-estudiante-enviar-btn");
