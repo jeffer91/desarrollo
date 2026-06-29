@@ -9,6 +9,7 @@ Función o funciones:
 - No leer el snapshot pesado durante el arranque de Maqueta.
 - Mantener SQLite/IndexedDB como motor asíncrono hasta migrar pantallas en bloques siguientes.
 - Exponer migración manual de Base Local V1 hacia BL2.
+- Invalidar caché sin disparar render reentrante por defecto.
 Con qué se conecta:
 - bl2-config.js
 - bl2-detect-runtime.js
@@ -20,7 +21,7 @@ Con qué se conecta:
 (function(window){
   "use strict";
 
-  var VERSION = "2.0.0-alpha.1";
+  var VERSION = "2.0.0-alpha.2";
   var bootedAt = new Date().toISOString();
   var state = {ready:false, mode:"initializing", storage:"legacy", runtime:null, lastError:"", adapterName:"legacy"};
 
@@ -49,11 +50,7 @@ Con qué se conecta:
     return null;
   }
 
-  function adapter(){
-    var ad = resolveAdapter();
-    if(!ad){throw new Error("BL2 no tiene adaptador disponible.");}
-    return ad;
-  }
+  function adapter(){var ad = resolveAdapter();if(!ad){throw new Error("BL2 no tiene adaptador disponible.");}return ad;}
 
   function status(options){
     options = options || {};
@@ -65,26 +62,17 @@ Con qué se conecta:
     return data;
   }
 
-  function invalidate(){
+  function invalidate(options){
+    options = options || {};
     safe("adapter.invalidate", function(){if(adapter().invalidate){adapter().invalidate();}}, null);
-    emit("invalidated", status({deep:false}));
+    var current = status({deep:false});
+    if(options.emit === true){emit("invalidated", current);}
+    return current;
   }
 
   function boot(){
-    try{
-      resolveAdapter();
-      state.ready = true;
-      state.lastError = "";
-      var current = status({deep:false});
-      emit("ready", current);
-      return current;
-    }catch(error){
-      state.ready = false;
-      state.lastError = error && error.message ? error.message : String(error);
-      var failed = status({deep:false});
-      emit("error", failed);
-      return failed;
-    }
+    try{resolveAdapter();state.ready = true;state.lastError = "";var current = status({deep:false});emit("ready", current);return current;}
+    catch(error){state.ready = false;state.lastError = error && error.message ? error.message : String(error);var failed = status({deep:false});emit("error", failed);return failed;}
   }
 
   var api = {
@@ -93,17 +81,13 @@ Con qué se conecta:
     status:status,
     invalidate:invalidate,
     runtime:function(){return state.runtime || (runtime() && runtime().detect ? runtime().detect(true) : null);},
-    periodos:{
-      listar:function(){return safe("periodos.listar", function(){return adapter().listPeriods ? adapter().listPeriods() : [];}, []);}
-    },
+    periodos:{listar:function(){return safe("periodos.listar", function(){return adapter().listPeriods ? adapter().listPeriods() : [];}, []);}},
     estudiantes:{
       buscar:function(options){return safe("estudiantes.buscar", function(){return adapter().searchStudents ? adapter().searchStudents((options && (options.search || options.q)) || "", options || {}) : {rows:[], total:0};}, {rows:[], total:0});},
       listarPagina:function(options){return safe("estudiantes.listarPagina", function(){return adapter().listStudents ? adapter().listStudents(options || {}) : {rows:[], total:0};}, {rows:[], total:0});},
       obtenerPorCedula:function(cedula, options){return safe("estudiantes.obtenerPorCedula", function(){return adapter().getStudentById ? adapter().getStudentById(cedula, options || {}) : null;}, null);}
     },
-    stats:{
-      resumen:function(options){return safe("stats.resumen", function(){return adapter().resumen ? adapter().resumen(options || {}) : {total:0, activos:0, retirados:0, carreras:{}, periodos:{}};}, {total:0, activos:0, retirados:0, carreras:{}, periodos:{}});}
-    },
+    stats:{resumen:function(options){return safe("stats.resumen", function(){return adapter().resumen ? adapter().resumen(options || {}) : {total:0, activos:0, retirados:0, carreras:{}, periodos:{}};}, {total:0, activos:0, retirados:0, carreras:{}, periodos:{}});}},
     storage:{
       estado:function(){return safe("storage.estado", function(){return storage() && typeof storage().status === "function" ? storage().status() : {ok:false, mode:"sin_storage"};}, {ok:false, mode:"sin_storage"});},
       inicializar:function(options){return storage() && typeof storage().initialize === "function" ? storage().initialize(options || {}) : Promise.resolve({ok:false, mode:"sin_storage"});},
@@ -115,13 +99,8 @@ Con qué se conecta:
       ejecutar:function(options){return migrator() && typeof migrator().run === "function" ? migrator().run(options || {}) : Promise.resolve({ok:false, mode:"sin_migrador"});},
       reporte:function(){return safe("migracion.reporte", function(){return migrationReport() && typeof migrationReport().read === "function" ? migrationReport().read() : null;}, null);}
     },
-    sync:{
-      estado:function(){return {ok:true, mode:"pendiente_bloque_10", message:"Firebase incremental se implementará en el bloque 10.", updatedAt:now()};}
-    },
-    compat:{
-      snapshot:function(options){return safe("compat.snapshot", function(){return adapter().readSnapshot ? adapter().readSnapshot(options || {}) : null;}, null);},
-      legacyAdapter:function(){return legacy();}
-    }
+    sync:{estado:function(){return {ok:true, mode:"pendiente_bloque_10", message:"Firebase incremental se implementará en el bloque 10.", updatedAt:now()};}},
+    compat:{snapshot:function(options){return safe("compat.snapshot", function(){return adapter().readSnapshot ? adapter().readSnapshot(options || {}) : null;}, null);},legacyAdapter:function(){return legacy();}}
   };
 
   window.BL2 = api;
