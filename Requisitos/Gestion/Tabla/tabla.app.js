@@ -9,6 +9,7 @@ Función o funciones:
 - Usar BL2 cuando esté disponible y mantener ExcelLocalRepo como respaldo.
 - Mostrar acciones compactas por fila: copiar, WhatsApp y Telegram individual.
 - Abrir Telegram masivo con los estudiantes filtrados actualmente.
+- Evitar construcción pesada duplicada al abrir la pantalla.
 Con qué se conecta:
 - tabla.core.js
 - tabla.message.js
@@ -112,7 +113,7 @@ Con qué se conecta:
     safeBind("tabla-export-csv","click",function(){window.TablaExport.exportCsv(state.allRows.length?state.allRows:state.rows);});
     safeBind("tabla-export-json","click",function(){window.TablaExport.exportJson(state.allRows.length?state.allRows:state.rows);});
   }
-  function boot(){if(window.ExcelLocalBridge)window.ExcelLocalBridge.ensureReady();bind();render();}
+  function boot(){if(window.BL2&&typeof window.BL2.status==="function"){window.BL2.status({deep:false});}bind();render();}
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",boot);else boot();
   window.TablaApp={render:render,openMass:openMass,getState:function(){return Object.assign({},state);}};
 })(window,document);
