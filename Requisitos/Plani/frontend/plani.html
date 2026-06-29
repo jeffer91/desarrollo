@@ -5,7 +5,7 @@ Ruta o ubicación: /Requisitos/Plani/frontend/plani.html
 Función o funciones:
 - Mostrar la pantalla Plani para planificación de titulación.
 - Guiar el flujo: Período -> Insumos -> Documento.
-- Conectar estado, período, tipo de documento, validación, diagnóstico, QA, plantillas institucionales, cronograma y recursos por sección.
+- Conectar estado, período, tipo de documento, cronograma, recursos por sección y motor documental.
 - Mantener el módulo separado de Infor hasta integración final.
 Con qué se conecta:
 - plani.css
@@ -22,6 +22,12 @@ Con qué se conecta:
 - ../core/plani.section-assets.js
 - ../core/plani.images.js
 - ../core/plani.charts.js
+- ../core/plani.numbering.js
+- ../core/plani.index-builder.js
+- ../core/plani.section-builder.js
+- ../core/plani.document-model.js
+- ../core/plani.builder.js
+- ../core/plani.preview.js
 - ../core/plani.qa.js
 - ../templates/layout/layout.config.js
 - ../templates/layout/typography.config.js
@@ -35,6 +41,7 @@ Con qué se conecta:
 - plani.ui.js
 - plani.events.js
 - plani.assets.ui.js
+- plani.preview.ui.js
 - plani.app.js
 ========================================================= -->
 <html lang="es">
@@ -53,7 +60,7 @@ Con qué se conecta:
         <p class="plani-lead">Selecciona el período, define el tipo de planificación, carga el cronograma y prepara el documento institucional.</p>
       </div>
       <div class="plani-hero-actions">
-        <span id="plani-module-state" class="plani-chip warn">Bloque 4</span>
+        <span id="plani-module-state" class="plani-chip warn">Bloque 5</span>
       </div>
     </section>
 
@@ -138,8 +145,8 @@ Con qué se conecta:
     <section class="plani-card">
       <div class="plani-card-head">
         <div>
-          <h2>4. Vista previa base</h2>
-          <p>Resumen técnico inicial del documento que se construirá.</p>
+          <h2>4. Vista previa documental</h2>
+          <p>Resumen del modelo interno que luego se usará para Word y PDF.</p>
         </div>
         <span id="plani-preview-chip" class="plani-chip warn">Sin vista previa</span>
       </div>
@@ -151,11 +158,11 @@ Con qué se conecta:
     <section class="plani-card plani-process-card">
       <div>
         <h2>5. Procesar y exportar</h2>
-        <p>En el bloque 4 ya existe parser de cronograma y estructura de recursos por sección.</p>
+        <p>En el bloque 5 ya existe motor constructor y vista previa del documento interno.</p>
         <p id="plani-readiness" class="plani-muted">Estado base listo.</p>
       </div>
       <div class="plani-process-actions">
-        <button id="plani-process" class="plani-primary" type="button">Validar base</button>
+        <button id="plani-process" class="plani-primary" type="button">Construir documento</button>
         <button id="plani-export-word" type="button" disabled>Exportar Word</button>
         <button id="plani-export-pdf" type="button" disabled>Exportar PDF</button>
       </div>
@@ -180,6 +187,12 @@ Con qué se conecta:
   <script src="../core/plani.section-assets.js"></script>
   <script src="../core/plani.images.js"></script>
   <script src="../core/plani.charts.js"></script>
+  <script src="../core/plani.numbering.js"></script>
+  <script src="../core/plani.index-builder.js"></script>
+  <script src="../core/plani.section-builder.js"></script>
+  <script src="../core/plani.document-model.js"></script>
+  <script src="../core/plani.builder.js"></script>
+  <script src="../core/plani.preview.js"></script>
   <script src="../templates/layout/layout.config.js"></script>
   <script src="../templates/layout/typography.config.js"></script>
   <script src="../templates/layout/header.template.js"></script>
@@ -192,6 +205,7 @@ Con qué se conecta:
   <script src="plani.ui.js"></script>
   <script src="plani.events.js"></script>
   <script src="plani.assets.ui.js"></script>
+  <script src="plani.preview.ui.js"></script>
   <script src="../core/plani.qa.js"></script>
   <script src="plani.app.js"></script>
 </body>
