@@ -3,7 +3,9 @@ Nombre completo: plani.app.js
 Ruta o ubicación: /Requisitos/Plani/frontend/plani.app.js
 Función o funciones:
 - Orquestar la pantalla Plani con estado interno robusto.
-- Conectar período, tipo de documento, almacenamiento, validación, QA, cronograma, recursos y motor documental.
+- Conectar período, tipo de documento, almacenamiento, validación, QA, cronograma, recursos, motor documental y exportación.
+- Construir el modelo interno para vista previa documental.
+- Exportar Word y PDF desde una sola fuente HTML institucional.
 - Mantener Plani separado de Infor y del menú principal hasta la integración final.
 ========================================================= */
 (function(window, document){
@@ -20,6 +22,7 @@ Función o funciones:
   function assetsUI(){return window.PlaniAssetsUI || null;}
   function previewUI(){return window.PlaniPreviewUI || null;}
   function builder(){return window.PlaniBuilder || null;}
+  function gateway(){return window.PlaniExportGateway || null;}
   function parser(){return window.PlaniCronogramaParser || null;}
   function mapper(){return window.PlaniCronogramaMapper || null;}
   function charts(){return window.PlaniCharts || null;}
@@ -30,6 +33,13 @@ Función o funciones:
 
   function option(value, label, selected){
     return '<option value="' + esc(value) + '" ' + (selected ? 'selected' : '') + '>' + esc(label) + '</option>';
+  }
+
+  function setExportEnabled(enabled){
+    var word = el("plani-export-word");
+    var pdf = el("plani-export-pdf");
+    if(word){word.disabled = !enabled;}
+    if(pdf){pdf.disabled = !enabled;}
   }
 
   function fillPeriods(current){
@@ -73,6 +83,7 @@ Función o funciones:
     if(ui()){ui().renderAll(snapshot, message, cls);}
     renderAssets(snapshot);
     if(currentModel){renderPreview(currentModel);}
+    setExportEnabled(!!(currentModel && currentModel.ready));
     if(qa()){qa().render(qa().run());}
   }
 
@@ -87,8 +98,14 @@ Función o funciones:
     return result;
   }
 
-  function onPeriodChange(periodId, periodLabel){
+  function resetModel(){
     currentModel = null;
+    setExportEnabled(false);
+    if(previewUI()){previewUI().render(null);}
+  }
+
+  function onPeriodChange(periodId, periodLabel){
+    resetModel();
     if(st()){st().setPeriod(periodId, periodLabel);}
     var snapshot = st() ? st().getState() : {};
     var selectDoc = el("plani-document-type");
@@ -98,14 +115,14 @@ Función o funciones:
   }
 
   function onDocumentTypeChange(documentType){
-    currentModel = null;
+    resetModel();
     if(st()){st().setDocumentType(documentType);}
     syncReadiness();
     render(documentType ? "Tipo de planificación seleccionado." : "Selecciona el tipo de planificación.", documentType ? "ok" : "warn");
   }
 
   function onCronogramaInput(value, fileName){
-    currentModel = null;
+    resetModel();
     if(st()){st().setCronograma(value, fileName);}
     syncReadiness();
     render(text(value) ? "Cronograma interpretado en Plani." : "Cronograma vacío.", text(value) ? "ok" : "warn");
@@ -120,7 +137,27 @@ Función o funciones:
       renderPreview(currentModel);
     }
     syncReadiness();
-    render(result.ok ? "Documento interno construido correctamente." : result.message, result.ok ? "ok" : "warn");
+    render(result.ok ? "Documento interno construido correctamente. Exportación habilitada." : result.message, result.ok ? "ok" : "warn");
+  }
+
+  function ensureModel(){
+    if(!currentModel && builder()){
+      currentModel = builder().build(enrichCronograma(st() ? st().getState() : {}));
+    }
+    if(!currentModel || !currentModel.ok){throw new Error("Primero construye el documento Plani.");}
+    return currentModel;
+  }
+
+  function onExportWord(){
+    var model = ensureModel();
+    if(gateway()){gateway().word(model);}
+    if(ui()){ui().status("Word generado desde Plani.", "ok");}
+  }
+
+  function onExportPdf(){
+    var model = ensureModel();
+    if(gateway()){gateway().pdf(model);}
+    if(ui()){ui().status("Vista PDF abierta para imprimir/guardar.", "ok");}
   }
 
   function boot(){
@@ -134,11 +171,14 @@ Función o funciones:
           onPeriodChange:onPeriodChange,
           onDocumentTypeChange:onDocumentTypeChange,
           onCronogramaInput:onCronogramaInput,
-          onPrepareBase:onPrepareBase
+          onPrepareBase:onPrepareBase,
+          onExportWord:onExportWord,
+          onExportPdf:onExportPdf
         });
       }
       syncReadiness();
-      render("Plani listo. Bloque 5 cargado correctamente.", "ok");
+      setExportEnabled(false);
+      render("Plani listo. Bloque 6 cargado correctamente.", "ok");
     }catch(error){
       console.error("[Plani boot]", error);
       if(ui()){ui().status(error.message || String(error), "bad");}
@@ -147,6 +187,7 @@ Función o funciones:
 
   function getState(){return st() ? st().getState() : {};}
   function getCurrentModel(){return currentModel;}
+  function getModel(){return currentModel;}
 
   if(document.readyState === "loading"){
     document.addEventListener("DOMContentLoaded", boot);
@@ -157,10 +198,13 @@ Función o funciones:
   window.PlaniApp = {
     getState:getState,
     getCurrentModel:getCurrentModel,
+    getModel:getModel,
     render:render,
     onPeriodChange:onPeriodChange,
     onDocumentTypeChange:onDocumentTypeChange,
     onCronogramaInput:onCronogramaInput,
-    onPrepareBase:onPrepareBase
+    onPrepareBase:onPrepareBase,
+    onExportWord:onExportWord,
+    onExportPdf:onExportPdf
   };
 })(window, document);
