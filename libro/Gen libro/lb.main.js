@@ -4,8 +4,8 @@ Ruta o ubicación: /desarrollo/libro/Gen libro/lb.main.js
 Función o funciones:
 1. Inicializar la pantalla Gen libro.
 2. Conectar selector de carrera y selector de materia con el almacenamiento local.
-3. Ejecutar validación flexible, plan maestro, IA, secciones iniciales y unidades.
-4. Preparar el libro para los siguientes bloques de recursos, referencias y Word.
+3. Ejecutar validación flexible, plan maestro, IA, secciones iniciales, unidades y recursos visuales.
+4. Preparar el libro para referencias y Word.
 ========================================================= */
 
 (function iniciarGenLibro(window, document) {
@@ -22,6 +22,9 @@ Función o funciones:
   var AiOrchestrator = window.LibroGenLibroAiOrchestrator || null;
   var InitialSectionsBuilder = window.LibroGenLibroInitialSectionsBuilder || null;
   var UnitBuilder = window.LibroGenLibroUnitBuilder || null;
+  var FigurePlanner = window.LibroGenLibroFigurePlanner || null;
+  var TablePlanner = window.LibroGenLibroTablePlanner || null;
+  var DiagramBuilder = window.LibroGenLibroDiagramBuilder || null;
 
   function refreshModules() {
     CarreraSelector = window.LibroGenLibroCarreraSelector || CarreraSelector;
@@ -31,6 +34,9 @@ Función o funciones:
     AiOrchestrator = window.LibroGenLibroAiOrchestrator || AiOrchestrator;
     InitialSectionsBuilder = window.LibroGenLibroInitialSectionsBuilder || InitialSectionsBuilder;
     UnitBuilder = window.LibroGenLibroUnitBuilder || UnitBuilder;
+    FigurePlanner = window.LibroGenLibroFigurePlanner || FigurePlanner;
+    TablePlanner = window.LibroGenLibroTablePlanner || TablePlanner;
+    DiagramBuilder = window.LibroGenLibroDiagramBuilder || DiagramBuilder;
   }
 
   function setInitialData() {
@@ -148,11 +154,44 @@ Función o funciones:
     var units = await UnitBuilder.buildAll(plan);
 
     State.addMessage("ok", "Unidades desarrolladas: " + units.units.length + ".");
-    UI.setMessage("is-ok", "Unidades desarrolladas. Listo para figuras, tablas y referencias.");
+    UI.setMessage("is-ok", "Unidades desarrolladas. Preparando figuras y tablas.");
     UI.setStatus("Unidades listas");
     Progress.render("units", "Unidades listas", 52);
 
     return units;
+  }
+
+  function buildVisualResources(units) {
+    refreshModules();
+
+    if (!units) return null;
+
+    Progress.render("visuals", "Preparando tablas y figuras", 78);
+
+    var figures = FigurePlanner && typeof FigurePlanner.planAll === "function" ? FigurePlanner.planAll(units) : null;
+    var tables = TablePlanner && typeof TablePlanner.planAll === "function" ? TablePlanner.planAll(units) : null;
+    var diagrams = DiagramBuilder && typeof DiagramBuilder.planAll === "function" ? DiagramBuilder.planAll(units) : null;
+
+    var visuals = {
+      id: "visual-resources",
+      title: "Recursos visuales didácticos",
+      figures: figures,
+      tables: tables,
+      diagrams: diagrams,
+      rules: {
+        onlyIfUseful: true,
+        noDecorativeImages: true,
+        appGeneratedResources: true
+      },
+      createdAt: new Date().toISOString()
+    };
+
+    State.addMessage("ok", "Recursos visuales planificados.");
+    UI.setMessage("is-ok", "Figuras, tablas y diagramas planificados. Listo para referencias APA 7.");
+    UI.setStatus("Recursos visuales listos");
+    Progress.render("visuals", "Recursos visuales listos", 78);
+
+    return visuals;
   }
 
   async function prepareBookPlan() {
@@ -185,12 +224,16 @@ Función o funciones:
     var units = await buildUnits(plan);
     window.LibroGenLibro.lastUnits = units;
 
-    if (initialSections || units) {
+    var visualResources = buildVisualResources(units);
+    window.LibroGenLibro.lastVisualResources = visualResources;
+
+    if (initialSections || units || visualResources) {
       State.setLibroGenerado({
         plan: plan,
         initialSections: initialSections,
         units: units,
-        status: "draft_units_ready",
+        visualResources: visualResources,
+        status: "visual_resources_ready",
         updatedAt: new Date().toISOString()
       });
     }
