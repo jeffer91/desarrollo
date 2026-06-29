@@ -5,7 +5,7 @@
   - Verificar comunicación interna entre HTML, apps, API client, runtime, Firebase directo y Netlify Functions.
   - Confirmar que estudiante, coordinador y administrador apunten a sus módulos correctos.
   - Confirmar que Electron abra las tres pantallas con Firebase directo.
-  - Confirmar que Gemini tenga cliente, endpoint y función de respaldo.
+  - Confirmar que Gemini funcione únicamente mediante Netlify Function segura.
   - Confirmar que el administrador cargue el normalizador de períodos.
 */
 
@@ -142,8 +142,12 @@ for (const file of netlifyFunctions) {
 const geminiClient = exists("src/services/ta-titulo-articulo-gemini-client.service.js") ? read("src/services/ta-titulo-articulo-gemini-client.service.js") : "";
 const geminiFunction = exists("netlify/functions/ta-titulo-articulo-gemini.js") ? read("netlify/functions/ta-titulo-articulo-gemini.js") : "";
 assert(errors, geminiClient.includes("/.netlify/functions/ta-titulo-articulo-gemini"), "Gemini client: endpoint incorrecto");
-assert(errors, geminiClient.includes("fallbackLocal"), "Gemini client: falta fallback local");
-assert(errors, geminiFunction.includes("sugerencias"), "Gemini function: no devuelve sugerencias");
+assert(errors, !geminiClient.includes("fallbackLocal"), "Gemini client: no debe tener fallback local");
+assert(errors, geminiClient.includes('data.origen !== "gemini-netlify"'), "Gemini client: debe rechazar respuestas que no sean de Gemini");
+assert(errors, geminiFunction.includes("GEMINI_API_KEY"), "Gemini function: falta GEMINI_API_KEY");
+assert(errors, geminiFunction.includes("generativelanguage.googleapis.com"), "Gemini function: no llama a Gemini");
+assert(errors, geminiFunction.includes("origen: \"gemini-netlify\""), "Gemini function: no confirma origen Gemini");
+assert(errors, !geminiFunction.includes("fallbackSugerencias"), "Gemini function: no debe tener fallback de sugerencias");
 assert(errors, geminiFunction.includes("jsonResponse"), "Gemini function: falta respuesta JSON");
 
 const adminPublic = exists("public/ta-titulo-articulo-admin.html") ? read("public/ta-titulo-articulo-admin.html") : "";
@@ -165,6 +169,6 @@ console.log("HTML conectado con sus apps.");
 console.log("Apps conectadas con API client.");
 console.log("API client conectado con runtime y Firebase directo.");
 console.log("Electron conectado con estudiante, coordinador y administrador.");
-console.log("Netlify Functions y Gemini verificados.");
+console.log("Netlify Functions y Gemini exclusivo verificados.");
 console.log("Panel administrador lateral verificado.");
 console.log("Normalizador de períodos verificado.");
