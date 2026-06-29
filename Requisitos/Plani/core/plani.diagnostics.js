@@ -3,7 +3,7 @@ Nombre completo: plani.diagnostics.js
 Ruta o ubicación: /Requisitos/Plani/core/plani.diagnostics.js
 Función o funciones:
 - Construir un diagnóstico técnico legible del módulo Plani.
-- Revisar módulos cargados, estado actual, validación base, cronograma, recursos, motor documental y exportación.
+- Revisar módulos cargados, estado actual, validación base, cronograma, recursos, motor documental, exportación y plantillas específicas.
 - Servir como apoyo para detectar errores en bloques posteriores.
 ========================================================= */
 (function(window){
@@ -24,6 +24,13 @@ Función o funciones:
     {name:"PlaniCharts", value:"PlaniCharts", required:true},
     {name:"PlaniNumbering", value:"PlaniNumbering", required:true},
     {name:"PlaniIndexBuilder", value:"PlaniIndexBuilder", required:true},
+    {name:"PlaniComplexivoConfig", value:"PlaniComplexivoConfig", required:false},
+    {name:"PlaniComplexivoContent", value:"PlaniComplexivoContent", required:false},
+    {name:"PlaniComplexivoRules", value:"PlaniComplexivoRules", required:false},
+    {name:"PlaniComplexivoTables", value:"PlaniComplexivoTables", required:false},
+    {name:"PlaniComplexivoCharts", value:"PlaniComplexivoCharts", required:false},
+    {name:"PlaniComplexivoAssetsConfig", value:"PlaniComplexivoAssetsConfig", required:false},
+    {name:"PlaniComplexivoSections", value:"PlaniComplexivoSections", required:false},
     {name:"PlaniSectionBuilder", value:"PlaniSectionBuilder", required:true},
     {name:"PlaniDocumentModel", value:"PlaniDocumentModel", required:true},
     {name:"PlaniBuilder", value:"PlaniBuilder", required:true},
@@ -55,17 +62,14 @@ Función o funciones:
     (validation.info || []).forEach(function(item){checks.push({type:"ok", label:item.field, message:item.message});});
     (validation.warnings || []).forEach(function(item){checks.push({type:"warn", label:item.field, message:item.message});});
     (validation.errors || []).forEach(function(item){checks.push({type:"error", label:item.field, message:item.message});});
-    if(state.cronogramaParsed){
-      checks.push({type:state.cronogramaParsed.ok ? "ok" : "warn", label:"cronogramaParsed", message:"Filas detectadas: " + (state.cronogramaParsed.total || 0)});
-    }
-    if(state.sectionAssets && window.PlaniSectionAssets){
-      checks.push({type:"ok", label:"sectionAssets", message:"Secciones con recursos: " + window.PlaniSectionAssets.summary(state.sectionAssets).length});
-    }
-    if(window.PlaniBuilder){
-      checks.push({type:"ok", label:"builder", message:"Motor documental disponible."});
-    }
-    if(window.PlaniExportGateway){
-      checks.push({type:"ok", label:"export", message:"Exportación HTML, Word y PDF disponible."});
+    if(state.cronogramaParsed){checks.push({type:state.cronogramaParsed.ok ? "ok" : "warn", label:"cronogramaParsed", message:"Filas detectadas: " + (state.cronogramaParsed.total || 0)});}
+    if(state.sectionAssets && window.PlaniSectionAssets){checks.push({type:"ok", label:"sectionAssets", message:"Secciones con recursos: " + window.PlaniSectionAssets.summary(state.sectionAssets).length});}
+    if(window.PlaniBuilder){checks.push({type:"ok", label:"builder", message:"Motor documental disponible."});}
+    if(window.PlaniExportGateway){checks.push({type:"ok", label:"export", message:"Exportación HTML, Word y PDF disponible."});}
+    if(state.documentType === "COMPLEXIVO" && window.PlaniComplexivoRules){
+      var cx = window.PlaniComplexivoRules.validate(state);
+      (cx.warnings || []).forEach(function(message){checks.push({type:"warn", label:"complexivo", message:message});});
+      if(!cx.warnings || !cx.warnings.length){checks.push({type:"ok", label:"complexivo", message:"Plantilla Complexivo disponible."});}
     }
     return checks;
   }
