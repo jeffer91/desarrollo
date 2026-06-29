@@ -5,7 +5,7 @@ Ruta o ubicación: /Requisitos/Plani/frontend/plani.html
 Función o funciones:
 - Mostrar la pantalla Plani para planificación de titulación.
 - Guiar el flujo: Período -> Insumos -> Documento.
-- Conectar estado, período, tipo de documento, validación, diagnóstico, QA y plantillas institucionales.
+- Conectar estado, período, tipo de documento, validación, diagnóstico, QA, plantillas institucionales, cronograma y recursos por sección.
 - Mantener el módulo separado de Infor hasta integración final.
 Con qué se conecta:
 - plani.css
@@ -16,6 +16,12 @@ Con qué se conecta:
 - ../core/plani.state.js
 - ../core/plani.validator.js
 - ../core/plani.diagnostics.js
+- ../core/plani.cronograma.parser.js
+- ../core/plani.cronograma.mapper.js
+- ../core/plani.assets.js
+- ../core/plani.section-assets.js
+- ../core/plani.images.js
+- ../core/plani.charts.js
 - ../core/plani.qa.js
 - ../templates/layout/layout.config.js
 - ../templates/layout/typography.config.js
@@ -28,6 +34,7 @@ Con qué se conecta:
 - ../templates/layout/page.template.js
 - plani.ui.js
 - plani.events.js
+- plani.assets.ui.js
 - plani.app.js
 ========================================================= -->
 <html lang="es">
@@ -46,7 +53,7 @@ Con qué se conecta:
         <p class="plani-lead">Selecciona el período, define el tipo de planificación, carga el cronograma y prepara el documento institucional.</p>
       </div>
       <div class="plani-hero-actions">
-        <span id="plani-module-state" class="plani-chip warn">Bloque 3</span>
+        <span id="plani-module-state" class="plani-chip warn">Bloque 4</span>
       </div>
     </section>
 
@@ -98,7 +105,7 @@ Con qué se conecta:
         <div class="plani-card-head">
           <div>
             <h2>2. Cronograma</h2>
-            <p>Pega el cronograma o carga un archivo de texto. En bloques posteriores se interpretará como tabla institucional.</p>
+            <p>Pega el cronograma o carga un archivo de texto. Plani lo interpreta como filas institucionales.</p>
           </div>
           <span id="plani-cronograma-chip" class="plani-chip warn">Sin cronograma</span>
         </div>
@@ -124,7 +131,7 @@ Con qué se conecta:
         <span id="plani-assets-chip" class="plani-chip">0 recursos</span>
       </div>
       <div id="plani-assets-preview" class="plani-preview-box">
-        <div class="plani-empty">Los recursos por sección se habilitarán en el bloque correspondiente.</div>
+        <div class="plani-empty">Todavía no hay recursos cargados por sección.</div>
       </div>
     </section>
 
@@ -144,7 +151,7 @@ Con qué se conecta:
     <section class="plani-card plani-process-card">
       <div>
         <h2>5. Procesar y exportar</h2>
-        <p>En el bloque 3 ya existe base institucional de portada, encabezado, firmas, índice, secciones, tablas y página.</p>
+        <p>En el bloque 4 ya existe parser de cronograma y estructura de recursos por sección.</p>
         <p id="plani-readiness" class="plani-muted">Estado base listo.</p>
       </div>
       <div class="plani-process-actions">
@@ -167,6 +174,12 @@ Con qué se conecta:
   <script src="../core/plani.state.js"></script>
   <script src="../core/plani.validator.js"></script>
   <script src="../core/plani.diagnostics.js"></script>
+  <script src="../core/plani.cronograma.parser.js"></script>
+  <script src="../core/plani.cronograma.mapper.js"></script>
+  <script src="../core/plani.assets.js"></script>
+  <script src="../core/plani.section-assets.js"></script>
+  <script src="../core/plani.images.js"></script>
+  <script src="../core/plani.charts.js"></script>
   <script src="../templates/layout/layout.config.js"></script>
   <script src="../templates/layout/typography.config.js"></script>
   <script src="../templates/layout/header.template.js"></script>
@@ -178,6 +191,7 @@ Con qué se conecta:
   <script src="../templates/layout/page.template.js"></script>
   <script src="plani.ui.js"></script>
   <script src="plani.events.js"></script>
+  <script src="plani.assets.ui.js"></script>
   <script src="../core/plani.qa.js"></script>
   <script src="plani.app.js"></script>
 </body>
