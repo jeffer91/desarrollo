@@ -41,6 +41,9 @@ Funcion:
     if(type === "COMPLEXIVO" && window.PlaniComplexivoSections && typeof window.PlaniComplexivoSections.build === "function"){
       return window.PlaniComplexivoSections.build(snapshot);
     }
+    if(type === "ARTICULO" && window.PlaniArticuloSections && typeof window.PlaniArticuloSections.build === "function"){
+      return window.PlaniArticuloSections.build(snapshot);
+    }
     return genericBuild(snapshot);
   }
 
