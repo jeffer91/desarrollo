@@ -51,6 +51,7 @@
           <a class="ta-admin-menu__link" href="#coordinacion" data-ta-admin-tab="coordinacion">Coordinadores y carreras</a>
           <a class="ta-admin-menu__link" href="#estudiantes" data-ta-admin-tab="estudiantes">Estudiantes</a>
           <a class="ta-admin-menu__link" href="#envios" data-ta-admin-tab="envios">T&iacute;tulos enviados</a>
+          <a class="ta-admin-menu__link" href="#ia" data-ta-admin-tab="ia">IA y conexiones</a>
           <a class="ta-admin-menu__link" href="#diagnostico" data-ta-admin-tab="diagnostico">Diagn&oacute;stico</a>
           <a class="ta-admin-menu__link ta-admin-menu__link--danger" href="#limpieza" data-ta-admin-tab="limpieza">Limpiar pruebas</a>
         </nav>
@@ -120,6 +121,36 @@
           </section>
         </section>
 
+        <section class="ta-admin-view" data-ta-admin-view="ia" data-ta-admin-title="IA y conexiones" data-ta-admin-description="Pruebas seguras de Gemini, Groq y motor local de respaldo.">
+          <section class="ta-admin-grid ta-admin-grid--main ta-admin-section">
+            <article class="ta-card ta-card--compact" id="ta-admin-ia-seguridad-card">
+              <div class="ta-section-heading"><div><h2>Estado general de IA</h2><p>Las claves no se muestran ni se guardan en el navegador. Solo se consulta si existen en Netlify.</p></div></div>
+              <dl class="ta-data-grid">
+                <div><dt>Token admin</dt><dd id="ta-admin-ia-token">---</dd></div>
+                <div><dt>Claves en frontend</dt><dd id="ta-admin-ia-frontend">---</dd></div>
+                <div><dt>Gemini</dt><dd id="ta-admin-ia-gemini-estado">---</dd></div>
+                <div><dt>Groq</dt><dd id="ta-admin-ia-groq-estado">---</dd></div>
+                <div><dt>Motor local</dt><dd id="ta-admin-ia-local-estado">---</dd></div>
+              </dl>
+              <div class="ta-actions">
+                <button class="ta-button ta-button--primary" type="button" id="ta-admin-ia-estado-btn">Ver estado IA</button>
+                <button class="ta-button ta-button--secondary" type="button" id="ta-admin-ia-limpiar-token-btn">Limpiar token local</button>
+              </div>
+            </article>
+
+            <article class="ta-card ta-card--compact" id="ta-admin-ia-pruebas-card">
+              <div class="ta-section-heading"><div><h2>Pruebas de motores</h2><p>Ejecute pruebas sin revelar claves. Si Gemini o Groq fallan, el motor local debe quedar disponible.</p></div></div>
+              <div class="ta-actions">
+                <button class="ta-button ta-button--primary" type="button" id="ta-admin-ia-gemini-btn">Probar Gemini</button>
+                <button class="ta-button ta-button--secondary" type="button" id="ta-admin-ia-groq-btn">Probar Groq</button>
+                <button class="ta-button ta-button--secondary" type="button" id="ta-admin-ia-local-btn">Probar motor local</button>
+              </div>
+              <p class="ta-message" id="ta-admin-ia-mensaje" hidden></p>
+              <div class="ta-empty-state" id="ta-admin-ia-resultado">Sin prueba ejecutada.</div>
+            </article>
+          </section>
+        </section>
+
         <section class="ta-admin-view" data-ta-admin-view="diagnostico" data-ta-admin-title="Diagn&oacute;stico" data-ta-admin-description="Verificaci&oacute;n de runtime, origen de datos y conexi&oacute;n Firebase.">
           <section class="ta-card ta-card--compact ta-admin-section" id="ta-admin-diagnostico-card">
             <div class="ta-section-heading">
@@ -147,6 +178,7 @@
     </div>
   </main>
   <script type="module" src="../src/admin/ta-titulo-articulo-admin-navegacion.app.js"></script>
+  <script type="module" src="../src/admin/ta-titulo-articulo-admin-ia.app.js"></script>
   <script type="module" src="../src/admin/ta-titulo-articulo-admin-diagnostico.app.js"></script>
   <script type="module" src="../src/admin/ta-titulo-articulo-admin.app.js"></script>
   <script type="module" src="../src/admin/ta-titulo-articulo-admin-periodos-normalizados.app.js"></script>
