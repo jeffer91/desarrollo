@@ -3,8 +3,8 @@ Nombre completo: menu.index.html
 Ruta o ubicación: /Curriculo/menu/menu.index.html
 Función o funciones:
 - Mostrar la pantalla principal del menú del módulo Currículo
-- Renderizar marca, navegación superior, estado local y frame principal
-- Permitir navegar entre Inicio, Base local, Carreras, Materias, PEA, Fichas, Actas y Control
+- Renderizar marca, navegación superior y frame principal
+- Permitir navegar entre Carreras, Materias, PEA, Fichas y Base
 - Incluir botones para refrescar, abrir la vista actual y volver al panel Desarrollo
 - Cargar el motor de Base local para inicialización diaria desde Currículo
 ========================================================= -->
@@ -25,8 +25,8 @@ Función o funciones:
           id="menuBrandBtn"
           class="brand"
           type="button"
-          title="Ir al inicio de Currículo"
-          aria-label="Ir al inicio de Currículo"
+          title="Ir a Carreras"
+          aria-label="Ir a Carreras"
         >
           <span class="brand-badge" aria-hidden="true">C</span>
           <span class="brand-text">
@@ -64,13 +64,6 @@ Función o funciones:
         >
           Refrescar
         </button>
-
-        <div class="status-stack">
-          <div id="menuHint" class="hint" aria-live="polite">Listo.</div>
-          <div data-curriculo-sync-status class="sync-hint" aria-live="polite">
-            Preparando guardado local...
-          </div>
-        </div>
 
         <button
           id="menuBackDesarrollo"
