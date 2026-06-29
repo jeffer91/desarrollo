@@ -8,7 +8,7 @@
   - Cargar HTML local sin depender primero de Netlify.
   - Bloquear navegación externa dentro de la ventana.
   - Cargar normalización visual de períodos en el administrador Electron.
-  - Conectar Gemini por IPC seguro sin exponer GEMINI_API_KEY al navegador.
+  - Conectar Gemini por IPC seguro y por protocolo interno seguro sin exponer GEMINI_API_KEY al navegador.
   - Devolver errores indicando el archivo responsable.
   Se conecta con:
   - Requisitos/Titulos/package.json
@@ -17,9 +17,10 @@
   - Requisitos/Titulos/electron/admin/ta-titulo-articulo-administrador.html
   - Requisitos/Titulos/electron/ta-titulo-articulo-preload.cjs
   - Requisitos/Titulos/electron/ta-titulo-articulo-gemini.service.js
+  - Requisitos/Titulos/src/services/ta-titulo-articulo-gemini-client.service.js
 */
 
-import { app, BrowserWindow, shell, ipcMain } from "electron";
+import { app, BrowserWindow, shell, ipcMain, protocol } from "electron";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { generarSugerenciasTituloElectron } from "./ta-titulo-articulo-gemini.service.js";
@@ -29,6 +30,19 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const ROOT_DIR = join(__dirname, "..");
 const PRELOAD_FILE = join(__dirname, "ta-titulo-articulo-preload.cjs");
+const ELECTRON_PROTOCOL = "ta-titulos";
+
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: ELECTRON_PROTOCOL,
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      corsEnabled: true
+    }
+  }
+]);
 
 const SCREENS = Object.freeze({
   estudiante: {
@@ -89,6 +103,19 @@ function errorPayload(error) {
   };
 }
 
+function jsonElectron(body, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Headers": "Content-Type",
+      "Access-Control-Allow-Methods": "POST, OPTIONS"
+    }
+  });
+}
+
 function registrarCanalesElectron() {
   ipcMain.handle("ta-titulo-articulo:gemini:generar-sugerencias", async (_event, payload) => {
     try {
@@ -96,6 +123,31 @@ function registrarCanalesElectron() {
     } catch (error) {
       console.error(`[${FILE_PATH}]`, error);
       return errorPayload(error);
+    }
+  });
+}
+
+function registrarProtocoloElectron() {
+  protocol.handle(ELECTRON_PROTOCOL, async (request) => {
+    const url = new URL(request.url);
+    if (request.method === "OPTIONS") return jsonElectron({ ok: true });
+
+    if (url.hostname !== "gemini" || url.pathname !== "/generar-sugerencias") {
+      return jsonElectron({
+        ok: false,
+        origen: "gemini-electron-protocol-error",
+        archivo: FILE_PATH,
+        error: `[Archivo: ${FILE_PATH}] Ruta de protocolo no permitida: ${request.url}`
+      }, 404);
+    }
+
+    try {
+      const payload = await request.json();
+      const resultado = await generarSugerenciasTituloElectron(payload, ROOT_DIR);
+      return jsonElectron(resultado);
+    } catch (error) {
+      console.error(`[${FILE_PATH}] Protocolo ${ELECTRON_PROTOCOL}:`, error);
+      return jsonElectron(errorPayload(error), 502);
     }
   });
 }
@@ -170,6 +222,7 @@ app.setName("Títulos Académicos");
 
 app.whenReady().then(() => {
   registrarCanalesElectron();
+  registrarProtocoloElectron();
   createWindow();
 
   app.on("activate", () => {
