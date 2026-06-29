@@ -3,7 +3,8 @@ Nombre completo: bl2-legacy-adapter.js
 Ruta o ubicación: /Requisitos/BaseLocal2/bl2-legacy-adapter.js
 Función o funciones:
 - Adaptar la Base Local actual V1 a la API BL2 sin romper pantallas existentes.
-- Leer snapshot desde MAQ_BASELOCAL_SESSION, ExcelLocalStorage o ExcelLocalRepo solo cuando una consulta lo necesita.
+- Leer snapshot desde MAQ_BASELOCAL_SESSION, localStorage crudo, ExcelLocalStorage o ExcelLocalRepo solo cuando una consulta lo necesita.
+- Escoger la mejor fuente disponible cuando una sesión antigua perdió campos de requisitos por cuota localStorage.
 - Entregar consultas simples de períodos, estudiantes, búsqueda y resumen.
 - Servir como puente temporal hasta que SQLite/IndexedDB quede implementado.
 Con qué se conecta:
@@ -16,17 +17,32 @@ Con qué se conecta:
 (function(window){
   "use strict";
 
-  var cache = {snapshot:null, readAt:0, signature:""};
+  var cache = {snapshot:null, readAt:0, signature:"", source:"", score:null};
   var CACHE_MS = 800;
+  var SNAPSHOT_KEY = "REQ_EXCEL_LOCAL_V1:snapshot";
+  var REQUIREMENT_ALIASES = {
+    academico:["Academico","Académico","academico","académico"],
+    documentacion:["Documentacion","Documentación","documentacion","documentación"],
+    financiero:["Financiero","financiero"],
+    titulacion:["Titulacion","Titulación","titulacion","titulación"],
+    practicasvinculacion:["PrácticasVinculacion","PracticasVinculacion","practicasVinculacion","prácticasVinculacion","Prácticas Vinculación","Practicas Vinculacion","Prácticas/Vinculación","Practicas/Vinculacion","practicasvinculacion"],
+    vinculacion:["Vinculacion","Vinculación","vinculacion","vinculación"],
+    seguimientograduados:["SeguimientoGraduados","seguimientoGraduados","seguimientograduados","Seguimiento graduados"],
+    ingles:["Ingles","Inglés","ingles","inglés"],
+    actualizaciondatos:["ActualizaciónDatos","ActualizacionDatos","actualizacionDatos","actualizaciónDatos","actualizaciondatos","Actualización de datos","Actualizacion de datos"],
+    aprobaciontitulacion:["AprobacionTitulacion","AprobaciónTitulacion","Aprobacion Titulacion","aprobacionTitulacion","aprobaciontitulacion"],
+    aprobacioncomplexivoproyecto:["AprobacionComplexivoProyecto","AprobaciónComplexivoProyecto","Aprobacion Complexivo Proyecto","Aprobacion Complexivo/Proyecto","aprobacionComplexivoProyecto","aprobacioncomplexivoproyecto"]
+  };
 
   function now(){return new Date().toISOString();}
   function text(value){return String(value == null ? "" : value).trim();}
   function norm(value){return text(value).normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim().toLowerCase();}
+  function keyNorm(value){return text(value).normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, "").toLowerCase();}
   function clone(value){try{return JSON.parse(JSON.stringify(value == null ? null : value));}catch(error){return value;}}
 
   function emptySnapshot(){return {meta:{app:"Requisitos", module:"BL2LegacyAdapter", source:"empty", updatedAt:now(), totalPeriods:0, totalStudents:0}, periods:[], students:[], history:[], diagnostics:[]};}
 
-  function normalizeSnapshot(snapshot){
+  function normalizeSnapshot(snapshot, source){
     var snap = snapshot && typeof snapshot === "object" ? snapshot : emptySnapshot();
     snap.meta = snap.meta && typeof snap.meta === "object" ? snap.meta : {};
     snap.periods = Array.isArray(snap.periods) ? snap.periods : [];
@@ -35,41 +51,120 @@ Con qué se conecta:
     snap.diagnostics = Array.isArray(snap.diagnostics) ? snap.diagnostics : [];
     snap.meta.totalPeriods = snap.periods.length;
     snap.meta.totalStudents = snap.students.length;
-    snap.meta.source = snap.meta.source || "legacy";
+    snap.meta.source = snap.meta.source || source || "legacy";
     return snap;
+  }
+
+  function getRawSnapshotKey(){
+    try{
+      if(window.ExcelLocalConfig && window.ExcelLocalConfig.keys && window.ExcelLocalConfig.keys.snapshot){return window.ExcelLocalConfig.keys.snapshot;}
+    }catch(error){}
+    return SNAPSHOT_KEY;
   }
 
   function sessionCandidates(){
     var list = [];
-    try{if(window.MAQ_BASELOCAL_SESSION){list.push(window.MAQ_BASELOCAL_SESSION);}}catch(error){}
-    try{if(window.parent && window.parent !== window && window.parent.MAQ_BASELOCAL_SESSION){list.push(window.parent.MAQ_BASELOCAL_SESSION);}}catch(error){}
-    try{if(window.top && window.top !== window && window.top.MAQ_BASELOCAL_SESSION){list.push(window.top.MAQ_BASELOCAL_SESSION);}}catch(error){}
+    try{if(window.MAQ_BASELOCAL_SESSION){list.push({api:window.MAQ_BASELOCAL_SESSION, source:"session_self"});}}catch(error){}
+    try{if(window.parent && window.parent !== window && window.parent.MAQ_BASELOCAL_SESSION){list.push({api:window.parent.MAQ_BASELOCAL_SESSION, source:"session_parent"});}}catch(error){}
+    try{if(window.top && window.top !== window && window.top.MAQ_BASELOCAL_SESSION){list.push({api:window.top.MAQ_BASELOCAL_SESSION, source:"session_top"});}}catch(error){}
     return list;
   }
 
   function fromSession(){
     var list = sessionCandidates();
+    var out = [];
     for(var i = 0; i < list.length; i += 1){
       try{
-        if(list[i] && typeof list[i].getSnapshot === "function"){
-          var snap = list[i].getSnapshot({clone:false});
-          if(snap && typeof snap === "object"){return normalizeSnapshot(snap);}
+        if(list[i].api && typeof list[i].api.getSnapshot === "function"){
+          var snap = list[i].api.getSnapshot({clone:false});
+          if(snap && typeof snap === "object"){out.push({snapshot:normalizeSnapshot(snap, list[i].source), source:list[i].source});}
         }
       }catch(error){}
     }
-    return null;
+    return out;
   }
 
-  function fromStorage(){
-    try{if(window.ExcelLocalStorage && typeof window.ExcelLocalStorage.readSnapshot === "function"){return normalizeSnapshot(window.ExcelLocalStorage.readSnapshot());}}catch(error){}
-    try{if(window.parent && window.parent !== window && window.parent.ExcelLocalStorage && typeof window.parent.ExcelLocalStorage.readSnapshot === "function"){return normalizeSnapshot(window.parent.ExcelLocalStorage.readSnapshot());}}catch(error){}
+  function fromRawStorage(){
+    try{
+      var raw = window.localStorage.getItem(getRawSnapshotKey()) || "";
+      if(!raw){return null;}
+      var parsed = JSON.parse(raw);
+      return {snapshot:normalizeSnapshot(parsed, "localStorage_raw"), source:"localStorage_raw"};
+    }catch(error){return null;}
+  }
+
+  function fromStorageApi(){
+    try{if(window.ExcelLocalStorage && typeof window.ExcelLocalStorage.readSnapshot === "function"){return {snapshot:normalizeSnapshot(window.ExcelLocalStorage.readSnapshot(), "ExcelLocalStorage"), source:"ExcelLocalStorage"};}}catch(error){}
+    try{if(window.parent && window.parent !== window && window.parent.ExcelLocalStorage && typeof window.parent.ExcelLocalStorage.readSnapshot === "function"){return {snapshot:normalizeSnapshot(window.parent.ExcelLocalStorage.readSnapshot(), "parent.ExcelLocalStorage"), source:"parent.ExcelLocalStorage"};}}catch(error){}
     return null;
   }
 
   function fromRepo(){
-    try{if(window.ExcelLocalRepo && typeof window.ExcelLocalRepo.getSnapshot === "function"){return normalizeSnapshot(window.ExcelLocalRepo.getSnapshot());}}catch(error){}
-    try{if(window.parent && window.parent !== window && window.parent.ExcelLocalRepo && typeof window.parent.ExcelLocalRepo.getSnapshot === "function"){return normalizeSnapshot(window.parent.ExcelLocalRepo.getSnapshot());}}catch(error){}
+    try{if(window.ExcelLocalRepo && typeof window.ExcelLocalRepo.getSnapshot === "function"){return {snapshot:normalizeSnapshot(window.ExcelLocalRepo.getSnapshot(), "ExcelLocalRepo"), source:"ExcelLocalRepo"};}}catch(error){}
+    try{if(window.parent && window.parent !== window && window.parent.ExcelLocalRepo && typeof window.parent.ExcelLocalRepo.getSnapshot === "function"){return {snapshot:normalizeSnapshot(window.parent.ExcelLocalRepo.getSnapshot(), "parent.ExcelLocalRepo"), source:"parent.ExcelLocalRepo"};}}catch(error){}
     return null;
+  }
+
+  function getOwnKey(row, wanted){
+    row = row || {};
+    var keys = Object.keys(row);
+    var wantedNorm = keyNorm(wanted);
+    for(var i = 0; i < keys.length; i += 1){
+      if(keys[i] === wanted || keyNorm(keys[i]) === wantedNorm){return keys[i];}
+    }
+    return "";
+  }
+
+  function valueFromAliases(row, aliases){
+    aliases = aliases || [];
+    for(var i = 0; i < aliases.length; i += 1){
+      var key = getOwnKey(row, aliases[i]);
+      if(key && row[key] != null && text(row[key]) !== ""){return row[key];}
+    }
+    return "";
+  }
+
+  function getRequirementValue(row, canonical){
+    try{
+      if(window.BLCampos && typeof window.BLCampos.getValue === "function"){
+        var value = window.BLCampos.getValue(row || {}, canonical, "");
+        if(text(value)){return value;}
+      }
+    }catch(error){}
+    return valueFromAliases(row || {}, REQUIREMENT_ALIASES[canonical] || [canonical]);
+  }
+
+  function scoreSnapshot(snapshot){
+    snapshot = normalizeSnapshot(snapshot || emptySnapshot(), "score");
+    var students = snapshot.students || [];
+    var periods = snapshot.periods || [];
+    var requirementValues = 0;
+    var fullRequirementRows = 0;
+    students.forEach(function(row){
+      var rowValues = 0;
+      Object.keys(REQUIREMENT_ALIASES).forEach(function(key){
+        if(text(getRequirementValue(row, key))){rowValues += 1;}
+      });
+      requirementValues += rowValues;
+      if(rowValues >= 8){fullRequirementRows += 1;}
+    });
+    return {
+      students:students.length,
+      periods:periods.length,
+      requirementValues:requirementValues,
+      fullRequirementRows:fullRequirementRows,
+      total:(requirementValues * 1000000) + (fullRequirementRows * 10000) + (students.length * 10) + periods.length
+    };
+  }
+
+  function chooseBestSnapshot(){
+    var candidates = [];
+    candidates = candidates.concat(fromSession());
+    [fromRawStorage(), fromStorageApi(), fromRepo()].forEach(function(item){if(item && item.snapshot){candidates.push(item);}});
+    if(!candidates.length){return {snapshot:emptySnapshot(), source:"empty", score:scoreSnapshot(emptySnapshot())};}
+    candidates.forEach(function(item){item.score = scoreSnapshot(item.snapshot);});
+    candidates.sort(function(a,b){return b.score.total - a.score.total;});
+    return candidates[0];
   }
 
   function signatureOf(snapshot){
@@ -79,21 +174,24 @@ Con qué se conecta:
     var meta = snapshot.meta || {};
     var first = students[0] || {};
     var last = students[students.length - 1] || {};
-    return [meta.updatedAt || meta.pulledAt || "", periods.length, students.length, first.cedula || first.numeroIdentificacion || first._docId || "", last.cedula || last.numeroIdentificacion || last._docId || ""].join("|");
+    var score = scoreSnapshot(snapshot);
+    return [meta.updatedAt || meta.pulledAt || "", periods.length, students.length, score.requirementValues, first.cedula || first.numeroIdentificacion || first._docId || "", last.cedula || last.numeroIdentificacion || last._docId || ""].join("|");
   }
 
   function readSnapshot(options){
     options = options || {};
     if(options.force !== true && cache.snapshot && Date.now() - cache.readAt < CACHE_MS){return options.clone === false ? cache.snapshot : clone(cache.snapshot);}
-    var snap = fromSession() || fromStorage() || fromRepo() || emptySnapshot();
-    snap = normalizeSnapshot(snap);
+    var chosen = chooseBestSnapshot();
+    var snap = normalizeSnapshot(chosen.snapshot, chosen.source);
     cache.snapshot = snap;
     cache.readAt = Date.now();
     cache.signature = signatureOf(snap);
+    cache.source = chosen.source;
+    cache.score = chosen.score || scoreSnapshot(snap);
     return options.clone === false ? snap : clone(snap);
   }
 
-  function invalidate(){cache.snapshot=null;cache.readAt=0;cache.signature="";}
+  function invalidate(){cache.snapshot=null;cache.readAt=0;cache.signature="";cache.source="";cache.score=null;}
   function samePeriod(a,b){if(!text(b)){return true;}try{if(window.BLPeriodosCanon && typeof window.BLPeriodosCanon.samePeriod === "function"){return window.BLPeriodosCanon.samePeriod(a,b);}}catch(error){}return text(a) === text(b) || norm(a) === norm(b);}
   function estadoOf(row){var raw = norm(row && (row.estadoMatricula || row.EstadoMatricula || row.estado || row.Estado || "ACTIVO"));return raw === "retirado" ? "RETIRADO" : "ACTIVO";}
   function cedulaOf(row){return text(row && (row.cedula || row.Cedula || row.CEDULA || row.numeroIdentificacion || row.numeroidentificacion || row.NumeroIdentificacion || row.identificacion || row.Identificacion || row._docId || row.docId || row.id));}
@@ -104,10 +202,22 @@ Con qué se conecta:
   function correoOf(row){return text(row && (row.CorreoPersonal || row.correoPersonal || row.CorreoInstitucional || row.correoInstitucional || row.email || row.correo));}
   function celularOf(row){return text(row && (row.Celular || row.celular || row.Telefono || row.telefono));}
 
+  function hydrateRequirementAliases(copy, source){
+    Object.keys(REQUIREMENT_ALIASES).forEach(function(key){
+      var value = getRequirementValue(source || copy, key);
+      if(text(value) === ""){return;}
+      if(!text(copy[key])){copy[key] = value;}
+      var normalizedKey = keyNorm(key);
+      if(!text(copy[normalizedKey])){copy[normalizedKey] = value;}
+    });
+    return copy;
+  }
+
   function studentSearchText(row){return norm([cedulaOf(row), nombreOf(row), carreraOf(row), periodoOf(row), divisionOf(row), correoOf(row), celularOf(row), estadoOf(row)].join(" "));}
 
   function normalizeStudentView(row){
     var copy = Object.assign({}, row || {});
+    hydrateRequirementAliases(copy, row || {});
     copy._bl2Id = cedulaOf(copy) || text(copy._docId || copy.docId || copy.id);
     copy._bl2Search = studentSearchText(copy);
     copy._bl2EstadoMatricula = estadoOf(copy);
@@ -122,7 +232,7 @@ Con qué se conecta:
 
   function listStudents(options){
     options = options || {};
-    var snap = readSnapshot({clone:false});
+    var snap = readSnapshot({clone:false, force:options.force === true});
     var search = norm(options.search || options.q || "");
     var periodId = text(options.periodoId || options.periodId || "");
     var division = text(options.division || "");
@@ -138,7 +248,7 @@ Con qué se conecta:
     });
     var total = rows.length;
     if(limit){rows = rows.slice(offset, offset + limit);}
-    return {rows:rows, total:total, offset:offset, limit:limit || total};
+    return {rows:rows, total:total, offset:offset, limit:limit || total, source:cache.source, score:cache.score};
   }
 
   function searchStudents(query, options){options = Object.assign({}, options || {}, {search:query || (options && options.search) || ""});return listStudents(options);}
@@ -152,7 +262,7 @@ Con qué se conecta:
   function resumen(options){
     options = options || {};
     var rows = listStudents(Object.assign({}, options, {matricula:"", estadoMatricula:"", limit:0})).rows;
-    var out = {total:0, activos:0, retirados:0, carreras:{}, periodos:{}, updatedAt:now()};
+    var out = {total:0, activos:0, retirados:0, carreras:{}, periodos:{}, updatedAt:now(), source:cache.source, score:cache.score};
     rows.forEach(function(row){
       out.total += 1;
       if(row._bl2EstadoMatricula === "RETIRADO"){out.retirados += 1;}else{out.activos += 1;}
@@ -167,11 +277,11 @@ Con qué se conecta:
   function status(options){
     options = options || {};
     if(options.deep === true){
-      var snap = readSnapshot({clone:false});
-      return {ok:true, mode:"legacy_bridge", source:snap.meta && snap.meta.source || "legacy", lazy:false, periods:snap.periods.length, students:snap.students.length, history:snap.history.length, signature:cache.signature, updatedAt:now()};
+      var snap = readSnapshot({clone:false, force:options.force === true});
+      return {ok:true, mode:"legacy_bridge", source:cache.source || (snap.meta && snap.meta.source) || "legacy", lazy:false, periods:snap.periods.length, students:snap.students.length, history:snap.history.length, requirementValues:cache.score ? cache.score.requirementValues : 0, fullRequirementRows:cache.score ? cache.score.fullRequirementRows : 0, signature:cache.signature, updatedAt:now()};
     }
-    return {ok:true, mode:"legacy_bridge", source:"legacy", lazy:true, cacheReady:!!cache.snapshot, signature:cache.signature, updatedAt:now()};
+    return {ok:true, mode:"legacy_bridge", source:cache.source || "legacy", lazy:true, cacheReady:!!cache.snapshot, requirementValues:cache.score ? cache.score.requirementValues : 0, fullRequirementRows:cache.score ? cache.score.fullRequirementRows : 0, signature:cache.signature, updatedAt:now()};
   }
 
-  window.BL2LegacyAdapter = {version:"2.0.0-alpha.1",readSnapshot:readSnapshot,invalidate:invalidate,listPeriods:listPeriods,listStudents:listStudents,searchStudents:searchStudents,getStudentById:getStudentById,resumen:resumen,status:status,helpers:{cedulaOf:cedulaOf,nombreOf:nombreOf,carreraOf:carreraOf,periodoOf:periodoOf,divisionOf:divisionOf,estadoOf:estadoOf}};
+  window.BL2LegacyAdapter = {version:"2.0.0-alpha.2-requirements-source",readSnapshot:readSnapshot,invalidate:invalidate,listPeriods:listPeriods,listStudents:listStudents,searchStudents:searchStudents,getStudentById:getStudentById,resumen:resumen,status:status,helpers:{cedulaOf:cedulaOf,nombreOf:nombreOf,carreraOf:carreraOf,periodoOf:periodoOf,divisionOf:divisionOf,estadoOf:estadoOf,getRequirementValue:getRequirementValue,scoreSnapshot:scoreSnapshot}};
 })(window);
