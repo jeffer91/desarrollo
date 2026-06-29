@@ -4,8 +4,8 @@ Ruta o ubicación: /desarrollo/libro/Gen libro/lb.main.js
 Función o funciones:
 1. Inicializar la pantalla Gen libro.
 2. Conectar selector de carrera y selector de materia con el almacenamiento local.
-3. Cargar la materia consolidada seleccionada desde Carga de la materia.
-4. Ejecutar validación flexible, crear el plan maestro, preparar IA y secciones iniciales.
+3. Ejecutar validación flexible, plan maestro, IA, secciones iniciales y unidades.
+4. Preparar el libro para los siguientes bloques de recursos, referencias y Word.
 ========================================================= */
 
 (function iniciarGenLibro(window, document) {
@@ -21,6 +21,7 @@ Función o funciones:
   var BookPlan = window.LibroGenLibroBookPlan || null;
   var AiOrchestrator = window.LibroGenLibroAiOrchestrator || null;
   var InitialSectionsBuilder = window.LibroGenLibroInitialSectionsBuilder || null;
+  var UnitBuilder = window.LibroGenLibroUnitBuilder || null;
 
   function refreshModules() {
     CarreraSelector = window.LibroGenLibroCarreraSelector || CarreraSelector;
@@ -29,6 +30,7 @@ Función o funciones:
     BookPlan = window.LibroGenLibroBookPlan || BookPlan;
     AiOrchestrator = window.LibroGenLibroAiOrchestrator || AiOrchestrator;
     InitialSectionsBuilder = window.LibroGenLibroInitialSectionsBuilder || InitialSectionsBuilder;
+    UnitBuilder = window.LibroGenLibroUnitBuilder || UnitBuilder;
   }
 
   function setInitialData() {
@@ -78,7 +80,7 @@ Función o funciones:
     refreshModules();
 
     if (!BookPlan || typeof BookPlan.build !== "function") {
-      UI.setMessage("is-warning", "Materia validada. El constructor de secciones se conectará en el siguiente bloque.");
+      UI.setMessage("is-warning", "Materia validada. El constructor de secciones se conectará después.");
       UI.setStatus("Plan pendiente");
       Progress.render("plan", "Plan pendiente de constructor", 15);
       return null;
@@ -101,7 +103,7 @@ Función o funciones:
     if (!plan) return null;
 
     if (!AiOrchestrator || typeof AiOrchestrator.prepare !== "function") {
-      UI.setMessage("is-warning", "Plan creado. El desarrollo de secciones se conectará en el siguiente bloque.");
+      UI.setMessage("is-warning", "Plan creado. El desarrollo de secciones se conectará después.");
       UI.setStatus("IA pendiente");
       Progress.render("plan", "Plan creado sin motor IA", 15);
       return null;
@@ -129,11 +131,28 @@ Función o funciones:
       : InitialSectionsBuilder.buildBase(plan);
 
     State.addMessage("ok", "Secciones iniciales creadas.");
-    UI.setMessage("is-ok", "Secciones iniciales creadas. Listo para desarrollar unidades.");
+    UI.setMessage("is-ok", "Secciones iniciales creadas. Desarrollando unidades.");
     UI.setStatus("Secciones iniciales listas");
     Progress.render("diagnostic", "Secciones iniciales listas", 30);
 
     return initialSections;
+  }
+
+  async function buildUnits(plan) {
+    refreshModules();
+
+    if (!plan || !UnitBuilder || typeof UnitBuilder.buildAll !== "function") return null;
+
+    Progress.render("units", "Desarrollando unidades", 52);
+
+    var units = await UnitBuilder.buildAll(plan);
+
+    State.addMessage("ok", "Unidades desarrolladas: " + units.units.length + ".");
+    UI.setMessage("is-ok", "Unidades desarrolladas. Listo para figuras, tablas y referencias.");
+    UI.setStatus("Unidades listas");
+    Progress.render("units", "Unidades listas", 52);
+
+    return units;
   }
 
   async function prepareBookPlan() {
@@ -148,12 +167,9 @@ Función o funciones:
     }
 
     var validation = runFlexibleValidation(selected);
-
     window.LibroGenLibro.lastValidation = validation;
 
-    if (validation && validation.ok === false) {
-      return null;
-    }
+    if (validation && validation.ok === false) return null;
 
     var plan = buildPlan(selected, validation);
     window.LibroGenLibro.lastPlan = plan;
@@ -165,6 +181,19 @@ Función o funciones:
 
     var initialSections = await buildInitialSections(plan);
     window.LibroGenLibro.lastInitialSections = initialSections;
+
+    var units = await buildUnits(plan);
+    window.LibroGenLibro.lastUnits = units;
+
+    if (initialSections || units) {
+      State.setLibroGenerado({
+        plan: plan,
+        initialSections: initialSections,
+        units: units,
+        status: "draft_units_ready",
+        updatedAt: new Date().toISOString()
+      });
+    }
 
     return plan;
   }
@@ -192,6 +221,7 @@ Función o funciones:
         State.setSelection(carrera, "");
         State.setMateriaSeleccionada(null);
         State.setPlanLibro(null);
+        State.setLibroGenerado(null);
         UI.setGenerateEnabled(false);
         Progress.render("load", carrera ? "Cargando materias" : "Esperando selección de materia", carrera ? 5 : 0);
 
@@ -207,6 +237,7 @@ Función o funciones:
         var materiaId = UI.getSelectedMateria();
         State.setSelection(carrera, materiaId);
         State.setPlanLibro(null);
+        State.setLibroGenerado(null);
 
         if (MateriaSelector && typeof MateriaSelector.selectMateria === "function") {
           var selected = MateriaSelector.selectMateria(carrera, materiaId);
