@@ -5,6 +5,7 @@
   - Controlar el módulo IA y conexiones del administrador.
   - Probar Gemini, Groq y motor local mediante Netlify Functions protegidas con token admin.
   - No leer, mostrar ni guardar claves de IA en el navegador.
+  - Renderizar resultados de IA con textContent para evitar HTML inyectado.
 */
 
 const BASE_FUNCTIONS_PATH = "/.netlify/functions";
@@ -110,6 +111,15 @@ function pintarEstado(data = {}) {
   setText("ta-admin-ia-local-estado", estadoTexto(motores.local));
 }
 
+function agregarLineaResultado(box, etiqueta, valor) {
+  const p = document.createElement("p");
+  const strong = document.createElement("strong");
+  strong.textContent = `${etiqueta}: `;
+  p.appendChild(strong);
+  p.appendChild(document.createTextNode(clean(valor)));
+  box.appendChild(p);
+}
+
 function pintarResultado(data = {}) {
   const box = byId("ta-admin-ia-resultado");
   if (!box) return;
@@ -123,21 +133,15 @@ function pintarResultado(data = {}) {
   }
 
   box.className = "ta-state-box";
-  const titulo = document.createElement("p");
-  titulo.innerHTML = `<strong>Motor:</strong> ${clean(prueba.motor)}`;
-  box.appendChild(titulo);
+  agregarLineaResultado(box, "Motor", prueba.motor);
 
   if (prueba.titulo) {
-    const p = document.createElement("p");
-    p.innerHTML = `<strong>Resultado:</strong> ${clean(prueba.titulo)}`;
-    box.appendChild(p);
+    agregarLineaResultado(box, "Resultado", prueba.titulo);
   }
 
   if (Array.isArray(prueba.sugerencias)) {
     prueba.sugerencias.forEach((sugerencia, index) => {
-      const p = document.createElement("p");
-      p.innerHTML = `<strong>Sugerencia ${index + 1}:</strong> ${clean(sugerencia)}`;
-      box.appendChild(p);
+      agregarLineaResultado(box, `Sugerencia ${index + 1}`, sugerencia);
     });
   }
 }
