@@ -5,6 +5,7 @@
   - Dar formato visual al flujo paginado del estudiante.
   - Mostrar avance paso a paso sin cambiar la lógica de Firebase ni el esquema de títulos.
   - Compactar el menú superior de pasos y destacar la generación/selección de títulos.
+  - Mostrar 3 sugerencias académicas de forma ordenada, responsiva y legible.
   - Mostrar avisos importantes en modal central para reducir texto en pantalla.
   Se conecta con:
   - Requisitos/Titulos/public/ta-titulo-articulo-estudiante.html
@@ -163,6 +164,10 @@ button[data-ta-generar-sugerencias]:focus-visible {
 }
 
 [data-ta-sugerencias] {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 14px;
   margin-top: 14px;
 }
 
@@ -171,7 +176,7 @@ button[data-ta-generar-sugerencias]:focus-visible {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  min-height: 150px;
+  min-height: 170px;
   gap: 14px;
   padding: 18px 18px 16px;
   border: 1px solid rgba(201, 168, 102, 0.52);
@@ -184,7 +189,7 @@ button[data-ta-generar-sugerencias]:focus-visible {
 [data-ta-sugerencias] .ta-state-box p {
   margin: 0;
   color: var(--ta-color-azul-marino);
-  font-size: 1.02rem;
+  font-size: 1rem;
   font-weight: 750;
   line-height: 1.45;
   letter-spacing: 0.01em;
@@ -258,7 +263,6 @@ button[data-ta-generar-sugerencias]:focus-visible {
   gap: 10px;
   margin: 0 0 14px;
   padding: 0;
-  list-style: none;
 }
 
 .ta-wizard-modal__list li {
@@ -299,9 +303,19 @@ button[data-ta-generar-sugerencias]:focus-visible {
   }
 }
 
+@media (max-width: 1100px) {
+  [data-ta-sugerencias] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 760px) {
   .ta-wizard-progress__list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  [data-ta-sugerencias] {
+    grid-template-columns: 1fr;
   }
 }
 
