@@ -2,7 +2,7 @@
   Nombre completo: ta-titulo-articulo-ia-check.mjs
   Ruta o ubicación: /Requisitos/Titulos/scripts/ta-titulo-articulo-ia-check.mjs
   Función o funciones:
-  - Revisar la integración final del botón inteligente, motores externos y fallback local.
+  - Revisar la integración final del botón inteligente, motores externos y motor local.
   - Validar que el administrador tenga vista IA o inyección automática de la vista IA.
   - Confirmar que las pruebas IA se ejecuten por función protegida con token administrativo.
   - Probar el motor local sin consumir internet ni claves reales.
@@ -68,9 +68,9 @@ for (const file of requiredFiles) {
 
 requireIncludes("src/services/ta-titulo-articulo-gemini-client.service.js", [
   "TaTituloArticuloMotorLocal",
-  "fallbackLocal",
-  "gemini-netlify",
-  "gemini-electron"
+  "generarSugerenciasTitulo",
+  "motor académico local interno",
+  "3 sugerencias"
 ]);
 
 requireIncludes("src/services/ta-titulo-articulo-motor-local.service.js", [
@@ -199,7 +199,7 @@ if (errors.length) {
 
 console.log("Títulos IA: diagnóstico final correcto.");
 console.log("- Motor local inteligente disponible.");
-console.log("- Fallback conectado al cliente seguro.");
+console.log("- Cliente de sugerencias conectado al motor interno.");
 console.log("- Administrador con IA y conexiones.");
 console.log("- Pruebas IA protegidas por token administrativo.");
 console.log("- Resultados IA renderizados de forma segura.");
