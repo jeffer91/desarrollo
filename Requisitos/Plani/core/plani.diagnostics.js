@@ -31,6 +31,13 @@ Función o funciones:
     {name:"PlaniComplexivoCharts", value:"PlaniComplexivoCharts", required:false},
     {name:"PlaniComplexivoAssetsConfig", value:"PlaniComplexivoAssetsConfig", required:false},
     {name:"PlaniComplexivoSections", value:"PlaniComplexivoSections", required:false},
+    {name:"PlaniArticuloConfig", value:"PlaniArticuloConfig", required:false},
+    {name:"PlaniArticuloContent", value:"PlaniArticuloContent", required:false},
+    {name:"PlaniArticuloRules", value:"PlaniArticuloRules", required:false},
+    {name:"PlaniArticuloTables", value:"PlaniArticuloTables", required:false},
+    {name:"PlaniArticuloCharts", value:"PlaniArticuloCharts", required:false},
+    {name:"PlaniArticuloAssetsConfig", value:"PlaniArticuloAssetsConfig", required:false},
+    {name:"PlaniArticuloSections", value:"PlaniArticuloSections", required:false},
     {name:"PlaniSectionBuilder", value:"PlaniSectionBuilder", required:true},
     {name:"PlaniDocumentModel", value:"PlaniDocumentModel", required:true},
     {name:"PlaniBuilder", value:"PlaniBuilder", required:true},
@@ -70,6 +77,11 @@ Función o funciones:
       var cx = window.PlaniComplexivoRules.validate(state);
       (cx.warnings || []).forEach(function(message){checks.push({type:"warn", label:"complexivo", message:message});});
       if(!cx.warnings || !cx.warnings.length){checks.push({type:"ok", label:"complexivo", message:"Plantilla Complexivo disponible."});}
+    }
+    if(state.documentType === "ARTICULO" && window.PlaniArticuloRules){
+      var ar = window.PlaniArticuloRules.validate(state);
+      (ar.warnings || []).forEach(function(message){checks.push({type:"warn", label:"articulo", message:message});});
+      if(!ar.warnings || !ar.warnings.length){checks.push({type:"ok", label:"articulo", message:"Plantilla Articulo Academico disponible."});}
     }
     return checks;
   }
