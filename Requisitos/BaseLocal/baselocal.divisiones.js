@@ -3,17 +3,18 @@ Nombre completo: baselocal.divisiones.js
 Ruta o ubicación: /Requisitos/BaseLocal/baselocal.divisiones.js
 Función o funciones:
 - Mostrar modal Divisiones en Base Local.
-- Crear, editar y borrar divisiones por período.
+- Separar dos procesos: crear división y adjuntar carreras.
+- Crear divisiones vacías por período sin exigir carreras.
 - Cargar carreras disponibles y carreras asignadas a la división seleccionada.
-- Permitir arrastrar carreras para agregar o quitar de una división.
-- Permitir que el botón + Crear guarde una división nueva si ya tiene nombre y carreras.
-- Permitir botón Editar para enfocar nombre de división sin guardar automático.
-- Guardar divisiones: ["Nombre"] en estudiantes activos y retirados.
+- Permitir arrastrar carreras para agregar o quitar de una división existente.
+- Guardar divisiones: ["Nombre"] en estudiantes activos y retirados solo al adjuntar carreras.
+- Mostrar mensaje: División [nombre] del período [período] creada.
 - Evitar que el modal se congele por sincronización Firebase pesada.
 - Sincronizar Firebase en segundo plano después de guardar localmente.
 Con qué se conecta:
 - services/bl-divisiones.service.js
 - baselocal.core.js
+- baselocal.divisiones-api.patch.js
 - baselocal.firebase.js
 - baselocal.connector.js
 - baselocal.app.js
@@ -37,7 +38,13 @@ Con qué se conecta:
 
   function periodLabel(periodId){
     var periods = window.BaseLocalAPI && typeof window.BaseLocalAPI.getPeriods === "function" ? window.BaseLocalAPI.getPeriods() : [];
-    var found = periods.find(function(period){return text(period.id || period.periodoId) === text(periodId);});
+    var found = periods.find(function(period){
+      var id = text(period.id || period.periodoId || period.label || period.periodoLabel);
+      if(window.BLPeriodosCanon && typeof window.BLPeriodosCanon.samePeriod === "function"){
+        try{return window.BLPeriodosCanon.samePeriod(id, periodId);}catch(error){}
+      }
+      return id === text(periodId);
+    });
     return found ? text(found.label || found.periodoLabel || found.id) : text(periodId);
   }
 
@@ -61,8 +68,8 @@ Con qué se conecta:
       btn.title = "Preparar una nueva división";
       return;
     }
-    btn.innerHTML = "<span>＋</span>Crear";
-    btn.title = "Crear y guardar esta nueva división";
+    btn.innerHTML = "<span>＋</span>Crear división";
+    btn.title = "Crear solo la división. Las carreras se adjuntan después.";
   }
 
   function setBusy(on){
@@ -75,7 +82,7 @@ Con qué se conecta:
     var newBtn = el("bl-division-new");
     var existing = el("bl-division-existing");
     var name = el("bl-division-name");
-    if(save){save.disabled = !!on;save.textContent = on ? "Guardando..." : "💾 Guardar cambios";}
+    if(save){save.disabled = !!on;save.textContent = on ? "Guardando..." : "💾 Guardar carreras";}
     if(cancel){cancel.disabled = !!on;}
     if(close){close.disabled = !!on;}
     if(del){del.disabled = !!on || !state.selectedDivision;}
@@ -125,28 +132,30 @@ Con qué se conecta:
 
   function refreshBaseLocalView(result){
     try{if(window.BaseLocalAPI && typeof window.BaseLocalAPI.clearSnapshotCache === "function"){window.BaseLocalAPI.clearSnapshotCache();}}catch(error){}
-    try{if(window.BaseLocalApp && typeof window.BaseLocalApp.scheduleRender === "function"){window.BaseLocalApp.scheduleRender("division-created");}}catch(error){}
+    try{if(window.BaseLocalApp && typeof window.BaseLocalApp.scheduleRender === "function"){window.BaseLocalApp.scheduleRender("division-updated");}}catch(error){}
     emitChange("requisitos:bl:division-created", result || {});
   }
 
   function syncDivisionInBackground(result){
     setTimeout(function(){
       if(!window.BaseLocalFirebase || typeof window.BaseLocalFirebase.push !== "function"){
-        status("División guardada localmente. Firebase queda pendiente porque el conector no está disponible.", "bl-status-warn");
+        status("Cambios de división guardados localmente. Firebase queda pendiente porque el conector no está disponible.", "bl-status-warn");
         return;
       }
       if(window.navigator && window.navigator.onLine === false){
-        status("División guardada localmente. Firebase se sincronizará cuando haya internet.", "bl-status-warn");
+        status("Cambios de división guardados localmente. Firebase se sincronizará cuando haya internet.", "bl-status-warn");
         return;
       }
       window.BaseLocalFirebase.push()
         .then(function(summary){
-          status("División guardada y sincronización Firebase finalizada.", "bl-status-ok");
+          var base = result && result.message ? result.message : "Cambios de división guardados.";
+          status(base + " Sincronización Firebase finalizada.", "bl-status-ok");
           refreshBaseLocalView(Object.assign({}, result || {}, {firebase:summary || null}));
         })
         .catch(function(error){
           console.warn("[BaseLocal Divisiones Firebase background]", error);
-          status("División guardada localmente. Firebase quedó pendiente: " + (error.message || String(error)), "bl-status-warn");
+          var base = result && result.message ? result.message : "Cambios de división guardados localmente.";
+          status(base + " Firebase quedó pendiente: " + (error.message || String(error)), "bl-status-warn");
         });
     }, 300);
   }
@@ -197,9 +206,13 @@ Con qué se conecta:
     var help = el("bl-division-help");
     if(!wrap){return;}
     if(help){
-      help.textContent = state.selectedDivision ? "Editando: " + state.selectedDivision + ". Arrastra carreras para agregar o quitar." : "Nueva división. Arrastra carreras disponibles hacia la columna derecha y presiona + Crear o Guardar cambios.";
+      if(state.selectedDivision){
+        help.textContent = "Proceso 2: adjuntar carreras a " + state.selectedDivision + ". Mueve carreras y presiona Guardar carreras.";
+      }else{
+        help.textContent = "Proceso 1: crea la división del período. Escribe el nombre y presiona Crear división. Las carreras se adjuntan después.";
+      }
     }
-    wrap.innerHTML = bucket("Carreras disponibles", "available", state.available, "No hay carreras libres.") + bucket("Carreras en esta división", "selected", state.selected, "Arrastra aquí las carreras.");
+    wrap.innerHTML = bucket("Carreras disponibles", "available", state.available, "No hay carreras libres.") + bucket("Carreras en esta división", "selected", state.selected, state.selectedDivision ? "Arrastra aquí las carreras." : "Primero crea o selecciona una división.");
     updateNewButtonLabel();
   }
 
@@ -210,6 +223,10 @@ Con qué se conecta:
   }
 
   function moveCareer(career, targetZone){
+    if(!state.selectedDivision){
+      status("Primero crea o selecciona una división. Después adjunta carreras.", "bl-status-warn");
+      return;
+    }
     career = text(career);
     if(!career){return;}
     if(targetZone === "selected"){
@@ -225,7 +242,7 @@ Con qué se conecta:
   function focusNameForEdit(){
     var name = el("bl-division-name");
     if(!state.selectedDivision){
-      status("Estás creando una división nueva. Escribe el nombre, agrega carreras y presiona + Crear o Guardar cambios.", "bl-status-warn");
+      status("Estás creando una división nueva. Escribe el nombre y presiona Crear división.", "bl-status-warn");
       if(name){name.focus();}
       return;
     }
@@ -237,21 +254,48 @@ Con qué se conecta:
     loadDivisionState(state.periodId || getSelectedPeriod(), "");
     if(name){name.value = "";name.focus();}
     renderAll();
+    status("Proceso 1: escribe el nombre de la nueva división y presiona Crear división.", "bl-status-info");
+  }
+
+  function selectDivision(name){
+    loadDivisionState(state.periodId || getSelectedPeriod(), name);
+    var input = el("bl-division-name");
+    if(input){input.value = name;}
+    renderAll();
+  }
+
+  async function createDivisionOnly(){
+    if(state.saving){return;}
+    var name = text(el("bl-division-name") && el("bl-division-name").value);
+    var periodId = state.periodId || getSelectedPeriod();
+    if(!periodId){status("Selecciona un período.", "bl-status-warn");return;}
+    if(!name){status("Escribe el nombre de la división.", "bl-status-warn");var input=el("bl-division-name");if(input){input.focus();}return;}
+
+    try{
+      if(!window.BaseLocalAPI || typeof window.BaseLocalAPI.createDivision !== "function"){
+        throw new Error("La API para crear divisiones no está disponible.");
+      }
+      setBusy(true);
+      var result = window.BaseLocalAPI.createDivision(periodId, name);
+      state.lastResult = result;
+      setBusy(false);
+      refreshBaseLocalView(result);
+      selectDivision(name);
+      status(result.message || ("División " + name + " del período " + periodLabel(periodId) + " creada."), result.alreadyExists ? "bl-status-warn" : "bl-status-ok");
+      syncDivisionInBackground(result);
+    }catch(error){
+      console.error("[BaseLocal Divisiones create]", error);
+      status("No se pudo crear la división: " + (error.message || String(error)), "bl-status-warn");
+      setBusy(false);
+    }
   }
 
   function handleNewButton(){
-    var name = text(el("bl-division-name") && el("bl-division-name").value);
-    if(!state.selectedDivision){
-      if(name || state.selected.length){
-        saveDivision();
-        return;
-      }
-      status("Para crear una división: escribe el nombre, arrastra al menos una carrera y presiona + Crear.", "bl-status-warn");
-      var input = el("bl-division-name");
-      if(input){input.focus();}
+    if(state.selectedDivision){
+      prepareNewDivision();
       return;
     }
-    prepareNewDivision();
+    createDivisionOnly();
   }
 
   function openModal(){
@@ -267,6 +311,7 @@ Con qué se conecta:
     loadDivisionState(periodId, "");
     renderAll();
     setModalOpen(true);
+    status("Proceso 1: crea la división del período " + periodLabel(periodId) + ". Luego adjunta carreras.", "bl-status-info");
     setTimeout(function(){if(name){name.focus();}}, 60);
   }
 
@@ -277,12 +322,13 @@ Con qué se conecta:
 
   async function saveDivision(){
     if(state.saving){return;}
-    var name = text(el("bl-division-name") && el("bl-division-name").value);
+    var name = text(el("bl-division-name") && el("bl-division-name").value) || state.selectedDivision;
     var periodId = state.periodId || getSelectedPeriod();
     var careers = state.selected.slice();
+
     if(!periodId){status("Selecciona un período.", "bl-status-warn");return;}
+    if(!state.selectedDivision){status("Primero crea o selecciona una división. Después adjunta carreras.", "bl-status-warn");return;}
     if(!name){status("Escribe el nombre de la división.", "bl-status-warn");return;}
-    if(!careers.length){status("Arrastra al menos una carrera a la división.", "bl-status-warn");return;}
 
     try{
       if(!window.BaseLocalAPI || typeof window.BaseLocalAPI.replaceDivisionToCareers !== "function"){
@@ -294,11 +340,12 @@ Con qué se conecta:
       setBusy(false);
       setModalOpen(false);
       refreshBaseLocalView(result);
-      status("División guardada localmente: " + name + ". Estudiantes actualizados: " + (result.updated || 0) + ". Firebase se sincroniza en segundo plano.", "bl-status-ok");
+      var msg = result.message || ("Carreras actualizadas en la división " + name + " del período " + periodLabel(periodId) + ".");
+      status(msg + " Estudiantes actualizados: " + (result.updated || 0) + ". Firebase se sincroniza en segundo plano.", "bl-status-ok");
       syncDivisionInBackground(result);
     }catch(error){
       console.error("[BaseLocal Divisiones]", error);
-      status("No se pudo guardar la división: " + (error.message || String(error)), "bl-status-warn");
+      status("No se pudo guardar las carreras de la división: " + (error.message || String(error)), "bl-status-warn");
       setBusy(false);
     }
   }
@@ -320,7 +367,7 @@ Con qué se conecta:
       setBusy(false);
       setModalOpen(false);
       refreshBaseLocalView(result);
-      status("División borrada localmente: " + division + ". Estudiantes actualizados: " + (result.updated || 0) + ". Firebase se sincroniza en segundo plano.", "bl-status-ok");
+      status("División borrada del período " + periodLabel(periodId) + ": " + division + ". Estudiantes actualizados: " + (result.updated || 0) + ". Firebase se sincroniza en segundo plano.", "bl-status-ok");
       syncDivisionInBackground(result);
     }catch(error){
       console.error("[BaseLocal Divisiones delete]", error);
@@ -380,7 +427,15 @@ Con qué se conecta:
     document.addEventListener("keydown", function(event){if(event.key === "Escape" && el("bl-division-modal") && el("bl-division-modal").classList.contains("is-open")){closeModal();}});
   }
 
-  window.BaseLocalDivisionesUI = {open:openModal, close:closeModal, save:saveDivision, renderCareers:renderCareers, lastResult:function(){return state.lastResult;}, getState:function(){return Object.assign({}, state);}};
+  window.BaseLocalDivisionesUI = {
+    open:openModal,
+    close:closeModal,
+    create:createDivisionOnly,
+    save:saveDivision,
+    renderCareers:renderCareers,
+    lastResult:function(){return state.lastResult;},
+    getState:function(){return Object.assign({}, state);}
+  };
 
   if(document.readyState === "loading"){document.addEventListener("DOMContentLoaded", bind);}else{bind();}
 })(window, document);
