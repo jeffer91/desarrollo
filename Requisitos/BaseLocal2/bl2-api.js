@@ -7,6 +7,7 @@ Función o funciones:
 - Usar BL2DataEngine cuando el motor central esté cargado.
 - Mantener BL2LegacyAdapter como respaldo para no romper pantallas existentes.
 - Entregar consultas rápidas de estudiantes, períodos, resumen y diagnóstico.
+- Evitar construir el índice completo solo por consultar estado o arrancar pantalla.
 - Invalidar caché sin disparar render reentrante por defecto.
 Con qué se conecta:
 - bl2-config.js
@@ -23,7 +24,7 @@ Con qué se conecta:
 (function(window, document){
   "use strict";
 
-  var VERSION = "2.0.0-alpha.3-core";
+  var VERSION = "2.0.0-alpha.4-light-status";
   var bootedAt = new Date().toISOString();
   var state = {ready:false, mode:"initializing", storage:"legacy", runtime:null, lastError:"", adapterName:"legacy", coreReady:false};
   var CORE_SCRIPTS = [
@@ -85,6 +86,11 @@ Con qué se conecta:
   }
 
   function adapter(){var ad = resolveAdapter();if(!ad){throw new Error("BL2 no tiene adaptador disponible.");}return ad;}
+  function lightStatus(extra){
+    var data = Object.assign({ok:!state.lastError, version:VERSION, ready:state.ready, coreReady:!!dataEngine(), mode:state.mode, storage:state.storage, adapter:state.adapterName, bootedAt:bootedAt, runtime:state.runtime, lastError:state.lastError, lightweight:true, updatedAt:now()}, extra || {});
+    if(config() && typeof config().saveStatus === "function"){config().saveStatus(data);}
+    return data;
+  }
 
   function listPeriods(){if(dataEngine() && typeof dataEngine().listPeriods === "function"){return dataEngine().listPeriods();}return adapter().listPeriods ? adapter().listPeriods() : [];}
   function listStudents(options){options = options || {};if(dataEngine() && typeof dataEngine().listStudents === "function"){return dataEngine().listStudents(options);}return adapter().listStudents ? adapter().listStudents(options) : {rows:[], total:0};}
@@ -94,12 +100,14 @@ Con qué se conecta:
 
   function status(options){
     options = options || {};
+    resolveAdapter();
+    if(options.deep !== true && options.force !== true){return lightStatus();}
     var adStatus = safe("adapter.status", function(){return adapter().status ? adapter().status({deep:options.deep === true}) : {ok:true};}, {ok:false, mode:"sin_adapter"});
     var engineStatus = safe("engine.status", function(){return dataEngine() && typeof dataEngine().status === "function" ? dataEngine().status({force:options.force === true}) : {ok:false, mode:"sin_motor_central"};}, {ok:false, mode:"sin_motor_central"});
     var screenStatus = safe("screen.status", function(){return screenAdapter() && typeof screenAdapter().status === "function" ? screenAdapter().status() : {ok:false, mode:"sin_screen_adapter"};}, {ok:false, mode:"sin_screen_adapter"});
     var storageStatus = safe("storage.status", function(){return storage() && typeof storage().status === "function" ? storage().status() : {ok:false, mode:"sin_storage"};}, {ok:false, mode:"sin_storage"});
     var migrationStatus = safe("migration.status", function(){return migrator() && typeof migrator().status === "function" ? migrator().status() : {ok:true, mode:"sin_migrador"};}, {ok:false, mode:"sin_migrador"});
-    var data = {ok:adStatus.ok !== false && !state.lastError, version:VERSION, ready:state.ready, coreReady:!!dataEngine(), mode:state.mode, storage:state.storage, adapter:state.adapterName, bootedAt:bootedAt, runtime:state.runtime, lastError:state.lastError, adapterStatus:adStatus, engineStatus:engineStatus, screenStatus:screenStatus, storageStatus:storageStatus, migrationStatus:migrationStatus, updatedAt:now()};
+    var data = {ok:adStatus.ok !== false && !state.lastError, version:VERSION, ready:state.ready, coreReady:!!dataEngine(), mode:state.mode, storage:state.storage, adapter:state.adapterName, bootedAt:bootedAt, runtime:state.runtime, lastError:state.lastError, adapterStatus:adStatus, engineStatus:engineStatus, screenStatus:screenStatus, storageStatus:storageStatus, migrationStatus:migrationStatus, lightweight:false, updatedAt:now()};
     if(config() && typeof config().saveStatus === "function"){config().saveStatus(data);}
     return data;
   }
@@ -107,15 +115,15 @@ Con qué se conecta:
   function invalidate(options){
     options = options || {};
     safe("engine.invalidate", function(){if(dataEngine() && dataEngine().invalidate){dataEngine().invalidate();}}, null);
-    safe("adapter.invalidate", function(){if(adapter().invalidate){adapter().invalidate();}}, null);
+    safe("adapter.invalidate", function(){var ad=adapter();if(ad && ad !== dataEngine() && ad.invalidate){ad.invalidate();}}, null);
     var current = status({deep:false});
     if(options.emit === true){emit("invalidated", current);}
     return current;
   }
 
   function boot(){
-    try{resolveAdapter();state.ready = true;state.lastError = "";var current = status({deep:false});emit("ready", current);return current;}
-    catch(error){state.ready = false;state.lastError = error && error.message ? error.message : String(error);var failed = status({deep:false});emit("error", failed);return failed;}
+    try{resolveAdapter();state.ready = true;state.lastError = "";var current = lightStatus({boot:true});emit("ready", current);return current;}
+    catch(error){state.ready = false;state.lastError = error && error.message ? error.message : String(error);var failed = lightStatus({boot:true});emit("error", failed);return failed;}
   }
 
   var api = {
