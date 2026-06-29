@@ -10,6 +10,7 @@ Función o funciones:
 - Asegurar soporte para estadoMatricula, historialEstadoMatricula y divisiones.
 - Proteger el guardado cuando localStorage supera la cuota.
 - Mantener la Base Local operativa en memoria si el navegador ya no permite guardar más datos.
+- Conservar los requisitos cuando se usa snapshot reducido por cuota.
 Con qué se conecta:
 - maq-baselocal-session.js
 - excel-local.bridge.js
@@ -20,14 +21,29 @@ Con qué se conecta:
 (function(window){
   "use strict";
 
-  var VERSION = "1.4.3";
+  var VERSION = "1.4.4";
   var STATUS_KEY = "REQ_EXCEL_LOCAL_V1:storageStatus";
   var memory = {loaded:false,raw:"",snapshot:null,source:"none"};
+
+  var REQUIREMENT_ALIASES = {
+    Academico:["Academico","Académico","academico","académico"],
+    Documentacion:["Documentacion","Documentación","documentacion","documentación"],
+    Financiero:["Financiero","financiero"],
+    Titulacion:["Titulacion","Titulación","titulacion","titulación"],
+    "PrácticasVinculacion":["PrácticasVinculacion","PracticasVinculacion","practicasVinculacion","prácticasVinculacion","Prácticas Vinculación","Practicas Vinculacion","Prácticas/Vinculación","Practicas/Vinculacion","practicasvinculacion"],
+    Vinculacion:["Vinculacion","Vinculación","vinculacion","vinculación"],
+    SeguimientoGraduados:["SeguimientoGraduados","seguimientoGraduados","seguimientograduados","Seguimiento graduados"],
+    Ingles:["Ingles","Inglés","ingles","inglés"],
+    "ActualizaciónDatos":["ActualizaciónDatos","ActualizacionDatos","actualizacionDatos","actualizaciónDatos","actualizaciondatos","Actualización de datos","Actualizacion de datos"],
+    AprobacionTitulacion:["AprobacionTitulacion","AprobaciónTitulacion","Aprobacion Titulacion","aprobacionTitulacion","aprobaciontitulacion"],
+    AprobacionComplexivoProyecto:["AprobacionComplexivoProyecto","AprobaciónComplexivoProyecto","Aprobacion Complexivo Proyecto","Aprobacion Complexivo/Proyecto","aprobacionComplexivoProyecto","aprobacioncomplexivoproyecto"]
+  };
 
   function clone(value){try{return JSON.parse(JSON.stringify(value==null?null:value));}catch(e){return value;}}
   function now(){return new Date().toISOString();}
   function text(value){return String(value==null?"":value).trim();}
   function norm(value){return text(value).normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").trim().toLowerCase();}
+  function keyNorm(value){return text(value).normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-zA-Z0-9]/g,"").toLowerCase();}
 
   function emptySnapshot(){return {meta:{app:"Requisitos",module:"ExcelLocal",version:VERSION,schemaVersion:4,createdAt:now(),updatedAt:now()},periods:[],students:[],history:[],diagnostics:[]};}
   function key(){return (window.ExcelLocalConfig&&window.ExcelLocalConfig.keys&&window.ExcelLocalConfig.keys.snapshot)||"REQ_EXCEL_LOCAL_V1:snapshot";}
@@ -79,26 +95,76 @@ Con qué se conecta:
     return out;
   }
 
+  function getOwnKey(row, wanted){
+    row = row || {};
+    var keys = Object.keys(row);
+    var wantedNorm = keyNorm(wanted);
+    for(var i = 0; i < keys.length; i += 1){
+      if(keys[i] === wanted || keyNorm(keys[i]) === wantedNorm){return keys[i];}
+    }
+    return "";
+  }
+
+  function valueFromAliases(row, aliases){
+    aliases = aliases || [];
+    for(var i = 0; i < aliases.length; i += 1){
+      var key = getOwnKey(row, aliases[i]);
+      if(key && row[key] != null && text(row[key]) !== ""){return row[key];}
+    }
+    return "";
+  }
+
+  function copyRequirementFields(source, target){
+    source = source || {};
+    target = target || {};
+    Object.keys(REQUIREMENT_ALIASES).forEach(function(canonical){
+      var aliases = REQUIREMENT_ALIASES[canonical];
+      var value = "";
+      try{
+        if(window.BLCampos && typeof window.BLCampos.getValue === "function"){
+          var canonicalForCampos = canonical.charAt(0).toLowerCase() + canonical.slice(1);
+          value = window.BLCampos.getValue(source, canonicalForCampos, "");
+        }
+      }catch(error){}
+      if(text(value) === ""){value = valueFromAliases(source, aliases);}
+      if(text(value) !== ""){
+        target[canonical] = value;
+        var lowerKey = keyNorm(canonical);
+        if(!target[lowerKey]){target[lowerKey] = value;}
+      }
+    });
+    return target;
+  }
+
   function minimalStudent(student){
     student = student && typeof student === "object" ? student : {};
-    return {
+    var out = {
       cedula:text(student.cedula || student.Cedula || student.CEDULA || student.numeroIdentificacion || student.numeroidentificacion || student.identificacion || student.docId || student._docId || student.id),
       numeroIdentificacion:text(student.numeroIdentificacion || student.numeroidentificacion || student.cedula || student.Cedula || student.docId || student._docId || student.id),
       docId:text(student.docId || student._docId || student.cedula || student.numeroIdentificacion || student.id),
       nombres:text(student.nombres || student.Nombres || student.nombresCompletos || student.nombre || student.Nombre),
+      Nombres:text(student.Nombres || student.nombres || student.nombresCompletos || student.nombre || student.Nombre),
       apellidos:text(student.apellidos || student.Apellidos || ""),
       nombrecarrera:text(student.nombrecarrera || student.nombreCarrera || student.NombreCarrera || student.carrera || student.Carrera || student.programa || student.Programa),
+      NombreCarrera:text(student.NombreCarrera || student.nombreCarrera || student.nombrecarrera || student.carrera || student.Carrera || student.programa || student.Programa),
+      CodigoCarrera:text(student.CodigoCarrera || student.codigoCarrera || student.codigocarrera || ""),
+      Sede:text(student.Sede || student.sede || ""),
       sede:text(student.sede || student.Sede || ""),
+      HorarioComplexivo:text(student.HorarioComplexivo || student.horarioComplexivo || student.horariocomplexivo || student.horario || ""),
       modalidad:text(student.modalidad || student.Modalidad || ""),
       jornada:text(student.jornada || student.Jornada || ""),
       periodoId:text(student.periodoId || student.periodoLabel || student.periodo || student.ultimoPeriodoId || ""),
       periodoLabel:text(student.periodoLabel || student.periodo || student.periodoId || ""),
       ultimoPeriodoId:text(student.ultimoPeriodoId || student.periodoId || student.periodoLabel || ""),
       estadoMatricula:text(student.estadoMatricula || "ACTIVO").toUpperCase() === "RETIRADO" ? "RETIRADO" : "ACTIVO",
+      CorreoPersonal:text(student.CorreoPersonal || student.correoPersonal || student.correopersonal || ""),
+      CorreoInstitucional:text(student.CorreoInstitucional || student.correoInstitucional || student.correoinstitucional || ""),
+      Celular:text(student.Celular || student.celular || student.telefono || student.Telefono || ""),
       division:text(student.division || ""),
       divisiones:Array.isArray(student.divisiones) ? student.divisiones.slice(0,3) : normalizeDivisiones(student.division || student.Division || student.División),
       updatedAt:text(student.updatedAt || student.actualizadoEn || student.createdAt || student.creadoEn || now())
     };
+    return copyRequirementFields(student, out);
   }
 
   function compactSnapshotForStorage(snapshot){
@@ -116,7 +182,7 @@ Con qué se conecta:
     var totalStudents = Array.isArray(snap.students) ? snap.students.length : 0;
     var totalPeriods = Array.isArray(snap.periods) ? snap.periods.length : 0;
     return {
-      meta:Object.assign({}, snap.meta || {}, {app:"Requisitos",module:"ExcelLocal",version:VERSION,schemaVersion:4,updatedAt:now(),totalStudents:totalStudents,totalPeriods:totalPeriods,emergencyStored:true,storageMode:"minimal_localStorage",message:"Snapshot reducido porque localStorage estaba lleno. Usa Solo bajar Firebase para reconstruir la sesión completa."}),
+      meta:Object.assign({}, snap.meta || {}, {app:"Requisitos",module:"ExcelLocal",version:VERSION,schemaVersion:4,updatedAt:now(),totalStudents:totalStudents,totalPeriods:totalPeriods,emergencyStored:true,storageMode:"minimal_localStorage_with_requirements",message:"Snapshot reducido porque localStorage estaba lleno. Se conservaron identidad y requisitos para Ficha/Stats."}),
       periods:Array.isArray(snap.periods) ? snap.periods.map(compactRecord) : [],
       students:Array.isArray(snap.students) ? snap.students.map(minimalStudent) : [],
       history:Array.isArray(snap.history) ? snap.history.slice(0,20) : [],
@@ -210,15 +276,9 @@ Con qué se conecta:
   }
 
   function sessionApi(){
-    try{
-      if(window.parent&&window.parent!==window&&window.parent.MAQ_BASELOCAL_SESSION){return window.parent.MAQ_BASELOCAL_SESSION;}
-    }catch(error){}
-    try{
-      if(window.top&&window.top!==window&&window.top.MAQ_BASELOCAL_SESSION){return window.top.MAQ_BASELOCAL_SESSION;}
-    }catch(error){}
-    try{
-      if(window.MAQ_BASELOCAL_SESSION){return window.MAQ_BASELOCAL_SESSION;}
-    }catch(error){}
+    try{if(window.parent&&window.parent!==window&&window.parent.MAQ_BASELOCAL_SESSION){return window.parent.MAQ_BASELOCAL_SESSION;}}catch(error){}
+    try{if(window.top&&window.top!==window&&window.top.MAQ_BASELOCAL_SESSION){return window.top.MAQ_BASELOCAL_SESSION;}}catch(error){}
+    try{if(window.MAQ_BASELOCAL_SESSION){return window.MAQ_BASELOCAL_SESSION;}}catch(error){}
     return null;
   }
 
@@ -234,9 +294,7 @@ Con qué se conecta:
     }catch(e){console.warn("[ExcelLocalStorage] lectura fallida",e);var fallback=emptySnapshot();memory.loaded=true;memory.raw="";memory.snapshot=fallback;memory.source="fallback";return fallback;}
   }
 
-  function persistRaw(raw){
-    localStorage.setItem(key(), raw);
-  }
+  function persistRaw(raw){localStorage.setItem(key(), raw);}
 
   function tryPersistSnapshot(candidate){
     var raw = JSON.stringify(candidate);
