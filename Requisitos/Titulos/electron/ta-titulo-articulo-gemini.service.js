@@ -5,14 +5,17 @@
   - Leer GEMINI_API_KEY desde variables de entorno o archivo .env local.
   - Generar sugerencias de títulos únicamente con Gemini en modo Electron.
   - Mantener la clave fuera del navegador y fuera de GitHub.
+  - Devolver errores indicando el archivo responsable.
   Se conecta con:
   - Requisitos/Titulos/electron/ta-titulo-articulo-main.js
-  - Requisitos/Titulos/electron/ta-titulo-articulo-preload.js
+  - Requisitos/Titulos/electron/ta-titulo-articulo-preload.cjs
   - Requisitos/Titulos/src/services/ta-titulo-articulo-gemini-client.service.js
 */
 
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+
+const FILE_PATH = "Requisitos/Titulos/electron/ta-titulo-articulo-gemini.service.js";
 
 function clean(value) {
   return String(value ?? "").replace(/\s+/g, " ").trim();
@@ -20,6 +23,10 @@ function clean(value) {
 
 function normalize(value) {
   return clean(value).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+function errorEnArchivo(message) {
+  return new Error(`[Archivo: ${FILE_PATH}] ${message}`);
 }
 
 function cargarEnvLocal(rootDir) {
@@ -142,8 +149,8 @@ function validarPayload(payload) {
   ];
 
   const faltante = campos.find(([, value]) => !clean(value));
-  if (faltante) throw new Error(`Complete el campo ${faltante[0]} antes de generar sugerencias.`);
-  if (![1, 2, 3].includes(Number(payload.numeroTitulo || 0))) throw new Error("Número de título inválido.");
+  if (faltante) throw errorEnArchivo(`Complete el campo ${faltante[0]} antes de generar sugerencias.`);
+  if (![1, 2, 3].includes(Number(payload.numeroTitulo || 0))) throw errorEnArchivo("Número de título inválido.");
 }
 
 function depurarTitulo(value) {
@@ -168,27 +175,32 @@ async function llamarGemini(prompt, rootDir) {
 
   const apiKey = process.env.GEMINI_API_KEY || "";
   const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
-  if (!apiKey) throw new Error("GEMINI_API_KEY no está configurada en el archivo .env.");
+  if (!apiKey) throw errorEnArchivo("GEMINI_API_KEY no está configurada en Requisitos/Titulos/.env.");
 
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.35,
-        topP: 0.9,
-        maxOutputTokens: 120
-      }
-    })
-  });
+  let response;
+  try {
+    response = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.35,
+          topP: 0.9,
+          maxOutputTokens: 120
+        }
+      })
+    });
+  } catch (error) {
+    throw errorEnArchivo(`No se pudo conectar con Gemini: ${error.message || error}`);
+  }
 
   const data = await response.json().catch(() => null);
-  if (!response.ok) throw new Error(data?.error?.message || `Gemini HTTP ${response.status}`);
+  if (!response.ok) throw errorEnArchivo(data?.error?.message || `Gemini HTTP ${response.status}`);
 
   const titulo = depurarTitulo(extraerTextoGemini(data));
-  if (!titulo) throw new Error("Gemini no devolvió un título válido.");
+  if (!titulo) throw errorEnArchivo("Gemini no devolvió un título válido.");
   return titulo;
 }
 
@@ -212,12 +224,13 @@ export async function generarSugerenciasTituloElectron(payload = {}, rootDir) {
   const sugerenciaTitulo2 = await llamarGemini(promptSugerencia2(payload, sugerenciaTitulo1), rootDir);
   const sugerencias = depurarSugerencias([sugerenciaTitulo1, sugerenciaTitulo2], payload.titulosYaGenerados || []);
 
-  if (sugerencias.length < 2) throw new Error("Gemini no generó dos sugerencias diferentes.");
+  if (sugerencias.length < 2) throw errorEnArchivo("Gemini no generó dos sugerencias diferentes.");
 
   return {
     ok: true,
     origen: "gemini-electron",
     bloqueado: false,
+    archivo: FILE_PATH,
     motivo: "",
     advertencia: "Sugerencias generadas únicamente por Gemini en Electron.",
     sugerencias
