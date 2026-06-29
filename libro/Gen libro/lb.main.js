@@ -5,7 +5,7 @@ Función o funciones:
 1. Inicializar la pantalla Gen libro.
 2. Conectar selector de carrera y selector de materia con el almacenamiento local.
 3. Cargar la materia consolidada seleccionada desde Carga de la materia.
-4. Preparar la pantalla para los siguientes bloques de validación, IA y Word.
+4. Ejecutar validación flexible antes de pasar al plan del libro.
 ========================================================= */
 
 (function iniciarGenLibro(window, document) {
@@ -17,10 +17,12 @@ Función o funciones:
   var UI = window.LibroGenLibroUI || null;
   var CarreraSelector = window.LibroGenLibroCarreraSelector || null;
   var MateriaSelector = window.LibroGenLibroMateriaSelector || null;
+  var Validator = window.LibroGenLibroValidator || null;
 
   function refreshModules() {
     CarreraSelector = window.LibroGenLibroCarreraSelector || CarreraSelector;
     MateriaSelector = window.LibroGenLibroMateriaSelector || MateriaSelector;
+    Validator = window.LibroGenLibroValidator || Validator;
   }
 
   function setInitialData() {
@@ -33,6 +35,37 @@ Función o funciones:
 
     UI.fillSelect("lb-carrera-select", [], "No se pudo leer carreras guardadas", null, null);
     UI.fillSelect("lb-materia-select", [], "Selecciona una carrera", null, null);
+  }
+
+  function runFlexibleValidation(selected) {
+    refreshModules();
+
+    if (!Validator || typeof Validator.validate !== "function") {
+      UI.setMessage("is-warning", "Materia cargada. El plan del libro se conectará en el siguiente bloque.");
+      UI.setStatus("Materia lista");
+      Progress.render("validate", "Materia lista para planificación", 10);
+      return null;
+    }
+
+    var validation = Validator.validate(selected);
+    var message = typeof Validator.message === "function" ? Validator.message(validation) : "Materia validada.";
+
+    if (State && typeof State.addMessage === "function") {
+      State.addMessage(validation.ok ? "ok" : "warning", message);
+    }
+
+    if (!validation.ok) {
+      UI.setMessage("is-error", message);
+      UI.setStatus("Falta asignatura");
+      Progress.render("validate", "Validación con error", 10);
+      return validation;
+    }
+
+    UI.setMessage(validation.advertencias.length ? "is-warning" : "is-ok", message);
+    UI.setStatus(validation.advertencias.length ? "Validada con advertencias" : "Materia validada");
+    Progress.render("validate", "Validación flexible completa", 10);
+
+    return validation;
   }
 
   function boot() {
@@ -82,23 +115,27 @@ Función o funciones:
     if (generateButton) {
       generateButton.addEventListener("click", function onGenerateClick() {
         var currentState = State.getState();
+        var selected = currentState.materiaSeleccionada;
 
-        if (!currentState.materiaSeleccionada) {
+        if (!selected) {
           UI.setMessage("is-warning", "Selecciona una materia guardada antes de generar el libro.");
           UI.setStatus("Sin materia");
           Progress.reset();
           return;
         }
 
-        UI.setMessage("is-warning", "Materia cargada. La validación flexible se conectará en el siguiente bloque.");
-        UI.setStatus("Materia lista");
-        Progress.render("validate", "Materia lista para validación", 10);
+        var validation = runFlexibleValidation(selected);
+
+        window.LibroGenLibro.lastValidation = validation;
       });
     }
 
     window.LibroGenLibro = {
       getState: State.getState,
-      reloadMaterias: setInitialData
+      reloadMaterias: setInitialData,
+      validateSelected: function validateSelected() {
+        return runFlexibleValidation(State.getState().materiaSeleccionada);
+      }
     };
   }
 
