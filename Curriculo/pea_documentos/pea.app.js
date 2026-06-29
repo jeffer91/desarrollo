@@ -5,8 +5,8 @@ Función:
 - Controlar pantalla PEA documentos
 - Cargar carreras y materias local-first
 - Guardar versiones PEA en local
-- Cargar historial, comparar y exportar
-- Ejecutar sincronización manual
+- Usar carga inteligente por arrastre para 1 Excel consolidado o 3 Excel
+- Cargar historial, comparar, exportar y sincronizar
 */
 (function (window, document) {
   "use strict";
@@ -47,7 +47,10 @@ Función:
     node.setAttribute("data-pending", String(pending));
   }
 
-  function mode() { var checked = document.querySelector('input[name="peaModoCarga"]:checked'); return checked ? String(checked.value || "triple") : "triple"; }
+  function mode() {
+    var checked = document.querySelector('input[name="peaModoCarga"]:checked');
+    return checked ? String(checked.value || "triple") : "triple";
+  }
 
   function toggleMode() {
     var m = mode();
@@ -55,12 +58,27 @@ Función:
     if (el("peaCargaConsolidado")) el("peaCargaConsolidado").classList.toggle("pea-hidden", m === "triple");
   }
 
-  function getCarrera(id) { id = clean(id); return state.carreras.find(function (item) { return String(item.id || "") === id; }) || null; }
-  function getMateria(id) { id = clean(id); return state.materias.find(function (item) { return String(item.id || "") === id; }) || null; }
+  function getCarrera(id) {
+    id = clean(id);
+    return state.carreras.find(function (item) { return String(item.id || "") === id; }) || null;
+  }
+
+  function getMateria(id) {
+    id = clean(id);
+    return state.materias.find(function (item) { return String(item.id || "") === id; }) || null;
+  }
 
   function uniqueSorted(list) {
-    var seen = Object.create(null), out = [];
-    (Array.isArray(list) ? list : []).forEach(function (item) { var text = clean(item); var key = text.toLowerCase(); if (text && !seen[key]) { seen[key] = true; out.push(text); } });
+    var seen = Object.create(null);
+    var out = [];
+    (Array.isArray(list) ? list : []).forEach(function (item) {
+      var text = clean(item);
+      var key = text.toLowerCase();
+      if (text && !seen[key]) {
+        seen[key] = true;
+        out.push(text);
+      }
+    });
     return out.sort(function (a, b) { return a.localeCompare(b, "es", { sensitivity: "base", numeric: true }); });
   }
 
@@ -112,7 +130,9 @@ Función:
       .concat(Array.isArray(doc.materiasTransversal4) ? doc.materiasTransversal4 : []);
 
     state.carreraId = carrera.id;
-    state.materias = uniqueSorted(materias).map(function (nombre) { return { id: materiaId(carrera.id, nombre), nombre: nombre, carreraId: carrera.id, carreraNombre: carrera.nombre, carreraTipo: carrera.tipo }; });
+    state.materias = uniqueSorted(materias).map(function (nombre) {
+      return { id: materiaId(carrera.id, nombre), nombre: nombre, carreraId: carrera.id, carreraNombre: carrera.nombre, carreraTipo: carrera.tipo };
+    });
     fillSelect(materiaSelect, state.materias, "Selecciona una materia");
     setStatus("Materias cargadas: " + state.materias.length, state.materias.length ? "ok" : "warn");
   }
@@ -141,7 +161,9 @@ Función:
 
   function buildPreviewHtml(versionData) {
     if (!versionData || !versionData.meta || !versionData.data) return "No hay datos para mostrar.";
-    var meta = versionData.meta, data = versionData.data, content = data.contenido || {};
+    var meta = versionData.meta;
+    var data = versionData.data;
+    var content = data.contenido || {};
     return [
       '<div class="pea-preview-block"><div class="pea-preview-title">' + esc(meta.materiaNombre || "") + " · " + esc(meta.versionId || "") + '</div><div class="pea-preview-lines">' + esc("Carrera: " + (meta.carreraNombre || data.carreraNombre || "") + "\nOrigen: " + (meta.origenTipo || "") + "\nFecha: " + (meta.createdAtClient || "") + "\nNota: " + (meta.versionNota || "Sin nota") + "\nSincronizado: " + (meta.synced ? "Sí" : "No")) + '</div></div>',
       '<div class="pea-preview-block"><div class="pea-preview-title">Base</div><div class="pea-preview-lines">' + esc(sectionInfo(content.base)) + '</div></div>',
@@ -150,74 +172,147 @@ Función:
     ].join("");
   }
 
-  function renderPreview(versionData) { if (el("peaPreview")) el("peaPreview").innerHTML = buildPreviewHtml(versionData); }
+  function renderPreview(versionData) {
+    if (el("peaPreview")) el("peaPreview").innerHTML = buildPreviewHtml(versionData);
+  }
 
   function renderHistorial() {
-    var list = el("peaHistorial"), a = el("peaCompareA"), b = el("peaCompareB");
+    var list = el("peaHistorial");
+    var a = el("peaCompareA");
+    var b = el("peaCompareB");
     if (!list || !a || !b) return;
-    if (!state.versions.length) { list.innerHTML = "No existen versiones locales para esta materia."; a.innerHTML = ""; b.innerHTML = ""; return; }
+    if (!state.versions.length) {
+      list.innerHTML = "No existen versiones locales para esta materia.";
+      a.innerHTML = "";
+      b.innerHTML = "";
+      return;
+    }
     list.innerHTML = state.versions.map(function (item) {
       var r = item.resumen || {};
       return '<div class="pea-version-card"><div class="pea-version-head"><div><div class="pea-version-title">' + esc(item.versionId || "") + ' <span class="pea-badge">' + esc(item.origenTipo || "") + '</span></div><div class="pea-version-meta">' + esc(item.createdAtClient || "") + '</div></div></div><div class="pea-version-meta">Base: ' + Number(r.totalHojasBase || 0) + ' · Unidades: ' + Number(r.totalHojasUnidades || 0) + ' · Actividades: ' + Number(r.totalHojasActividades || 0) + '</div><div class="pea-version-meta">Nota: ' + esc(item.versionNota || "Sin nota") + '</div><div class="pea-version-meta">Sincronizado: ' + (item.synced ? "Sí" : "No") + '</div><div class="pea-version-actions"><button class="pea-btn pea-btn-primary" type="button" data-load-version="' + esc(item.versionId || "") + '">Cargar</button></div></div>';
     }).join("");
     a.innerHTML = b.innerHTML = state.versions.map(function (item) { return '<option value="' + esc(item.versionId || "") + '">' + esc(item.versionId || "") + '</option>'; }).join("");
-    if (state.versions.length > 1) { a.value = state.versions[state.versions.length - 1].versionId; b.value = state.versions[0].versionId; }
+    if (state.versions.length > 1) {
+      a.value = state.versions[state.versions.length - 1].versionId;
+      b.value = state.versions[0].versionId;
+    }
   }
 
-  function loadHistorial() { var m = selectedMateriaData(); state.materiaId = m.materiaId; state.versions = PEA.store.listVersionsLocal(m.materiaId); renderHistorial(); setSyncText(); setStatus("Historial local cargado correctamente.", "ok"); }
-  function loadVersion(versionId) { var m = selectedMateriaData(); state.currentVersion = PEA.store.readVersionLocal(m.materiaId, versionId); renderPreview(state.currentVersion); setStatus("Versión local cargada correctamente.", "ok"); }
+  function loadHistorial() {
+    var m = selectedMateriaData();
+    state.materiaId = m.materiaId;
+    state.versions = PEA.store.listVersionsLocal(m.materiaId);
+    renderHistorial();
+    setSyncText();
+    setStatus("Historial local cargado correctamente.", "ok");
+  }
+
+  function loadVersion(versionId) {
+    var m = selectedMateriaData();
+    state.currentVersion = PEA.store.readVersionLocal(m.materiaId, versionId);
+    renderPreview(state.currentVersion);
+    setStatus("Versión local cargada correctamente.", "ok");
+  }
+
+  function getSmartPayload() {
+    if (!PEA.smartUpload || typeof PEA.smartUpload.getPayloadFiles !== "function") return null;
+    return PEA.smartUpload.getPayloadFiles();
+  }
 
   async function saveVersion() {
-    var m = selectedMateriaData(), payload, result, versionNota = has("peaVersionNota") ? clean(el("peaVersionNota").value) : "";
+    var m = selectedMateriaData();
+    var payload;
+    var result;
+    var smart = getSmartPayload();
+    var versionNota = has("peaVersionNota") ? clean(el("peaVersionNota").value) : "";
+
     if (!PEA.parser || !PEA.parser.buildNormalizedUpload) throw new Error("PEA.parser.buildNormalizedUpload no está disponible.");
     setStatus("Procesando archivos...");
-    if (mode() === "triple") payload = await PEA.parser.buildNormalizedUpload({ materiaNombre: m.materiaNombre, materiaCodigo: m.materiaCodigo, versionNota: versionNota, modo: "triple", baseFile: has("peaFileBase") ? el("peaFileBase").files[0] : null, unidadesFile: has("peaFileUnidades") ? el("peaFileUnidades").files[0] : null, actividadesFile: has("peaFileActividades") ? el("peaFileActividades").files[0] : null });
-    else payload = await PEA.parser.buildNormalizedUpload({ materiaNombre: m.materiaNombre, materiaCodigo: m.materiaCodigo, versionNota: versionNota, modo: "consolidado", consolidadoFile: has("peaFileConsolidado") ? el("peaFileConsolidado").files[0] : null });
-    payload.carreraId = m.carreraId; payload.carreraNombre = m.carreraNombre; payload.materiaId = m.materiaId;
+
+    if (smart && smart.mode === "triple") {
+      payload = await PEA.parser.buildNormalizedUpload({ materiaNombre: m.materiaNombre, materiaCodigo: m.materiaCodigo, versionNota: versionNota, modo: "triple", baseFile: smart.baseFile, unidadesFile: smart.unidadesFile, actividadesFile: smart.actividadesFile });
+    } else if (smart && smart.mode === "consolidado") {
+      payload = await PEA.parser.buildNormalizedUpload({ materiaNombre: m.materiaNombre, materiaCodigo: m.materiaCodigo, versionNota: versionNota, modo: "consolidado", consolidadoFile: smart.consolidadoFile });
+    } else if (mode() === "triple") {
+      payload = await PEA.parser.buildNormalizedUpload({ materiaNombre: m.materiaNombre, materiaCodigo: m.materiaCodigo, versionNota: versionNota, modo: "triple", baseFile: has("peaFileBase") ? el("peaFileBase").files[0] : null, unidadesFile: has("peaFileUnidades") ? el("peaFileUnidades").files[0] : null, actividadesFile: has("peaFileActividades") ? el("peaFileActividades").files[0] : null });
+    } else {
+      payload = await PEA.parser.buildNormalizedUpload({ materiaNombre: m.materiaNombre, materiaCodigo: m.materiaCodigo, versionNota: versionNota, modo: "consolidado", consolidadoFile: has("peaFileConsolidado") ? el("peaFileConsolidado").files[0] : null });
+    }
+
+    payload.carreraId = m.carreraId;
+    payload.carreraNombre = m.carreraNombre;
+    payload.materiaId = m.materiaId;
     if (PEA.cccValidator && PEA.cccValidator.validateUpload) PEA.cccValidator.validateUpload(payload);
     result = PEA.store.saveVersionLocal(payload);
     setStatus("Versión guardada localmente: " + result.versionId, "ok");
-    loadHistorial(); loadVersion(result.versionId); setSyncText();
+    loadHistorial();
+    loadVersion(result.versionId);
+    setSyncText();
   }
 
   async function syncNow(force) {
-    var pull = { skipped: true, pulled: 0 }, push = { skipped: true, pushed: 0 };
+    var pull = { skipped: true, pulled: 0 };
+    var push = { skipped: true, pushed: 0 };
     setStatus("Sincronizando PEA...");
     if (PEA.store.pullFromFirebaseIfDue) pull = await PEA.store.pullFromFirebaseIfDue(force === true);
     if (PEA.store.pushPendingToFirebaseIfDue) push = await PEA.store.pushPendingToFirebaseIfDue(force === true);
     if (PEA.firebase && PEA.firebase.syncCurriculoNow) await PEA.firebase.syncCurriculoNow();
-    if (state.materiaId) { state.versions = PEA.store.listVersionsLocal(state.materiaId); renderHistorial(); }
-    setSyncText(); setStatus("Sincronización completada · descarga: " + Number(pull.pulled || 0) + " · subida: " + Number(push.pushed || 0), "ok");
+    if (state.materiaId) {
+      state.versions = PEA.store.listVersionsLocal(state.materiaId);
+      renderHistorial();
+    }
+    setSyncText();
+    setStatus("Sincronización completada · descarga: " + Number(pull.pulled || 0) + " · subida: " + Number(push.pushed || 0), "ok");
   }
 
   function renderCompare(comparison) {
-    var node = el("peaComparePreview"), lines = [];
+    var node = el("peaComparePreview");
+    var lines = [];
     if (!node) return;
-    if (!comparison) { node.textContent = "Aquí aparecerá el resumen comparativo."; return; }
+    if (!comparison) {
+      node.textContent = "Aquí aparecerá el resumen comparativo.";
+      return;
+    }
     lines.push("Materia: " + String(comparison.materiaNombre || ""));
     lines.push("Versión A: " + String((comparison.versionA && comparison.versionA.versionId) || ""));
     lines.push("Versión B: " + String((comparison.versionB && comparison.versionB.versionId) || ""));
     lines.push("Total cambios: " + Number(comparison.totalCambios || 0));
-    (comparison.sections || []).forEach(function (s) { lines.push("\n" + String(s.sectionName || "").toUpperCase()); lines.push("  Agregadas: " + (s.added || []).length); lines.push("  Eliminadas: " + (s.removed || []).length); lines.push("  Modificadas: " + (s.changed || []).length); });
+    (comparison.sections || []).forEach(function (s) {
+      lines.push("\n" + String(s.sectionName || "").toUpperCase());
+      lines.push("  Agregadas: " + (s.added || []).length);
+      lines.push("  Eliminadas: " + (s.removed || []).length);
+      lines.push("  Modificadas: " + (s.changed || []).length);
+    });
     node.textContent = lines.join("\n");
   }
 
   function compareVersions() {
-    var m = selectedMateriaData(), a = has("peaCompareA") ? clean(el("peaCompareA").value) : "", b = has("peaCompareB") ? clean(el("peaCompareB").value) : "";
+    var m = selectedMateriaData();
+    var a = has("peaCompareA") ? clean(el("peaCompareA").value) : "";
+    var b = has("peaCompareB") ? clean(el("peaCompareB").value) : "";
     if (!a || !b) throw new Error("Debes seleccionar dos versiones.");
     if (a === b) throw new Error("Debes escoger dos versiones diferentes.");
     state.currentComparison = PEA.compare.compareVersions(PEA.store.readVersionLocal(m.materiaId, a), PEA.store.readVersionLocal(m.materiaId, b));
-    renderCompare(state.currentComparison); setStatus("Comparación generada correctamente.", "ok");
+    renderCompare(state.currentComparison);
+    setStatus("Comparación generada correctamente.", "ok");
   }
 
   function clearForm() {
     if (has("peaCarreraSelect")) el("peaCarreraSelect").value = "";
     if (has("peaMateriaSelect")) fillSelect(el("peaMateriaSelect"), [], "Selecciona una materia");
-    ["peaMateriaTipo", "peaVersionNota", "peaFileBase", "peaFileUnidades", "peaFileActividades", "peaFileConsolidado"].forEach(function (id) { if (has(id)) el(id).value = ""; });
-    state.carreraId = ""; state.materiaId = ""; state.materias = []; state.versions = []; state.currentVersion = null; state.currentComparison = null;
+    ["peaMateriaTipo", "peaVersionNota", "peaFileBase", "peaFileUnidades", "peaFileActividades", "peaFileConsolidado", "peaSmartFiles"].forEach(function (id) { if (has(id)) el(id).value = ""; });
+    if (PEA.smartUpload && typeof PEA.smartUpload.clear === "function") PEA.smartUpload.clear();
+    state.carreraId = "";
+    state.materiaId = "";
+    state.materias = [];
+    state.versions = [];
+    state.currentVersion = null;
+    state.currentComparison = null;
     if (el("peaHistorial")) el("peaHistorial").innerHTML = "Aún no se ha cargado el historial de esta materia.";
     if (el("peaPreview")) el("peaPreview").innerHTML = "Selecciona una versión para verla aquí.";
-    renderCompare(null); setStatus("Formulario limpio."); setSyncText();
+    renderCompare(null);
+    setStatus("Formulario limpio.");
+    setSyncText();
   }
 
   function bind() {
@@ -232,11 +327,22 @@ Función:
     if (has("peaBtnExcel")) el("peaBtnExcel").addEventListener("click", function () { try { PEA.export.downloadThreeExcels(state.currentVersion); setStatus("Excel reconstruido correctamente.", "ok"); } catch (e) { setStatus(e.message || "No se pudo descargar Excel.", "error"); } });
     if (has("peaBtnComparar")) el("peaBtnComparar").addEventListener("click", function () { try { compareVersions(); } catch (e) { setStatus(e.message || "No se pudo comparar.", "error"); } });
     if (has("peaBtnPdfComparativo")) el("peaBtnPdfComparativo").addEventListener("click", function () { try { PEA.export.downloadPdfComparison(state.currentComparison); setStatus("PDF comparativo generado correctamente.", "ok"); } catch (e) { setStatus(e.message || "No se pudo generar PDF comparativo.", "error"); } });
-    document.addEventListener("click", function (event) { var btn = event.target.closest("[data-load-version]"); if (btn) { try { loadVersion(btn.getAttribute("data-load-version")); } catch (e) { setStatus(e.message || "No se pudo cargar versión.", "error"); } } });
+    document.addEventListener("click", function (event) {
+      var btn = event.target.closest("[data-load-version]");
+      if (btn) {
+        try { loadVersion(btn.getAttribute("data-load-version")); }
+        catch (e) { setStatus(e.message || "No se pudo cargar versión.", "error"); }
+      }
+    });
   }
 
   async function boot() {
-    toggleMode(); bind(); setSyncText(); await loadCarreras(); await syncNow(false).catch(function () {}); setStatus("Pantalla lista.", "ok");
+    toggleMode();
+    bind();
+    setSyncText();
+    await loadCarreras();
+    await syncNow(false).catch(function () {});
+    setStatus("Pantalla lista.", "ok");
   }
 
   PEA.app = { state: state, boot: boot, syncNow: syncNow, loadCarreras: loadCarreras, setStatus: setStatus, setSyncText: setSyncText };
