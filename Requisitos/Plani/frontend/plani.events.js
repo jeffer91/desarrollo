@@ -5,6 +5,7 @@ Función o funciones:
 - Encapsular la conexión de eventos de la pantalla Plani.
 - Leer archivo de cronograma en texto cuando el usuario lo cargue.
 - Delegar acciones al controlador principal sin mezclar lógica de estado con DOM.
+- Conectar acciones de exportación Word y PDF.
 Con qué se conecta:
 - plani.html
 - plani.ui.js
@@ -33,6 +34,15 @@ Con qué se conecta:
       reader.onerror = function(){reject(reader.error || new Error("No se pudo leer el archivo."));};
       reader.readAsText(file);
     });
+  }
+
+  function safeCall(fn){
+    try{
+      if(typeof fn === "function"){fn();}
+    }catch(error){
+      console.error("[Plani evento]", error);
+      if(ui()){ui().status(error.message || String(error), "bad");}
+    }
   }
 
   function bindEvents(app){
@@ -74,9 +84,15 @@ Con qué se conecta:
     });
 
     bind("plani-process", "click", function(){
-      if(typeof app.onPrepareBase === "function"){
-        app.onPrepareBase();
-      }
+      safeCall(app.onPrepareBase);
+    });
+
+    bind("plani-export-word", "click", function(){
+      safeCall(app.onExportWord);
+    });
+
+    bind("plani-export-pdf", "click", function(){
+      safeCall(app.onExportPdf);
     });
   }
 
