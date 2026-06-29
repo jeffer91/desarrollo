@@ -6,6 +6,7 @@ Función o funciones:
 - Manejar filtros por período, división, carrera y prioridad.
 - Renderizar tablas, mensajes y exportación.
 - Mostrar si la vista viene desde BL2/cache o desde ExcelLocalRepo.
+- Evitar construcción pesada duplicada al abrir la pantalla.
 Con qué se conecta:
 - coordi.core.js
 - coordi.export.js
@@ -27,6 +28,6 @@ Con qué se conecta:
   function renderMessage(data){var msg=window.CoordiCore.message(data,state.messageType);el("coordi-message").value=msg;}
   function render(){try{state.data=window.CoordiCore.summary({periodId:state.periodId,division:state.division,career:state.career,priority:state.priority});var d=state.data;fillFilters(d);el("coordi-total").textContent=d.kpis.total;el("coordi-alta").textContent=d.kpis.alta;el("coordi-media").textContent=d.kpis.media;el("coordi-baja").textContent=d.kpis.baja;el("coordi-carreras-total").textContent=d.kpis.carreras;renderCareers(d);renderReqs(d);renderStudents(d);renderMessage(d);el("coordi-diagnostics").textContent=JSON.stringify(d.diagnostics,null,2);status("Coordi cargado por "+source()+". División: "+(state.division||"Todas")+".","ok");}catch(e){console.error("[Coordi]",e);status(e.message||String(e),"warn");}}
   function bind(){el("coordi-periodo").addEventListener("change",function(e){state.periodId=e.target.value;state.division="";state.career="";render();});el("coordi-division").addEventListener("change",function(e){state.division=e.target.value;state.career="";render();});el("coordi-carrera").addEventListener("change",function(e){state.career=e.target.value;render();});el("coordi-prioridad").addEventListener("change",function(e){state.priority=e.target.value;render();});el("coordi-message-type").addEventListener("change",function(e){state.messageType=e.target.value;renderMessage(state.data);});el("coordi-refresh").addEventListener("click",render);el("coordi-export-json").addEventListener("click",function(){window.CoordiExport.exportJson(state.data);});el("coordi-copy-summary").addEventListener("click",function(){window.CoordiExport.copyText(window.CoordiExport.summaryText(state.data)).then(function(){status("Resumen copiado.","ok");});});el("coordi-copy-message").addEventListener("click",function(){window.CoordiExport.copyText(el("coordi-message").value).then(function(){status("Mensaje copiado.","ok");});});}
-  function boot(){if(window.ExcelLocalBridge)window.ExcelLocalBridge.ensureReady();bind();render();}
+  function boot(){if(window.BL2&&typeof window.BL2.status==="function"){window.BL2.status({deep:false});}bind();render();}
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",boot);else boot();
 })(window,document);
