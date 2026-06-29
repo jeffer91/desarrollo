@@ -6,6 +6,7 @@
   - Usar carrera, tema, problema, contexto, grupo, período, objetivo y resultado esperado.
   - Separar enfoques: diagnóstico/análisis y propuesta/estrategia.
   - Evitar que el estudiante quede bloqueado si Gemini no responde.
+  - Mostrar al estudiante un aviso simple y reservar el detalle técnico para diagnóstico posterior.
   Se conecta con:
   - Requisitos/Titulos/src/services/ta-titulo-articulo-gemini-client.service.js
   - Requisitos/Titulos/src/estudiante/ta-titulo-articulo-estudiante.app.js
@@ -176,6 +177,10 @@ function generarSugerenciasTitulo(payload = {}, options = {}) {
   if (sugerencias.length < 2) throw new Error(`[Archivo: ${FILE_PATH}] No se pudieron generar dos sugerencias diferentes.`);
 
   const errorOriginal = clean(options.errorOriginal || "");
+  const aviso = errorOriginal
+    ? "No se pudo conectar con Gemini. Se generaron sugerencias con el motor inteligente de respaldo."
+    : "Sugerencias generadas con motor inteligente local.";
+
   return {
     ok: true,
     origen: "fallback-local",
@@ -184,7 +189,8 @@ function generarSugerenciasTitulo(payload = {}, options = {}) {
     sugerencias,
     bloqueado: false,
     motivo: "",
-    advertencia: errorOriginal ? `Gemini no respondió. Se usó el motor inteligente local. Detalle: ${errorOriginal}` : "Sugerencias generadas con motor inteligente local."
+    advertencia: aviso,
+    detalleTecnico: errorOriginal
   };
 }
 
