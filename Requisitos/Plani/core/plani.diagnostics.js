@@ -3,7 +3,7 @@ Nombre completo: plani.diagnostics.js
 Ruta o ubicación: /Requisitos/Plani/core/plani.diagnostics.js
 Función o funciones:
 - Construir un diagnóstico técnico legible del módulo Plani.
-- Revisar módulos cargados, estado actual, validación base, cronograma, recursos y motor documental.
+- Revisar módulos cargados, estado actual, validación base, cronograma, recursos, motor documental y exportación.
 - Servir como apoyo para detectar errores en bloques posteriores.
 ========================================================= */
 (function(window){
@@ -28,6 +28,13 @@ Función o funciones:
     {name:"PlaniDocumentModel", value:"PlaniDocumentModel", required:true},
     {name:"PlaniBuilder", value:"PlaniBuilder", required:true},
     {name:"PlaniPreview", value:"PlaniPreview", required:true},
+    {name:"PlaniExportFilename", value:"PlaniExportFilename", required:true},
+    {name:"PlaniExportHelpers", value:"PlaniExportHelpers", required:true},
+    {name:"PlaniExportStyles", value:"PlaniExportStyles", required:true},
+    {name:"PlaniHtmlExport", value:"PlaniHtmlExport", required:true},
+    {name:"PlaniWordExport", value:"PlaniWordExport", required:true},
+    {name:"PlaniPdfExport", value:"PlaniPdfExport", required:true},
+    {name:"PlaniExportGateway", value:"PlaniExportGateway", required:true},
     {name:"PlaniUI", value:"PlaniUI", required:true},
     {name:"PlaniEvents", value:"PlaniEvents", required:true},
     {name:"PlaniAssetsUI", value:"PlaniAssetsUI", required:true},
@@ -56,6 +63,9 @@ Función o funciones:
     }
     if(window.PlaniBuilder){
       checks.push({type:"ok", label:"builder", message:"Motor documental disponible."});
+    }
+    if(window.PlaniExportGateway){
+      checks.push({type:"ok", label:"export", message:"Exportación HTML, Word y PDF disponible."});
     }
     return checks;
   }
