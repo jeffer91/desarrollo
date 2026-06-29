@@ -2,16 +2,19 @@
   Nombre completo: ta-titulo-articulo-gemini-client.service.js
   Ruta o ubicación: /Requisitos/Titulos/src/services/ta-titulo-articulo-gemini-client.service.js
   Función o funciones:
-  - Solicitar sugerencias de títulos académicos exclusivamente a la Netlify Function segura de Gemini.
-  - No exponer GEMINI_API_KEY en el navegador.
-  - Enviar a la función segura todos los datos necesarios para armar los prompts de IA.
+  - Solicitar sugerencias de títulos académicos exclusivamente a Gemini.
+  - En Electron, llamar al puente seguro IPC sin exponer GEMINI_API_KEY al navegador.
+  - En Netlify, llamar a la Netlify Function segura.
   - No generar sugerencias locales cuando Gemini no esté disponible.
   Se conecta con:
   - Requisitos/Titulos/src/estudiante/ta-titulo-articulo-estudiante.app.js
+  - Requisitos/Titulos/electron/ta-titulo-articulo-preload.js
+  - Requisitos/Titulos/electron/ta-titulo-articulo-gemini.service.js
   - Requisitos/Titulos/netlify/functions/ta-titulo-articulo-gemini.js
 */
 
 const ENDPOINT = "/.netlify/functions/ta-titulo-articulo-gemini";
+const ORIGENES_GEMINI_VALIDOS = new Set(["gemini-netlify", "gemini-electron"]);
 
 function clean(value) {
   return String(value ?? "").replace(/\s+/g, " ").trim();
@@ -35,8 +38,8 @@ function dedupeTitulos(titulos = [], titulosYaGenerados = []) {
   return salida.slice(0, 2);
 }
 
-async function generarSugerenciasTitulo(payload = {}) {
-  const body = {
+function buildBody(payload = {}) {
+  return {
     carrera: clean(payload.carrera),
     materia: clean(payload.materia || payload.nombreMateria || payload.asignatura || payload.nombreAsignatura),
     codigoCarrera: clean(payload.codigoCarrera),
@@ -51,20 +54,15 @@ async function generarSugerenciasTitulo(payload = {}) {
     numeroTitulo: Number(payload.numeroTitulo || 0),
     titulosYaGenerados: Array.isArray(payload.titulosYaGenerados) ? payload.titulosYaGenerados.map(clean).filter(Boolean) : []
   };
+}
 
-  const response = await fetch(ENDPOINT, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body)
-  });
-
-  const data = await response.json().catch(() => null);
-  if (!response.ok || !data || data.ok === false) {
-    throw new Error(data?.error || data?.motivo || `Error HTTP ${response.status}`);
+function validarRespuestaGemini(data, body) {
+  if (!data || data.ok === false) {
+    throw new Error(data?.error || data?.motivo || "Gemini no pudo generar sugerencias.");
   }
 
-  if (data.origen !== "gemini-netlify") {
-    throw new Error("Las sugerencias no fueron generadas por Gemini. Revise GEMINI_API_KEY en Netlify.");
+  if (!ORIGENES_GEMINI_VALIDOS.has(data.origen)) {
+    throw new Error("Las sugerencias no fueron generadas por Gemini. Revise la configuración de GEMINI_API_KEY.");
   }
 
   const sugerencias = dedupeTitulos(data.sugerencias || [], body.titulosYaGenerados);
@@ -74,12 +72,34 @@ async function generarSugerenciasTitulo(payload = {}) {
 
   return {
     ok: true,
-    origen: "gemini-netlify",
+    origen: data.origen,
     sugerencias,
     advertencia: clean(data.advertencia),
     bloqueado: Boolean(data.bloqueado),
     motivo: clean(data.motivo)
   };
+}
+
+async function generarSugerenciasTitulo(payload = {}) {
+  const body = buildBody(payload);
+
+  if (window.taTituloArticuloElectron?.generarSugerenciasTitulo) {
+    const data = await window.taTituloArticuloElectron.generarSugerenciasTitulo(body);
+    return validarRespuestaGemini(data, body);
+  }
+
+  const response = await fetch(ENDPOINT, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(data?.error || data?.motivo || `Error HTTP ${response.status}`);
+  }
+
+  return validarRespuestaGemini(data, body);
 }
 
 export const TaTituloArticuloGemini = Object.freeze({
