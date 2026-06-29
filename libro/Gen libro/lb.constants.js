@@ -27,7 +27,10 @@ Función o funciones:
   var STORAGE = {
     materiasKey: "libro.cargaMateria.materias",
     librosKey: "libro.genLibro.libros",
-    diagnosticosKey: "libro.genLibro.diagnosticos"
+    diagnosticosKey: "libro.genLibro.diagnosticos",
+    progressHistoryKey: "libro.genLibro.progressHistory",
+    lastErrorKey: "libro.genLibro.lastError",
+    finalReviewKey: "libro.genLibro.finalReview"
   };
 
   var STATUS = {
@@ -41,17 +44,20 @@ Función o funciones:
   };
 
   var PROGRESS_STEPS = [
+    { id: "idle", label: "Esperando selección de materia", percent: 0 },
     { id: "load", label: "Cargando materia", percent: 5 },
     { id: "validate", label: "Validando estructura", percent: 10 },
     { id: "plan", label: "Planificando libro", percent: 15 },
     { id: "presentation", label: "Generando presentación", percent: 22 },
     { id: "diagnostic", label: "Generando evaluación diagnóstica", percent: 30 },
     { id: "units", label: "Desarrollando unidades", percent: 52 },
-    { id: "references", label: "Buscando referencias APA 7", percent: 68 },
-    { id: "visuals", label: "Preparando tablas y figuras", percent: 78 },
+    { id: "visuals", label: "Preparando tablas y figuras", percent: 68 },
+    { id: "references", label: "Buscando referencias APA 7", percent: 78 },
+    { id: "ending", label: "Preparando glosario y anexos", percent: 86 },
     { id: "docx", label: "Armando Word", percent: 90 },
     { id: "save", label: "Guardando copia local", percent: 96 },
-    { id: "download", label: "Finalizando descarga", percent: 100 }
+    { id: "download", label: "Finalizando descarga", percent: 100 },
+    { id: "error", label: "Error en generación", percent: 0 }
   ];
 
   var BOOK_SECTIONS = [
