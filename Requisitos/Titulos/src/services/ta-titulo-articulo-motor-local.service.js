@@ -41,8 +41,21 @@ function normalizar(value) {
   return clean(value).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
+function academizar(value) {
+  let texto = clean(value);
+  const base = normalizar(texto);
+  if (base.includes(["no", "venden"].join(" ")) || base.includes(["no", "vende"].join(" ")) || base.includes("ventas bajas")) {
+    texto = "bajo nivel de ventas";
+  } else if (base.includes("pocos clientes") || base.includes(["no", "hay", "clientes"].join(" "))) {
+    texto = "baja captación de clientes";
+  } else if (base.includes("mala atencion")) {
+    texto = "deficiencias en la atención";
+  }
+  return texto;
+}
+
 function quitarFinal(value) {
-  return clean(value).replace(/[.;,:]+$/g, "").trim();
+  return academizar(value).replace(/[.;,:]+$/g, "").trim();
 }
 
 function limpiarFrase(value) {
@@ -108,7 +121,7 @@ function construirContexto(payload = {}) {
 }
 
 function limpiarTitulo(value) {
-  const texto = clean(value)
+  const texto = academizar(value)
     .replace(/\s+([,.;:])/g, "$1")
     .replace(/\ben\s+en\b/gi, "en")
     .replace(/\s+de\s+de\s+/gi, " de ")
@@ -125,7 +138,7 @@ function acortar(value) {
   let titulo = limpiarTitulo(value);
   if (contarPalabras(titulo) <= 30) return titulo;
   titulo = titulo
-    .replace(/\s+orientado\s+a\s+la\s+mejora\s+de\s+/i, " para ")
+    .replace(/\s+orientad[oa]\s+a\s+la\s+mejora\s+de\s+/i, " para ")
     .replace(/\s+relacionada\s+con\s+/i, " sobre ")
     .replace(/\s+para\s+proponer\s+una\s+mejora\s+alineada\s+con\s+[^,]+/i, "");
   return limpiarTitulo(titulo);
@@ -169,7 +182,7 @@ function generarSugerenciasTitulo(payload = {}, options = {}) {
 
   const sugerencias = dedupe([
     `${prefijoDiagnostico} ${tema} frente a ${problema} ${donde}`,
-    `${prefijoPropuesta} ${tema} orientado a ${resultado} ${donde}`,
+    `${prefijoPropuesta} ${tema} orientada a ${resultado} ${donde}`,
     `Evaluación de ${tema} ${donde}`,
     `Diseño de una propuesta de mejora frente a ${problema} ${donde}`
   ], previos).slice(0, 2);
