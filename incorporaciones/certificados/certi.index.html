@@ -3,7 +3,7 @@ Nombre completo: certi.index.html
 Ruta o ubicación: /incorporaciones/certificados/certi.index.html
 Función o funciones:
 - Cargar la pantalla final del módulo Certi.
-- Integrar selector de período, calendario, carga de Excel y texto pegado.
+- Integrar selector de tipo de certificado, período, calendario, carga de Excel y texto pegado.
 - Cargar todos los archivos JavaScript del módulo en el orden correcto.
 - No mostrar vista previa del certificado.
 - Permitir generar PDF único y PDFs individuales.
@@ -31,6 +31,7 @@ Con qué se une:
 - certi.validate.js
 - certi.compat.js
 - certi.assets.js
+- certi.capacitacion.js
 - certi.app.js
 - certi.seguridad.fix.js
 ========================================================= -->
@@ -39,7 +40,7 @@ Con qué se une:
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Certi | Certificados de mejores egresados</title>
+  <title>Certi | Certificados institucionales</title>
   <link rel="stylesheet" href="../css/menu.css" />
   <link rel="stylesheet" href="./certi.css" />
 </head>
@@ -52,7 +53,7 @@ Con qué se une:
         <p class="certi-eyebrow">Incorporaciones</p>
         <h1>Certi</h1>
         <p>
-          Generación automática de certificados de reconocimiento para mejores egresados por carrera.
+          Generación automática de certificados institucionales por tipo.
         </p>
       </div>
 
@@ -67,12 +68,20 @@ Con qué se une:
         <div>
           <h2>Configuración inicial</h2>
           <p>
-            Seleccione el período, defina la fecha oficial y cargue los datos desde Excel o texto pegado.
+            Seleccione el tipo de certificado, período, fecha oficial y cargue los datos correspondientes.
           </p>
         </div>
       </div>
 
       <div class="certi-form-grid">
+        <label class="certi-field">
+          <span>Tipo de certificado</span>
+          <select id="certiTipoCertificado">
+            <option value="reconocimiento">Reconocimiento a mejores egresados</option>
+            <option value="capacitacion">Certificado de capacitación docente</option>
+          </select>
+        </label>
+
         <label class="certi-field">
           <span>Período</span>
           <select id="certiPeriodo">
@@ -213,9 +222,9 @@ Con qué se une:
     <section class="certi-panel">
       <div class="certi-panel-title">
         <div>
-          <h2>Mejores egresados seleccionados</h2>
+          <h2>Certificados seleccionados</h2>
           <p>
-            Resumen final por carrera antes de descargar los certificados.
+            Resumen final antes de descargar los certificados.
           </p>
         </div>
       </div>
@@ -285,6 +294,7 @@ Con qué se une:
   <script src="./certi.validate.js"></script>
   <script src="./certi.compat.js"></script>
   <script src="./certi.assets.js"></script>
+  <script src="./certi.capacitacion.js?v=20260707"></script>
 
   <!-- Inicio de la app -->
   <script src="./certi.app.js"></script>
