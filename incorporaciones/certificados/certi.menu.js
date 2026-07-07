@@ -1,13 +1,13 @@
 /*
 =========================================================
 Nombre completo: certi.menu.js
-Ruta o ubicación: /incorporaciones/sedes/certi/certi.menu.js
+Ruta o ubicación: /incorporaciones/certificados/certi.menu.js
 Función o funciones:
 - Marcar la opción Certi como activa dentro del menú de Incorporaciones.
 - Crear un menú mínimo de respaldo si el menú superior general no se carga.
 - Mantener la pantalla Certi funcional aunque falle el menú principal.
 Con qué se une:
-- certi.html
+- certi.index.html
 - ../js/menu-superior.js
 - ../css/menu.css
 =========================================================
@@ -28,7 +28,7 @@ Con qué se une:
       const texto = String(enlace.textContent || "").trim().toLowerCase();
       const href = String(enlace.getAttribute("href") || "").toLowerCase();
 
-      if (texto === "certi" || href.includes("/certi/") || href.includes("certi.html")) {
+      if (texto === "certi" || href.includes("/certificados/") || href.includes("certi.index.html")) {
         enlace.classList.add("activo");
         enlace.classList.add("active");
         enlace.setAttribute("aria-current", "page");
@@ -49,7 +49,7 @@ Con qué se une:
       <nav class="certi-menu-respaldo">
         <a href="../index.html">Inicio</a>
         <a href="../admin.html">Administración</a>
-        <a href="./certi.html" class="active activo">Certi</a>
+        <a href="./certi.index.html" class="active activo">Certi</a>
       </nav>
     `;
   }
