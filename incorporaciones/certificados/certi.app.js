@@ -6,8 +6,9 @@ Función o funciones:
 - Iniciar el módulo Certi.
 - Conectar la interfaz con Excel, texto pegado, lógica, renderizado, almacenamiento y PDF.
 - Controlar el flujo completo: seleccionar período, fecha, cargar fuente, procesar y descargar.
+- Sincronizar el formulario justo antes de procesar para evitar estados desactualizados.
+- Mostrar estado visible al presionar Procesar datos.
 Con qué se une:
-- certi.html
 - certi.index.html
 - certi.config.js
 - certi.state.js
@@ -44,6 +45,7 @@ Con qué se une:
     await cargarPeriodos(dom);
     restaurarDatosGuardados(dom);
     enlazarEventos(dom);
+    crearEstadoVisualProceso();
     actualizarVistaFuente(dom);
 
     State.suscribir(Render.renderizar);
@@ -126,11 +128,9 @@ Con qué se une:
     });
 
     Dom.escuchar(dom.excelInput, "change", function () {
-      const archivo = dom.excelInput.files && dom.excelInput.files[0]
-        ? dom.excelInput.files[0]
-        : null;
-
+      const archivo = obtenerArchivoExcelDesdeDom();
       State.establecerArchivoExcel(archivo);
+      mostrarEstadoProceso(archivo ? `Archivo cargado: ${archivo.name}` : "", "info");
     });
 
     Dom.escuchar(dom.textoInput, "input", function () {
@@ -184,20 +184,26 @@ Con qué se une:
   }
 
   async function procesarDatos() {
+    sincronizarFormularioDesdeDom();
+
     const estado = State.obtener();
     const validacion = validarFormularioBase(estado);
 
     if (!validacion.valido) {
       mostrarErrores(validacion.errores);
+      mostrarEstadoProceso(validacion.errores[0] || "Revise los datos antes de procesar.", "error");
+      enfocarResumen();
       return;
     }
 
     try {
+      bloquearBotonProcesar(true);
+      mostrarEstadoProceso("Procesando datos del Excel. Espere un momento...", "info");
       State.establecerCarga(true);
       State.establecerErrores([]);
       State.establecerAlertas([]);
 
-      const lectura = await Source.leer(estado);
+      const lectura = await Source.leer(State.obtener());
 
       State.establecerLecturaDatos(lectura);
       State.establecerRegistros(lectura.registros);
@@ -215,11 +221,55 @@ Con qué se une:
 
       State.establecerResultado(resultado);
       guardarFormularioActual();
+
+      const listos = resultado && resultado.resumen ? resultado.resumen.certificadosListos || 0 : 0;
+      const registros = resultado && resultado.resumen ? resultado.resumen.registrosLeidos || 0 : 0;
+
+      mostrarEstadoProceso(
+        `Procesamiento terminado: ${listos} certificado(s) listo(s) de ${registros} registro(s) leído(s).`,
+        listos > 0 ? "success" : "warning"
+      );
+      enfocarResumen();
     } catch (error) {
-      mostrarErrores([error.message || "No se pudieron procesar los datos."]);
+      const mensaje = error && error.message ? error.message : "No se pudieron procesar los datos.";
+      mostrarErrores([mensaje]);
+      mostrarEstadoProceso(mensaje, "error");
+      enfocarResumen();
     } finally {
       State.establecerCarga(false);
+      bloquearBotonProcesar(false);
     }
+  }
+
+  function sincronizarFormularioDesdeDom() {
+    Dom.limpiarCache();
+    const dom = Dom.obtener();
+
+    if (dom.periodo) {
+      const option = dom.periodo.options[dom.periodo.selectedIndex];
+      const valor = dom.periodo.value || "";
+      const texto = option ? option.textContent : valor;
+      State.establecerPeriodo(valor, texto);
+    }
+
+    if (dom.fechaCertificado) {
+      State.establecerFecha(dom.fechaCertificado.value || "");
+    }
+
+    if (dom.fuenteDatos) {
+      State.establecerFuenteDatos(dom.fuenteDatos.value || "auto");
+    }
+
+    State.establecerArchivoExcel(obtenerArchivoExcelDesdeDom());
+
+    if (dom.textoInput) {
+      State.establecerTextoPegado(dom.textoInput.value || "");
+    }
+  }
+
+  function obtenerArchivoExcelDesdeDom() {
+    const input = document.getElementById("certiExcelInput");
+    return input && input.files && input.files[0] ? input.files[0] : null;
   }
 
   function validarFormularioBase(estado) {
@@ -374,6 +424,7 @@ Con qué se une:
 
     guardarFormularioActual();
     actualizarVistaFuente(dom);
+    mostrarEstadoProceso("Pantalla limpiada.", "info");
   }
 
   function actualizarVistaFuente(dom, estadoParam) {
@@ -399,6 +450,49 @@ Con qué se une:
         Dom.mostrar(dom.bloqueTexto);
       }
     }
+  }
+
+  function crearEstadoVisualProceso() {
+    if (document.getElementById("certiProcesarEstado")) return;
+
+    const btn = document.getElementById("certiBtnProcesar");
+    if (!btn || !btn.parentElement) return;
+
+    const estado = document.createElement("div");
+    estado.id = "certiProcesarEstado";
+    estado.className = "certi-process-status certi-process-status-hidden";
+    btn.parentElement.appendChild(estado);
+  }
+
+  function mostrarEstadoProceso(mensaje, tipo) {
+    const estado = document.getElementById("certiProcesarEstado");
+    if (!estado) return;
+
+    if (!mensaje) {
+      estado.textContent = "";
+      estado.className = "certi-process-status certi-process-status-hidden";
+      return;
+    }
+
+    estado.textContent = mensaje;
+    estado.className = `certi-process-status certi-process-status-${tipo || "info"}`;
+  }
+
+  function bloquearBotonProcesar(bloquear) {
+    const btn = document.getElementById("certiBtnProcesar");
+    if (!btn) return;
+
+    btn.disabled = Boolean(bloquear);
+    btn.textContent = bloquear ? "Procesando..." : "Procesar datos";
+  }
+
+  function enfocarResumen() {
+    const destino = document.getElementById("certiResumenCards") || document.getElementById("certiAlertas");
+    if (!destino || typeof destino.scrollIntoView !== "function") return;
+
+    setTimeout(function () {
+      destino.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 120);
   }
 
   document.addEventListener("DOMContentLoaded", iniciar);
