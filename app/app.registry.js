@@ -19,13 +19,6 @@ Función o funciones:
 
   var modules = [
     {
-      id: "audit",
-      title: "Audit",
-      group: "Auditoría",
-      description: "Entrada principal del módulo de auditoría y escaneo UGPA.",
-      path: "./audit/screens/scan/scan.index.html"
-    },
-    {
       id: "curriculo",
       title: "Currículo",
       group: "Currículo",
