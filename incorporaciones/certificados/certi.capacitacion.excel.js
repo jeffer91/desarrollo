@@ -5,9 +5,8 @@ Ruta o ubicación: /incorporaciones/certificados/certi.capacitacion.excel.js
 Función o funciones:
 - Leer Excel de certificados de capacitación docente.
 - Detectar columnas de cargo, cédula, docente, curso/tema, nota, horas y fecha.
-- Leer todas las hojas del Excel.
-- Normalizar filas para que la lógica genere un certificado por docente.
 - Soportar el formato real: Cargo | Nombre | capacitación | Calificación.
+- Evitar coincidencias falsas como tomar Nombre como Nombre del curso.
 Con qué se une:
 - certi.capacitacion.js
 - certi.capacitacion.logic.js
@@ -22,90 +21,18 @@ Con qué se une:
   const TIPO_CAPACITACION = "capacitacion";
 
   const candidatosColumnas = {
-    cargo: [
-      "CARGO",
-      "ROL",
-      "FUNCION",
-      "FUNCIÓN",
-      "PUESTO",
-      "TIPO",
-      "PERFIL"
-    ],
-    cedula: [
-      "CEDULA",
-      "CÉDULA",
-      "N. CEDULA",
-      "N° CEDULA",
-      "NRO CEDULA",
-      "NUMERO CEDULA",
-      "IDENTIFICACION",
-      "IDENTIFICACIÓN",
-      "DOCUMENTO",
-      "DNI"
-    ],
-    docente: [
-      "DOCENTE",
-      "NOMBRE DOCENTE",
-      "NOMBRE DEL DOCENTE",
-      "PARTICIPANTE",
-      "NOMBRE PARTICIPANTE",
-      "NOMBRE",
-      "NOMBRES",
-      "NOMBRE COMPLETO",
-      "APELLIDOS Y NOMBRES"
-    ],
-    curso: [
-      "CURSO",
-      "TEMA",
-      "NOMBRE DEL CURSO",
-      "NOMBRE CURSO",
-      "CAPACITACION",
-      "CAPACITACIÓN",
-      "TEMA DE CAPACITACION",
-      "TEMA DE CAPACITACIÓN",
-      "EVENTO",
-      "MODULO",
-      "MÓDULO"
-    ],
-    nota: [
-      "NOTA",
-      "NOTA FINAL",
-      "CALIFICACION",
-      "CALIFICACIÓN",
-      "CALIFICACION FINAL",
-      "CALIFICACIÓN FINAL",
-      "PUNTAJE",
-      "PROMEDIO"
-    ],
-    horas: [
-      "HORAS",
-      "HORA",
-      "DURACION",
-      "DURACIÓN",
-      "INTENSIDAD",
-      "CARGA HORARIA",
-      "NUMERO DE HORAS",
-      "NÚMERO DE HORAS"
-    ],
-    fecha: [
-      "FECHA",
-      "FECHA CURSO",
-      "FECHA DEL CURSO",
-      "FECHA CAPACITACION",
-      "FECHA CAPACITACIÓN",
-      "FECHA EMISION",
-      "FECHA EMISIÓN"
-    ]
+    cargo: ["CARGO", "ROL", "FUNCION", "FUNCIÓN", "PUESTO", "TIPO", "PERFIL"],
+    cedula: ["CEDULA", "CÉDULA", "N. CEDULA", "N° CEDULA", "NRO CEDULA", "NUMERO CEDULA", "IDENTIFICACION", "IDENTIFICACIÓN", "DOCUMENTO", "DNI"],
+    docente: ["DOCENTE", "NOMBRE DOCENTE", "NOMBRE DEL DOCENTE", "PARTICIPANTE", "NOMBRE PARTICIPANTE", "NOMBRE", "NOMBRES", "NOMBRE COMPLETO", "APELLIDOS Y NOMBRES"],
+    curso: ["CURSO", "TEMA", "NOMBRE DEL CURSO", "NOMBRE CURSO", "CAPACITACION", "CAPACITACIÓN", "TEMA DE CAPACITACION", "TEMA DE CAPACITACIÓN", "EVENTO", "MODULO", "MÓDULO"],
+    nota: ["NOTA", "NOTA FINAL", "CALIFICACION", "CALIFICACIÓN", "CALIFICACION FINAL", "CALIFICACIÓN FINAL", "PUNTAJE", "PROMEDIO"],
+    horas: ["HORAS", "HORA", "DURACION", "DURACIÓN", "INTENSIDAD", "CARGA HORARIA", "NUMERO DE HORAS", "NÚMERO DE HORAS"],
+    fecha: ["FECHA", "FECHA CURSO", "FECHA DEL CURSO", "FECHA CAPACITACION", "FECHA CAPACITACIÓN", "FECHA EMISION", "FECHA EMISIÓN"]
   };
 
   async function leerArchivo(file) {
-    if (!file) {
-      throw new Error("Debe cargar el Excel de capacitación docente.");
-    }
-
-    if (!window.XLSX) {
-      throw new Error("No se encontró la librería XLSX para leer Excel.");
-    }
+    if (!file) throw new Error("Debe cargar el Excel de capacitación docente.");
+    if (!window.XLSX) throw new Error("No se encontró la librería XLSX para leer Excel.");
 
     const libro = await leerLibro(file);
     const procesado = leerHojas(libro);
@@ -202,10 +129,7 @@ Con qué se une:
     const encabezado = detectarFilaEncabezado(filas);
 
     if (!encabezado) {
-      return {
-        registros: [],
-        totalFilas: filas.length
-      };
+      return { registros: [], totalFilas: filas.length };
     }
 
     const registros = [];
@@ -213,9 +137,7 @@ Con qué se une:
     for (let i = encabezado.indice + 1; i < filas.length; i += 1) {
       const fila = filas[i] || [];
       const registro = normalizarFila(fila, encabezado.columnas, nombreHoja, i, indiceInicial + registros.length);
-
       if (registro.__vacia) continue;
-
       registros.push(registro);
     }
 
@@ -235,16 +157,10 @@ Con qué se une:
       const puntaje = puntuarColumnas(columnas);
 
       if (!mejor || puntaje > mejor.puntaje) {
-        mejor = {
-          indice: i,
-          columnas,
-          puntaje
-        };
+        mejor = { indice: i, columnas, puntaje };
       }
 
-      if (puntaje >= 9) {
-        return mejor;
-      }
+      if (puntaje >= 9) return mejor;
     }
 
     return mejor && mejor.puntaje >= 8 ? mejor : null;
@@ -277,18 +193,37 @@ Con qué se une:
   function buscarIndiceColumna(encabezados, candidatos) {
     const claves = (encabezados || []).map(claveTexto);
 
+    const coincidenciaExacta = buscarPorCoincidenciaExacta(claves, candidatos);
+    if (coincidenciaExacta >= 0) return coincidenciaExacta;
+
+    return buscarPorContenidoSeguro(claves, candidatos);
+  }
+
+  function buscarPorCoincidenciaExacta(claves, candidatos) {
+    for (let i = 0; i < claves.length; i += 1) {
+      const clave = claves[i];
+      if (!clave) continue;
+
+      const coincide = candidatos.some(function (candidato) {
+        return clave === claveTexto(candidato);
+      });
+
+      if (coincide) return i;
+    }
+
+    return -1;
+  }
+
+  function buscarPorContenidoSeguro(claves, candidatos) {
     for (let i = 0; i < claves.length; i += 1) {
       const clave = claves[i];
       if (!clave) continue;
 
       const coincide = candidatos.some(function (candidato) {
         const claveCandidato = claveTexto(candidato);
+        if (!claveCandidato) return false;
 
-        return (
-          clave === claveCandidato ||
-          clave.includes(claveCandidato) ||
-          claveCandidato.includes(clave)
-        );
+        return clave.includes(claveCandidato);
       });
 
       if (coincide) return i;
@@ -399,15 +334,12 @@ Con qué se une:
     (registros || []).forEach(function (registro) {
       const clave = [registro.cargo, registro.cedula, registro.docente, registro.curso, registro.nota].map(claveTexto).join("|");
       if (mapa[clave]) return;
-
       mapa[clave] = true;
       salida.push(registro);
     });
 
     return salida.map(function (registro, index) {
-      return Object.assign({}, registro, {
-        indice: index
-      });
+      return Object.assign({}, registro, { indice: index });
     });
   }
 
@@ -446,25 +378,17 @@ Con qué se une:
   }
 
   function limpiarNombre(valor) {
-    if (U && typeof U.limpiarNombrePropio === "function") {
-      return U.limpiarNombrePropio(valor);
-    }
-
+    if (U && typeof U.limpiarNombrePropio === "function") return U.limpiarNombrePropio(valor);
     return limpiarTexto(valor).toUpperCase();
   }
 
   function limpiarTexto(valor) {
-    if (U && typeof U.limpiarEspacios === "function") {
-      return U.limpiarEspacios(valor);
-    }
-
+    if (U && typeof U.limpiarEspacios === "function") return U.limpiarEspacios(valor);
     return String(valor == null ? "" : valor).replace(/\s+/g, " ").trim();
   }
 
   function claveTexto(valor) {
-    if (U && typeof U.claveTexto === "function") {
-      return U.claveTexto(valor);
-    }
+    if (U && typeof U.claveTexto === "function") return U.claveTexto(valor);
 
     return limpiarTexto(valor)
       .normalize("NFD")
