@@ -2,16 +2,14 @@
 Nombre completo: certi.index.html
 Ruta o ubicación: /incorporaciones/certificados/certi.index.html
 Función o funciones:
-- Cargar la pantalla final del módulo Certi.
+- Cargar la pantalla independiente del módulo Certificados / Certi.
 - Integrar selector de tipo de certificado, período, calendario, carga de Excel y texto pegado.
 - Cargar todos los archivos JavaScript del módulo en el orden correcto.
 - No mostrar vista previa del certificado.
 - Permitir generar PDF único y PDFs individuales.
 - Cargar módulos separados para certificados de capacitación docente.
-- Cargar el parche definitivo para Seguridad y Prevención de Riesgos Laborales.
+- Funcionar como apartado propio, fuera del menú interno de Incorporaciones.
 Con qué se une:
-- ../css/menu.css
-- ../js/menu-superior.js
 - certi.css
 - certi.config.js
 - certi.state.js
@@ -27,7 +25,6 @@ Con qué se une:
 - certi.periodos.js
 - certi.template.js
 - certi.pdf.js
-- certi.menu.js
 - certi.audit.js
 - certi.validate.js
 - certi.compat.js
@@ -46,25 +43,37 @@ Con qué se une:
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Certi | Certificados institucionales</title>
-  <link rel="stylesheet" href="../css/menu.css" />
-  <link rel="stylesheet" href="./certi.css" />
+  <title>Certificados | Certi</title>
+  <link rel="stylesheet" href="./certi.css?v=20260707" />
 </head>
 <body>
-  <header id="menuSuperior" class="menu-superior" data-base="../" data-active="certi"></header>
+  <header class="certi-topbar">
+    <a class="certi-brand" href="../../index.html" title="Volver al panel principal">
+      <span class="certi-brand-mark">C</span>
+      <span>
+        <strong>Certificados</strong>
+        <small>Generador institucional</small>
+      </span>
+    </a>
+
+    <div class="certi-topbar-actions">
+      <a class="certi-topbar-link" href="../../index.html">Panel principal</a>
+      <a class="certi-topbar-link certi-topbar-link-soft" href="../index.html">Incorporaciones</a>
+    </div>
+  </header>
 
   <main class="certi-page">
     <section class="certi-hero">
       <div>
-        <p class="certi-eyebrow">Incorporaciones</p>
+        <p class="certi-eyebrow">Módulo independiente</p>
         <h1>Certi</h1>
         <p>
-          Generación automática de certificados institucionales por tipo.
+          Generación automática de certificados institucionales de reconocimiento y capacitación docente.
         </p>
       </div>
 
       <div class="certi-hero-badge">
-        <span>Datos</span>
+        <span>Modo</span>
         <strong>Excel + Texto</strong>
       </div>
     </section>
@@ -79,7 +88,7 @@ Con qué se une:
         </div>
       </div>
 
-      <div class="certi-form-grid">
+      <div class="certi-form-grid certi-form-grid-main">
         <label class="certi-field">
           <span>Tipo de certificado</span>
           <select id="certiTipoCertificado">
@@ -110,46 +119,33 @@ Con qué se une:
         </label>
       </div>
 
-      <div id="certiBloqueExcel" style="margin-top: 16px;">
-        <label class="certi-field certi-file-field">
-          <span>Excel de mejores egresados</span>
-          <input id="certiExcelInput" type="file" accept=".xlsx,.xls" />
-        </label>
-      </div>
+      <div class="certi-source-grid">
+        <div id="certiBloqueExcel" class="certi-source-card">
+          <label class="certi-field certi-file-field">
+            <span>Excel de mejores egresados</span>
+            <input id="certiExcelInput" type="file" accept=".xlsx,.xls" />
+          </label>
+          <p class="certi-help-text">
+            Para capacitación, el Excel puede tener columnas como Cargo, Nombre, capacitación y Calificación.
+          </p>
+        </div>
 
-      <div id="certiBloqueTexto" style="margin-top: 16px;">
-        <label class="certi-field">
-          <span>Texto pegado de mejores egresados</span>
-          <textarea
-            id="certiTextoInput"
-            rows="9"
-            placeholder="Pegue aquí datos como: Carrera | Estudiante | Promedio"
-            style="
-              width: 100%;
-              min-height: 170px;
-              padding: 12px;
-              border: 1px solid var(--certi-border, #d9e2ef);
-              border-radius: 12px;
-              background: #ffffff;
-              color: var(--certi-text, #172033);
-              outline: none;
-              font-family: Arial, Helvetica, sans-serif;
-              font-size: 14px;
-              line-height: 1.45;
-              resize: vertical;
-            "
-          ></textarea>
-        </label>
+        <div id="certiBloqueTexto" class="certi-source-card certi-source-card-text">
+          <label class="certi-field">
+            <span>Texto pegado de mejores egresados</span>
+            <textarea
+              id="certiTextoInput"
+              rows="9"
+              placeholder="Pegue aquí datos como: Carrera | Estudiante | Promedio"
+            ></textarea>
+          </label>
 
-        <div
-          id="certiTextoAyuda"
-          class="certi-alert certi-alert-info"
-          style="margin-top: 10px;"
-        >
-          <strong>Ejemplos aceptados</strong>
-          Carrera | Estudiante | Promedio<br />
-          Desarrollo de Software | Juan Pérez Zambrano | 9.85<br />
-          Carrera: Administración / Carlos Ruiz Mera - 9.91
+          <div id="certiTextoAyuda" class="certi-alert certi-alert-info certi-mini-help">
+            <strong>Ejemplos aceptados</strong>
+            <span>Carrera | Estudiante | Promedio</span>
+            <span>Desarrollo de Software | Juan Pérez Zambrano | 9.85</span>
+            <span>Carrera: Administración / Carlos Ruiz Mera - 9.91</span>
+          </div>
         </div>
       </div>
 
@@ -272,9 +268,6 @@ Con qué se une:
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 
-  <!-- Menú general -->
-  <script src="../js/menu-superior.js"></script>
-
   <!-- Configuración base -->
   <script src="./certi.config.js"></script>
 
@@ -294,8 +287,6 @@ Con qué se une:
   <script src="./certi.pdf.js"></script>
 
   <!-- Complementos del módulo -->
-  <script src="./certi.menu.js"></script>
-  <script src="./certi.menu.patch.js"></script>
   <script src="./certi.audit.js"></script>
   <script src="./certi.validate.js"></script>
   <script src="./certi.compat.js"></script>
