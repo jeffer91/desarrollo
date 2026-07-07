@@ -1,0 +1,256 @@
+/*
+=========================================================
+Nombre completo: certi.descargas.alertas.css
+Ruta o ubicación: /incorporaciones/certificados/certi.descargas.alertas.css
+Función o funciones:
+- Estilizar el resumen compacto de alertas.
+- Estilizar el modal de alertas del procesamiento.
+- Estilizar el estado visible de descargas PDF.
+Con qué se une:
+- certi.index.html
+- certi.descargas.alertas.js
+=========================================================
+*/
+
+.certi-alertas-resumen {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid #c8dcff;
+  border-radius: 16px;
+  background: #eaf2ff;
+  color: #0d47a1;
+}
+
+.certi-alertas-resumen strong,
+.certi-alertas-resumen span {
+  display: block;
+}
+
+.certi-alertas-resumen strong {
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.certi-alertas-resumen span {
+  margin-top: 3px;
+  color: #475467;
+  font-size: 13px;
+}
+
+.certi-alertas-resumen button {
+  min-height: 38px;
+  padding: 9px 15px;
+  border: 0;
+  border-radius: 999px;
+  background: #0d47a1;
+  color: #ffffff;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.certi-alertas-resumen button:hover {
+  background: #08306f;
+}
+
+.certi-alertas-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+}
+
+.certi-alertas-modal-hidden {
+  display: none !important;
+}
+
+.certi-alertas-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.58);
+  backdrop-filter: blur(6px);
+}
+
+.certi-alertas-dialog {
+  position: relative;
+  width: min(820px, 100%);
+  max-height: min(720px, calc(100vh - 36px));
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  background: #ffffff;
+  border: 1px solid #d9e2ef;
+  border-radius: 24px;
+  box-shadow: 0 28px 90px rgba(15, 23, 42, 0.32);
+}
+
+.certi-alertas-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+  padding: 22px 24px;
+  background: linear-gradient(135deg, rgba(13, 71, 161, 0.96), rgba(183, 28, 28, 0.88));
+  color: #ffffff;
+}
+
+.certi-alertas-header p {
+  margin: 0 0 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 11px;
+  font-weight: 900;
+  opacity: 0.82;
+}
+
+.certi-alertas-header h2 {
+  margin: 0;
+  font-size: 28px;
+  line-height: 1.1;
+}
+
+.certi-alertas-header span {
+  display: block;
+  margin-top: 7px;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 14px;
+}
+
+.certi-alertas-close {
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.36);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.certi-alertas-body {
+  overflow: auto;
+  padding: 20px;
+  display: grid;
+  gap: 12px;
+  background: #fbfdff;
+}
+
+.certi-alerta-modal-item {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid #d9e2ef;
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.certi-alerta-modal-numero {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #eaf2ff;
+  color: #0d47a1;
+  font-weight: 900;
+}
+
+.certi-alerta-modal-contenido strong {
+  display: block;
+  color: #172033;
+  font-size: 14px;
+}
+
+.certi-alerta-modal-contenido p {
+  margin: 4px 0 0;
+  color: #475467;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.certi-alerta-modal-accion {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.certi-alerta-modal-accion span {
+  color: #667085;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.certi-alerta-modal-accion button {
+  min-height: 34px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: #b71c1c;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.certi-alerta-modal-success {
+  border-color: #bfe8cd;
+  background: #f7fdf9;
+}
+
+.certi-alerta-modal-warning {
+  border-color: #f3d58c;
+  background: #fffaf0;
+}
+
+.certi-alerta-modal-danger {
+  border-color: #ffc9c9;
+  background: #fff7f7;
+}
+
+.certi-alertas-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 20px;
+  border-top: 1px solid #d9e2ef;
+  background: #ffffff;
+}
+
+.certi-alertas-empty {
+  padding: 18px;
+  border: 1px dashed #d9e2ef;
+  border-radius: 14px;
+  text-align: center;
+  color: #667085;
+  background: #ffffff;
+}
+
+#certiDescargaEstado {
+  flex: 1 1 100%;
+}
+
+@media (max-width: 720px) {
+  .certi-alertas-resumen,
+  .certi-alertas-header,
+  .certi-alerta-modal-item {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .certi-alertas-resumen button,
+  .certi-alerta-modal-accion button {
+    width: 100%;
+  }
+
+  .certi-alerta-modal-accion {
+    justify-content: stretch;
+  }
+}
