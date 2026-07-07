@@ -9,6 +9,7 @@ Función o funciones:
 - Permitir generar PDF único y PDFs individuales.
 - Cargar módulos separados para certificados de capacitación docente.
 - Cargar modal para crear, editar y borrar períodos.
+- Cargar automáticamente los períodos guardados al abrir la pantalla.
 - Mostrar estado visual al procesar datos.
 - Cargar controlador directo de respaldo para el botón Procesar datos.
 - Cargar controlador directo de descargas PDF y modal de alertas.
@@ -31,6 +32,7 @@ Con qué se une:
 - certi.storage.js
 - certi.periodos.js
 - certi.periodos.modal.js
+- certi.periodos.autoload.js
 - certi.template.js
 - certi.pdf.js
 - certi.audit.js
@@ -316,6 +318,9 @@ Con qué se une:
 
   <!-- Inicio de la app -->
   <script src="./certi.app.js?v=20260707"></script>
+
+  <!-- Carga automática de períodos guardados -->
+  <script src="./certi.periodos.autoload.js?v=20260707"></script>
 
   <!-- Controlador directo de respaldo para Procesar datos -->
   <script src="./certi.procesar.fallback.js?v=20260707"></script>
