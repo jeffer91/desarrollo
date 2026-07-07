@@ -24,7 +24,6 @@
         "eventos/**/*",
         "incorporaciones/**/*",
         "localsave/**/*",
-        "Requisitos/**/*",
         "txt-exporter-electron/package.json",
         "txt-exporter-electron/src/**/*",
         "!**/node_modules/**",
