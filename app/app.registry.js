@@ -6,7 +6,7 @@ Función o funciones:
 1. Define el catálogo central de módulos del proyecto desarrollo.
 2. Guarda título, grupo, descripción y ruta HTML real de cada módulo.
 3. Expone funciones para listar, buscar y validar visibilidad.
-4. Agrega el módulo Incorporaciones como entorno independiente.
+4. Mantiene Certificados como apartado independiente del módulo Incorporaciones.
 5. Mantiene los módulos principales separados para evitar sobrecargar el launcher.
 6. Agrega el módulo Libro como entorno independiente por bloques.
 =========================================================
@@ -47,10 +47,17 @@ Función o funciones:
       path: "./libro/index.html"
     },
     {
+      id: "certificados",
+      title: "Certificados",
+      group: "Certificados",
+      description: "Generación independiente de certificados institucionales, reconocimientos y capacitaciones.",
+      path: "./incorporaciones/certificados/certi.index.html"
+    },
+    {
       id: "incorporaciones",
       title: "Incorporaciones",
       group: "Titulación",
-      description: "Entorno independiente para gestionar sedes, planificación y recordatorios de incorporación.",
+      description: "Entorno para distribución, guiones, faltantes, sedes y gestión de incorporación.",
       path: "./incorporaciones/index.html"
     }
   ];
