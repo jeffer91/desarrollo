@@ -8,6 +8,7 @@ Función o funciones:
 2. Organizar el menú superior con accesos directos y submenús.
 3. Establecer Distribución como pantalla inicial.
 4. Centralizar nombres, etiquetas y rutas para evitar errores de navegación.
+5. Mantener Certificados fuera de Incorporaciones porque ahora es un módulo independiente.
 
 Con qué se une:
 - /incorporaciones/index.html
@@ -16,7 +17,6 @@ Con qué se une:
 - /incorporaciones/distribucion/distribucion.index.html
 - /incorporaciones/guiones/guiones.index.html
 - /incorporaciones/falt/falt.html
-- /incorporaciones/certificados/certi.index.html
 - /incorporaciones/sedes/admin.html
 - /incorporaciones/sedes/estudiante.html
 - /incorporaciones/sedes/estadisticas/index.html
@@ -56,15 +56,6 @@ Con qué se une:
       shortLabel: "Faltantes",
       description: "Mensajes para estudiantes con pagos o registros pendientes.",
       path: "./falt/falt.html",
-      group: "Principal"
-    },
-    {
-      id: "certificados",
-      type: "route",
-      label: "Certificados",
-      shortLabel: "Certificados",
-      description: "Generación de certificados de mejores graduados.",
-      path: "./certificados/certi.index.html",
       group: "Principal"
     },
     {
