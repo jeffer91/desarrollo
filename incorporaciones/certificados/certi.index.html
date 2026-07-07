@@ -9,10 +9,12 @@ Función o funciones:
 - Permitir generar PDF único y PDFs individuales.
 - Cargar módulos separados para certificados de capacitación docente.
 - Cargar modal para crear, editar y borrar períodos.
+- Mostrar estado visual al procesar datos.
 - Funcionar como apartado propio, fuera del menú interno de Incorporaciones.
 Con qué se une:
 - certi.css
 - certi.periodos.modal.css
+- certi.procesar.estado.css
 - certi.config.js
 - certi.state.js
 - certi.dom.js
@@ -49,6 +51,7 @@ Con qué se une:
   <title>Certificados | Certi</title>
   <link rel="stylesheet" href="./certi.css?v=20260707" />
   <link rel="stylesheet" href="./certi.periodos.modal.css?v=20260707" />
+  <link rel="stylesheet" href="./certi.procesar.estado.css?v=20260707" />
 </head>
 <body>
   <header class="certi-topbar">
@@ -306,7 +309,7 @@ Con qué se une:
   <script src="./certi.capacitacion.js?v=20260707"></script>
 
   <!-- Inicio de la app -->
-  <script src="./certi.app.js"></script>
+  <script src="./certi.app.js?v=20260707"></script>
 
   <!-- Parche definitivo Seguridad -->
   <script src="./certi.seguridad.fix.js?v=20260605"></script>
