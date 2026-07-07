@@ -4,7 +4,8 @@ Nombre completo: certi.capacitacion.logic.js
 Ruta o ubicación: /incorporaciones/certificados/certi.capacitacion.logic.js
 Función o funciones:
 - Procesar registros de capacitación docente.
-- Validar cédula, docente, curso/tema y nota.
+- Validar docente, curso/tema y nota.
+- Aceptar cédula como campo opcional para soportar el Excel real de capacitaciones.
 - Preparar certificados finales para PDF único o individual.
 - Mantener una fila válida del Excel como un certificado.
 Con qué se une:
@@ -75,10 +76,12 @@ Con qué se une:
     const nota = convertirNota(base.nota !== undefined ? base.nota : base.promedio);
     const curso = limpiarTexto(base.curso || base.tema || obtenerRaw(base.raw, "curso"));
     const docente = limpiarNombre(base.docente || base.nombre || obtenerRaw(base.raw, "docente"));
+    const cargo = limpiarTexto(base.cargo || obtenerRaw(base.raw, "cargo"));
 
     return Object.assign({}, base, {
       tipoCertificado: TIPO_CAPACITACION,
       indice: base.indice !== undefined ? base.indice : index,
+      cargo,
       cedula: limpiarCedula(base.cedula || obtenerRaw(base.raw, "cedula")),
       nombre: docente,
       docente,
@@ -99,7 +102,6 @@ Con qué se une:
   function validarRegistro(registro) {
     const errores = [];
 
-    if (!registro.cedula) errores.push("No tiene cédula.");
     if (!registro.docente) errores.push("No tiene nombre de docente.");
     if (!registro.curso) errores.push("No tiene curso o tema.");
     if (registro.nota === null || registro.nota === undefined || !Number.isFinite(Number(registro.nota))) {
@@ -168,7 +170,8 @@ Con qué se une:
 
         return {
           tipoCertificado: TIPO_CAPACITACION,
-          cedula: item.cedula,
+          cargo: item.cargo || "",
+          cedula: item.cedula || "",
           nombre: item.docente || item.nombre,
           docente: item.docente || item.nombre,
           curso: item.curso,
@@ -209,7 +212,7 @@ Con qué se une:
       alertas.push({
         tipo: "warning",
         titulo: "Filas incompletas",
-        mensaje: `${incompletos.length} fila(s) no se usarán porque falta cédula, docente, curso o nota válida.`
+        mensaje: `${incompletos.length} fila(s) no se usarán porque falta docente, curso o nota válida.`
       });
     }
 
