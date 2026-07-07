@@ -4,8 +4,8 @@ Nombre completo: certi.capacitacion.excel.js
 Ruta o ubicación: /incorporaciones/certificados/certi.capacitacion.excel.js
 Función o funciones:
 - Leer Excel de certificados de capacitación docente.
-- Detectar columnas de cargo, cédula, docente, curso/tema, nota, horas y fecha.
-- Soportar el formato real: Cargo | Nombre | capacitación | Calificación.
+- Detectar columnas de cargo, cédula, docente, curso/tema, capacitador, nota, horas y fecha.
+- Soportar el formato real: Cargo | Nombre | capacitación | Capacitador | Calificación.
 - Evitar coincidencias falsas como tomar Nombre como Nombre del curso.
 Con qué se une:
 - certi.capacitacion.js
@@ -24,7 +24,8 @@ Con qué se une:
     cargo: ["CARGO", "ROL", "FUNCION", "FUNCIÓN", "PUESTO", "TIPO", "PERFIL"],
     cedula: ["CEDULA", "CÉDULA", "N. CEDULA", "N° CEDULA", "NRO CEDULA", "NUMERO CEDULA", "IDENTIFICACION", "IDENTIFICACIÓN", "DOCUMENTO", "DNI"],
     docente: ["DOCENTE", "NOMBRE DOCENTE", "NOMBRE DEL DOCENTE", "PARTICIPANTE", "NOMBRE PARTICIPANTE", "NOMBRE", "NOMBRES", "NOMBRE COMPLETO", "APELLIDOS Y NOMBRES"],
-    curso: ["CURSO", "TEMA", "NOMBRE DEL CURSO", "NOMBRE CURSO", "CAPACITACION", "CAPACITACIÓN", "TEMA DE CAPACITACION", "TEMA DE CAPACITACIÓN", "EVENTO", "MODULO", "MÓDULO"],
+    curso: ["CURSO", "TEMA", "NOMBRE DEL CURSO", "NOMBRE CURSO", "CAPACITACION", "CAPACITACIÓN", "TEMA DE CAPACITACION", "TEMA DE CAPACITACIÓN", "EVENTO", "MODULO", "MÓDULO", "PROGRAMA"],
+    capacitador: ["CAPACITADOR", "NOMBRE CAPACITADOR", "DOCENTE CAPACITADOR", "INSTRUCTOR", "FACILITADOR", "TUTOR", "FORMADOR", "EXPOSITOR", "PONENTE"],
     nota: ["NOTA", "NOTA FINAL", "CALIFICACION", "CALIFICACIÓN", "CALIFICACION FINAL", "CALIFICACIÓN FINAL", "PUNTAJE", "PROMEDIO"],
     horas: ["HORAS", "HORA", "DURACION", "DURACIÓN", "INTENSIDAD", "CARGA HORARIA", "NUMERO DE HORAS", "NÚMERO DE HORAS"],
     fecha: ["FECHA", "FECHA CURSO", "FECHA DEL CURSO", "FECHA CAPACITACION", "FECHA CAPACITACIÓN", "FECHA EMISION", "FECHA EMISIÓN"]
@@ -160,7 +161,7 @@ Con qué se une:
         mejor = { indice: i, columnas, puntaje };
       }
 
-      if (puntaje >= 9) return mejor;
+      if (puntaje >= 10) return mejor;
     }
 
     return mejor && mejor.puntaje >= 8 ? mejor : null;
@@ -172,6 +173,7 @@ Con qué se une:
       cedula: buscarIndiceColumna(encabezados, candidatosColumnas.cedula),
       docente: buscarIndiceColumna(encabezados, candidatosColumnas.docente),
       curso: buscarIndiceColumna(encabezados, candidatosColumnas.curso),
+      capacitador: buscarIndiceColumna(encabezados, candidatosColumnas.capacitador),
       nota: buscarIndiceColumna(encabezados, candidatosColumnas.nota),
       horas: buscarIndiceColumna(encabezados, candidatosColumnas.horas),
       fecha: buscarIndiceColumna(encabezados, candidatosColumnas.fecha)
@@ -184,6 +186,7 @@ Con qué se une:
     if (columnas.cedula >= 0) puntos += 1;
     if (columnas.docente >= 0) puntos += 3;
     if (columnas.curso >= 0) puntos += 3;
+    if (columnas.capacitador >= 0) puntos += 2;
     if (columnas.nota >= 0) puntos += 2;
     if (columnas.horas >= 0) puntos += 1;
     if (columnas.fecha >= 0) puntos += 1;
@@ -222,7 +225,6 @@ Con qué se une:
       const coincide = candidatos.some(function (candidato) {
         const claveCandidato = claveTexto(candidato);
         if (!claveCandidato) return false;
-
         return clave.includes(claveCandidato);
       });
 
@@ -237,12 +239,13 @@ Con qué se une:
     const cedula = limpiarCedula(obtenerCelda(fila, columnas.cedula));
     const docente = limpiarNombre(obtenerCelda(fila, columnas.docente));
     const curso = limpiarTexto(obtenerCelda(fila, columnas.curso));
+    const capacitador = limpiarTexto(obtenerCelda(fila, columnas.capacitador));
     const notaOriginal = obtenerCelda(fila, columnas.nota);
     const nota = convertirNota(notaOriginal);
     const horas = convertirHoras(obtenerCelda(fila, columnas.horas));
     const fechaCurso = limpiarTexto(obtenerCelda(fila, columnas.fecha));
 
-    const vacia = [cargo, cedula, docente, curso, limpiarTexto(notaOriginal), horas, fechaCurso].every(function (valor) {
+    const vacia = [cargo, cedula, docente, curso, capacitador, limpiarTexto(notaOriginal), horas, fechaCurso].every(function (valor) {
       return limpiarTexto(valor) === "";
     });
 
@@ -257,6 +260,7 @@ Con qué se une:
       docente,
       curso,
       tema: curso,
+      capacitador,
       nota,
       notaOriginal,
       promedio: nota,
@@ -272,6 +276,7 @@ Con qué se une:
         cedula: obtenerCelda(fila, columnas.cedula),
         docente: obtenerCelda(fila, columnas.docente),
         curso: obtenerCelda(fila, columnas.curso),
+        capacitador: obtenerCelda(fila, columnas.capacitador),
         nota: obtenerCelda(fila, columnas.nota),
         horas: obtenerCelda(fila, columnas.horas),
         fecha: obtenerCelda(fila, columnas.fecha)
@@ -308,6 +313,20 @@ Con qué se une:
       });
     }
 
+    if (procesado.registros.length > 0) {
+      const sinCapacitador = procesado.registros.filter(function (item) {
+        return !limpiarTexto(item.capacitador);
+      }).length;
+
+      if (sinCapacitador > 0) {
+        alertas.push({
+          tipo: "warning",
+          titulo: "Capacitador faltante",
+          mensaje: `${sinCapacitador} fila(s) no tienen capacitador. La tercera firma requiere ese dato.`
+        });
+      }
+    }
+
     if (procesado.duplicados > 0) {
       alertas.push({
         tipo: "info",
@@ -332,7 +351,7 @@ Con qué se une:
     const salida = [];
 
     (registros || []).forEach(function (registro) {
-      const clave = [registro.cargo, registro.cedula, registro.docente, registro.curso, registro.nota].map(claveTexto).join("|");
+      const clave = [registro.cargo, registro.cedula, registro.docente, registro.curso, registro.capacitador, registro.nota].map(claveTexto).join("|");
       if (mapa[clave]) return;
       mapa[clave] = true;
       salida.push(registro);
@@ -352,11 +371,8 @@ Con qué se une:
     let numero = Number(texto);
     if (!Number.isFinite(numero)) return null;
 
-    if (numero > 10 && numero <= 100) {
-      numero = numero / 10;
-    } else if (numero > 100 && numero < 1000000) {
-      numero = numero / 1000;
-    }
+    if (numero > 10 && numero <= 100) numero = numero / 10;
+    else if (numero > 100 && numero < 1000000) numero = numero / 1000;
 
     if (numero < 0 || numero > 10) return null;
     return Number(numero.toFixed(2));
