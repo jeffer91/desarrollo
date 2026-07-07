@@ -6,7 +6,8 @@ Función o funciones:
 - Crear el botón Gestionar períodos junto al selector principal de período.
 - Mostrar modal para crear, editar y borrar períodos.
 - Usar selector de mes e incremento/decremento de año para inicio y fin.
-- Guardar períodos en localStorage y actualizar el selector principal de Certi.
+- Guardar períodos en localStorage.
+- Reconstruir inmediatamente el selector principal de período después de crear, editar o borrar.
 Con qué se une:
 - certi.index.html
 - certi.periodos.js
@@ -365,9 +366,9 @@ Con qué se une:
     }
 
     guardarPeriodos(ordenarPeriodos(nuevaLista));
+    reconstruirSelectorPrincipal(periodo.id);
     seleccionarPeriodoPrincipal(periodo.id, periodo.texto);
     renderizarLista();
-    recargarSelectorPrincipal(periodo.id);
     cancelarEdicion(false);
     mostrarAlerta("Período guardado correctamente.", "success");
   }
@@ -416,20 +417,25 @@ Con qué se une:
     const confirmar = window.confirm(`¿Desea borrar el período ${periodo.texto || periodo.id}?`);
     if (!confirmar) return;
 
+    const selectPeriodo = document.getElementById("certiPeriodo");
+    const valorActual = selectPeriodo ? selectPeriodo.value : "";
+    const eraSeleccionado = valorActual === id;
+    const nuevoValor = eraSeleccionado ? "" : valorActual;
+
     const nuevaLista = leerPeriodos().filter(function (item) {
       return item.id !== id;
     });
 
     guardarPeriodos(nuevaLista);
-
-    const selectPeriodo = document.getElementById("certiPeriodo");
-    const eraSeleccionado = selectPeriodo && selectPeriodo.value === id;
+    reconstruirSelectorPrincipal(nuevoValor);
 
     if (eraSeleccionado) {
       seleccionarPeriodoPrincipal("", "");
-      recargarSelectorPrincipal("");
     } else {
-      recargarSelectorPrincipal(selectPeriodo ? selectPeriodo.value : "");
+      const periodoActual = leerPeriodos().find(function (item) {
+        return item.id === nuevoValor;
+      });
+      seleccionarPeriodoPrincipal(nuevoValor, periodoActual ? periodoActual.texto : nuevoValor);
     }
 
     cancelarEdicion(false);
@@ -558,7 +564,12 @@ Con qué se une:
   }
 
   function guardarPeriodos(lista) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizarPeriodos(lista)));
+    const normalizados = normalizarPeriodos(lista);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizados));
+
+    if (window.CertiPeriodos && typeof window.CertiPeriodos.guardarPeriodosPropios === "function") {
+      window.CertiPeriodos.guardarPeriodosPropios(normalizados);
+    }
   }
 
   function normalizarPeriodos(lista) {
@@ -609,21 +620,28 @@ Con qué se une:
     });
   }
 
-  async function recargarSelectorPrincipal(valorSeleccionado) {
+  function reconstruirSelectorPrincipal(valorSeleccionado) {
+    const selectPeriodo = document.getElementById("certiPeriodo");
+    if (!selectPeriodo) return;
+
     const valor = valorSeleccionado || "";
-    let periodos = leerPeriodos();
+    const lista = ordenarPeriodos(leerPeriodos());
+    const opciones = ['<option value="">Seleccione un período</option>'];
 
-    if (window.CertiPeriodos && typeof window.CertiPeriodos.cargarPeriodos === "function") {
-      periodos = await window.CertiPeriodos.cargarPeriodos();
-    }
+    lista.forEach(function (periodo) {
+      const selected = periodo.id === valor ? "selected" : "";
+      opciones.push(`<option value="${escaparHtml(periodo.id)}" ${selected}>${escaparHtml(periodo.texto)}</option>`);
+    });
 
-    if (window.CertiRender && typeof window.CertiRender.renderizarPeriodos === "function") {
-      window.CertiRender.renderizarPeriodos(periodos, valor);
-    }
+    selectPeriodo.innerHTML = opciones.join("");
+    selectPeriodo.value = valor;
+  }
+
+  function recargarSelectorPrincipal(valorSeleccionado) {
+    reconstruirSelectorPrincipal(valorSeleccionado || "");
 
     const selectPeriodo = document.getElementById("certiPeriodo");
     if (selectPeriodo) {
-      selectPeriodo.value = valor;
       selectPeriodo.dispatchEvent(new Event("change", { bubbles: true }));
     }
   }
@@ -633,6 +651,7 @@ Con qué se une:
 
     if (selectPeriodo) {
       selectPeriodo.value = id || "";
+      selectPeriodo.dispatchEvent(new Event("change", { bubbles: true }));
     }
 
     if (window.CertiState && typeof window.CertiState.establecerPeriodo === "function") {
@@ -680,6 +699,7 @@ Con qué se une:
     cerrarModal,
     leerPeriodos,
     guardarPeriodos,
+    reconstruirSelectorPrincipal,
     recargarSelectorPrincipal
   };
 })();
