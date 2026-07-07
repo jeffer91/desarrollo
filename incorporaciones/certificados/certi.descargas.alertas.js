@@ -4,19 +4,20 @@ Nombre completo: certi.descargas.alertas.js
 Ruta o ubicación: /incorporaciones/certificados/certi.descargas.alertas.js
 Función o funciones:
 - Enlazar directamente los botones Descargar PDF único y Descargar PDFs individuales.
-- Generar PDFs de capacitación docente aunque el flujo original de descargas falle.
-- Tomar certificados desde el estado interno y, si no existe, desde la tabla ya pintada.
-- Convertir las alertas visibles en un resumen con botón Ver alertas.
-- Mostrar un modal con todas las alertas y acciones de corrección cuando correspondan.
+- Generar un PDF único con todos los certificados.
+- Generar un único archivo ZIP cuando se soliciten PDFs individuales.
+- Evitar múltiples ventanas o descargas separadas que puedan colapsar Electron.
+- Convertir alertas visibles en resumen con botón Ver alertas.
+- Mostrar modal con todas las alertas y acciones de corrección cuando correspondan.
 Con qué se une:
 - certi.index.html
 - certi.state.js
-- certi.capacitacion.logic.js
 - certi.capacitacion.template.js
 - certi.tipos.js
 - certi.firmantes.js
 - certi.utils.js
-- certi.pdf.js
+- jsPDF
+- JSZip, cargado dinámicamente si no existe
 =========================================================
 */
 
@@ -24,9 +25,10 @@ Con qué se une:
   "use strict";
 
   const TIPO_CAPACITACION = "capacitacion";
+  const JSZIP_CDN = "https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js";
+
   const ESTADO_GLOBAL = {
-    alertas: [],
-    ultimoEstado: null
+    alertas: []
   };
 
   iniciar();
@@ -65,7 +67,7 @@ Con qué se une:
       btnIndividuales.addEventListener("click", function (evento) {
         evento.preventDefault();
         evento.stopImmediatePropagation();
-        descargarPdfIndividualesDirecto();
+        descargarZipIndividualesDirecto();
       }, true);
     }
   }
@@ -76,28 +78,29 @@ Con qué se une:
       mostrarEstadoDescarga("Generando PDF único. Espere un momento...", "info");
 
       const estado = obtenerEstadoSeguro();
-      const preparado = prepararCertificadosSeguro(estado);
+      const certificados = obtenerCertificadosParaPdf(estado);
 
-      if (!preparado.valido) {
-        throw new Error(preparado.errores.join("\n") || "No hay certificados listos para descargar.");
+      if (!certificados.length) {
+        throw new Error("No hay certificados procesados para descargar.");
       }
 
       const jsPDF = obtenerJsPdf();
       const config = obtenerConfigPdf(estado);
-      const doc = new jsPDF({
-        orientation: "landscape",
-        unit: "mm",
-        format: "a4"
-      });
       const plantillaDataUrl = await cargarPlantilla(config.plantilla);
+      const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
 
-      for (let i = 0; i < preparado.certificados.length; i += 1) {
+      for (let i = 0; i < certificados.length; i += 1) {
         if (i > 0) doc.addPage();
-        await dibujarCertificado(doc, preparado.certificados[i], plantillaDataUrl);
+        await dibujarCertificado(doc, normalizarCertificado(certificados[i], estado, config), plantillaDataUrl);
+
+        if ((i + 1) % 10 === 0 || i + 1 === certificados.length) {
+          mostrarEstadoDescarga(`Generando PDF único: ${i + 1} de ${certificados.length} certificado(s)...`, "info");
+          await esperar(40);
+        }
       }
 
       doc.save(crearNombrePdfUnico(estado, config));
-      mostrarEstadoDescarga(`PDF único generado con ${preparado.certificados.length} certificado(s).`, "success");
+      mostrarEstadoDescarga(`PDF único generado con ${certificados.length} certificado(s).`, "success");
     } catch (error) {
       mostrarEstadoDescarga(error.message || "No se pudo generar el PDF único.", "error");
     } finally {
@@ -105,38 +108,53 @@ Con qué se une:
     }
   }
 
-  async function descargarPdfIndividualesDirecto() {
+  async function descargarZipIndividualesDirecto() {
     try {
-      bloquearDescargas(true, "Generando PDFs...");
-      mostrarEstadoDescarga("Generando PDFs individuales. Espere un momento...", "info");
+      bloquearDescargas(true, "Generando ZIP...");
+      mostrarEstadoDescarga("Preparando PDFs individuales en un único ZIP. Espere un momento...", "info");
 
       const estado = obtenerEstadoSeguro();
-      const preparado = prepararCertificadosSeguro(estado);
+      const certificados = obtenerCertificadosParaPdf(estado);
 
-      if (!preparado.valido) {
-        throw new Error(preparado.errores.join("\n") || "No hay certificados listos para descargar.");
+      if (!certificados.length) {
+        throw new Error("No hay certificados listos para comprimir en ZIP.");
       }
+
+      await asegurarJSZip();
 
       const jsPDF = obtenerJsPdf();
+      const zip = new window.JSZip();
       const config = obtenerConfigPdf(estado);
       const plantillaDataUrl = await cargarPlantilla(config.plantilla);
+      const usados = {};
 
-      for (let i = 0; i < preparado.certificados.length; i += 1) {
-        const certificado = preparado.certificados[i];
-        const doc = new jsPDF({
-          orientation: "landscape",
-          unit: "mm",
-          format: "a4"
-        });
+      for (let i = 0; i < certificados.length; i += 1) {
+        const certificado = normalizarCertificado(certificados[i], estado, config);
+        const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
 
         await dibujarCertificado(doc, certificado, plantillaDataUrl);
-        doc.save(crearNombrePdfIndividual(certificado, estado, config));
-        await esperar(180);
+
+        const nombrePdf = crearNombreUnico(crearNombrePdfIndividual(certificado, estado, config), usados);
+        zip.file(nombrePdf, doc.output("blob"));
+
+        if ((i + 1) % 10 === 0 || i + 1 === certificados.length) {
+          mostrarEstadoDescarga(`Preparando ZIP: ${i + 1} de ${certificados.length} PDF(s)...`, "info");
+          await esperar(60);
+        }
       }
 
-      mostrarEstadoDescarga(`Se generaron ${preparado.certificados.length} PDF(s) individuales.`, "success");
+      mostrarEstadoDescarga("Comprimiendo ZIP. Espere un momento...", "info");
+
+      const blobZip = await zip.generateAsync({
+        type: "blob",
+        compression: "DEFLATE",
+        compressionOptions: { level: 6 }
+      });
+
+      descargarBlob(blobZip, crearNombreZip(estado, config));
+      mostrarEstadoDescarga(`ZIP generado correctamente con ${certificados.length} certificado(s).`, "success");
     } catch (error) {
-      mostrarEstadoDescarga(error.message || "No se pudieron generar los PDFs individuales.", "error");
+      mostrarEstadoDescarga(error.message || "No se pudo generar el ZIP de certificados.", "error");
     } finally {
       bloquearDescargas(false);
     }
@@ -158,34 +176,23 @@ Con qué se une:
       ? periodoSelect.options[periodoSelect.selectedIndex]
       : null;
 
-    const estadoSeguro = Object.assign({}, estado, {
+    return Object.assign({}, estado, {
       tipoCertificado: tipoSelect && tipoSelect.value ? tipoSelect.value : estado.tipoCertificado || TIPO_CAPACITACION,
       periodoSeleccionado: periodoSelect && periodoSelect.value ? periodoSelect.value : estado.periodoSeleccionado || "",
       periodoTexto: option ? option.textContent : estado.periodoTexto || estado.periodoSeleccionado || "",
       fechaCertificado: fechaInput && fechaInput.value ? fechaInput.value : estado.fechaCertificado || "",
       fuenteDatos: fuenteSelect && fuenteSelect.value ? fuenteSelect.value : estado.fuenteDatos || "excel"
     });
-
-    ESTADO_GLOBAL.ultimoEstado = estadoSeguro;
-    return estadoSeguro;
   }
 
-  function prepararCertificadosSeguro(estado) {
-    const esCapacitacion = estado.tipoCertificado === TIPO_CAPACITACION;
+  function obtenerCertificadosParaPdf(estado) {
+    let certificados = [];
 
-    if (esCapacitacion && window.CertiCapacitacionLogic && typeof window.CertiCapacitacionLogic.prepararCertificados === "function") {
-      const preparado = window.CertiCapacitacionLogic.prepararCertificados(estado);
-      if (preparado && preparado.certificados && preparado.certificados.length) return preparado;
+    if (estado && estado.resultado) {
+      certificados = obtenerCertificadosDesdeResultado(estado.resultado);
     }
 
-    if (window.CertiLogic && typeof window.CertiLogic.prepararCertificados === "function") {
-      const preparado = window.CertiLogic.prepararCertificados(estado);
-      if (preparado && preparado.valido && preparado.certificados && preparado.certificados.length) return preparado;
-    }
-
-    let certificados = obtenerCertificadosDesdeResultado(estado.resultado);
-
-    if (!certificados.length && window.CertiProcesarFallback && window.CertiState && typeof window.CertiState.obtener === "function") {
+    if (!certificados.length && window.CertiState && typeof window.CertiState.obtener === "function") {
       const estadoActual = window.CertiState.obtener() || {};
       certificados = obtenerCertificadosDesdeResultado(estadoActual.resultado);
     }
@@ -194,19 +201,7 @@ Con qué se une:
       certificados = obtenerCertificadosDesdeTabla();
     }
 
-    if (certificados.length) {
-      return {
-        valido: true,
-        errores: [],
-        certificados: normalizarCertificadosParaPdf(certificados, estado)
-      };
-    }
-
-    return {
-      valido: false,
-      errores: ["No hay certificados procesados para descargar."],
-      certificados: []
-    };
+    return certificados;
   }
 
   function obtenerCertificadosDesdeResultado(resultado) {
@@ -227,10 +222,10 @@ Con qué se une:
       const celdas = Array.from(fila.querySelectorAll("td"));
       if (celdas.length < 5) return;
 
-      const estadoTexto = limpiarTexto(celdas[4].textContent);
-      if (!/LISTO/i.test(estadoTexto)) return;
+      const estado = limpiarTexto(celdas[4].textContent);
+      if (!/LISTO/i.test(estado)) return;
 
-      const cargoCedula = limpiarTexto(celdas[0].textContent);
+      const cargo = limpiarTexto(celdas[0].textContent);
       const docente = limpiarTexto(celdas[1].textContent);
       const curso = limpiarTexto(celdas[2].textContent);
       const nota = limpiarTexto(celdas[3].textContent);
@@ -239,7 +234,7 @@ Con qué se une:
 
       certificados.push({
         tipoCertificado: TIPO_CAPACITACION,
-        cargo: cargoCedula && cargoCedula !== "—" ? cargoCedula : "",
+        cargo: cargo && cargo !== "—" ? cargo : "",
         cedula: "",
         nombre: docente,
         docente,
@@ -255,43 +250,37 @@ Con qué se une:
     return certificados;
   }
 
-  function normalizarCertificadosParaPdf(certificados, estado) {
+  function normalizarCertificado(item, estado, config) {
     const fechaLarga = formatearFechaLarga(estado.fechaCertificado);
     const periodo = estado.periodoTexto || estado.periodoSeleccionado || "";
     const firmantes = obtenerFirmantesCapacitacion();
 
-    return certificados.map(function (item) {
-      return Object.assign({}, item, {
-        tipoCertificado: item.tipoCertificado || estado.tipoCertificado || TIPO_CAPACITACION,
-        cargo: item.cargo || "",
-        cedula: item.cedula || "",
-        nombre: item.nombre || item.docente || "",
-        docente: item.docente || item.nombre || "",
-        curso: item.curso || item.tema || item.carrera || "",
-        tema: item.tema || item.curso || item.carrera || "",
-        nota: formatearNota(item.nota || item.promedio),
-        promedio: formatearNota(item.promedio || item.nota),
-        horas: String(item.horas || obtenerConfigPdf(estado).horasDefecto || 40),
-        periodo,
-        fecha: fechaLarga,
-        fechaInput: estado.fechaCertificado,
-        firmantes
-      });
+    return Object.assign({}, item, {
+      tipoCertificado: item.tipoCertificado || estado.tipoCertificado || TIPO_CAPACITACION,
+      cargo: item.cargo || "",
+      cedula: item.cedula || "",
+      nombre: item.nombre || item.docente || "",
+      docente: item.docente || item.nombre || "",
+      curso: item.curso || item.tema || item.carrera || "",
+      tema: item.tema || item.curso || item.carrera || "",
+      nota: formatearNota(item.nota || item.promedio),
+      promedio: formatearNota(item.promedio || item.nota),
+      horas: String(item.horas || config.horasDefecto || 40),
+      periodo,
+      fecha: fechaLarga,
+      fechaInput: estado.fechaCertificado,
+      firmantes
     });
   }
 
   async function dibujarCertificado(doc, certificado, plantillaDataUrl) {
     if (certificado.tipoCertificado === TIPO_CAPACITACION && window.CertiCapacitacionTemplate) {
-      window.CertiCapacitacionTemplate.dibujarCertificado(doc, certificado, {
-        plantillaDataUrl
-      });
+      window.CertiCapacitacionTemplate.dibujarCertificado(doc, certificado, { plantillaDataUrl });
       return;
     }
 
     if (window.CertiTemplate && typeof window.CertiTemplate.dibujarCertificado === "function") {
-      await window.CertiTemplate.dibujarCertificado(doc, certificado, {
-        plantillaDataUrl
-      });
+      await window.CertiTemplate.dibujarCertificado(doc, certificado, { plantillaDataUrl });
       return;
     }
 
@@ -304,6 +293,7 @@ Con qué se une:
       return {
         plantilla: tipo.plantilla || "./assets/certi-plantilla-capacitacion.png",
         prefijoUnico: tipo.pdfUnicoPrefijo || "Certificados_Capacitacion_Docente",
+        prefijoZip: tipo.pdfZipPrefijo || "Certificados_Capacitacion_Docente_ZIP",
         prefijoIndividual: tipo.pdfIndividualPrefijo || "Certificado_Capacitacion",
         horasDefecto: tipo.horasDefecto || 40
       };
@@ -313,6 +303,7 @@ Con qué se une:
     return {
       plantilla: config.rutas && config.rutas.plantillaCertificado ? config.rutas.plantillaCertificado : "./assets/certi-plantilla-certificado.png",
       prefijoUnico: config.archivos && config.archivos.pdfUnicoPrefijo ? config.archivos.pdfUnicoPrefijo : "Certificados",
+      prefijoZip: "Certificados_ZIP",
       prefijoIndividual: config.archivos && config.archivos.pdfIndividualPrefijo ? config.archivos.pdfIndividualPrefijo : "Certificado",
       horasDefecto: 40
     };
@@ -335,6 +326,37 @@ Con qué se une:
     }
 
     return window.jspdf.jsPDF;
+  }
+
+  function asegurarJSZip() {
+    return new Promise(function (resolve, reject) {
+      if (window.JSZip) {
+        resolve(window.JSZip);
+        return;
+      }
+
+      const existente = document.querySelector(`script[src="${JSZIP_CDN}"]`);
+      if (existente) {
+        existente.addEventListener("load", function () {
+          resolve(window.JSZip);
+        });
+        existente.addEventListener("error", function () {
+          reject(new Error("No se pudo cargar JSZip."));
+        });
+        return;
+      }
+
+      const script = document.createElement("script");
+      script.src = JSZIP_CDN;
+      script.onload = function () {
+        if (window.JSZip) resolve(window.JSZip);
+        else reject(new Error("JSZip no quedó disponible después de cargar."));
+      };
+      script.onerror = function () {
+        reject(new Error("No se pudo cargar JSZip para crear el archivo ZIP."));
+      };
+      document.head.appendChild(script);
+    });
   }
 
   async function cargarPlantilla(ruta) {
@@ -370,10 +392,30 @@ Con qué se une:
     });
   }
 
+  function descargarBlob(blob, nombreArchivo) {
+    const url = URL.createObjectURL(blob);
+    const enlace = document.createElement("a");
+    enlace.href = url;
+    enlace.download = nombreArchivo;
+    document.body.appendChild(enlace);
+    enlace.click();
+    enlace.remove();
+
+    setTimeout(function () {
+      URL.revokeObjectURL(url);
+    }, 1500);
+  }
+
   function crearNombrePdfUnico(estado, config) {
     const periodo = crearNombreArchivo(estado.periodoTexto || estado.periodoSeleccionado || "periodo");
     const fecha = formatearFechaArchivo(estado.fechaCertificado);
     return `${config.prefijoUnico}_${periodo}_${fecha}.pdf`;
+  }
+
+  function crearNombreZip(estado, config) {
+    const periodo = crearNombreArchivo(estado.periodoTexto || estado.periodoSeleccionado || "periodo");
+    const fecha = formatearFechaArchivo(estado.fechaCertificado);
+    return `${config.prefijoZip}_${periodo}_${fecha}.zip`;
   }
 
   function crearNombrePdfIndividual(certificado, estado, config) {
@@ -381,6 +423,16 @@ Con qué se une:
     const curso = crearNombreArchivo(certificado.curso || certificado.tema || certificado.carrera || "curso");
     const nombre = crearNombreArchivo(certificado.nombre || certificado.docente || "participante");
     return `${config.prefijoIndividual}_${periodo}_${curso}_${nombre}.pdf`;
+  }
+
+  function crearNombreUnico(nombre, usados) {
+    if (!usados[nombre]) {
+      usados[nombre] = 1;
+      return nombre;
+    }
+
+    usados[nombre] += 1;
+    return nombre.replace(/\.pdf$/i, `_${usados[nombre]}.pdf`);
   }
 
   function enlazarBotonAlertas() {
@@ -400,7 +452,7 @@ Con qué se une:
       const corregir = evento.target.closest("[data-certi-alerta-corregir]");
       if (corregir) {
         evento.preventDefault();
-        irACorreccionAlerta(corregir.dataset.certiAlertaCorregir);
+        irACorreccionAlerta();
       }
     });
 
@@ -418,11 +470,7 @@ Con qué se une:
       convertirAlertasEnResumen();
     });
 
-    observer.observe(contenedor, {
-      childList: true,
-      subtree: true
-    });
-
+    observer.observe(contenedor, { childList: true, subtree: true });
     setTimeout(convertirAlertasEnResumen, 200);
   }
 
@@ -589,7 +637,7 @@ Con qué se une:
 
     if (btnIndividuales) {
       btnIndividuales.disabled = Boolean(bloquear);
-      btnIndividuales.textContent = bloquear ? texto || "Generando..." : "Descargar PDFs individuales";
+      btnIndividuales.textContent = bloquear ? texto || "Generando ZIP..." : "Descargar PDFs individuales";
     }
   }
 
@@ -658,7 +706,7 @@ Con qué se une:
 
   window.CertiDescargasAlertas = {
     descargarPdfUnicoDirecto,
-    descargarPdfIndividualesDirecto,
+    descargarZipIndividualesDirecto,
     abrirModalAlertas,
     cerrarModalAlertas
   };
