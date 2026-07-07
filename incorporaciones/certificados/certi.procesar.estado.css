@@ -1,0 +1,51 @@
+/*
+=========================================================
+Nombre completo: certi.procesar.estado.css
+Ruta o ubicación: /incorporaciones/certificados/certi.procesar.estado.css
+Función o funciones:
+- Estilizar el mensaje visible que aparece al cargar archivo y procesar datos.
+- Mostrar estados de información, éxito, advertencia y error.
+Con qué se une:
+- certi.index.html
+- certi.app.js
+=========================================================
+*/
+
+.certi-process-status {
+  flex: 1 1 100%;
+  margin-top: 6px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid #d9e2ef;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.certi-process-status-hidden {
+  display: none !important;
+}
+
+.certi-process-status-info {
+  background: #eaf2ff;
+  color: #0d47a1;
+  border-color: #c8dcff;
+}
+
+.certi-process-status-success {
+  background: #edf9f1;
+  color: #147a3f;
+  border-color: #bfe8cd;
+}
+
+.certi-process-status-warning {
+  background: #fff8e8;
+  color: #b86b00;
+  border-color: #f3d58c;
+}
+
+.certi-process-status-error {
+  background: #fff0f0;
+  color: #b42318;
+  border-color: #ffc9c9;
+}
