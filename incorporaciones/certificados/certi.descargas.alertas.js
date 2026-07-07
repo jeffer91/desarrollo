@@ -5,6 +5,7 @@ Ruta o ubicación: /incorporaciones/certificados/certi.descargas.alertas.js
 Función o funciones:
 - Enlazar directamente los botones Descargar PDF único y Descargar PDFs individuales.
 - Generar PDFs de capacitación docente aunque el flujo original de descargas falle.
+- Tomar certificados desde el estado interno y, si no existe, desde la tabla ya pintada.
 - Convertir las alertas visibles en un resumen con botón Ver alertas.
 - Mostrar un modal con todas las alertas y acciones de corrección cuando correspondan.
 Con qué se une:
@@ -179,10 +180,19 @@ Con qué se une:
 
     if (window.CertiLogic && typeof window.CertiLogic.prepararCertificados === "function") {
       const preparado = window.CertiLogic.prepararCertificados(estado);
-      if (preparado && preparado.valido) return preparado;
+      if (preparado && preparado.valido && preparado.certificados && preparado.certificados.length) return preparado;
     }
 
-    const certificados = obtenerCertificadosDesdeResultado(estado.resultado);
+    let certificados = obtenerCertificadosDesdeResultado(estado.resultado);
+
+    if (!certificados.length && window.CertiProcesarFallback && window.CertiState && typeof window.CertiState.obtener === "function") {
+      const estadoActual = window.CertiState.obtener() || {};
+      certificados = obtenerCertificadosDesdeResultado(estadoActual.resultado);
+    }
+
+    if (!certificados.length) {
+      certificados = obtenerCertificadosDesdeTabla();
+    }
 
     if (certificados.length) {
       return {
@@ -207,6 +217,42 @@ Con qué se une:
     if (Array.isArray(resultado.registrosValidos) && resultado.registrosValidos.length) return resultado.registrosValidos.slice();
 
     return [];
+  }
+
+  function obtenerCertificadosDesdeTabla() {
+    const filas = Array.from(document.querySelectorAll("#certiTablaBody tr"));
+    const certificados = [];
+
+    filas.forEach(function (fila) {
+      const celdas = Array.from(fila.querySelectorAll("td"));
+      if (celdas.length < 5) return;
+
+      const estadoTexto = limpiarTexto(celdas[4].textContent);
+      if (!/LISTO/i.test(estadoTexto)) return;
+
+      const cargoCedula = limpiarTexto(celdas[0].textContent);
+      const docente = limpiarTexto(celdas[1].textContent);
+      const curso = limpiarTexto(celdas[2].textContent);
+      const nota = limpiarTexto(celdas[3].textContent);
+
+      if (!docente || !curso) return;
+
+      certificados.push({
+        tipoCertificado: TIPO_CAPACITACION,
+        cargo: cargoCedula && cargoCedula !== "—" ? cargoCedula : "",
+        cedula: "",
+        nombre: docente,
+        docente,
+        curso,
+        tema: curso,
+        nota,
+        promedio: nota,
+        horas: "40",
+        estadoCertificado: "listo"
+      });
+    });
+
+    return certificados;
   }
 
   function normalizarCertificadosParaPdf(certificados, estado) {
@@ -560,6 +606,10 @@ Con qué se une:
     const numero = Number(valor);
     if (!Number.isFinite(numero)) return String(valor);
     return numero.toFixed(2);
+  }
+
+  function limpiarTexto(valor) {
+    return String(valor == null ? "" : valor).replace(/\s+/g, " ").trim();
   }
 
   function formatearFechaLarga(fecha) {
