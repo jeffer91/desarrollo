@@ -7,7 +7,7 @@ Función o funciones:
 - Usar plantilla de fondo específica para capacitación.
 - Usar texto institucional formal.
 - Dibujar tres firmas: Rector, Gestor de Procesos Académicos y Capacitador.
-- Corregir la ubicación vertical del contenido para que no se monte sobre el logo.
+- Corregir ubicación y equilibrio visual del contenido.
 Con qué se une:
 - certi.capacitacion.logic.js
 - certi.capacitacion.js
@@ -62,18 +62,18 @@ Con qué se une:
     const ciudad = config.ciudad || "Quito";
     const fechaFormal = formatearFechaFormal(certificado.fechaInput, certificado.fecha);
 
-    const yIntro = 60;
-    const yNombre = 76;
-    const yParticipacionMin = 96;
-    const yCursoMin = 111;
-    const yPeriodoMin = 130;
-    const yConstanciaMin = 145;
-    const yFechaMin = 160;
-    const yFechaMax = 165;
+    const yIntro = 56;
+    const yNombre = 69;
+    const yParticipacionMin = 89;
+    const yCursoMin = 104;
+    const yPeriodoMin = 123;
+    const yConstanciaMin = 138;
+    const yFechaMin = 153;
+    const yFechaMax = 156;
 
     doc.setTextColor(20, 20, 20);
     doc.setFont("times", "normal");
-    doc.setFontSize(12.1);
+    doc.setFontSize(11.6);
 
     escribirCentrado(
       doc,
@@ -81,27 +81,27 @@ Con qué se une:
       centroX,
       yIntro,
       226,
-      5.8
+      5.2
     );
 
     doc.setTextColor(6, 25, 65);
     doc.setFont("times", "bold");
     doc.setFontSize(calcularTamanoNombre(nombre));
-    const finNombre = escribirCentrado(doc, nombre, centroX, yNombre, 238, 7.2);
+    const finNombre = escribirCentrado(doc, nombre, centroX, yNombre, 238, 6.8);
 
-    dibujarLinea(doc, centroX - 88, finNombre + 5.2, centroX + 88, finNombre + 5.2, 7, 29, 76, 0.48);
-    dibujarLinea(doc, centroX - 58, finNombre + 6.9, centroX + 58, finNombre + 6.9, 196, 155, 57, 0.20);
+    dibujarLinea(doc, centroX - 88, finNombre + 5, centroX + 88, finNombre + 5, 7, 29, 76, 0.45);
+    dibujarLinea(doc, centroX - 58, finNombre + 6.6, centroX + 58, finNombre + 6.6, 196, 155, 57, 0.18);
 
     doc.setTextColor(20, 20, 20);
     doc.setFont("times", "normal");
-    doc.setFontSize(11.8);
+    doc.setFontSize(10.9);
     const finParticipacion = escribirCentrado(
       doc,
       "participó y aprobó satisfactoriamente el programa de capacitación denominado:",
       centroX,
-      Math.max(yParticipacionMin, finNombre + 16),
+      Math.max(yParticipacionMin, finNombre + 13),
       232,
-      5.5
+      5
     );
 
     doc.setTextColor(6, 25, 65);
@@ -111,51 +111,57 @@ Con qué se une:
       doc,
       curso,
       centroX,
-      Math.max(yCursoMin, finParticipacion + 10.5),
+      Math.max(yCursoMin, finParticipacion + 9),
       238,
-      6.4
+      6
     );
 
     doc.setTextColor(20, 20, 20);
     doc.setFont("times", "normal");
-    doc.setFontSize(11.2);
+    doc.setFontSize(10.2);
 
-    const textoPeriodo = `desarrollado durante el período ${periodo}, con una duración total de ${horas} horas académicas, obteniendo una calificación final de ${nota}/10.`;
+    const textoPeriodo =
+      `desarrollado durante el período ${periodo}, con una duración total de ${horas} horas académicas, ` +
+      `obteniendo una calificación final de ${nota}/10.`;
+
     const finPeriodo = escribirCentrado(
       doc,
       textoPeriodo,
       centroX,
-      Math.max(yPeriodoMin, finCurso + 12),
+      Math.max(yPeriodoMin, finCurso + 10),
       236,
-      5.4
+      4.8
     );
 
-    const textoConstancia = "El presente certificado se confiere como constancia formal del cumplimiento de los requisitos académicos establecidos por la institución.";
+    const textoConstancia =
+      "El presente certificado se confiere como constancia formal del cumplimiento de los requisitos académicos establecidos por la institución.";
+
     const finConstancia = escribirCentrado(
       doc,
       textoConstancia,
       centroX,
-      Math.max(yConstanciaMin, finPeriodo + 10.5),
+      Math.max(yConstanciaMin, finPeriodo + 9),
       236,
-      5.2
+      4.8
     );
 
     doc.setTextColor(80, 80, 80);
     doc.setFont("times", "normal");
-    doc.setFontSize(10.8);
+    doc.setFontSize(10.1);
+
     escribirCentrado(
       doc,
       `Dado y firmado en la ciudad de ${ciudad}, a los ${fechaFormal}.`,
       centroX,
-      Math.min(Math.max(yFechaMin, finConstancia + 9.5), yFechaMax),
+      Math.min(Math.max(yFechaMin, finConstancia + 8), yFechaMax),
       232,
-      5.2
+      4.8
     );
   }
 
   function dibujarFirmas(doc, firmantes, ancho) {
-    const y = 178;
-    const posiciones = [ancho * 0.21, ancho * 0.50, ancho * 0.79];
+    const y = 177;
+    const posiciones = [ancho * 0.18, ancho * 0.50, ancho * 0.82];
 
     (firmantes || []).slice(0, 3).forEach(function (firmante, index) {
       const x = posiciones[index] || ancho / 2;
@@ -163,24 +169,26 @@ Con qué se une:
       const cargo = limpiarTexto(firmante.cargo || "");
       const nombreVisible = debeOcultarNombrePlaceholder(nombre, cargo) ? "" : nombre;
 
-      dibujarLinea(doc, x - 36, y, x + 36, y, 65, 65, 65, 0.40);
+      dibujarLinea(doc, x - 34, y, x + 34, y, 65, 65, 65, 0.38);
 
       doc.setTextColor(10, 10, 10);
       doc.setFont("times", "bold");
       doc.setFontSize(calcularTamanoFirma(nombreVisible));
 
       if (nombreVisible) {
-        escribirCentrado(doc, nombreVisible, x, y + 7.6, 70, 4.1);
+        escribirCentrado(doc, nombreVisible, x, y + 7, 68, 3.8);
       }
 
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(7.3);
-      escribirCentrado(doc, cargo, x, y + 15.2, 72, 3.7);
+      doc.setFontSize(6.8);
+      escribirCentrado(doc, cargo, x, y + 14, 70, 3.5);
     });
   }
 
   function obtenerFirmantes(certificado) {
-    const capacitador = limpiarNombre(certificado.capacitador || certificado.instructor || certificado.facilitador || "");
+    const capacitador = limpiarNombre(
+      certificado.capacitador || certificado.instructor || certificado.facilitador || ""
+    );
 
     if (window.CertiFirmantes && typeof window.CertiFirmantes.obtenerFirmantesCapacitacion === "function") {
       return window.CertiFirmantes.obtenerFirmantesCapacitacion(capacitador);
@@ -222,32 +230,32 @@ Con qué se une:
 
   function calcularTamanoNombre(nombre) {
     const largo = String(nombre || "").length;
-    if (largo > 66) return 13.8;
-    if (largo > 58) return 15;
-    if (largo > 50) return 16.2;
-    if (largo > 42) return 17.4;
-    if (largo > 34) return 18.8;
-    if (largo > 28) return 20;
-    return 21.2;
+    if (largo > 66) return 13.2;
+    if (largo > 58) return 14.3;
+    if (largo > 50) return 15.4;
+    if (largo > 42) return 16.6;
+    if (largo > 34) return 17.8;
+    if (largo > 28) return 19;
+    return 20.2;
   }
 
   function calcularTamanoCurso(curso) {
     const largo = String(curso || "").length;
-    if (largo > 96) return 11.4;
-    if (largo > 84) return 12.2;
-    if (largo > 72) return 13;
-    if (largo > 58) return 13.8;
-    if (largo > 44) return 14.8;
-    return 15.8;
+    if (largo > 96) return 10.8;
+    if (largo > 84) return 11.5;
+    if (largo > 72) return 12.3;
+    if (largo > 58) return 13.1;
+    if (largo > 44) return 14;
+    return 15;
   }
 
   function calcularTamanoFirma(nombre) {
     const largo = String(nombre || "").length;
-    if (!largo) return 8.6;
-    if (largo > 42) return 7.2;
-    if (largo > 34) return 7.8;
-    if (largo > 28) return 8.4;
-    return 9.1;
+    if (!largo) return 8;
+    if (largo > 42) return 6.9;
+    if (largo > 34) return 7.4;
+    if (largo > 28) return 8;
+    return 8.6;
   }
 
   function debeOcultarNombrePlaceholder(nombre, cargo) {
