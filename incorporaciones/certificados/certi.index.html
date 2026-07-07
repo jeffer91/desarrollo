@@ -11,11 +11,13 @@ Función o funciones:
 - Cargar modal para crear, editar y borrar períodos.
 - Mostrar estado visual al procesar datos.
 - Cargar controlador directo de respaldo para el botón Procesar datos.
+- Cargar controlador directo de descargas PDF y modal de alertas.
 - Funcionar como apartado propio, fuera del menú interno de Incorporaciones.
 Con qué se une:
 - certi.css
 - certi.periodos.modal.css
 - certi.procesar.estado.css
+- certi.descargas.alertas.css
 - certi.config.js
 - certi.state.js
 - certi.dom.js
@@ -43,6 +45,7 @@ Con qué se une:
 - certi.capacitacion.js
 - certi.app.js
 - certi.procesar.fallback.js
+- certi.descargas.alertas.js
 - certi.seguridad.fix.js
 ========================================================= -->
 <!DOCTYPE html>
@@ -54,6 +57,7 @@ Con qué se une:
   <link rel="stylesheet" href="./certi.css?v=20260707" />
   <link rel="stylesheet" href="./certi.periodos.modal.css?v=20260707" />
   <link rel="stylesheet" href="./certi.procesar.estado.css?v=20260707" />
+  <link rel="stylesheet" href="./certi.descargas.alertas.css?v=20260707" />
 </head>
 <body>
   <header class="certi-topbar">
@@ -315,6 +319,9 @@ Con qué se une:
 
   <!-- Controlador directo de respaldo para Procesar datos -->
   <script src="./certi.procesar.fallback.js?v=20260707"></script>
+
+  <!-- Controlador directo de descargas y modal de alertas -->
+  <script src="./certi.descargas.alertas.js?v=20260707"></script>
 
   <!-- Parche definitivo Seguridad -->
   <script src="./certi.seguridad.fix.js?v=20260605"></script>
