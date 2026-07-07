@@ -7,6 +7,7 @@ Función o funciones:
 - Procesar capacitación docente aunque certi.app.js no haya enlazado el evento principal.
 - Sincronizar período, fecha, fuente y archivo directamente desde el DOM.
 - Actualizar el estado central para habilitar PDF único e individuales.
+- Pintar directamente resumen, tabla, alertas y botones cuando el render principal no actualiza la vista.
 Con qué se une:
 - certi.index.html
 - certi.state.js
@@ -70,10 +71,11 @@ Con qué se une:
 
       actualizarStateConResultado(lectura, resultadoFinal, estadoDom);
       renderizarPantalla();
+      pintarResultadoDirecto(resultadoFinal, estadoDom, lectura);
       guardarFormulario(estadoDom);
 
       const resumen = resultadoFinal.resumen || {};
-      const listos = resumen.certificadosListos || 0;
+      const listos = resumen.certificadosListos || obtenerCertificadosResultado(resultadoFinal).length || 0;
       const leidos = resumen.registrosLeidos || lectura.registros.length || 0;
 
       mostrarEstado(
@@ -248,12 +250,17 @@ Con qué se une:
     const alertasBase = Array.isArray(base.alertas) ? base.alertas : [];
     const alertasFuente = Array.isArray(alertasLectura) ? alertasLectura : [];
     const alertas = alertasFuente.concat(alertasBase);
+    const resumenBase = base.resumen || {};
+    const certificados = obtenerCertificadosResultado(base);
 
     return {
       ...base,
       alertas,
       resumen: {
-        ...(base.resumen || {}),
+        ...resumenBase,
+        registrosLeidos: Number(resumenBase.registrosLeidos || 0),
+        carrerasDetectadas: Number(resumenBase.carrerasDetectadas || 0),
+        certificadosListos: Number(resumenBase.certificadosListos || certificados.length || 0),
         alertas: alertas.length
       }
     };
@@ -268,6 +275,183 @@ Con qué se une:
     ) {
       window.CertiRender.renderizar(window.CertiState.obtener());
     }
+  }
+
+  function pintarResultadoDirecto(resultado, estadoDom, lectura) {
+    pintarResumenDirecto(resultado, lectura);
+    pintarAlertasDirecto(resultado);
+    pintarTablaDirecta(resultado, estadoDom);
+    actualizarBotonesDescarga(resultado);
+  }
+
+  function pintarResumenDirecto(resultado, lectura) {
+    const contenedor = document.getElementById("certiResumenCards");
+    if (!contenedor) return;
+
+    const resumen = resultado && resultado.resumen ? resultado.resumen : {};
+    const certificados = obtenerCertificadosResultado(resultado);
+    const registrosLeidos = resumen.registrosLeidos || (lectura && lectura.registros ? lectura.registros.length : 0);
+    const carrerasDetectadas = resumen.carrerasDetectadas || contarCursos(certificados);
+    const certificadosListos = resumen.certificadosListos || certificados.length;
+    const alertas = resumen.alertas || (resultado && Array.isArray(resultado.alertas) ? resultado.alertas.length : 0);
+
+    contenedor.innerHTML = `
+      <article class="certi-summary-card">
+        <span>Registros leídos</span>
+        <strong>${escaparHtml(registrosLeidos)}</strong>
+      </article>
+
+      <article class="certi-summary-card">
+        <span>${certificados.some(function (item) { return item.tipoCertificado === TIPO_CAPACITACION; }) ? "Cursos detectados" : "Carreras detectadas"}</span>
+        <strong>${escaparHtml(carrerasDetectadas)}</strong>
+      </article>
+
+      <article class="certi-summary-card">
+        <span>Certificados listos</span>
+        <strong>${escaparHtml(certificadosListos)}</strong>
+      </article>
+
+      <article class="certi-summary-card">
+        <span>Alertas</span>
+        <strong>${escaparHtml(alertas)}</strong>
+      </article>
+    `;
+  }
+
+  function pintarAlertasDirecto(resultado) {
+    const contenedor = document.getElementById("certiAlertas");
+    if (!contenedor) return;
+
+    const alertas = resultado && Array.isArray(resultado.alertas) ? resultado.alertas : [];
+
+    if (!alertas.length) {
+      contenedor.innerHTML = "";
+      return;
+    }
+
+    contenedor.innerHTML = alertas.map(function (alerta) {
+      const tipo = normalizarTipoAlerta(alerta.tipo);
+      return `
+        <div class="certi-alert certi-alert-${tipo}">
+          <strong>${escaparHtml(alerta.titulo || "Aviso")}</strong>
+          ${escaparHtml(alerta.mensaje || "")}
+        </div>
+      `;
+    }).join("");
+  }
+
+  function pintarTablaDirecta(resultado, estadoDom) {
+    const tbody = document.getElementById("certiTablaBody");
+    const thead = document.querySelector(".certi-table thead tr");
+    if (!tbody || !thead) return;
+
+    const certificados = obtenerCertificadosResultado(resultado);
+    const esCapacitacion = estadoDom.tipoCertificado === TIPO_CAPACITACION || certificados.some(function (item) {
+      return item.tipoCertificado === TIPO_CAPACITACION || item.docente || item.curso;
+    });
+
+    if (esCapacitacion) {
+      thead.innerHTML = `
+        <th>Cargo / Cédula</th>
+        <th>Docente</th>
+        <th>Curso / Tema</th>
+        <th>Nota</th>
+        <th>Estado</th>
+      `;
+
+      if (!certificados.length) {
+        tbody.innerHTML = `<tr><td colspan="5" class="certi-empty">No existen certificados listos.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = certificados.map(function (item) {
+        const identificacion = item.cargo || item.cedula || "—";
+        const docente = item.docente || item.nombre || "";
+        const curso = item.curso || item.tema || "";
+        const nota = formatearNotaVisual(item.nota || item.promedio);
+
+        return `
+          <tr>
+            <td>${escaparHtml(identificacion)}</td>
+            <td>${escaparHtml(docente)}</td>
+            <td>${escaparHtml(curso)}</td>
+            <td>${escaparHtml(nota)}</td>
+            <td><span class="certi-status certi-status-ok">Listo</span></td>
+          </tr>
+        `;
+      }).join("");
+
+      return;
+    }
+
+    thead.innerHTML = `
+      <th>Carrera oficial</th>
+      <th>Mejor egresado</th>
+      <th>Promedio</th>
+      <th>Estado</th>
+    `;
+
+    if (!certificados.length) {
+      tbody.innerHTML = `<tr><td colspan="4" class="certi-empty">No existen certificados listos.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = certificados.map(function (item) {
+      return `
+        <tr>
+          <td>${escaparHtml(item.carreraOficial || item.carrera || "")}</td>
+          <td>${escaparHtml(item.nombre || item.estudiante || "")}</td>
+          <td>${escaparHtml(item.promedio || item.nota || "")}</td>
+          <td><span class="certi-status certi-status-ok">Listo</span></td>
+        </tr>
+      `;
+    }).join("");
+  }
+
+  function actualizarBotonesDescarga(resultado) {
+    const certificados = obtenerCertificadosResultado(resultado);
+    const habilitar = certificados.length > 0;
+    const btnUnico = document.getElementById("certiBtnPdfUnico");
+    const btnIndividuales = document.getElementById("certiBtnPdfIndividuales");
+
+    if (btnUnico) btnUnico.disabled = !habilitar;
+    if (btnIndividuales) btnIndividuales.disabled = !habilitar;
+  }
+
+  function obtenerCertificadosResultado(resultado) {
+    if (!resultado || typeof resultado !== "object") return [];
+
+    if (Array.isArray(resultado.certificados) && resultado.certificados.length) {
+      return resultado.certificados.slice();
+    }
+
+    if (Array.isArray(resultado.mejores) && resultado.mejores.length) {
+      return resultado.mejores.slice();
+    }
+
+    if (Array.isArray(resultado.registrosValidos) && resultado.registrosValidos.length) {
+      return resultado.registrosValidos.slice();
+    }
+
+    return [];
+  }
+
+  function contarCursos(certificados) {
+    const mapa = {};
+
+    (certificados || []).forEach(function (item) {
+      const clave = String(item.curso || item.tema || item.carrera || item.carreraOficial || "").trim().toUpperCase();
+      if (clave) mapa[clave] = true;
+    });
+
+    return Object.keys(mapa).length;
+  }
+
+  function formatearNotaVisual(valor) {
+    if (valor === null || valor === undefined || valor === "") return "";
+    const numero = Number(valor);
+    if (!Number.isFinite(numero)) return String(valor);
+    return numero.toFixed(2);
   }
 
   function guardarFormulario(estado) {
@@ -350,6 +534,14 @@ Con qué se une:
     }, 120);
   }
 
+  function normalizarTipoAlerta(tipo) {
+    const valor = String(tipo || "info").toLowerCase().trim();
+    if (valor === "danger" || valor === "error") return "danger";
+    if (valor === "success") return "success";
+    if (valor === "warning" || valor === "warn") return "warning";
+    return "info";
+  }
+
   function escaparHtml(valor) {
     return String(valor == null ? "" : valor)
       .replace(/&/g, "&amp;")
@@ -361,6 +553,7 @@ Con qué se une:
 
   window.CertiProcesarFallback = {
     procesarDirecto,
-    enlazarBotonFallback
+    enlazarBotonFallback,
+    pintarResultadoDirecto
   };
 })();
