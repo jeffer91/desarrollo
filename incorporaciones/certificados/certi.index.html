@@ -10,6 +10,7 @@ Función o funciones:
 - Cargar módulos separados para certificados de capacitación docente.
 - Cargar modal para crear, editar y borrar períodos.
 - Mostrar estado visual al procesar datos.
+- Cargar controlador directo de respaldo para el botón Procesar datos.
 - Funcionar como apartado propio, fuera del menú interno de Incorporaciones.
 Con qué se une:
 - certi.css
@@ -41,6 +42,7 @@ Con qué se une:
 - certi.capacitacion.template.js
 - certi.capacitacion.js
 - certi.app.js
+- certi.procesar.fallback.js
 - certi.seguridad.fix.js
 ========================================================= -->
 <!DOCTYPE html>
@@ -310,6 +312,9 @@ Con qué se une:
 
   <!-- Inicio de la app -->
   <script src="./certi.app.js?v=20260707"></script>
+
+  <!-- Controlador directo de respaldo para Procesar datos -->
+  <script src="./certi.procesar.fallback.js?v=20260707"></script>
 
   <!-- Parche definitivo Seguridad -->
   <script src="./certi.seguridad.fix.js?v=20260605"></script>
