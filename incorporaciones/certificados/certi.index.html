@@ -8,9 +8,11 @@ Función o funciones:
 - No mostrar vista previa del certificado.
 - Permitir generar PDF único y PDFs individuales.
 - Cargar módulos separados para certificados de capacitación docente.
+- Cargar modal para crear, editar y borrar períodos.
 - Funcionar como apartado propio, fuera del menú interno de Incorporaciones.
 Con qué se une:
 - certi.css
+- certi.periodos.modal.css
 - certi.config.js
 - certi.state.js
 - certi.dom.js
@@ -23,6 +25,7 @@ Con qué se une:
 - certi.render.js
 - certi.storage.js
 - certi.periodos.js
+- certi.periodos.modal.js
 - certi.template.js
 - certi.pdf.js
 - certi.audit.js
@@ -45,6 +48,7 @@ Con qué se une:
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Certificados | Certi</title>
   <link rel="stylesheet" href="./certi.css?v=20260707" />
+  <link rel="stylesheet" href="./certi.periodos.modal.css?v=20260707" />
 </head>
 <body>
   <header class="certi-topbar">
@@ -283,6 +287,7 @@ Con qué se une:
   <script src="./certi.render.js"></script>
   <script src="./certi.storage.js"></script>
   <script src="./certi.periodos.js"></script>
+  <script src="./certi.periodos.modal.js?v=20260707"></script>
   <script src="./certi.template.js"></script>
   <script src="./certi.pdf.js"></script>
 
