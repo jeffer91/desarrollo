@@ -4,9 +4,9 @@ Nombre completo: certi.capacitacion.logic.js
 Ruta o ubicación: /incorporaciones/certificados/certi.capacitacion.logic.js
 Función o funciones:
 - Procesar registros de capacitación docente.
-- Validar docente, curso/tema y nota.
+- Validar docente, curso/tema, capacitador y nota.
 - Aceptar cédula como campo opcional para soportar el Excel real de capacitaciones.
-- Preparar certificados finales para PDF único o individual.
+- Preparar certificados finales para PDF único o ZIP individual.
 - Mantener una fila válida del Excel como un certificado.
 Con qué se une:
 - certi.capacitacion.excel.js
@@ -77,6 +77,7 @@ Con qué se une:
     const curso = limpiarTexto(base.curso || base.tema || obtenerRaw(base.raw, "curso"));
     const docente = limpiarNombre(base.docente || base.nombre || obtenerRaw(base.raw, "docente"));
     const cargo = limpiarTexto(base.cargo || obtenerRaw(base.raw, "cargo"));
+    const capacitador = limpiarNombre(base.capacitador || obtenerRaw(base.raw, "capacitador"));
 
     return Object.assign({}, base, {
       tipoCertificado: TIPO_CAPACITACION,
@@ -87,6 +88,7 @@ Con qué se une:
       docente,
       curso,
       tema: curso,
+      capacitador,
       nota,
       promedio: nota,
       notaOriginal: base.notaOriginal !== undefined ? base.notaOriginal : base.promedioOriginal,
@@ -104,6 +106,7 @@ Con qué se une:
 
     if (!registro.docente) errores.push("No tiene nombre de docente.");
     if (!registro.curso) errores.push("No tiene curso o tema.");
+    if (!registro.capacitador) errores.push("No tiene capacitador para la tercera firma.");
     if (registro.nota === null || registro.nota === undefined || !Number.isFinite(Number(registro.nota))) {
       errores.push("No tiene nota válida.");
     }
@@ -159,7 +162,6 @@ Con qué se une:
     const fechaLarga = formatearFechaLarga(estado.fechaCertificado);
     const periodoTexto = estado.periodoTexto || estado.periodoSeleccionado;
     const tipoConfig = obtenerConfigTipo();
-    const firmantes = obtenerFirmantes();
 
     const certificados = estado.resultado.mejores
       .filter(function (item) {
@@ -167,6 +169,7 @@ Con qué se une:
       })
       .map(function (item) {
         const horas = item.horas || tipoConfig.horasDefecto || 40;
+        const capacitador = limpiarNombre(item.capacitador);
 
         return {
           tipoCertificado: TIPO_CAPACITACION,
@@ -176,6 +179,7 @@ Con qué se une:
           docente: item.docente || item.nombre,
           curso: item.curso,
           tema: item.curso,
+          capacitador,
           nota: formatearNota(item.nota),
           promedio: formatearNota(item.nota),
           horas: String(horas),
@@ -186,7 +190,7 @@ Con qué se une:
           carrera: item.curso,
           carreraCodigo: item.carreraCodigo || crearNombreArchivo(item.curso),
           origen: TIPO_CAPACITACION,
-          firmantes
+          firmantes: obtenerFirmantes(capacitador)
         };
       });
 
@@ -212,7 +216,7 @@ Con qué se une:
       alertas.push({
         tipo: "warning",
         titulo: "Filas incompletas",
-        mensaje: `${incompletos.length} fila(s) no se usarán porque falta docente, curso o nota válida.`
+        mensaje: `${incompletos.length} fila(s) no se usarán porque falta docente, curso, capacitador o nota válida.`
       });
     }
 
@@ -259,80 +263,67 @@ Con qué se une:
     };
   }
 
-  function obtenerFirmantes() {
+  function obtenerFirmantes(capacitador) {
     if (window.CertiFirmantes && typeof window.CertiFirmantes.obtenerFirmantesCapacitacion === "function") {
-      return window.CertiFirmantes.obtenerFirmantesCapacitacion();
+      return window.CertiFirmantes.obtenerFirmantesCapacitacion(capacitador);
     }
 
     return [
-      {
-        nombre: "Dr. Alex León",
-        cargo: "VICERRECTOR"
-      },
-      {
-        nombre: "Mgs. Jefferson Villarreal",
-        cargo: "GESTOR DE PROCESOS ACADÉMICOS"
-      }
+      { nombre: "Dr. León Tito", cargo: "RECTOR" },
+      { nombre: "Mgs. Jefferson Villarreal", cargo: "GESTOR DE PROCESOS ACADÉMICOS" },
+      { nombre: capacitador || "CAPACITADOR", cargo: "CAPACITADOR" }
     ];
   }
 
-  function obtenerRaw(raw, campo) {
-    if (!raw || typeof raw !== "object") return "";
-    return raw[campo] == null ? "" : raw[campo];
-  }
-
   function convertirNota(valor) {
-    if (window.CertiCapacitacionExcel && typeof window.CertiCapacitacionExcel.convertirNota === "function") {
-      return window.CertiCapacitacionExcel.convertirNota(valor);
-    }
+    if (valor === null || valor === undefined || valor === "") return null;
 
-    if (valor === null || valor === undefined || String(valor).trim() === "") return null;
+    const numero = Number(String(valor).replace(",", ".").replace(/[^0-9.-]/g, ""));
 
-    const texto = String(valor).replace(",", ".").replace(/[^0-9.-]/g, "");
-    const numero = Number(texto);
+    if (!Number.isFinite(numero)) return null;
+    if (numero < 0 || numero > 10) return null;
 
-    if (!Number.isFinite(numero) || numero < 0 || numero > 10) return null;
     return Number(numero.toFixed(2));
   }
 
   function convertirHoras(valor) {
-    if (window.CertiCapacitacionExcel && typeof window.CertiCapacitacionExcel.convertirHoras === "function") {
-      return window.CertiCapacitacionExcel.convertirHoras(valor);
-    }
+    const texto = limpiarTexto(valor).replace(",", ".").replace(/[^0-9.]/g, "");
+    if (!texto) return "";
 
-    return limpiarTexto(valor);
+    const numero = Number(texto);
+    if (!Number.isFinite(numero) || numero <= 0) return "";
+
+    if (Number.isInteger(numero)) return String(numero);
+    return String(Number(numero.toFixed(1)));
   }
 
   function formatearNota(valor) {
     const numero = convertirNota(valor);
     if (numero === null) return "";
-    return numero.toFixed(2);
+    return numero.toFixed(2).replace(".", ",");
+  }
+
+  function formatearFechaLarga(fechaInput) {
+    if (U && typeof U.formatearFechaLarga === "function") return U.formatearFechaLarga(fechaInput);
+    return fechaInput || "";
+  }
+
+  function limpiarNombre(valor) {
+    if (U && typeof U.limpiarNombrePropio === "function") return U.limpiarNombrePropio(valor);
+    return limpiarTexto(valor).toUpperCase();
+  }
+
+  function limpiarTexto(valor) {
+    if (U && typeof U.limpiarEspacios === "function") return U.limpiarEspacios(valor);
+    return String(valor == null ? "" : valor).replace(/\s+/g, " ").trim();
   }
 
   function limpiarCedula(valor) {
     return limpiarTexto(valor).replace(/[^0-9A-Za-z-]/g, "").toUpperCase();
   }
 
-  function limpiarNombre(valor) {
-    if (U && typeof U.limpiarNombrePropio === "function") {
-      return U.limpiarNombrePropio(valor);
-    }
-
-    return limpiarTexto(valor).toUpperCase();
-  }
-
-  function limpiarTexto(valor) {
-    if (U && typeof U.limpiarEspacios === "function") {
-      return U.limpiarEspacios(valor);
-    }
-
-    return String(valor == null ? "" : valor).replace(/\s+/g, " ").trim();
-  }
-
   function claveTexto(valor) {
-    if (U && typeof U.claveTexto === "function") {
-      return U.claveTexto(valor);
-    }
+    if (U && typeof U.claveTexto === "function") return U.claveTexto(valor);
 
     return limpiarTexto(valor)
       .normalize("NFD")
@@ -343,28 +334,20 @@ Con qué se une:
       .toUpperCase();
   }
 
-  function crearNombreArchivo(texto) {
-    if (U && typeof U.crearNombreArchivo === "function") {
-      return U.crearNombreArchivo(texto);
-    }
-
-    return claveTexto(texto).replace(/[^A-Z0-9]+/g, "_").toLowerCase();
+  function crearNombreArchivo(valor) {
+    if (U && typeof U.crearNombreArchivo === "function") return U.crearNombreArchivo(valor);
+    return claveTexto(valor).replace(/Ñ/g, "N").replace(/[^A-Z0-9]+/g, "_").toLowerCase();
   }
 
-  function formatearFechaLarga(fecha) {
-    if (U && typeof U.formatearFechaLarga === "function") {
-      return U.formatearFechaLarga(fecha);
-    }
-
-    return fecha || "";
+  function obtenerRaw(raw, campo) {
+    if (!raw || typeof raw !== "object") return "";
+    return raw[campo] || "";
   }
 
   window.CertiCapacitacionLogic = {
     procesar,
-    normalizarRegistro,
-    validarRegistro,
     validarGeneracion,
     prepararCertificados,
-    formatearNota
+    normalizarRegistro
   };
 })();
