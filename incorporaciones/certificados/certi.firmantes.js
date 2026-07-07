@@ -5,7 +5,7 @@ Ruta o ubicación: /incorporaciones/certificados/certi.firmantes.js
 Función o funciones:
 - Centralizar los firmantes disponibles para certificados.
 - Definir grupos de firma por tipo de certificado.
-- Permitir que capacitación use dos firmas institucionales.
+- Permitir que capacitación use tres firmas: Rector, Gestor de Procesos Académicos y Capacitador.
 Con qué se une:
 - certi.config.js
 - certi.capacitacion.logic.js
@@ -19,24 +19,29 @@ Con qué se une:
   const firmantes = {
     rector: {
       id: "rector",
-      nombre: "Dr. León Alberto Tito",
+      nombre: "Dr. León Tito",
       cargo: "RECTOR"
-    },
-    vicerrector: {
-      id: "vicerrector",
-      nombre: "Dr. Alex León",
-      cargo: "VICERRECTOR"
     },
     gestorProcesos: {
       id: "gestorProcesos",
       nombre: "Mgs. Jefferson Villarreal",
       cargo: "GESTOR DE PROCESOS ACADÉMICOS"
+    },
+    capacitador: {
+      id: "capacitador",
+      nombre: "",
+      cargo: "CAPACITADOR"
+    },
+    vicerrector: {
+      id: "vicerrector",
+      nombre: "Dr. Alex León",
+      cargo: "VICERRECTOR"
     }
   };
 
   const grupos = {
     reconocimiento: ["rector"],
-    capacitacion: ["vicerrector", "gestorProcesos"]
+    capacitacion: ["rector", "gestorProcesos", "capacitador"]
   };
 
   extenderConfig();
@@ -46,11 +51,13 @@ Con qué se une:
     if (!config) return;
 
     config.firmantes = Object.assign({}, firmantes, config.firmantes || {});
+    config.firmantes.rector = Object.assign({}, firmantes.rector, config.firmantes.rector || {});
+    config.firmantes.gestorProcesos = Object.assign({}, firmantes.gestorProcesos, config.firmantes.gestorProcesos || {});
+    config.firmantes.capacitador = Object.assign({}, firmantes.capacitador, config.firmantes.capacitador || {});
     config.gruposFirmantes = Object.assign({}, grupos, config.gruposFirmantes || {});
+    config.gruposFirmantes.capacitacion = grupos.capacitacion.slice();
 
-    if (!config.firmante) {
-      config.firmante = Object.assign({}, firmantes.rector);
-    }
+    config.firmante = Object.assign({}, firmantes.rector);
   }
 
   function obtener(id) {
@@ -73,14 +80,19 @@ Con qué se une:
       .filter(Boolean);
   }
 
-  function obtenerFirmantesCapacitacion() {
-    const lista = obtenerGrupo("capacitacion");
-
-    if (lista.length) return lista;
+  function obtenerFirmantesCapacitacion(nombreCapacitador) {
+    const capacitador = limpiarTexto(nombreCapacitador);
+    const rector = obtener("rector") || Object.assign({}, firmantes.rector);
+    const gestor = obtener("gestorProcesos") || Object.assign({}, firmantes.gestorProcesos);
 
     return [
-      Object.assign({}, firmantes.vicerrector),
-      Object.assign({}, firmantes.gestorProcesos)
+      rector,
+      gestor,
+      {
+        id: "capacitador",
+        nombre: capacitador || "CAPACITADOR",
+        cargo: "CAPACITADOR"
+      }
     ];
   }
 
@@ -91,6 +103,10 @@ Con qué se une:
     return Object.keys(disponibles).map(function (id) {
       return Object.assign({}, disponibles[id]);
     });
+  }
+
+  function limpiarTexto(valor) {
+    return String(valor == null ? "" : valor).replace(/\s+/g, " ").trim();
   }
 
   window.CertiFirmantes = {
