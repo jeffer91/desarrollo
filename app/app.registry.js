@@ -7,7 +7,7 @@ Función o funciones:
 2. Guarda título, grupo, descripción y ruta HTML real de cada módulo.
 3. Expone funciones para listar, buscar y validar visibilidad.
 4. Agrega el módulo Incorporaciones como entorno independiente.
-5. Mantiene el módulo Titulación separado para evitar sobrecargarlo.
+5. Mantiene los módulos principales separados para evitar sobrecargar el launcher.
 6. Agrega el módulo Libro como entorno independiente por bloques.
 =========================================================
 */
@@ -59,13 +59,6 @@ Función o funciones:
       group: "Titulación",
       description: "Entorno independiente para gestionar sedes, planificación y recordatorios de incorporación.",
       path: "./incorporaciones/index.html"
-    },
-    {
-      id: "requisitos",
-      title: "Titulación",
-      group: "Titulación",
-      description: "Entrada principal para titulación, carga de datos, Base Local, seguimiento académico y gestión operativa.",
-      path: "./Requisitos/Maqueta/maq-index.html"
     }
   ];
 
