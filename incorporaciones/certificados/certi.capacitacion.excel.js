@@ -4,9 +4,10 @@ Nombre completo: certi.capacitacion.excel.js
 Ruta o ubicación: /incorporaciones/certificados/certi.capacitacion.excel.js
 Función o funciones:
 - Leer Excel de certificados de capacitación docente.
-- Detectar columnas de cédula, docente, curso/tema, nota, horas y fecha.
+- Detectar columnas de cargo, cédula, docente, curso/tema, nota, horas y fecha.
 - Leer todas las hojas del Excel.
 - Normalizar filas para que la lógica genere un certificado por docente.
+- Soportar el formato real: Cargo | Nombre | capacitación | Calificación.
 Con qué se une:
 - certi.capacitacion.js
 - certi.capacitacion.logic.js
@@ -21,6 +22,15 @@ Con qué se une:
   const TIPO_CAPACITACION = "capacitacion";
 
   const candidatosColumnas = {
+    cargo: [
+      "CARGO",
+      "ROL",
+      "FUNCION",
+      "FUNCIÓN",
+      "PUESTO",
+      "TIPO",
+      "PERFIL"
+    ],
     cedula: [
       "CEDULA",
       "CÉDULA",
@@ -232,7 +242,7 @@ Con qué se une:
         };
       }
 
-      if (puntaje >= 10) {
+      if (puntaje >= 9) {
         return mejor;
       }
     }
@@ -242,6 +252,7 @@ Con qué se une:
 
   function detectarColumnas(encabezados) {
     return {
+      cargo: buscarIndiceColumna(encabezados, candidatosColumnas.cargo),
       cedula: buscarIndiceColumna(encabezados, candidatosColumnas.cedula),
       docente: buscarIndiceColumna(encabezados, candidatosColumnas.docente),
       curso: buscarIndiceColumna(encabezados, candidatosColumnas.curso),
@@ -253,17 +264,14 @@ Con qué se une:
 
   function puntuarColumnas(columnas) {
     let puntos = 0;
-    if (columnas.cedula >= 0) puntos += 2;
+    if (columnas.cargo >= 0) puntos += 1;
+    if (columnas.cedula >= 0) puntos += 1;
     if (columnas.docente >= 0) puntos += 3;
     if (columnas.curso >= 0) puntos += 3;
-    if (columnsTieneNota(columnas)) puntos += 2;
+    if (columnas.nota >= 0) puntos += 2;
     if (columnas.horas >= 0) puntos += 1;
     if (columnas.fecha >= 0) puntos += 1;
     return puntos;
-  }
-
-  function columnsTieneNota(columnas) {
-    return columnas && columnas.nota >= 0;
   }
 
   function buscarIndiceColumna(encabezados, candidatos) {
@@ -290,6 +298,7 @@ Con qué se une:
   }
 
   function normalizarFila(fila, columnas, nombreHoja, indexFila, indice) {
+    const cargo = limpiarTexto(obtenerCelda(fila, columnas.cargo));
     const cedula = limpiarCedula(obtenerCelda(fila, columnas.cedula));
     const docente = limpiarNombre(obtenerCelda(fila, columnas.docente));
     const curso = limpiarTexto(obtenerCelda(fila, columnas.curso));
@@ -298,7 +307,7 @@ Con qué se une:
     const horas = convertirHoras(obtenerCelda(fila, columnas.horas));
     const fechaCurso = limpiarTexto(obtenerCelda(fila, columnas.fecha));
 
-    const vacia = [cedula, docente, curso, limpiarTexto(notaOriginal), horas, fechaCurso].every(function (valor) {
+    const vacia = [cargo, cedula, docente, curso, limpiarTexto(notaOriginal), horas, fechaCurso].every(function (valor) {
       return limpiarTexto(valor) === "";
     });
 
@@ -307,6 +316,7 @@ Con qué se une:
       indice,
       filaExcel: indexFila + 1,
       hojaExcel: nombreHoja || "",
+      cargo,
       cedula,
       nombre: docente,
       docente,
@@ -323,6 +333,7 @@ Con qué se une:
       estadoCertificado: "pendiente_validacion",
       requiereAccion: false,
       raw: {
+        cargo: obtenerCelda(fila, columnas.cargo),
         cedula: obtenerCelda(fila, columnas.cedula),
         docente: obtenerCelda(fila, columnas.docente),
         curso: obtenerCelda(fila, columnas.curso),
@@ -358,7 +369,7 @@ Con qué se une:
       alertas.push({
         tipo: "warning",
         titulo: "Sin datos detectados",
-        mensaje: "No se encontraron columnas suficientes para capacitación: cédula, docente, curso y nota."
+        mensaje: "No se encontraron columnas suficientes para capacitación: nombre, capacitación y calificación."
       });
     }
 
@@ -386,7 +397,7 @@ Con qué se une:
     const salida = [];
 
     (registros || []).forEach(function (registro) {
-      const clave = [registro.cedula, registro.docente, registro.curso, registro.nota].map(claveTexto).join("|");
+      const clave = [registro.cargo, registro.cedula, registro.docente, registro.curso, registro.nota].map(claveTexto).join("|");
       if (mapa[clave]) return;
 
       mapa[clave] = true;
