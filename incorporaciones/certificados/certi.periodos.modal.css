@@ -1,0 +1,353 @@
+/*
+=========================================================
+Nombre completo: certi.periodos.modal.css
+Ruta o ubicación: /incorporaciones/certificados/certi.periodos.modal.css
+Función o funciones:
+- Estilizar el botón Gestionar períodos.
+- Estilizar el modal para crear, editar y borrar períodos.
+- Ocultar flechas nativas del input number y usar controles +/- personalizados.
+Con qué se une:
+- certi.index.html
+- certi.periodos.modal.js
+=========================================================
+*/
+
+.certi-periodo-selector-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.certi-periodo-manage-btn {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--certi-border, #d9e2ef);
+  border-radius: 13px;
+  background: var(--certi-soft-blue, #eaf2ff);
+  color: var(--certi-primary, #0d47a1);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.certi-periodo-manage-btn:hover {
+  background: var(--certi-primary, #0d47a1);
+  color: #ffffff;
+}
+
+.certi-periodos-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+}
+
+.certi-periodos-hidden {
+  display: none !important;
+}
+
+.certi-periodos-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.58);
+  backdrop-filter: blur(6px);
+}
+
+.certi-periodos-dialog {
+  position: relative;
+  width: min(880px, 100%);
+  max-height: min(720px, calc(100vh - 36px));
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  background: #ffffff;
+  border: 1px solid var(--certi-border, #d9e2ef);
+  border-radius: 24px;
+  box-shadow: 0 28px 90px rgba(15, 23, 42, 0.32);
+}
+
+.certi-periodos-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+  padding: 22px 24px;
+  background:
+    linear-gradient(135deg, rgba(13, 71, 161, 0.96), rgba(183, 28, 28, 0.88)),
+    #0d47a1;
+  color: #ffffff;
+}
+
+.certi-periodos-header p {
+  margin: 0 0 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 11px;
+  font-weight: 900;
+  opacity: 0.82;
+}
+
+.certi-periodos-header h2 {
+  margin: 0;
+  font-size: 28px;
+  line-height: 1.1;
+}
+
+.certi-periodos-header span {
+  display: block;
+  margin-top: 7px;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 14px;
+}
+
+.certi-periodos-close {
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.36);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.certi-periodos-body {
+  overflow: auto;
+  padding: 22px;
+  display: grid;
+  gap: 18px;
+}
+
+.certi-periodos-form,
+.certi-periodos-list-panel {
+  padding: 18px;
+  border: 1px solid var(--certi-border, #d9e2ef);
+  border-radius: 18px;
+  background: #fbfdff;
+}
+
+.certi-periodos-section-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.certi-periodos-section-title strong {
+  color: var(--certi-primary-dark, #08306f);
+  font-size: 16px;
+}
+
+.certi-periodos-section-title span {
+  color: var(--certi-muted, #667085);
+  font-size: 13px;
+  font-weight: 800;
+  text-align: right;
+}
+
+.certi-periodos-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(130px, 1fr));
+  gap: 14px;
+}
+
+.certi-periodos-group {
+  display: grid;
+  gap: 8px;
+}
+
+.certi-periodos-group label {
+  color: var(--certi-primary-dark, #08306f);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.certi-periodos-group select,
+.certi-periodos-group input {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--certi-border, #d9e2ef);
+  border-radius: 13px;
+  padding: 10px 12px;
+  background: #ffffff;
+  color: var(--certi-text, #172033);
+  font-size: 14px;
+  outline: none;
+}
+
+.certi-periodos-group select:focus,
+.certi-periodos-group input:focus {
+  border-color: var(--certi-primary, #0d47a1);
+  box-shadow: 0 0 0 3px rgba(13, 71, 161, 0.12);
+}
+
+.certi-year-control {
+  display: grid;
+  grid-template-columns: 40px minmax(72px, 1fr) 40px;
+  gap: 6px;
+}
+
+.certi-year-control button {
+  border: 1px solid var(--certi-border, #d9e2ef);
+  border-radius: 12px;
+  background: var(--certi-soft-blue, #eaf2ff);
+  color: var(--certi-primary, #0d47a1);
+  font-size: 20px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.certi-year-control button:hover {
+  background: var(--certi-primary, #0d47a1);
+  color: #ffffff;
+}
+
+.certi-year-control input {
+  text-align: center;
+  font-weight: 900;
+}
+
+.certi-year-control input::-webkit-outer-spin-button,
+.certi-year-control input::-webkit-inner-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+
+.certi-year-control input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+.certi-periodos-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.certi-periodos-alert {
+  margin-top: 14px;
+  padding: 11px 12px;
+  border-radius: 13px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.certi-periodos-alert-hidden {
+  display: none;
+}
+
+.certi-periodos-alert-error {
+  background: var(--certi-soft-red, #fff0f0);
+  color: var(--certi-danger, #b42318);
+  border: 1px solid #ffc9c9;
+}
+
+.certi-periodos-alert-success {
+  background: var(--certi-soft-green, #edf9f1);
+  color: var(--certi-success, #147a3f);
+  border: 1px solid #bfe8cd;
+}
+
+.certi-periodos-alert-info {
+  background: var(--certi-soft-blue, #eaf2ff);
+  color: var(--certi-primary, #0d47a1);
+  border: 1px solid #c8dcff;
+}
+
+.certi-periodos-list {
+  display: grid;
+  gap: 10px;
+}
+
+.certi-periodos-empty {
+  padding: 18px;
+  border: 1px dashed var(--certi-border, #d9e2ef);
+  border-radius: 14px;
+  color: var(--certi-muted, #667085);
+  text-align: center;
+  background: #ffffff;
+}
+
+.certi-periodo-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--certi-border, #d9e2ef);
+  border-radius: 15px;
+  background: #ffffff;
+}
+
+.certi-periodo-item strong,
+.certi-periodo-item span {
+  display: block;
+}
+
+.certi-periodo-item strong {
+  color: var(--certi-text, #172033);
+  font-size: 14px;
+}
+
+.certi-periodo-item span {
+  margin-top: 3px;
+  color: var(--certi-muted, #667085);
+  font-size: 12px;
+}
+
+.certi-periodo-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.certi-periodo-item-actions button {
+  min-height: 34px;
+  padding: 7px 12px;
+  border: 1px solid var(--certi-border, #d9e2ef);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--certi-primary, #0d47a1);
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.certi-periodo-item-actions button:hover {
+  background: var(--certi-soft-blue, #eaf2ff);
+}
+
+@media (max-width: 860px) {
+  .certi-periodos-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .certi-periodo-selector-row,
+  .certi-periodos-grid,
+  .certi-year-control {
+    grid-template-columns: 1fr;
+  }
+
+  .certi-periodos-header,
+  .certi-periodo-item,
+  .certi-periodos-section-title {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .certi-periodos-section-title span {
+    text-align: left;
+  }
+
+  .certi-periodo-manage-btn,
+  .certi-periodo-item-actions button {
+    width: 100%;
+  }
+}
