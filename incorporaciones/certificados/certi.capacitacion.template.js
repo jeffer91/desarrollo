@@ -7,6 +7,7 @@ Función o funciones:
 - Usar plantilla de fondo específica para capacitación.
 - Usar texto institucional formal.
 - Dibujar tres firmas: Rector, Gestor de Procesos Académicos y Capacitador.
+- Corregir la ubicación vertical del contenido para que no se monte sobre el logo.
 Con qué se une:
 - certi.capacitacion.logic.js
 - certi.capacitacion.js
@@ -61,85 +62,120 @@ Con qué se une:
     const ciudad = config.ciudad || "Quito";
     const fechaFormal = formatearFechaFormal(certificado.fechaInput, certificado.fecha);
 
+    const yIntro = 60;
+    const yNombre = 76;
+    const yParticipacionMin = 96;
+    const yCursoMin = 111;
+    const yPeriodoMin = 130;
+    const yConstanciaMin = 145;
+    const yFechaMin = 160;
+    const yFechaMax = 165;
+
     doc.setTextColor(20, 20, 20);
     doc.setFont("times", "normal");
-    doc.setFontSize(11.8);
+    doc.setFontSize(12.1);
 
     escribirCentrado(
       doc,
-      "El Instituto Superior Tecnológico Quito Metropolitano, en uso de sus atribuciones institucionales, certifica que:",
+      "El Instituto Superior Tecnológico Quito Metropolitano certifica que:",
       centroX,
-      42,
-      235,
-      5.6
+      yIntro,
+      226,
+      5.8
     );
 
     doc.setTextColor(6, 25, 65);
     doc.setFont("times", "bold");
     doc.setFontSize(calcularTamanoNombre(nombre));
-    const finNombre = escribirCentrado(doc, nombre, centroX, 60, 238, 7.6);
+    const finNombre = escribirCentrado(doc, nombre, centroX, yNombre, 238, 7.2);
 
-    dibujarLinea(doc, centroX - 92, finNombre + 5, centroX + 92, finNombre + 5, 7, 29, 76, 0.45);
+    dibujarLinea(doc, centroX - 88, finNombre + 5.2, centroX + 88, finNombre + 5.2, 7, 29, 76, 0.48);
+    dibujarLinea(doc, centroX - 58, finNombre + 6.9, centroX + 58, finNombre + 6.9, 196, 155, 57, 0.20);
 
     doc.setTextColor(20, 20, 20);
     doc.setFont("times", "normal");
-    doc.setFontSize(11.5);
-    escribirCentrado(
+    doc.setFontSize(11.8);
+    const finParticipacion = escribirCentrado(
       doc,
       "participó y aprobó satisfactoriamente el programa de capacitación denominado:",
       centroX,
-      Math.max(78, finNombre + 16),
-      230,
-      5.4
+      Math.max(yParticipacionMin, finNombre + 16),
+      232,
+      5.5
     );
 
     doc.setTextColor(6, 25, 65);
     doc.setFont("times", "bold");
     doc.setFontSize(calcularTamanoCurso(curso));
-    const finCurso = escribirCentrado(doc, curso, centroX, Math.max(91, finNombre + 29), 238, 6.8);
+    const finCurso = escribirCentrado(
+      doc,
+      curso,
+      centroX,
+      Math.max(yCursoMin, finParticipacion + 10.5),
+      238,
+      6.4
+    );
 
     doc.setTextColor(20, 20, 20);
     doc.setFont("times", "normal");
-    doc.setFontSize(10.8);
+    doc.setFontSize(11.2);
 
     const textoPeriodo = `desarrollado durante el período ${periodo}, con una duración total de ${horas} horas académicas, obteniendo una calificación final de ${nota}/10.`;
-    const finPeriodo = escribirCentrado(doc, textoPeriodo, centroX, Math.max(111, finCurso + 12), 232, 5.4);
+    const finPeriodo = escribirCentrado(
+      doc,
+      textoPeriodo,
+      centroX,
+      Math.max(yPeriodoMin, finCurso + 12),
+      236,
+      5.4
+    );
 
-    const textoConstancia = "El presente certificado se confiere como constancia formal del cumplimiento de los requisitos académicos establecidos por la institución, así como de la aprobación del proceso formativo correspondiente.";
-    const finConstancia = escribirCentrado(doc, textoConstancia, centroX, Math.max(127, finPeriodo + 12), 232, 5.2);
+    const textoConstancia = "El presente certificado se confiere como constancia formal del cumplimiento de los requisitos académicos establecidos por la institución.";
+    const finConstancia = escribirCentrado(
+      doc,
+      textoConstancia,
+      centroX,
+      Math.max(yConstanciaMin, finPeriodo + 10.5),
+      236,
+      5.2
+    );
 
     doc.setTextColor(80, 80, 80);
     doc.setFont("times", "normal");
-    doc.setFontSize(10.6);
+    doc.setFontSize(10.8);
     escribirCentrado(
       doc,
       `Dado y firmado en la ciudad de ${ciudad}, a los ${fechaFormal}.`,
       centroX,
-      Math.max(146, finConstancia + 11),
+      Math.min(Math.max(yFechaMin, finConstancia + 9.5), yFechaMax),
       232,
       5.2
     );
   }
 
   function dibujarFirmas(doc, firmantes, ancho) {
-    const y = 173;
+    const y = 178;
     const posiciones = [ancho * 0.21, ancho * 0.50, ancho * 0.79];
 
     (firmantes || []).slice(0, 3).forEach(function (firmante, index) {
       const x = posiciones[index] || ancho / 2;
       const nombre = limpiarTexto(firmante.nombre || "");
       const cargo = limpiarTexto(firmante.cargo || "");
+      const nombreVisible = debeOcultarNombrePlaceholder(nombre, cargo) ? "" : nombre;
 
-      dibujarLinea(doc, x - 34, y, x + 34, y, 65, 65, 65, 0.38);
+      dibujarLinea(doc, x - 36, y, x + 36, y, 65, 65, 65, 0.40);
 
       doc.setTextColor(10, 10, 10);
       doc.setFont("times", "bold");
-      doc.setFontSize(calcularTamanoFirma(nombre));
-      escribirCentrado(doc, nombre, x, y + 7.8, 66, 4.2);
+      doc.setFontSize(calcularTamanoFirma(nombreVisible));
+
+      if (nombreVisible) {
+        escribirCentrado(doc, nombreVisible, x, y + 7.6, 70, 4.1);
+      }
 
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(7.1);
-      escribirCentrado(doc, cargo, x, y + 15.3, 70, 3.7);
+      doc.setFontSize(7.3);
+      escribirCentrado(doc, cargo, x, y + 15.2, 72, 3.7);
     });
   }
 
@@ -153,7 +189,7 @@ Con qué se une:
     return [
       { nombre: "Dr. León Tito", cargo: "RECTOR" },
       { nombre: "Mgs. Jefferson Villarreal", cargo: "GESTOR DE PROCESOS ACADÉMICOS" },
-      { nombre: capacitador || "CAPACITADOR", cargo: "CAPACITADOR" }
+      { nombre: capacitador || "", cargo: "CAPACITADOR" }
     ];
   }
 
@@ -186,28 +222,38 @@ Con qué se une:
 
   function calcularTamanoNombre(nombre) {
     const largo = String(nombre || "").length;
-    if (largo > 62) return 14.5;
-    if (largo > 54) return 15.7;
-    if (largo > 46) return 16.8;
-    if (largo > 38) return 18;
-    if (largo > 30) return 19.2;
-    return 20.8;
+    if (largo > 66) return 13.8;
+    if (largo > 58) return 15;
+    if (largo > 50) return 16.2;
+    if (largo > 42) return 17.4;
+    if (largo > 34) return 18.8;
+    if (largo > 28) return 20;
+    return 21.2;
   }
 
   function calcularTamanoCurso(curso) {
     const largo = String(curso || "").length;
-    if (largo > 86) return 12.2;
-    if (largo > 72) return 13.2;
-    if (largo > 58) return 14.2;
-    if (largo > 44) return 15.2;
-    return 16.2;
+    if (largo > 96) return 11.4;
+    if (largo > 84) return 12.2;
+    if (largo > 72) return 13;
+    if (largo > 58) return 13.8;
+    if (largo > 44) return 14.8;
+    return 15.8;
   }
 
   function calcularTamanoFirma(nombre) {
     const largo = String(nombre || "").length;
-    if (largo > 38) return 7.5;
-    if (largo > 30) return 8.2;
-    return 9;
+    if (!largo) return 8.6;
+    if (largo > 42) return 7.2;
+    if (largo > 34) return 7.8;
+    if (largo > 28) return 8.4;
+    return 9.1;
+  }
+
+  function debeOcultarNombrePlaceholder(nombre, cargo) {
+    const claveNombre = claveTexto(nombre);
+    const claveCargo = claveTexto(cargo);
+    return claveNombre === "CAPACITADOR" && claveCargo === "CAPACITADOR";
   }
 
   function formatearNota(valor) {
@@ -257,6 +303,20 @@ Con qué se une:
     }
 
     return String(valor == null ? "" : valor).replace(/\s+/g, " ").trim();
+  }
+
+  function claveTexto(valor) {
+    if (U && typeof U.claveTexto === "function") {
+      return U.claveTexto(valor);
+    }
+
+    return limpiarTexto(valor)
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^A-Z0-9Ñ ]/gi, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toUpperCase();
   }
 
   window.CertiCapacitacionTemplate = {
