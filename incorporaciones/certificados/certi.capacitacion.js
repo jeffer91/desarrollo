@@ -7,6 +7,7 @@ Función o funciones:
 - Conectar el selector de tipo de certificado con el estado de la app.
 - Enrutar lectura, lógica, render, plantilla y PDF según el tipo seleccionado.
 - Mantener intacto el flujo actual de reconocimiento a mejores egresados.
+- Mostrar Cargo / Cédula según el Excel cargado.
 Con qué se une:
 - certi.tipos.js
 - certi.firmantes.js
@@ -343,7 +344,7 @@ Con qué se une:
 
     if (thead) {
       thead.innerHTML = `
-        <th>Cédula</th>
+        <th>Cargo / Cédula</th>
         <th>Docente</th>
         <th>Curso / Tema</th>
         <th>Nota</th>
@@ -373,10 +374,11 @@ Con qué se une:
       const nota = window.CertiCapacitacionLogic && typeof window.CertiCapacitacionLogic.formatearNota === "function"
         ? window.CertiCapacitacionLogic.formatearNota(item.nota)
         : String(item.nota || "");
+      const identificacion = item.cargo || item.cedula || "—";
 
       return `
         <tr>
-          <td>${escaparHtml(item.cedula)}</td>
+          <td>${escaparHtml(identificacion)}</td>
           <td>${escaparHtml(item.docente || item.nombre)}</td>
           <td>${escaparHtml(item.curso)}</td>
           <td>${escaparHtml(nota)}</td>
