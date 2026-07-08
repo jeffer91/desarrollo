@@ -5,6 +5,7 @@ Ruta o ubicación: /incorporaciones/sedes/certi/certi.utils.js
 Función o funciones:
 - Proveer funciones auxiliares para normalizar texto, fechas, nombres y promedios.
 - Convertir promedios del Excel al formato institucional de tres decimales.
+- Normalizar nombres propios con primera letra en mayúscula y resto en minúscula.
 - Crear nombres de archivo seguros para PDF.
 Con qué se une:
 - certi.excel.js
@@ -34,6 +35,32 @@ Con qué se une:
     "diciembre"
   ];
 
+  const CONECTORES_MINUSCULA = new Set([
+    "de",
+    "del",
+    "la",
+    "las",
+    "los",
+    "y",
+    "e",
+    "da",
+    "das",
+    "do",
+    "dos"
+  ]);
+
+  const TITULOS_CORTOS = {
+    dr: "Dr.",
+    dra: "Dra.",
+    mgs: "Mgs.",
+    mgtr: "Mgtr.",
+    ing: "Ing.",
+    lic: "Lic.",
+    abg: "Abg.",
+    eco: "Eco.",
+    phd: "PhD"
+  };
+
   function esVacio(valor) {
     return valor === null || valor === undefined || String(valor).trim() === "";
   }
@@ -62,7 +89,38 @@ Con qué se une:
   }
 
   function limpiarNombrePropio(valor) {
-    return limpiarEspacios(valor).toUpperCase();
+    const texto = limpiarEspacios(valor);
+    if (!texto) return "";
+
+    return texto
+      .toLocaleLowerCase("es-EC")
+      .split(" ")
+      .map(function (palabra, index) {
+        return normalizarPalabraNombre(palabra, index);
+      })
+      .join(" ")
+      .replace(/\s+([.,])/g, "$1")
+      .trim();
+  }
+
+  function normalizarPalabraNombre(palabra, index) {
+    const limpia = String(palabra || "").trim();
+    if (!limpia) return "";
+
+    const sinPunto = limpia.replace(/\.+$/g, "");
+    const titulo = TITULOS_CORTOS[sinPunto];
+    if (titulo) return titulo;
+
+    if (index > 0 && CONECTORES_MINUSCULA.has(sinPunto)) {
+      return sinPunto;
+    }
+
+    return sinPunto
+      .split("-")
+      .map(function (parte) {
+        return parte ? parte.charAt(0).toLocaleUpperCase("es-EC") + parte.slice(1) : parte;
+      })
+      .join("-");
   }
 
   function convertirPromedio(valor) {
