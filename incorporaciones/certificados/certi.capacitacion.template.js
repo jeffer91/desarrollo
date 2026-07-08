@@ -236,18 +236,30 @@ Con qué se une:
       certificado.capacitador || certificado.instructor || certificado.facilitador || ""
     );
 
+    if (capacitador && window.CertiFirmantes && typeof window.CertiFirmantes.obtenerFirmantesCapacitacion === "function") {
+      return window.CertiFirmantes.obtenerFirmantesCapacitacion(capacitador);
+    }
+
+    if (capacitador) {
+      return [
+        { nombre: "Dr. León Tito", cargo: "RECTOR" },
+        { nombre: "Mgs. Jefferson Villarreal", cargo: "GESTOR DE PROCESOS ACADÉMICOS" },
+        { nombre: capacitador, cargo: "CAPACITADOR" }
+      ];
+    }
+
     if (certificado.firmantes && Array.isArray(certificado.firmantes) && certificado.firmantes.length) {
       return certificado.firmantes;
     }
 
     if (window.CertiFirmantes && typeof window.CertiFirmantes.obtenerFirmantesCapacitacion === "function") {
-      return window.CertiFirmantes.obtenerFirmantesCapacitacion(capacitador);
+      return window.CertiFirmantes.obtenerFirmantesCapacitacion("");
     }
 
     return [
       { nombre: "Dr. León Tito", cargo: "RECTOR" },
       { nombre: "Mgs. Jefferson Villarreal", cargo: "GESTOR DE PROCESOS ACADÉMICOS" },
-      { nombre: capacitador || "", cargo: "CAPACITADOR" }
+      { nombre: "", cargo: "CAPACITADOR" }
     ];
   }
 
