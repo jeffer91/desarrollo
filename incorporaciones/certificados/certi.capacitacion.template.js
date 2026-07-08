@@ -5,10 +5,12 @@ Ruta o ubicación: /incorporaciones/certificados/certi.capacitacion.template.js
 Función o funciones:
 - Dibujar el certificado de capacitación docente en PDF.
 - Usar plantilla de fondo específica para capacitación.
+- Escribir dentro de zonas seguras y ajustar texto automáticamente.
 - Usar texto institucional formal.
 - Dibujar tres firmas: Rector, Gestor de Procesos Académicos y Capacitador.
-- Corregir ubicación y equilibrio visual del contenido.
+- Evitar que el texto se cruce con firmas, logos o bordes de la plantilla.
 Con qué se une:
+- certi.template.smart.js
 - certi.capacitacion.logic.js
 - certi.capacitacion.js
 - certi.firmantes.js
@@ -26,12 +28,11 @@ Con qué se une:
     const pdfConfig = config.pdf || {};
     const ancho = pdfConfig.ancho || 297;
     const alto = pdfConfig.alto || 210;
-    const centroX = ancho / 2;
     const plantilla = opciones && opciones.plantillaDataUrl;
 
     dibujarFondo(doc, plantilla, ancho, alto);
-    dibujarContenido(doc, certificado, config, ancho, centroX);
-    dibujarFirmas(doc, obtenerFirmantes(certificado), ancho);
+    dibujarContenido(doc, certificado, config, ancho, alto);
+    dibujarFirmas(doc, obtenerFirmantes(certificado), ancho, alto);
   }
 
   function dibujarFondo(doc, plantillaDataUrl, ancho, alto) {
@@ -53,7 +54,8 @@ Con qué se une:
     dibujarLinea(doc, 16, alto - 16, ancho - 16, alto - 16, 196, 155, 57, 0.45);
   }
 
-  function dibujarContenido(doc, certificado, config, ancho, centroX) {
+  function dibujarContenido(doc, certificado, config, ancho, alto) {
+    const Smart = window.CertiTemplateSmart;
     const nombre = limpiarNombre(certificado.nombre || certificado.docente).toUpperCase();
     const curso = limpiarTexto(certificado.curso || certificado.tema).toUpperCase();
     const nota = formatearNota(certificado.nota || certificado.promedio);
@@ -62,106 +64,150 @@ Con qué se une:
     const ciudad = config.ciudad || "Quito";
     const fechaFormal = formatearFechaFormal(certificado.fechaInput, certificado.fecha);
 
-    const yIntro = 56;
-    const yNombre = 69;
-    const yParticipacionMin = 89;
-    const yCursoMin = 104;
-    const yPeriodoMin = 123;
-    const yConstanciaMin = 138;
-    const yFechaMin = 153;
-    const yFechaMax = 156;
-
-    doc.setTextColor(20, 20, 20);
-    doc.setFont("times", "normal");
-    doc.setFontSize(11.6);
-
-    escribirCentrado(
-      doc,
-      "El Instituto Superior Tecnológico Quito Metropolitano certifica que:",
-      centroX,
-      yIntro,
-      226,
-      5.2
-    );
-
-    doc.setTextColor(6, 25, 65);
-    doc.setFont("times", "bold");
-    doc.setFontSize(calcularTamanoNombre(nombre));
-    const finNombre = escribirCentrado(doc, nombre, centroX, yNombre, 238, 6.8);
-
-    dibujarLinea(doc, centroX - 88, finNombre + 5, centroX + 88, finNombre + 5, 7, 29, 76, 0.45);
-    dibujarLinea(doc, centroX - 58, finNombre + 6.6, centroX + 58, finNombre + 6.6, 196, 155, 57, 0.18);
-
-    doc.setTextColor(20, 20, 20);
-    doc.setFont("times", "normal");
-    doc.setFontSize(10.9);
-    const finParticipacion = escribirCentrado(
-      doc,
-      "participó y aprobó satisfactoriamente el programa de capacitación denominado:",
-      centroX,
-      Math.max(yParticipacionMin, finNombre + 13),
-      232,
-      5
-    );
-
-    doc.setTextColor(6, 25, 65);
-    doc.setFont("times", "bold");
-    doc.setFontSize(calcularTamanoCurso(curso));
-    const finCurso = escribirCentrado(
-      doc,
-      curso,
-      centroX,
-      Math.max(yCursoMin, finParticipacion + 9),
-      238,
-      6
-    );
-
-    doc.setTextColor(20, 20, 20);
-    doc.setFont("times", "normal");
-    doc.setFontSize(10.2);
+    const zonaContenido = Smart && typeof Smart.obtenerZona === "function"
+      ? Smart.obtenerZona("capacitacion", "contenido", ancho, alto)
+      : { x: 30, y: 54, w: 237, h: 104, centroX: ancho / 2 };
 
     const textoPeriodo =
       `desarrollado durante el período ${periodo}, con una duración total de ${horas} horas académicas, ` +
       `obteniendo una calificación final de ${nota}/10.`;
 
-    const finPeriodo = escribirCentrado(
-      doc,
-      textoPeriodo,
-      centroX,
-      Math.max(yPeriodoMin, finCurso + 10),
-      236,
-      4.8
-    );
-
     const textoConstancia =
       "El presente certificado se confiere como constancia formal del cumplimiento de los requisitos académicos establecidos por la institución.";
 
-    const finConstancia = escribirCentrado(
-      doc,
-      textoConstancia,
-      centroX,
-      Math.max(yConstanciaMin, finPeriodo + 9),
-      236,
-      4.8
-    );
+    const bloques = [
+      {
+        texto: "El Instituto Superior Tecnológico Quito Metropolitano certifica que:",
+        font: "times",
+        style: "normal",
+        size: 11.6,
+        minSize: 9.1,
+        lineHeight: 5,
+        minLineHeight: 3.8,
+        color: [20, 20, 20],
+        gapAfter: 4.6,
+        minGapAfter: 1.4
+      },
+      {
+        texto: nombre,
+        font: "times",
+        style: "bold",
+        size: calcularTamanoNombre(nombre),
+        minSize: 12.6,
+        lineHeight: 6.4,
+        minLineHeight: 4.7,
+        color: [6, 25, 65],
+        gapAfter: 8.5,
+        minGapAfter: 4,
+        lineAfter: {
+          width: 176,
+          offset: 4.1,
+          color: [7, 29, 76],
+          lineWidth: 0.45,
+          secondary: {
+            width: 116,
+            offset: 5.5,
+            color: [196, 155, 57],
+            lineWidth: 0.18
+          }
+        }
+      },
+      {
+        texto: "participó y aprobó satisfactoriamente el programa de capacitación denominado:",
+        font: "times",
+        style: "normal",
+        size: 10.9,
+        minSize: 8.6,
+        lineHeight: 4.8,
+        minLineHeight: 3.5,
+        color: [20, 20, 20],
+        gapAfter: 4.6,
+        minGapAfter: 1.4
+      },
+      {
+        texto: curso,
+        font: "times",
+        style: "bold",
+        size: calcularTamanoCurso(curso),
+        minSize: 8.6,
+        lineHeight: 5.4,
+        minLineHeight: 3.5,
+        color: [6, 25, 65],
+        gapAfter: 4.8,
+        minGapAfter: 1.2
+      },
+      {
+        texto: textoPeriodo,
+        font: "times",
+        style: "normal",
+        size: 10.2,
+        minSize: 8.2,
+        lineHeight: 4.6,
+        minLineHeight: 3.4,
+        color: [20, 20, 20],
+        gapAfter: 4.2,
+        minGapAfter: 1.2
+      },
+      {
+        texto: textoConstancia,
+        font: "times",
+        style: "normal",
+        size: 10.1,
+        minSize: 8,
+        lineHeight: 4.5,
+        minLineHeight: 3.3,
+        color: [20, 20, 20],
+        gapAfter: 4.2,
+        minGapAfter: 1.1
+      },
+      {
+        texto: `Dado y firmado en la ciudad de ${ciudad}, a los ${fechaFormal}.`,
+        font: "times",
+        style: "normal",
+        size: 10.1,
+        minSize: 8,
+        lineHeight: 4.3,
+        minLineHeight: 3.2,
+        color: [80, 80, 80],
+        gapAfter: 0
+      }
+    ];
 
-    doc.setTextColor(80, 80, 80);
-    doc.setFont("times", "normal");
-    doc.setFontSize(10.1);
+    if (Smart && typeof Smart.prepararBloques === "function") {
+      const layout = Smart.prepararBloques(doc, bloques, zonaContenido.w, zonaContenido.h);
+      Smart.dibujarBloques(doc, layout.bloques, zonaContenido, { align: "center" });
+      return;
+    }
 
-    escribirCentrado(
-      doc,
-      `Dado y firmado en la ciudad de ${ciudad}, a los ${fechaFormal}.`,
-      centroX,
-      Math.min(Math.max(yFechaMin, finConstancia + 8), yFechaMax),
-      232,
-      4.8
-    );
+    dibujarContenidoBasico(doc, bloques, zonaContenido);
   }
 
-  function dibujarFirmas(doc, firmantes, ancho) {
-    const y = 177;
-    const posiciones = [ancho * 0.18, ancho * 0.50, ancho * 0.82];
+  function dibujarContenidoBasico(doc, bloques, zona) {
+    let y = zona.y;
+
+    bloques.forEach(function (bloque) {
+      const color = bloque.color || [20, 20, 20];
+      doc.setTextColor(color[0], color[1], color[2]);
+      doc.setFont(bloque.font || "times", bloque.style || "normal");
+      doc.setFontSize(bloque.size || 10);
+
+      const lineas = doc.splitTextToSize(bloque.texto || "", zona.w);
+      lineas.forEach(function (linea, index) {
+        doc.text(linea, zona.centroX, y + index * (bloque.lineHeight || 4.8), { align: "center" });
+      });
+
+      y += Math.max(1, lineas.length) * (bloque.lineHeight || 4.8) + (bloque.gapAfter || 0);
+    });
+  }
+
+  function dibujarFirmas(doc, firmantes, ancho, alto) {
+    const Smart = window.CertiTemplateSmart;
+    const zonaFirmas = Smart && typeof Smart.obtenerZona === "function"
+      ? Smart.obtenerZona("capacitacion", "firmas", ancho, alto)
+      : { x: 14, y: 175, w: ancho - 28, h: 27 };
+
+    const y = zonaFirmas.y;
+    const posiciones = [zonaFirmas.x + zonaFirmas.w * 0.16, zonaFirmas.x + zonaFirmas.w * 0.50, zonaFirmas.x + zonaFirmas.w * 0.84];
 
     (firmantes || []).slice(0, 3).forEach(function (firmante, index) {
       const x = posiciones[index] || ancho / 2;
@@ -176,12 +222,12 @@ Con qué se une:
       doc.setFontSize(calcularTamanoFirma(nombreVisible));
 
       if (nombreVisible) {
-        escribirCentrado(doc, nombreVisible, x, y + 7, 68, 3.8);
+        escribirCentrado(doc, nombreVisible, x, y + 7, 68, 3.6);
       }
 
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(6.8);
-      escribirCentrado(doc, cargo, x, y + 14, 70, 3.5);
+      doc.setFontSize(6.6);
+      escribirCentrado(doc, cargo, x, y + 13.5, 70, 3.4);
     });
   }
 
@@ -189,6 +235,10 @@ Con qué se une:
     const capacitador = limpiarNombre(
       certificado.capacitador || certificado.instructor || certificado.facilitador || ""
     );
+
+    if (certificado.firmantes && Array.isArray(certificado.firmantes) && certificado.firmantes.length) {
+      return certificado.firmantes;
+    }
 
     if (window.CertiFirmantes && typeof window.CertiFirmantes.obtenerFirmantesCapacitacion === "function") {
       return window.CertiFirmantes.obtenerFirmantesCapacitacion(capacitador);
@@ -241,6 +291,7 @@ Con qué se une:
 
   function calcularTamanoCurso(curso) {
     const largo = String(curso || "").length;
+    if (largo > 110) return 9.8;
     if (largo > 96) return 10.8;
     if (largo > 84) return 11.5;
     if (largo > 72) return 12.3;
@@ -252,10 +303,10 @@ Con qué se une:
   function calcularTamanoFirma(nombre) {
     const largo = String(nombre || "").length;
     if (!largo) return 8;
-    if (largo > 42) return 6.9;
-    if (largo > 34) return 7.4;
-    if (largo > 28) return 8;
-    return 8.6;
+    if (largo > 42) return 6.8;
+    if (largo > 34) return 7.2;
+    if (largo > 28) return 7.8;
+    return 8.4;
   }
 
   function debeOcultarNombrePlaceholder(nombre, cargo) {
