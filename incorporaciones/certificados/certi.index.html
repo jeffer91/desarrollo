@@ -14,7 +14,6 @@ Función o funciones:
 - Cargar controlador directo de respaldo para el botón Procesar datos.
 - Cargar controlador directo de descargas PDF, ZIP, descarga individual y modal de alertas.
 - Cargar controlador visual seguro para que las descargas generales esperen el análisis de plantilla.
-- Cargar corrección de centrado vertical para que el texto no quede amontonado arriba.
 - Cargar normalización de nombres propios en firmantes y capacitador.
 - Funcionar como apartado propio, fuera del menú interno de Incorporaciones.
 Con qué se une:
@@ -89,9 +88,7 @@ Con qué se une:
       <div>
         <p class="certi-eyebrow">Módulo independiente</p>
         <h1>Certi</h1>
-        <p>
-          Generación automática de certificados institucionales de reconocimiento y capacitación docente.
-        </p>
+        <p>Generación automática de certificados institucionales de reconocimiento y capacitación docente.</p>
       </div>
 
       <div class="certi-hero-badge">
@@ -104,9 +101,7 @@ Con qué se une:
       <div class="certi-panel-title">
         <div>
           <h2>Configuración inicial</h2>
-          <p>
-            Seleccione el tipo de certificado, período, fecha oficial y cargue los datos correspondientes.
-          </p>
+          <p>Seleccione el tipo de certificado, período, fecha oficial y cargue los datos correspondientes.</p>
         </div>
       </div>
 
@@ -147,19 +142,13 @@ Con qué se une:
             <span>Excel de mejores egresados</span>
             <input id="certiExcelInput" type="file" accept=".xlsx,.xls" />
           </label>
-          <p class="certi-help-text">
-            Para capacitación, el Excel puede tener columnas como Cargo, Nombre, capacitación y Calificación.
-          </p>
+          <p class="certi-help-text">Para capacitación, el Excel puede tener columnas como Cargo, Nombre, capacitación y Calificación.</p>
         </div>
 
         <div id="certiBloqueTexto" class="certi-source-card certi-source-card-text">
           <label class="certi-field">
             <span>Texto pegado de mejores egresados</span>
-            <textarea
-              id="certiTextoInput"
-              rows="9"
-              placeholder="Pegue aquí datos como: Carrera | Estudiante | Promedio"
-            ></textarea>
+            <textarea id="certiTextoInput" rows="9" placeholder="Pegue aquí datos como: Carrera | Estudiante | Promedio"></textarea>
           </label>
 
           <div id="certiTextoAyuda" class="certi-alert certi-alert-info certi-mini-help">
@@ -172,13 +161,8 @@ Con qué se une:
       </div>
 
       <div class="certi-actions">
-        <button id="certiBtnProcesar" class="certi-btn certi-btn-primary" type="button">
-          Procesar datos
-        </button>
-
-        <button id="certiBtnLimpiar" class="certi-btn certi-btn-ghost" type="button">
-          Limpiar pantalla
-        </button>
+        <button id="certiBtnProcesar" class="certi-btn certi-btn-primary" type="button">Procesar datos</button>
+        <button id="certiBtnLimpiar" class="certi-btn certi-btn-ghost" type="button">Limpiar pantalla</button>
       </div>
     </section>
 
@@ -186,9 +170,7 @@ Con qué se une:
       <div class="certi-panel-title">
         <div>
           <h2>Resumen de procesamiento</h2>
-          <p>
-            Esta pantalla no genera vista previa. Solo muestra el resumen necesario antes de descargar.
-          </p>
+          <p>Esta pantalla no genera vista previa. Solo muestra el resumen necesario antes de descargar.</p>
         </div>
       </div>
 
@@ -197,17 +179,14 @@ Con qué se une:
           <span>Registros leídos</span>
           <strong>0</strong>
         </article>
-
         <article class="certi-summary-card">
           <span>Carreras detectadas</span>
           <strong>0</strong>
         </article>
-
         <article class="certi-summary-card">
           <span>Certificados listos</span>
           <strong>0</strong>
         </article>
-
         <article class="certi-summary-card">
           <span>Alertas</span>
           <strong>0</strong>
@@ -221,12 +200,9 @@ Con qué se une:
       <div class="certi-panel-title">
         <div>
           <h2>Carreras no reconocidas</h2>
-          <p>
-            Empareje cada carrera detectada con una carrera oficial del catálogo institucional.
-          </p>
+          <p>Empareje cada carrera detectada con una carrera oficial del catálogo institucional.</p>
         </div>
       </div>
-
       <div id="certiCarrerasList" class="certi-mapping-list"></div>
     </section>
 
@@ -234,12 +210,9 @@ Con qué se une:
       <div class="certi-panel-title">
         <div>
           <h2>Empates detectados</h2>
-          <p>
-            Si dos estudiantes tienen el mismo promedio más alto, seleccione manualmente al beneficiario.
-          </p>
+          <p>Si dos estudiantes tienen el mismo promedio más alto, seleccione manualmente al beneficiario.</p>
         </div>
       </div>
-
       <div id="certiEmpatesList" class="certi-ties-list"></div>
     </section>
 
@@ -247,9 +220,7 @@ Con qué se une:
       <div class="certi-panel-title">
         <div>
           <h2>Certificados seleccionados</h2>
-          <p>
-            Resumen final antes de descargar los certificados. También puede descargar un certificado individual desde cada fila.
-          </p>
+          <p>Resumen final antes de descargar los certificados. También puede descargar un certificado individual desde cada fila.</p>
         </div>
       </div>
 
@@ -263,25 +234,17 @@ Con qué se une:
               <th>Estado</th>
             </tr>
           </thead>
-
           <tbody id="certiTablaBody">
             <tr>
-              <td colspan="4" class="certi-empty">
-                Cargue y procese los datos para ver los resultados.
-              </td>
+              <td colspan="4" class="certi-empty">Cargue y procese los datos para ver los resultados.</td>
             </tr>
           </tbody>
         </table>
       </div>
 
       <div class="certi-downloads">
-        <button id="certiBtnPdfUnico" class="certi-btn certi-btn-primary" type="button" disabled>
-          Descargar todos en un PDF
-        </button>
-
-        <button id="certiBtnPdfIndividuales" class="certi-btn certi-btn-secondary" type="button" disabled>
-          Descargar todos como ZIP
-        </button>
+        <button id="certiBtnPdfUnico" class="certi-btn certi-btn-primary" type="button" disabled>Descargar todos en un PDF</button>
+        <button id="certiBtnPdfIndividuales" class="certi-btn certi-btn-secondary" type="button" disabled>Descargar todos como ZIP</button>
       </div>
     </section>
   </main>
@@ -289,6 +252,7 @@ Con qué se une:
   <!-- Librerías externas -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js" data-certi-jszip="1"></script>
 
   <!-- Configuración base -->
   <script src="./certi.config.js"></script>
@@ -336,7 +300,7 @@ Con qué se une:
 
   <!-- Controladores directos de descargas, ZIP, descarga individual y modal de alertas -->
   <script src="./certi.descargas.alertas.js?v=20260707"></script>
-  <script src="./certi.descargas.visual.fix.js?v=20260712"></script>
+  <script src="./certi.descargas.visual.fix.js?v=20260713"></script>
   <script src="./certi.descarga.individual.js?v=20260712"></script>
 
   <!-- Parche definitivo Seguridad -->
