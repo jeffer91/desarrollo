@@ -4,7 +4,8 @@ Nombre completo: certi.template.js
 Ruta o ubicación: /incorporaciones/certificados/certi.template.js
 Función o funciones:
 - Dibujar el contenido del certificado sobre la plantilla oficial.
-- Usar zonas seguras de escritura para que el texto no invada firmas, logos o bordes.
+- Analizar visualmente la plantilla antes de escribir.
+- Usar zonas libres reales para que el texto no invada firmas, logos o bordes.
 - Ajustar automáticamente tamaño, interlineado y separación cuando el texto es largo.
 - Preparar cada página del PDF con fondo, nombre, promedio, carrera, cohorte, fecha y firma.
 Con qué se une:
@@ -47,9 +48,27 @@ Con qué se une:
   async function dibujarCertificado(doc, certificado, opciones) {
     const config = obtenerConfig();
     const plantilla = opciones && opciones.plantillaDataUrl;
+    const layout = await obtenerLayoutVisual(plantilla, config);
 
     dibujarFondo(doc, plantilla, config);
-    dibujarTexto(doc, certificado, config);
+    dibujarTexto(doc, certificado, config, layout);
+  }
+
+  async function obtenerLayoutVisual(plantilla, config) {
+    const ancho = config.pdf.ancho || 297;
+    const alto = config.pdf.alto || 210;
+
+    if (window.CertiTemplateSmart && typeof window.CertiTemplateSmart.analizarPlantilla === "function") {
+      return await window.CertiTemplateSmart.analizarPlantilla("reconocimiento", plantilla, ancho, alto);
+    }
+
+    return {
+      origen: "respaldo_sin_motor",
+      zonas: {
+        contenido: { x: 28, y: 54, w: 241, h: 105, centroX: ancho / 2 },
+        firma: { x: ancho / 2 - 62, y: 169, w: 124, h: 28, centroX: ancho / 2 }
+      }
+    };
   }
 
   function dibujarFondo(doc, plantillaDataUrl, config) {
@@ -77,11 +96,9 @@ Con qué se une:
     doc.rect(16, 16, ancho - 32, alto - 32);
   }
 
-  function dibujarTexto(doc, certificado, config) {
+  function dibujarTexto(doc, certificado, config, layout) {
     const Smart = window.CertiTemplateSmart;
     const ancho = config.pdf.ancho || 297;
-    const alto = config.pdf.alto || 210;
-    const centroX = ancho / 2;
 
     const nombre = limpiarNombre(certificado.nombre).toUpperCase();
     const carrera = String(certificado.carrera || "").toUpperCase();
@@ -90,13 +107,13 @@ Con qué se une:
     const fecha = certificado.fecha || "";
     const ciudad = config.ciudad || "Quito";
 
-    const zonaContenido = Smart && typeof Smart.obtenerZona === "function"
-      ? Smart.obtenerZona("reconocimiento", "contenido", ancho, alto)
-      : { x: 28, y: 54, w: 241, h: 105, centroX };
+    const zonaContenido = layout && layout.zonas && layout.zonas.contenido
+      ? layout.zonas.contenido
+      : { x: 28, y: 54, w: 241, h: 105, centroX: ancho / 2 };
 
-    const zonaFirma = Smart && typeof Smart.obtenerZona === "function"
-      ? Smart.obtenerZona("reconocimiento", "firma", ancho, alto)
-      : { x: centroX - 62, y: 169, w: 124, h: 28, centroX };
+    const zonaFirma = layout && layout.zonas && layout.zonas.firma
+      ? layout.zonas.firma
+      : { x: ancho / 2 - 62, y: 169, w: 124, h: 28, centroX: ancho / 2 };
 
     const textoReconocimiento = prepararTextoReconocimiento(
       config.texto.reconocimiento,
@@ -130,12 +147,12 @@ Con qué se une:
         gapAfter: 9,
         minGapAfter: 4,
         lineAfter: {
-          width: 184,
+          width: Math.min(184, zonaContenido.w * 0.76),
           offset: 4.5,
           color: [7, 29, 76],
           lineWidth: 0.5,
           secondary: {
-            width: 128,
+            width: Math.min(128, zonaContenido.w * 0.53),
             offset: 5.9,
             color: [196, 155, 57],
             lineWidth: 0.18
@@ -180,8 +197,8 @@ Con qué se une:
     ];
 
     if (Smart && typeof Smart.prepararBloques === "function") {
-      const layout = Smart.prepararBloques(doc, bloques, zonaContenido.w, zonaContenido.h);
-      Smart.dibujarBloques(doc, layout.bloques, zonaContenido, { align: "center" });
+      const layoutTexto = Smart.prepararBloques(doc, bloques, zonaContenido.w, zonaContenido.h);
+      Smart.dibujarBloques(doc, layoutTexto.bloques, zonaContenido, { align: "center" });
     } else {
       dibujarTextoBasico(doc, bloques, zonaContenido);
     }
@@ -193,7 +210,8 @@ Con qué se une:
     let y = zona.y;
 
     bloques.forEach(function (bloque) {
-      doc.setTextColor.apply(doc, bloque.color || [20, 20, 20]);
+      const color = bloque.color || [20, 20, 20];
+      doc.setTextColor(color[0], color[1], color[2]);
       doc.setFont(bloque.font || "times", bloque.style || "normal");
       doc.setFontSize(bloque.size || 10);
       const lineas = doc.splitTextToSize(bloque.texto || "", zona.w);
@@ -207,10 +225,11 @@ Con qué se une:
   function dibujarFirma(doc, config, zonaFirma) {
     const centroX = zonaFirma.centroX || (zonaFirma.x + zonaFirma.w / 2);
     const yFirma = zonaFirma.y;
+    const anchoLinea = Math.min(78, zonaFirma.w * 0.62);
 
     doc.setDrawColor(65, 65, 65);
     doc.setLineWidth(0.38);
-    doc.line(centroX - 39, yFirma, centroX + 39, yFirma);
+    doc.line(centroX - anchoLinea / 2, yFirma, centroX + anchoLinea / 2, yFirma);
 
     doc.setTextColor(10, 10, 10);
     doc.setFont("times", "bold");
