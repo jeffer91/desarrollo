@@ -4,10 +4,12 @@ Nombre completo: certi.template.js
 Ruta o ubicación: /incorporaciones/certificados/certi.template.js
 Función o funciones:
 - Dibujar el contenido del certificado sobre la plantilla oficial.
-- Centralizar posiciones, fuentes, líneas decorativas y textos del certificado.
+- Usar zonas seguras de escritura para que el texto no invada firmas, logos o bordes.
+- Ajustar automáticamente tamaño, interlineado y separación cuando el texto es largo.
 - Preparar cada página del PDF con fondo, nombre, promedio, carrera, cohorte, fecha y firma.
 Con qué se une:
 - certi.config.js
+- certi.template.smart.js
 - certi.pdf.js
 - certi.utils.js
 =========================================================
@@ -76,57 +78,25 @@ Con qué se une:
   }
 
   function dibujarTexto(doc, certificado, config) {
+    const Smart = window.CertiTemplateSmart;
     const ancho = config.pdf.ancho || 297;
-    const margenX = config.pdf.margenX || 28;
+    const alto = config.pdf.alto || 210;
     const centroX = ancho / 2;
 
-    const nombre = U.limpiarNombrePropio(certificado.nombre).toUpperCase();
+    const nombre = limpiarNombre(certificado.nombre).toUpperCase();
     const carrera = String(certificado.carrera || "").toUpperCase();
     const promedio = certificado.promedio;
     const periodo = String(certificado.periodo || "").toUpperCase();
     const fecha = certificado.fecha || "";
     const ciudad = config.ciudad || "Quito";
 
-    const anchoNombre = ancho - margenX * 2;
-    const anchoEncabezado = 224;
-    const anchoReconocimiento = 226;
-    const anchoCierre = 224;
+    const zonaContenido = Smart && typeof Smart.obtenerZona === "function"
+      ? Smart.obtenerZona("reconocimiento", "contenido", ancho, alto)
+      : { x: 28, y: 54, w: 241, h: 105, centroX };
 
-    const yEncabezado = 58;
-    const yNombre = 79;
-    const yReconocimiento = 105;
-    const yCierre = 131;
-    const yFecha = 154;
-    const yFirma = 171;
-
-    doc.setTextColor(25, 25, 25);
-    doc.setFont("times", "normal");
-    doc.setFontSize(14.2);
-
-    escribirCentradoMultilinea(
-      doc,
-      config.texto.encabezado,
-      centroX,
-      yEncabezado,
-      anchoEncabezado,
-      6.3
-    );
-
-    doc.setTextColor(6, 25, 65);
-    doc.setFont("times", "bold");
-    doc.setFontSize(calcularTamanoNombre(nombre));
-
-    const finNombre = escribirCentradoMultilinea(
-      doc,
-      nombre,
-      centroX,
-      yNombre,
-      anchoNombre,
-      9.2
-    );
-
-    const yLineaNombre = finNombre + 7;
-    dibujarLineaNombre(doc, centroX, yLineaNombre);
+    const zonaFirma = Smart && typeof Smart.obtenerZona === "function"
+      ? Smart.obtenerZona("reconocimiento", "firma", ancho, alto)
+      : { x: centroX - 62, y: 169, w: 124, h: 28, centroX };
 
     const textoReconocimiento = prepararTextoReconocimiento(
       config.texto.reconocimiento,
@@ -135,51 +105,123 @@ Con qué se une:
       periodo
     );
 
-    doc.setTextColor(20, 20, 20);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10.6);
+    const bloques = [
+      {
+        texto: config.texto.encabezado,
+        font: "times",
+        style: "normal",
+        size: 14.2,
+        minSize: 10.2,
+        lineHeight: 6.1,
+        minLineHeight: 4.4,
+        color: [25, 25, 25],
+        gapAfter: 6,
+        minGapAfter: 2
+      },
+      {
+        texto: nombre,
+        font: "times",
+        style: "bold",
+        size: calcularTamanoNombre(nombre),
+        minSize: 13.2,
+        lineHeight: 8,
+        minLineHeight: 5.2,
+        color: [6, 25, 65],
+        gapAfter: 9,
+        minGapAfter: 4,
+        lineAfter: {
+          width: 184,
+          offset: 4.5,
+          color: [7, 29, 76],
+          lineWidth: 0.5,
+          secondary: {
+            width: 128,
+            offset: 5.9,
+            color: [196, 155, 57],
+            lineWidth: 0.18
+          }
+        }
+      },
+      {
+        texto: textoReconocimiento,
+        font: "helvetica",
+        style: "normal",
+        size: 10.6,
+        minSize: 8.5,
+        lineHeight: 5.2,
+        minLineHeight: 3.7,
+        color: [20, 20, 20],
+        gapAfter: 7,
+        minGapAfter: 2
+      },
+      {
+        texto: config.texto.cierre,
+        font: "helvetica",
+        style: "normal",
+        size: 10.4,
+        minSize: 8.3,
+        lineHeight: 5.2,
+        minLineHeight: 3.7,
+        color: [30, 30, 30],
+        gapAfter: 7,
+        minGapAfter: 2
+      },
+      {
+        texto: `${ciudad}, ${fecha}.`,
+        font: "times",
+        style: "normal",
+        size: 11.8,
+        minSize: 9,
+        lineHeight: 4.8,
+        minLineHeight: 3.6,
+        color: [115, 115, 115],
+        gapAfter: 0
+      }
+    ];
 
-    const finReconocimiento = escribirCentradoMultilinea(
-      doc,
-      textoReconocimiento,
-      centroX,
-      Math.max(yReconocimiento, yLineaNombre + 13),
-      anchoReconocimiento,
-      5.5
-    );
+    if (Smart && typeof Smart.prepararBloques === "function") {
+      const layout = Smart.prepararBloques(doc, bloques, zonaContenido.w, zonaContenido.h);
+      Smart.dibujarBloques(doc, layout.bloques, zonaContenido, { align: "center" });
+    } else {
+      dibujarTextoBasico(doc, bloques, zonaContenido);
+    }
 
-    doc.setTextColor(30, 30, 30);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10.4);
+    dibujarFirma(doc, config, zonaFirma);
+  }
 
-    const finCierre = escribirCentradoMultilinea(
-      doc,
-      config.texto.cierre,
-      centroX,
-      Math.max(yCierre, finReconocimiento + 15),
-      anchoCierre,
-      5.5
-    );
+  function dibujarTextoBasico(doc, bloques, zona) {
+    let y = zona.y;
 
-    doc.setTextColor(115, 115, 115);
-    doc.setFont("times", "normal");
-    doc.setFontSize(11.8);
-    doc.text(`${ciudad}, ${fecha}.`, ancho - margenX, Math.max(yFecha, finCierre + 16), {
-    align: "right"
+    bloques.forEach(function (bloque) {
+      doc.setTextColor.apply(doc, bloque.color || [20, 20, 20]);
+      doc.setFont(bloque.font || "times", bloque.style || "normal");
+      doc.setFontSize(bloque.size || 10);
+      const lineas = doc.splitTextToSize(bloque.texto || "", zona.w);
+      lineas.forEach(function (linea, index) {
+        doc.text(linea, zona.centroX, y + index * (bloque.lineHeight || 5), { align: "center" });
+      });
+      y += Math.max(1, lineas.length) * (bloque.lineHeight || 5) + (bloque.gapAfter || 0);
     });
+  }
 
-    dibujarLineaFirma(doc, centroX, yFirma);
+  function dibujarFirma(doc, config, zonaFirma) {
+    const centroX = zonaFirma.centroX || (zonaFirma.x + zonaFirma.w / 2);
+    const yFirma = zonaFirma.y;
+
+    doc.setDrawColor(65, 65, 65);
+    doc.setLineWidth(0.38);
+    doc.line(centroX - 39, yFirma, centroX + 39, yFirma);
 
     doc.setTextColor(10, 10, 10);
     doc.setFont("times", "bold");
-    doc.setFontSize(11.6);
+    doc.setFontSize(11.4);
 
     doc.text(config.firmante.nombre, centroX, yFirma + 8.4, {
       align: "center"
     });
 
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(8.8);
+    doc.setFontSize(8.6);
 
     doc.text(config.firmante.cargo, centroX, yFirma + 14.4, {
       align: "center"
@@ -194,48 +236,6 @@ Con qué se une:
       .replace("en la carrera de ", "en la carrera ");
   }
 
-  function dibujarLineaNombre(doc, centroX, y) {
-    doc.setDrawColor(7, 29, 76);
-    doc.setLineWidth(0.5);
-    doc.line(centroX - 92, y, centroX + 92, y);
-
-    doc.setDrawColor(196, 155, 57);
-    doc.setLineWidth(0.18);
-    doc.line(centroX - 64, y + 1.4, centroX + 64, y + 1.4);
-  }
-
-  function dibujarLineaFirma(doc, centroX, y) {
-    doc.setDrawColor(65, 65, 65);
-    doc.setLineWidth(0.38);
-    doc.line(centroX - 39, y, centroX + 39, y);
-  }
-
-  function escribirCentradoMultilinea(doc, texto, x, y, anchoMaximo, saltoLinea) {
-    const lineas = [];
-
-    String(texto || "")
-      .split("\n")
-      .forEach(function (bloque) {
-        const partes = doc.splitTextToSize(bloque, anchoMaximo);
-
-        partes.forEach(function (parte) {
-          lineas.push(parte);
-        });
-      });
-
-    lineas.forEach(function (linea, index) {
-      doc.text(linea, x, y + index * saltoLinea, {
-        align: "center"
-      });
-    });
-
-    if (!lineas.length) {
-      return y;
-    }
-
-    return y + (lineas.length - 1) * saltoLinea;
-  }
-
   function calcularTamanoNombre(nombre) {
     const largo = String(nombre || "").length;
 
@@ -246,6 +246,14 @@ Con qué se une:
     if (largo > 30) return 21.2;
 
     return 22.4;
+  }
+
+  function limpiarNombre(valor) {
+    if (U && typeof U.limpiarNombrePropio === "function") {
+      return U.limpiarNombrePropio(valor);
+    }
+
+    return String(valor == null ? "" : valor).replace(/\s+/g, " ").trim();
   }
 
   window.CertiTemplate = {
