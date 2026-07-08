@@ -3,8 +3,11 @@
 Nombre completo: certi.descargas.visual.fix.js
 Ruta o ubicación: /incorporaciones/certificados/certi.descargas.visual.fix.js
 Función o funciones:
-- Reemplazar de forma segura las descargas generales con soporte para análisis visual de plantilla.
-- Interceptar Descargar todos en PDF y Descargar todos como ZIP antes del controlador anterior.
+- Controlar de forma única y segura las descargas generales del módulo Certi.
+- Generar un PDF único con todos los certificados procesados.
+- Generar un ZIP con un PDF individual por certificado procesado.
+- Evitar que los botones queden bloqueados en "Generando ZIP...".
+- Cargar JSZip con control de error y tiempo máximo de espera.
 - Esperar correctamente las plantillas async de reconocimiento y capacitación.
 - Conservar el capacitador real en los certificados de capacitación.
 Con qué se une:
@@ -24,7 +27,15 @@ Con qué se une:
   "use strict";
 
   const TIPO_CAPACITACION = "capacitacion";
+  const TIPO_RECONOCIMIENTO = "reconocimiento";
   const JSZIP_CDN = "https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js";
+  const JSZIP_TIMEOUT_MS = 15000;
+  const IMAGEN_TIMEOUT_MS = 12000;
+
+  const CONTROL = {
+    descargando: false,
+    tipo: ""
+  };
 
   iniciar();
 
@@ -38,6 +49,8 @@ Con qué se une:
   }
 
   function inicializar() {
+    restablecerBotonesSiQuedaronAtorados();
+
     document.addEventListener("click", function (evento) {
       const btnPdfUnico = evento.target.closest("#certiBtnPdfUnico");
       const btnZip = evento.target.closest("#certiBtnPdfIndividuales");
@@ -46,6 +59,11 @@ Con qué se une:
 
       evento.preventDefault();
       evento.stopImmediatePropagation();
+
+      if (CONTROL.descargando) {
+        mostrarEstado("Ya existe una descarga en proceso. Espere a que termine.", "warning");
+        return;
+      }
 
       if (btnPdfUnico) {
         descargarTodosEnPdf();
@@ -57,9 +75,15 @@ Con qué se une:
   }
 
   async function descargarTodosEnPdf() {
+    CONTROL.descargando = true;
+    CONTROL.tipo = "pdf";
+
     try {
-      bloquearDescargas(true, "Generando PDF...");
-      mostrarEstado("Analizando plantilla y generando PDF único...", "info");
+      bloquearDescargas(true, {
+        pdf: "Generando PDF...",
+        zip: "Espere..."
+      });
+      mostrarEstado("Preparando PDF único. Espere un momento...", "info");
 
       const estado = obtenerEstadoSeguro();
       const certificados = obtenerCertificadosParaPdf(estado);
@@ -81,23 +105,31 @@ Con qué se une:
 
         if ((i + 1) % 10 === 0 || i + 1 === certificados.length) {
           mostrarEstado(`Generando PDF único: ${i + 1} de ${certificados.length} certificado(s)...`, "info");
-          await esperar(40);
+          await esperar(35);
         }
       }
 
       doc.save(crearNombrePdfUnico(estado, config));
       mostrarEstado(`PDF único generado correctamente con ${certificados.length} certificado(s).`, "success");
     } catch (error) {
-      mostrarEstado(error.message || "No se pudo generar el PDF único.", "error");
+      mostrarEstado(error && error.message ? error.message : "No se pudo generar el PDF único.", "error");
     } finally {
+      CONTROL.descargando = false;
+      CONTROL.tipo = "";
       bloquearDescargas(false);
     }
   }
 
   async function descargarTodosComoZip() {
+    CONTROL.descargando = true;
+    CONTROL.tipo = "zip";
+
     try {
-      bloquearDescargas(true, "Generando ZIP...");
-      mostrarEstado("Analizando plantilla y preparando certificados en ZIP...", "info");
+      bloquearDescargas(true, {
+        pdf: "Espere...",
+        zip: "Generando ZIP..."
+      });
+      mostrarEstado("Preparando PDFs individuales en un único ZIP. Espere un momento...", "info");
 
       const estado = obtenerEstadoSeguro();
       const certificados = obtenerCertificadosParaPdf(estado);
@@ -106,10 +138,9 @@ Con qué se une:
         throw new Error("No hay certificados listos para comprimir en ZIP.");
       }
 
-      await asegurarJSZip();
-
+      const JSZip = await asegurarJSZip();
       const jsPDF = obtenerJsPdf();
-      const zip = new window.JSZip();
+      const zip = new JSZip();
       const config = obtenerConfigPdf(estado);
       const plantillaDataUrl = await cargarPlantilla(config.plantilla);
       const usados = {};
@@ -121,11 +152,11 @@ Con qué se une:
         await dibujarCertificado(doc, certificado, plantillaDataUrl);
 
         const nombrePdf = crearNombreUnico(crearNombrePdfIndividual(certificado, estado, config), usados);
-        zip.file(nombrePdf, doc.output("blob"));
+        zip.file(nombrePdf, doc.output("arraybuffer"));
 
-        if ((i + 1) % 10 === 0 || i + 1 === certificados.length) {
+        if ((i + 1) % 5 === 0 || i + 1 === certificados.length) {
           mostrarEstado(`Preparando ZIP: ${i + 1} de ${certificados.length} PDF(s)...`, "info");
-          await esperar(60);
+          await esperar(50);
         }
       }
 
@@ -140,8 +171,10 @@ Con qué se une:
       descargarBlob(blobZip, crearNombreZip(estado, config));
       mostrarEstado(`ZIP generado correctamente con ${certificados.length} certificado(s).`, "success");
     } catch (error) {
-      mostrarEstado(error.message || "No se pudo generar el ZIP de certificados.", "error");
+      mostrarEstado(error && error.message ? error.message : "No se pudo generar el ZIP de certificados.", "error");
     } finally {
+      CONTROL.descargando = false;
+      CONTROL.tipo = "";
       bloquearDescargas(false);
     }
   }
@@ -171,13 +204,13 @@ Con qué se une:
   function obtenerCertificadosParaPdf(estado) {
     if (estado && estado.resultado) {
       const desdeResultado = obtenerCertificadosDesdeResultado(estado.resultado);
-      if (desdeResultado.length) return desdeResultado;
+      if (desdeResultado.length) return filtrarListos(desdeResultado);
     }
 
     if (window.CertiState && typeof window.CertiState.obtener === "function") {
       const actual = window.CertiState.obtener() || {};
       const desdeEstadoActual = obtenerCertificadosDesdeResultado(actual.resultado);
-      if (desdeEstadoActual.length) return desdeEstadoActual;
+      if (desdeEstadoActual.length) return filtrarListos(desdeEstadoActual);
     }
 
     return obtenerCertificadosDesdeTabla(estado);
@@ -189,6 +222,12 @@ Con qué se une:
     if (Array.isArray(resultado.mejores) && resultado.mejores.length) return resultado.mejores.slice();
     if (Array.isArray(resultado.registrosValidos) && resultado.registrosValidos.length) return resultado.registrosValidos.slice();
     return [];
+  }
+
+  function filtrarListos(lista) {
+    return (lista || []).filter(function (item) {
+      return !item.estadoCertificado || item.estadoCertificado === "listo";
+    });
   }
 
   function obtenerCertificadosDesdeTabla(estado) {
@@ -232,7 +271,7 @@ Con qué se une:
         if (!/LISTO/i.test(estadoFila)) return;
 
         certificados.push({
-          tipoCertificado: "reconocimiento",
+          tipoCertificado: TIPO_RECONOCIMIENTO,
           carrera: limpiarTexto(celdas[0].textContent),
           nombre: limpiarTexto(celdas[1].textContent),
           promedio: limpiarTexto(celdas[2].textContent),
@@ -272,13 +311,14 @@ Con qué se une:
     }
 
     return Object.assign({}, item, {
-      tipoCertificado: "reconocimiento",
+      tipoCertificado: TIPO_RECONOCIMIENTO,
       nombre: item.nombre || item.estudiante || "",
       carrera: item.carrera || item.carreraOficial || item.carreraOriginal || "",
       promedio: item.promedio || item.nota || "",
       periodo,
       fecha: fechaLarga,
-      fechaInput: estado.fechaCertificado
+      fechaInput: estado.fechaCertificado,
+      carreraCodigo: item.carreraCodigo || crearNombreArchivo(item.carrera || item.carreraOficial || item.carreraOriginal || "carrera")
     });
   }
 
@@ -338,35 +378,117 @@ Con qué se une:
     return window.jspdf.jsPDF;
   }
 
-  function asegurarJSZip() {
+  async function asegurarJSZip() {
+    if (window.JSZip) return window.JSZip;
+
+    await cargarScriptJSZip();
+
+    if (!window.JSZip) {
+      throw new Error("JSZip no quedó disponible para crear el archivo ZIP.");
+    }
+
+    return window.JSZip;
+  }
+
+  function cargarScriptJSZip() {
     return new Promise(function (resolve, reject) {
       if (window.JSZip) {
         resolve(window.JSZip);
         return;
       }
 
-      const existente = document.querySelector(`script[src="${JSZIP_CDN}"]`);
-      if (existente) {
-        existente.addEventListener("load", function () {
-          resolve(window.JSZip);
-        });
-        existente.addEventListener("error", function () {
-          reject(new Error("No se pudo cargar JSZip."));
-        });
+      const existente = document.querySelector('script[data-certi-jszip="1"]') || document.querySelector(`script[src="${JSZIP_CDN}"]`);
+
+      if (existente && existente.dataset.certiJszipLoading === "1") {
+        esperarScriptExistente(existente, resolve, reject);
         return;
       }
 
+      if (existente && !window.JSZip) {
+        existente.remove();
+      }
+
       const script = document.createElement("script");
+      let terminado = false;
+      let timer = null;
+
+      function limpiar() {
+        terminado = true;
+        clearTimeout(timer);
+        script.dataset.certiJszipLoading = "0";
+      }
+
       script.src = JSZIP_CDN;
+      script.async = true;
+      script.defer = true;
+      script.dataset.certiJszip = "1";
+      script.dataset.certiJszipLoading = "1";
+
       script.onload = function () {
-        if (window.JSZip) resolve(window.JSZip);
-        else reject(new Error("JSZip no quedó disponible después de cargar."));
+        if (terminado) return;
+        limpiar();
+
+        if (window.JSZip) {
+          script.dataset.certiJszipLoaded = "1";
+          resolve(window.JSZip);
+          return;
+        }
+
+        reject(new Error("JSZip se cargó, pero no quedó disponible."));
       };
+
       script.onerror = function () {
-        reject(new Error("No se pudo cargar JSZip para crear el archivo ZIP."));
+        if (terminado) return;
+        limpiar();
+        script.remove();
+        reject(new Error("No se pudo cargar JSZip para crear el archivo ZIP. Revise la conexión a internet."));
       };
+
+      timer = setTimeout(function () {
+        if (terminado) return;
+        limpiar();
+        script.remove();
+        reject(new Error("La carga de JSZip tardó demasiado. Recargue la pantalla e intente nuevamente."));
+      }, JSZIP_TIMEOUT_MS);
+
       document.head.appendChild(script);
     });
+  }
+
+  function esperarScriptExistente(script, resolve, reject) {
+    let terminado = false;
+    let timer = null;
+
+    function limpiar() {
+      terminado = true;
+      clearTimeout(timer);
+    }
+
+    if (window.JSZip) {
+      resolve(window.JSZip);
+      return;
+    }
+
+    script.addEventListener("load", function () {
+      if (terminado) return;
+      limpiar();
+      if (window.JSZip) resolve(window.JSZip);
+      else reject(new Error("JSZip se cargó, pero no quedó disponible."));
+    }, { once: true });
+
+    script.addEventListener("error", function () {
+      if (terminado) return;
+      limpiar();
+      script.remove();
+      reject(new Error("No se pudo cargar JSZip para crear el archivo ZIP."));
+    }, { once: true });
+
+    timer = setTimeout(function () {
+      if (terminado) return;
+      limpiar();
+      script.remove();
+      reject(new Error("La carga anterior de JSZip quedó inconclusa. Recargue la pantalla e intente nuevamente."));
+    }, JSZIP_TIMEOUT_MS);
   }
 
   async function cargarPlantilla(ruta) {
@@ -383,6 +505,16 @@ Con qué se une:
   function imagenADataUrl(ruta) {
     return new Promise(function (resolve, reject) {
       const imagen = new Image();
+      let terminado = false;
+      let timer = null;
+
+      function cerrar(callback, valor) {
+        if (terminado) return;
+        terminado = true;
+        clearTimeout(timer);
+        callback(valor);
+      }
+
       imagen.onload = function () {
         try {
           const canvas = document.createElement("canvas");
@@ -390,14 +522,20 @@ Con qué se une:
           canvas.height = imagen.naturalHeight || imagen.height;
           const ctx = canvas.getContext("2d");
           ctx.drawImage(imagen, 0, 0);
-          resolve(canvas.toDataURL("image/png"));
+          cerrar(resolve, canvas.toDataURL("image/png"));
         } catch (error) {
-          reject(error);
+          cerrar(reject, error);
         }
       };
+
       imagen.onerror = function () {
-        reject(new Error("No se pudo cargar la imagen de plantilla."));
+        cerrar(reject, new Error("No se pudo cargar la imagen de plantilla."));
       };
+
+      timer = setTimeout(function () {
+        cerrar(reject, new Error("La plantilla tardó demasiado en cargar."));
+      }, IMAGEN_TIMEOUT_MS);
+
       imagen.src = ruta;
     });
   }
@@ -407,13 +545,14 @@ Con qué se une:
     const enlace = document.createElement("a");
     enlace.href = url;
     enlace.download = nombreArchivo;
+    enlace.style.display = "none";
     document.body.appendChild(enlace);
     enlace.click();
     enlace.remove();
 
     setTimeout(function () {
       URL.revokeObjectURL(url);
-    }, 1500);
+    }, 1800);
   }
 
   function crearNombrePdfUnico(estado, config) {
@@ -445,22 +584,44 @@ Con qué se une:
     return nombre.replace(/\.pdf$/i, `_${usados[nombre]}.pdf`);
   }
 
-  function bloquearDescargas(bloquear, texto) {
-    const botones = [
-      document.getElementById("certiBtnPdfUnico"),
-      document.getElementById("certiBtnPdfIndividuales")
-    ];
+  function bloquearDescargas(bloquear, textos) {
+    const btnUnico = document.getElementById("certiBtnPdfUnico");
+    const btnIndividuales = document.getElementById("certiBtnPdfIndividuales");
+    const cfg = textos || {};
 
-    botones.forEach(function (boton) {
-      if (!boton) return;
-      boton.disabled = Boolean(bloquear);
-      if (bloquear && texto) boton.dataset.textoOriginal = boton.textContent;
-      if (bloquear && texto) boton.textContent = texto;
-      if (!bloquear && boton.dataset.textoOriginal) {
-        boton.textContent = boton.dataset.textoOriginal;
-        delete boton.dataset.textoOriginal;
-      }
-    });
+    aplicarEstadoBoton(btnUnico, bloquear, cfg.pdf, "Descargar todos en un PDF");
+    aplicarEstadoBoton(btnIndividuales, bloquear, cfg.zip, "Descargar todos como ZIP");
+  }
+
+  function aplicarEstadoBoton(boton, bloquear, textoTemporal, textoDefecto) {
+    if (!boton) return;
+
+    if (!boton.dataset.certiTextoOriginal) {
+      boton.dataset.certiTextoOriginal = limpiarTexto(boton.textContent) || textoDefecto;
+    }
+
+    boton.disabled = Boolean(bloquear);
+
+    if (bloquear) {
+      boton.textContent = textoTemporal || "Espere...";
+      return;
+    }
+
+    boton.textContent = boton.dataset.certiTextoOriginal || textoDefecto;
+    delete boton.dataset.certiTextoOriginal;
+  }
+
+  function restablecerBotonesSiQuedaronAtorados() {
+    const btnUnico = document.getElementById("certiBtnPdfUnico");
+    const btnIndividuales = document.getElementById("certiBtnPdfIndividuales");
+
+    if (btnUnico && /GENERANDO|ESPERE/i.test(btnUnico.textContent)) {
+      btnUnico.textContent = "Descargar todos en un PDF";
+    }
+
+    if (btnIndividuales && /GENERANDO|ESPERE/i.test(btnIndividuales.textContent)) {
+      btnIndividuales.textContent = "Descargar todos como ZIP";
+    }
   }
 
   function mostrarEstado(mensaje, tipo) {
@@ -538,6 +699,8 @@ Con qué se une:
 
   window.CertiDescargasVisualFix = {
     descargarTodosEnPdf,
-    descargarTodosComoZip
+    descargarTodosComoZip,
+    asegurarJSZip,
+    restablecerBotonesSiQuedaronAtorados
   };
 })();
