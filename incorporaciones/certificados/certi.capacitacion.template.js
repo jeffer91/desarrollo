@@ -5,11 +5,11 @@ Ruta o ubicación: /incorporaciones/certificados/certi.capacitacion.template.js
 Función o funciones:
 - Dibujar el certificado de capacitación docente en PDF.
 - Usar plantilla de fondo específica para capacitación.
-- Escribir dentro de zonas seguras y ajustar texto automáticamente.
+- Analizar visualmente la plantilla antes de escribir.
+- Escribir dentro de zonas libres detectadas por canvas.
 - Usar texto institucional formal.
 - Dibujar tres firmas: Rector, Gestor de Procesos Académicos y Capacitador.
-- Evitar que el texto se cruce con firmas, logos o bordes de la plantilla.
-- Subir y compactar firmas para que no toquen el filo dorado inferior.
+- Evitar que el texto se cruce con firmas, logos, bordes o filos dorados de la plantilla.
 Con qué se une:
 - certi.template.smart.js
 - certi.capacitacion.logic.js
@@ -24,16 +24,36 @@ Con qué se une:
 
   const U = window.CertiUtils || {};
 
-  function dibujarCertificado(doc, certificado, opciones) {
+  async function dibujarCertificado(doc, certificado, opciones) {
     const config = window.CertiConfig || {};
     const pdfConfig = config.pdf || {};
     const ancho = pdfConfig.ancho || 297;
     const alto = pdfConfig.alto || 210;
     const plantilla = opciones && opciones.plantillaDataUrl;
+    const layout = await obtenerLayoutVisual(plantilla, ancho, alto);
 
     dibujarFondo(doc, plantilla, ancho, alto);
-    dibujarContenido(doc, certificado, config, ancho, alto);
-    dibujarFirmas(doc, obtenerFirmantes(certificado), ancho, alto);
+    dibujarContenido(doc, certificado, config, ancho, alto, layout);
+    dibujarFirmas(doc, obtenerFirmantes(certificado), ancho, alto, layout);
+  }
+
+  async function obtenerLayoutVisual(plantilla, ancho, alto) {
+    if (window.CertiTemplateSmart && typeof window.CertiTemplateSmart.analizarPlantilla === "function") {
+      return await window.CertiTemplateSmart.analizarPlantilla("capacitacion", plantilla, ancho, alto);
+    }
+
+    return {
+      origen: "respaldo_sin_motor",
+      zonas: {
+        contenido: { x: 30, y: 54, w: 237, h: 96, centroX: ancho / 2 },
+        firmas: { x: 22, y: 162, w: 253, h: 34 },
+        firmaBoxes: [
+          { x: 36, y: 162, w: 62, h: 24, centroX: 67 },
+          { x: 118, y: 162, w: 62, h: 24, centroX: 149 },
+          { x: 199, y: 162, w: 62, h: 24, centroX: 230 }
+        ]
+      }
+    };
   }
 
   function dibujarFondo(doc, plantillaDataUrl, ancho, alto) {
@@ -55,7 +75,7 @@ Con qué se une:
     dibujarLinea(doc, 16, alto - 16, ancho - 16, alto - 16, 196, 155, 57, 0.45);
   }
 
-  function dibujarContenido(doc, certificado, config, ancho, alto) {
+  function dibujarContenido(doc, certificado, config, ancho, alto, layout) {
     const Smart = window.CertiTemplateSmart;
     const nombre = limpiarNombre(certificado.nombre || certificado.docente).toUpperCase();
     const curso = limpiarTexto(certificado.curso || certificado.tema).toUpperCase();
@@ -65,8 +85,8 @@ Con qué se une:
     const ciudad = config.ciudad || "Quito";
     const fechaFormal = formatearFechaFormal(certificado.fechaInput, certificado.fecha);
 
-    const zonaContenido = Smart && typeof Smart.obtenerZona === "function"
-      ? Smart.obtenerZona("capacitacion", "contenido", ancho, alto)
+    const zonaContenido = layout && layout.zonas && layout.zonas.contenido
+      ? layout.zonas.contenido
       : { x: 30, y: 54, w: 237, h: 96, centroX: ancho / 2 };
 
     const textoPeriodo =
@@ -101,12 +121,12 @@ Con qué se une:
         gapAfter: 8.5,
         minGapAfter: 4,
         lineAfter: {
-          width: 176,
+          width: Math.min(176, zonaContenido.w * 0.74),
           offset: 4.1,
           color: [7, 29, 76],
           lineWidth: 0.45,
           secondary: {
-            width: 116,
+            width: Math.min(116, zonaContenido.w * 0.49),
             offset: 5.5,
             color: [196, 155, 57],
             lineWidth: 0.18
@@ -175,8 +195,8 @@ Con qué se une:
     ];
 
     if (Smart && typeof Smart.prepararBloques === "function") {
-      const layout = Smart.prepararBloques(doc, bloques, zonaContenido.w, zonaContenido.h);
-      Smart.dibujarBloques(doc, layout.bloques, zonaContenido, { align: "center" });
+      const layoutTexto = Smart.prepararBloques(doc, bloques, zonaContenido.w, zonaContenido.h);
+      Smart.dibujarBloques(doc, layoutTexto.bloques, zonaContenido, { align: "center" });
       return;
     }
 
@@ -201,23 +221,21 @@ Con qué se une:
     });
   }
 
-  function dibujarFirmas(doc, firmantes, ancho, alto) {
-    const Smart = window.CertiTemplateSmart;
-    const zonaFirmas = Smart && typeof Smart.obtenerZona === "function"
-      ? Smart.obtenerZona("capacitacion", "firmas", ancho, alto)
-      : { x: 22, y: 162, w: 253, h: 34 };
-
-    const y = zonaFirmas.y;
-    const posiciones = [
-      zonaFirmas.x + zonaFirmas.w * 0.18,
-      zonaFirmas.x + zonaFirmas.w * 0.50,
-      zonaFirmas.x + zonaFirmas.w * 0.82
-    ];
-    const anchoLinea = Math.min(56, zonaFirmas.w / 4.8);
-    const anchoTexto = Math.min(62, zonaFirmas.w / 3.8);
+  function dibujarFirmas(doc, firmantes, ancho, alto, layout) {
+    const firmaBoxes = layout && layout.zonas && Array.isArray(layout.zonas.firmaBoxes) && layout.zonas.firmaBoxes.length
+      ? layout.zonas.firmaBoxes
+      : [
+        { x: 36, y: 162, w: 62, h: 24, centroX: 67 },
+        { x: 118, y: 162, w: 62, h: 24, centroX: 149 },
+        { x: 199, y: 162, w: 62, h: 24, centroX: 230 }
+      ];
 
     (firmantes || []).slice(0, 3).forEach(function (firmante, index) {
-      const x = posiciones[index] || ancho / 2;
+      const box = firmaBoxes[index] || firmaBoxes[1];
+      const x = box.centroX || (box.x + box.w / 2);
+      const y = box.y;
+      const anchoLinea = Math.max(42, Math.min(56, box.w * 0.9));
+      const anchoTexto = Math.max(46, Math.min(62, box.w));
       const nombre = limpiarTexto(firmante.nombre || "");
       const cargo = limpiarTexto(firmante.cargo || "");
       const nombreVisible = debeOcultarNombrePlaceholder(nombre, cargo) ? "" : nombre;
