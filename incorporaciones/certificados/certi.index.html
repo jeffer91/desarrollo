@@ -15,6 +15,7 @@ Función o funciones:
 - Cargar controlador directo de descargas PDF, ZIP, descarga individual y modal de alertas.
 - Cargar controlador visual seguro para que las descargas generales esperen el análisis de plantilla.
 - Cargar corrección de centrado vertical para que el texto no quede amontonado arriba.
+- Cargar normalización de nombres propios en firmantes y capacitador.
 - Funcionar como apartado propio, fuera del menú interno de Incorporaciones.
 Con qué se une:
 - certi.css
@@ -295,7 +296,7 @@ Con qué se une:
   <!-- Núcleo del módulo -->
   <script src="./certi.state.js"></script>
   <script src="./certi.dom.js"></script>
-  <script src="./certi.utils.js"></script>
+  <script src="./certi.utils.js?v=20260712"></script>
   <script src="./certi.catalogo.js"></script>
   <script src="./certi.excel.js"></script>
   <script src="./certi.text.js"></script>
@@ -318,10 +319,10 @@ Con qué se une:
 
   <!-- Tipos de certificados y capacitación docente -->
   <script src="./certi.tipos.js?v=20260707"></script>
-  <script src="./certi.firmantes.js?v=20260707"></script>
+  <script src="./certi.firmantes.js?v=20260712"></script>
   <script src="./certi.capacitacion.excel.js?v=20260707"></script>
   <script src="./certi.capacitacion.logic.js?v=20260707"></script>
-  <script src="./certi.capacitacion.template.js?v=20260711"></script>
+  <script src="./certi.capacitacion.template.js?v=20260712"></script>
   <script src="./certi.capacitacion.js?v=20260707"></script>
 
   <!-- Inicio de la app -->
@@ -335,8 +336,8 @@ Con qué se une:
 
   <!-- Controladores directos de descargas, ZIP, descarga individual y modal de alertas -->
   <script src="./certi.descargas.alertas.js?v=20260707"></script>
-  <script src="./certi.descargas.visual.fix.js?v=20260711"></script>
-  <script src="./certi.descarga.individual.js?v=20260711"></script>
+  <script src="./certi.descargas.visual.fix.js?v=20260712"></script>
+  <script src="./certi.descarga.individual.js?v=20260712"></script>
 
   <!-- Parche definitivo Seguridad -->
   <script src="./certi.seguridad.fix.js?v=20260605"></script>
