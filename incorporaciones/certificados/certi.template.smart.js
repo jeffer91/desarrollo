@@ -6,6 +6,7 @@ Función o funciones:
 - Crear un motor común para escribir sobre plantillas de certificados.
 - Trabajar con zonas seguras de texto para evitar cruces con firmas, logos o bordes.
 - Ajustar automáticamente tamaño de letra, interlineado y separación entre bloques.
+- Reservar una zona inferior segura para que las firmas no toquen el borde dorado de la plantilla.
 - Permitir que una plantilla nueva pueda definir sus propias zonas desde CertiConfig.zonasTexto.
 Con qué se une:
 - certi.template.js
@@ -24,8 +25,8 @@ Con qué se une:
       firma: { x: 86, y: 169, w: 125, h: 28 }
     },
     capacitacion: {
-      contenido: { x: 30, y: 54, w: 237, h: 104 },
-      firmas: { x: 14, y: 175, w: 269, h: 27 }
+      contenido: { x: 30, y: 54, w: 237, h: 96 },
+      firmas: { x: 22, y: 162, w: 253, h: 34 }
     }
   };
 
@@ -189,7 +190,12 @@ Con qué se une:
 
       doc.setDrawColor(color2[0], color2[1], color2[2]);
       doc.setLineWidth(width2);
-      doc.line(zona.centroX - ancho2 / 2, y + Math.max(0, lineas.length - 1) * lineHeight + offset2, zona.centroX + ancho2 / 2, y + Math.max(0, lineas.length - 1) * lineHeight + offset2);
+      doc.line(
+        zona.centroX - ancho2 / 2,
+        y + Math.max(0, lineas.length - 1) * lineHeight + offset2,
+        zona.centroX + ancho2 / 2,
+        y + Math.max(0, lineas.length - 1) * lineHeight + offset2
+      );
     }
   }
 
