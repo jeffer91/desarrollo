@@ -9,6 +9,7 @@ Función o funciones:
 - Usar texto institucional formal.
 - Dibujar tres firmas: Rector, Gestor de Procesos Académicos y Capacitador.
 - Evitar que el texto se cruce con firmas, logos o bordes de la plantilla.
+- Subir y compactar firmas para que no toquen el filo dorado inferior.
 Con qué se une:
 - certi.template.smart.js
 - certi.capacitacion.logic.js
@@ -66,7 +67,7 @@ Con qué se une:
 
     const zonaContenido = Smart && typeof Smart.obtenerZona === "function"
       ? Smart.obtenerZona("capacitacion", "contenido", ancho, alto)
-      : { x: 30, y: 54, w: 237, h: 104, centroX: ancho / 2 };
+      : { x: 30, y: 54, w: 237, h: 96, centroX: ancho / 2 };
 
     const textoPeriodo =
       `desarrollado durante el período ${periodo}, con una duración total de ${horas} horas académicas, ` +
@@ -204,10 +205,16 @@ Con qué se une:
     const Smart = window.CertiTemplateSmart;
     const zonaFirmas = Smart && typeof Smart.obtenerZona === "function"
       ? Smart.obtenerZona("capacitacion", "firmas", ancho, alto)
-      : { x: 14, y: 175, w: ancho - 28, h: 27 };
+      : { x: 22, y: 162, w: 253, h: 34 };
 
     const y = zonaFirmas.y;
-    const posiciones = [zonaFirmas.x + zonaFirmas.w * 0.16, zonaFirmas.x + zonaFirmas.w * 0.50, zonaFirmas.x + zonaFirmas.w * 0.84];
+    const posiciones = [
+      zonaFirmas.x + zonaFirmas.w * 0.18,
+      zonaFirmas.x + zonaFirmas.w * 0.50,
+      zonaFirmas.x + zonaFirmas.w * 0.82
+    ];
+    const anchoLinea = Math.min(56, zonaFirmas.w / 4.8);
+    const anchoTexto = Math.min(62, zonaFirmas.w / 3.8);
 
     (firmantes || []).slice(0, 3).forEach(function (firmante, index) {
       const x = posiciones[index] || ancho / 2;
@@ -215,19 +222,19 @@ Con qué se une:
       const cargo = limpiarTexto(firmante.cargo || "");
       const nombreVisible = debeOcultarNombrePlaceholder(nombre, cargo) ? "" : nombre;
 
-      dibujarLinea(doc, x - 34, y, x + 34, y, 65, 65, 65, 0.38);
+      dibujarLinea(doc, x - anchoLinea / 2, y, x + anchoLinea / 2, y, 65, 65, 65, 0.34);
 
       doc.setTextColor(10, 10, 10);
       doc.setFont("times", "bold");
       doc.setFontSize(calcularTamanoFirma(nombreVisible));
 
       if (nombreVisible) {
-        escribirCentrado(doc, nombreVisible, x, y + 7, 68, 3.6);
+        escribirCentrado(doc, nombreVisible, x, y + 6.2, anchoTexto, 3.2);
       }
 
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(6.6);
-      escribirCentrado(doc, cargo, x, y + 13.5, 70, 3.4);
+      doc.setFontSize(6.1);
+      escribirCentrado(doc, cargo, x, y + 11.8, anchoTexto, 3.1);
     });
   }
 
@@ -314,11 +321,11 @@ Con qué se une:
 
   function calcularTamanoFirma(nombre) {
     const largo = String(nombre || "").length;
-    if (!largo) return 8;
-    if (largo > 42) return 6.8;
-    if (largo > 34) return 7.2;
-    if (largo > 28) return 7.8;
-    return 8.4;
+    if (!largo) return 7.4;
+    if (largo > 42) return 6.1;
+    if (largo > 34) return 6.5;
+    if (largo > 28) return 7;
+    return 7.6;
   }
 
   function debeOcultarNombrePlaceholder(nombre, cargo) {
