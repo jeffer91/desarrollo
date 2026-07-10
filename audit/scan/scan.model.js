@@ -4,7 +4,7 @@ Ruta o ubicación: /audit/scan/scan.model.js
 Función o funciones:
 - Preservar la ruta y el nombre exactos declarados dentro del ZIP.
 - Generar una ruta normalizada y otra segura para visualización y consultas.
-- Detectar recorridos relativos, rutas absolutas, controles y separadores no estándar.
+- Detectar recorridos relativos, rutas absolutas, controles, nombres vacíos y separadores no estándar.
 - Crear registros uniformes de archivos y carpetas.
 - Ordenar colecciones en el mismo arreglo para reducir memoria.
 - Funcionar en ventana principal y Web Worker.
@@ -82,11 +82,10 @@ Función o funciones:
     return parts.length ? parts[parts.length - 1] : "";
   }
 
-  function getSourceName(path, isFolder) {
+  function getSourceName(path) {
     var clean = raw(path).replace(/[\\/]+$/, "");
     var parts = clean.split(/[\\/]/);
-    var name = parts.length ? parts[parts.length - 1] : "";
-    return isFolder ? name : name;
+    return parts.length ? parts[parts.length - 1] : "";
   }
 
   function getParent(path, isFolder) {
@@ -111,7 +110,7 @@ Función o funciones:
     var value = raw(name);
     var index = value.lastIndexOf(".");
     if (index <= 0 || index === value.length - 1) return "";
-    return value.slice(index + 1).toLowerCase();
+    return value.slice(index + 1).trim().toLowerCase();
   }
 
   function numberOrZero(value) {
@@ -130,14 +129,14 @@ Función o funciones:
     );
     var originalPath = normalizeSlashes(sourcePath);
     var path = sanitizePath(data.path || originalPath, isFolder);
-    var invalidPath = !path && Boolean(sourcePath);
+    var invalidPath = !path;
 
     if (invalidPath) {
       path = isFolder ? "[ruta-invalida]/" : "[ruta-invalida]";
     }
 
     var name = getName(path, isFolder);
-    var sourceName = getSourceName(sourcePath, isFolder);
+    var sourceName = getSourceName(sourcePath);
     var unsafePath = Boolean(
       data.unsafePath ||
       hasUnsafeSegments(sourcePath) ||
