@@ -2,10 +2,10 @@
 Nombre completo: scan.guard.js
 Ruta o ubicación: /audit/scan/scan.guard.js
 Función o funciones:
-- Evaluar tamaño, memoria estimada y riesgos antes de escanear un ZIP.
-- Emitir advertencias para archivos grandes sin bloquear casos normales.
-- Rechazar archivos vacíos o extremadamente grandes para el entorno actual.
-- Mantener la validación separada del motor y de la interfaz.
+- Evaluar riesgos básicos antes de escanear un ZIP.
+- Adaptar los límites al lector progresivo del directorio central.
+- Advertir sobre archivos extremadamente grandes sin usar límites falsos de RAM.
+- Rechazar archivos vacíos o fuera del rango práctico del navegador.
 ========================================================= */
 
 (function attachScanGuard(window) {
@@ -13,19 +13,18 @@ Función o funciones:
 
   window.AuditScan = window.AuditScan || {};
 
-  var MB = 1024 * 1024;
-  var GB = 1024 * MB;
+  var GB = 1024 * 1024 * 1024;
+  var RECOMMENDED_BYTES = 8 * GB;
+  var HARD_LIMIT_BYTES = 128 * GB;
 
   function getDeviceMemoryGb() {
     var value = Number(window.navigator && window.navigator.deviceMemory);
-    return Number.isFinite(value) && value > 0 ? value : 4;
+    return Number.isFinite(value) && value > 0 ? value : null;
   }
 
   function evaluate(file) {
     var size = Number(file && file.size) || 0;
     var memoryGb = getDeviceMemoryGb();
-    var recommended = Math.min(4 * GB, Math.max(512 * MB, memoryGb * 256 * MB));
-    var hardLimit = Math.min(16 * GB, Math.max(8 * GB, recommended * 4));
     var warnings = [];
     var errors = [];
 
@@ -37,16 +36,16 @@ Función o funciones:
       errors.push("El archivo ZIP está vacío.");
     }
 
-    if (size > recommended) {
-      warnings.push("El ZIP supera el tamaño recomendado para este equipo y puede consumir bastante memoria.");
+    if (size > RECOMMENDED_BYTES) {
+      warnings.push("El ZIP es muy grande. SCAN leerá únicamente su directorio central y no descomprimirá los archivos.");
     }
 
-    if (size > hardLimit) {
-      errors.push("El ZIP supera el límite extremo que puede procesarse de forma segura en este entorno.");
+    if (size > HARD_LIMIT_BYTES) {
+      errors.push("El ZIP supera el límite práctico de 128 GB admitido por esta versión de SCAN.");
     }
 
-    if (memoryGb <= 4 && size > 1024 * MB) {
-      warnings.push("El equipo reporta poca memoria disponible para un ZIP mayor a 1 GB.");
+    if (memoryGb && memoryGb <= 4 && size > 32 * GB) {
+      warnings.push("El equipo reporta poca memoria; la organización final de una cantidad muy alta de rutas podría tardar.");
     }
 
     return {
@@ -55,8 +54,9 @@ Función o funciones:
       warnings: warnings,
       size: size,
       deviceMemoryGb: memoryGb,
-      recommendedBytes: recommended,
-      hardLimitBytes: hardLimit,
+      recommendedBytes: RECOMMENDED_BYTES,
+      hardLimitBytes: HARD_LIMIT_BYTES,
+      streamingReader: true,
       risk: errors.length ? "blocked" : warnings.length ? "high" : "normal"
     };
   }
