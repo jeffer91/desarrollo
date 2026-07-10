@@ -4,10 +4,10 @@ Ruta o ubicación: /audit/scan/scan.app.js
 Función o funciones:
 - Iniciar la pantalla autónoma de SCAN.
 - Gestionar selección, arrastre y validación del archivo ZIP.
-- Evaluar tamaño y memoria antes de procesar.
-- Ejecutar el motor real mediante Web Worker o fallback compatible.
+- Evaluar riesgos básicos antes de procesar.
+- Ejecutar el lector progresivo mediante Web Worker o fallback.
+- Aplicar búsqueda con espera para evitar filtros en cada tecla.
 - Sincronizar controles, progreso, filtros, estado y resultados.
-- Evitar que un escaneo anterior sobrescriba un ZIP nuevo.
 - Preparar puntos públicos para TXT, PDF y BL.
 ========================================================= */
 
@@ -20,6 +20,8 @@ Función o funciones:
   var Dom = window.AuditScan.Dom;
   var Guard = window.AuditScan.Guard;
   var operationSequence = 0;
+  var searchTimer = null;
+  var SEARCH_DELAY_MS = 280;
 
   if (!State || !Dom) {
     console.error("SCAN no pudo iniciar: faltan scan.state.js o scan.dom.js.");
@@ -50,13 +52,20 @@ Función o funciones:
       allowed: true,
       errors: [],
       warnings: [],
-      risk: "normal"
+      risk: "normal",
+      streamingReader: true
     };
   }
 
   function resetFileInput() {
     var input = Dom.$("scanFileInput");
     if (input) input.value = "";
+  }
+
+  function clearSearchTimer() {
+    if (!searchTimer) return;
+    window.clearTimeout(searchTimer);
+    searchTimer = null;
   }
 
   function cancelActiveEngine() {
@@ -93,6 +102,7 @@ Función o funciones:
 
     operationSequence += 1;
     cancelActiveEngine();
+    clearSearchTimer();
 
     if (!isZipFile(file)) {
       resetFileInput();
@@ -123,14 +133,20 @@ Función o funciones:
       status: assessment.allowed ? "ready" : "error",
       statusMessage: assessment.allowed
         ? "ZIP preparado: " + record.name + "." + warningText
-        : "El ZIP no puede procesarse de forma segura en este equipo.",
+        : "El ZIP no puede procesarse de forma segura en este entorno.",
       error: assessment.allowed ? "" : assessment.errors.join(" "),
       progress: 0,
       progressLabel: assessment.allowed ? "Listo para iniciar" : "Archivo bloqueado",
       entries: [],
       metadata: null,
-      summary: emptySummary()
+      summary: emptySummary(),
+      filters: { search: "", type: "all" }
     });
+
+    var search = Dom.$("scanSearchInput");
+    var type = Dom.$("scanTypeFilter");
+    if (search) search.value = "";
+    if (type) type.value = "all";
 
     window.dispatchEvent(new CustomEvent("audit-scan:file-selected", {
       detail: { file: file, metadata: record, guard: assessment }
@@ -140,6 +156,7 @@ Función o funciones:
   function clearScan() {
     operationSequence += 1;
     cancelActiveEngine();
+    clearSearchTimer();
     resetFileInput();
     State.reset();
 
@@ -158,7 +175,7 @@ Función o funciones:
       State.patch({
         guard: assessment,
         status: "error",
-        statusMessage: "El escaneo fue bloqueado por la validación de tamaño y memoria.",
+        statusMessage: "El escaneo fue bloqueado por la validación previa.",
         progressLabel: "Archivo bloqueado",
         error: assessment.errors.join(" ")
       });
@@ -166,14 +183,13 @@ Función o funciones:
     }
 
     var engine = window.AuditScan.Engine;
-
     if (!engine || typeof engine.scan !== "function") {
       State.patch({
         status: "error",
         statusMessage: "El motor ZIP no está disponible.",
         progress: 0,
         progressLabel: "Motor no disponible",
-        error: "Verifique que el worker, el lector ZIP y el motor estén cargados."
+        error: "Verifique que scan.archive.js, el worker y el motor estén cargados."
       });
       return;
     }
@@ -183,9 +199,9 @@ Función o funciones:
 
     State.patch({
       status: "running",
-      statusMessage: "Analizando el contenido del ZIP en un proceso independiente...",
+      statusMessage: "Leyendo el directorio central del ZIP en un proceso independiente...",
       progress: 0,
-      progressLabel: "Preparando lectura",
+      progressLabel: "Preparando lectura progresiva",
       entries: [],
       metadata: null,
       summary: emptySummary(),
@@ -194,13 +210,15 @@ Función o funciones:
 
     try {
       var result = await engine.scan(current.file.raw, {
+        maxEntries: 1000000,
+        maxCentralDirectoryBytes: 512 * 1024 * 1024,
         onProgress: function onProgress(progress) {
           if (operationId !== operationSequence) return;
 
           progress = progress || {};
           State.patch({
             status: "running",
-            statusMessage: "Analizando el contenido del ZIP...",
+            statusMessage: "Leyendo y organizando el directorio central del ZIP...",
             progress: Number(progress.value) || 0,
             progressLabel: progress.label || "Procesando"
           });
@@ -400,7 +418,11 @@ Función o funciones:
 
     if (search) {
       search.addEventListener("input", function updateSearch() {
-        State.patch({ filters: { search: search.value || "" } });
+        clearSearchTimer();
+        searchTimer = window.setTimeout(function applySearch() {
+          searchTimer = null;
+          State.patch({ filters: { search: search.value || "" } });
+        }, SEARCH_DELAY_MS);
       });
     }
 
@@ -429,7 +451,7 @@ Función o funciones:
     State.subscribe(Dom.render);
 
     window.dispatchEvent(new CustomEvent("audit-scan:ready", {
-      detail: { version: "1.2.0", standalone: true }
+      detail: { version: "1.3.0", standalone: true }
     }));
   }
 
