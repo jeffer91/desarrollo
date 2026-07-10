@@ -16,7 +16,6 @@ Función o funciones:
 
   var State = window.AuditScan.State;
   var Dom = window.AuditScan.Dom;
-  var dragDepth = 0;
 
   if (!State || !Dom) {
     console.error("SCAN no pudo iniciar: faltan scan.state.js o scan.dom.js.");
@@ -213,12 +212,10 @@ Función o funciones:
   function openPreviousScreen() {
     if (window.parent && window.parent !== window) {
       try {
-        if (window.parent.AuditMenu && typeof window.parent.AuditMenu.open === "function") {
-          window.parent.AuditMenu.open("scan");
-          return;
-        }
+        window.parent.location.href = new URL("../../index.html", window.parent.location.href).href;
+        return;
       } catch (error) {
-        // El iframe puede estar aislado; se usa navegación local.
+        // Si el iframe está aislado, se intenta navegación local.
       }
     }
 
@@ -249,26 +246,32 @@ Función o funciones:
       selectFile(input.files && input.files[0]);
     });
 
-    ["dragenter", "dragover"].forEach(function bindDragStart(eventName) {
-      zone.addEventListener(eventName, function onDragStart(event) {
-        event.preventDefault();
-        event.stopPropagation();
-        dragDepth += 1;
-        zone.classList.add("is-dragover");
-      });
+    zone.addEventListener("dragenter", function onDragEnter(event) {
+      event.preventDefault();
+      event.stopPropagation();
+      zone.classList.add("is-dragover");
     });
 
-    ["dragleave", "drop"].forEach(function bindDragEnd(eventName) {
-      zone.addEventListener(eventName, function onDragEnd(event) {
-        event.preventDefault();
-        event.stopPropagation();
-        dragDepth = Math.max(0, dragDepth - 1);
-        if (eventName === "drop" || dragDepth === 0) zone.classList.remove("is-dragover");
-      });
+    zone.addEventListener("dragover", function onDragOver(event) {
+      event.preventDefault();
+      event.stopPropagation();
+      if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+      zone.classList.add("is-dragover");
+    });
+
+    zone.addEventListener("dragleave", function onDragLeave(event) {
+      event.preventDefault();
+      event.stopPropagation();
+
+      var nextTarget = event.relatedTarget;
+      if (!nextTarget || !zone.contains(nextTarget)) {
+        zone.classList.remove("is-dragover");
+      }
     });
 
     zone.addEventListener("drop", function onDrop(event) {
-      dragDepth = 0;
+      event.preventDefault();
+      event.stopPropagation();
       zone.classList.remove("is-dragover");
 
       var files = event.dataTransfer && event.dataTransfer.files;
