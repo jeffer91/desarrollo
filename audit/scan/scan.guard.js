@@ -4,7 +4,7 @@ Ruta o ubicación: /audit/scan/scan.guard.js
 Función o funciones:
 - Evaluar tamaño, memoria estimada y riesgos antes de escanear un ZIP.
 - Emitir advertencias para archivos grandes sin bloquear casos normales.
-- Rechazar archivos vacíos o excesivamente grandes para el entorno actual.
+- Rechazar archivos vacíos o extremadamente grandes para el entorno actual.
 - Mantener la validación separada del motor y de la interfaz.
 ========================================================= */
 
@@ -25,7 +25,7 @@ Función o funciones:
     var size = Number(file && file.size) || 0;
     var memoryGb = getDeviceMemoryGb();
     var recommended = Math.min(4 * GB, Math.max(512 * MB, memoryGb * 256 * MB));
-    var hardLimit = Math.min(8 * GB, Math.max(2 * GB, recommended * 2));
+    var hardLimit = Math.min(16 * GB, Math.max(8 * GB, recommended * 4));
     var warnings = [];
     var errors = [];
 
@@ -42,7 +42,7 @@ Función o funciones:
     }
 
     if (size > hardLimit) {
-      errors.push("El ZIP supera el límite seguro estimado para este equipo.");
+      errors.push("El ZIP supera el límite extremo que puede procesarse de forma segura en este entorno.");
     }
 
     if (memoryGb <= 4 && size > 1024 * MB) {
