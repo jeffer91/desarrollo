@@ -4,8 +4,9 @@ Ruta o ubicación: /audit/scan/scan.app.js
 Función o funciones:
 - Iniciar la pantalla autónoma de SCAN.
 - Gestionar selección, arrastre y validación del archivo ZIP.
-- Sincronizar controles, filtros, estado y tabla.
-- Preparar puntos públicos de conexión para el futuro motor ZIP, TXT, PDF y BL.
+- Ejecutar el motor real de lectura del ZIP.
+- Sincronizar controles, progreso, filtros, estado y resultados.
+- Preparar puntos públicos para TXT, PDF y BL.
 - Seguir funcionando aunque no existan Audit Menu ni Base Local.
 ========================================================= */
 
@@ -42,8 +43,22 @@ Función o funciones:
     if (input) input.value = "";
   }
 
+  function cancelActiveEngine() {
+    var engine = window.AuditScan.Engine;
+    if (!engine || typeof engine.cancel !== "function") return false;
+
+    try {
+      return engine.cancel();
+    } catch (error) {
+      console.warn("No fue posible cancelar el motor de SCAN.", error);
+      return false;
+    }
+  }
+
   function selectFile(file) {
     if (!file) return;
+
+    cancelActiveEngine();
 
     if (!isZipFile(file)) {
       resetFileInput();
@@ -53,14 +68,16 @@ Función o funciones:
         statusMessage: "El archivo seleccionado no es un ZIP válido.",
         error: "Seleccione un archivo cuyo nombre termine en .zip.",
         progress: 0,
-        progressLabel: "Archivo rechazado"
+        progressLabel: "Archivo rechazado",
+        entries: [],
+        metadata: null
       });
       return;
     }
 
     var record = buildFileRecord(file);
     var largeNotice = record.size >= 1024 * 1024 * 1024
-      ? " Archivo grande detectado; el motor usará procesamiento progresivo."
+      ? " Archivo grande detectado; el procesamiento puede requerir más memoria."
       : "";
 
     State.patch({
@@ -71,11 +88,17 @@ Función o funciones:
       progress: 0,
       progressLabel: "Listo para iniciar",
       entries: [],
+      metadata: null,
       summary: {
         files: 0,
         folders: 0,
         totalSize: 0,
-        alerts: 0
+        compressedSize: 0,
+        alerts: 0,
+        emptyFiles: 0,
+        unsafePaths: 0,
+        duplicatePaths: 0,
+        maxDepth: 0
       }
     });
 
@@ -85,16 +108,7 @@ Función o funciones:
   }
 
   function clearScan() {
-    var engine = window.AuditScan.Engine;
-
-    if (engine && typeof engine.cancel === "function") {
-      try {
-        engine.cancel();
-      } catch (error) {
-        console.warn("No fue posible cancelar el motor de SCAN.", error);
-      }
-    }
-
+    cancelActiveEngine();
     resetFileInput();
     State.reset();
 
@@ -112,16 +126,12 @@ Función o funciones:
 
     if (!engine || typeof engine.scan !== "function") {
       State.patch({
-        status: "ready",
-        statusMessage: "La interfaz está lista. El motor de lectura ZIP se incorporará en el Bloque 3.",
+        status: "error",
+        statusMessage: "El motor ZIP no está disponible.",
         progress: 0,
-        progressLabel: "Motor pendiente",
-        error: ""
+        progressLabel: "Motor no disponible",
+        error: "Verifique que scan.model.js, scan.zip.js y scan.engine.js estén cargados."
       });
-
-      window.dispatchEvent(new CustomEvent("audit-scan:scan-requested", {
-        detail: { file: current.file.raw, metadata: current.file }
-      }));
       return;
     }
 
@@ -130,6 +140,19 @@ Función o funciones:
       statusMessage: "Analizando el contenido del ZIP...",
       progress: 0,
       progressLabel: "Preparando lectura",
+      entries: [],
+      metadata: null,
+      summary: {
+        files: 0,
+        folders: 0,
+        totalSize: 0,
+        compressedSize: 0,
+        alerts: 0,
+        emptyFiles: 0,
+        unsafePaths: 0,
+        duplicatePaths: 0,
+        maxDepth: 0
+      },
       error: ""
     });
 
@@ -139,6 +162,7 @@ Función o funciones:
           progress = progress || {};
           State.patch({
             status: "running",
+            statusMessage: "Analizando el contenido del ZIP...",
             progress: Number(progress.value) || 0,
             progressLabel: progress.label || "Procesando"
           });
@@ -146,16 +170,38 @@ Función o funciones:
       });
 
       result = result || {};
+      var entries = Array.isArray(result.entries) ? result.entries : [];
+      var summary = result.summary || {};
+
       State.patch({
         status: "completed",
-        statusMessage: "Escaneo completado correctamente.",
+        statusMessage: "Escaneo completado: " + entries.length + " elementos registrados.",
         progress: 100,
         progressLabel: "Completado",
-        entries: Array.isArray(result.entries) ? result.entries : [],
-        summary: result.summary || {},
+        entries: entries,
+        metadata: result.metadata || null,
+        summary: summary,
         error: ""
       });
+
+      window.dispatchEvent(new CustomEvent("audit-scan:completed", {
+        detail: {
+          entries: entries,
+          summary: summary,
+          metadata: result.metadata || null
+        }
+      }));
     } catch (error) {
+      if (error && error.name === "ScanCancelledError") {
+        State.patch({
+          status: "ready",
+          statusMessage: "Escaneo cancelado. El ZIP continúa preparado.",
+          progressLabel: "Cancelado",
+          error: ""
+        });
+        return;
+      }
+
       State.patch({
         status: "error",
         statusMessage: "No fue posible completar el escaneo.",
@@ -166,20 +212,14 @@ Función o funciones:
   }
 
   function cancelScan() {
-    var engine = window.AuditScan.Engine;
-
-    if (engine && typeof engine.cancel === "function") {
-      try {
-        engine.cancel();
-      } catch (error) {
-        console.warn("El motor no pudo cancelar el escaneo.", error);
-      }
-    }
+    var cancelled = cancelActiveEngine();
 
     State.patch({
       status: "ready",
-      statusMessage: "Escaneo cancelado. El ZIP continúa preparado.",
-      progressLabel: "Cancelado",
+      statusMessage: cancelled
+        ? "Cancelando escaneo. El ZIP continuará preparado."
+        : "No existe un escaneo activo para cancelar.",
+      progressLabel: cancelled ? "Cancelando" : "Sin proceso activo",
       error: ""
     });
   }
@@ -202,7 +242,7 @@ Función o funciones:
       if (handled) return;
 
       State.patch({
-        status: "ready",
+        status: "completed",
         statusMessage: actionName + " estará disponible al integrar su generador correspondiente.",
         error: ""
       });
@@ -337,7 +377,7 @@ Función o funciones:
     State.subscribe(Dom.render);
 
     window.dispatchEvent(new CustomEvent("audit-scan:ready", {
-      detail: { version: "1.0.0", standalone: true }
+      detail: { version: "1.1.0", standalone: true }
     }));
   }
 
