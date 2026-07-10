@@ -1,0 +1,56 @@
+/* =========================================================
+Nombre completo: scan.performance.css
+Ruta o ubicación: /audit/scan/scan.performance.css
+Función o funciones:
+- Mostrar visualmente el estado completado del Web Worker.
+- Resaltar filas con alertas sin alterar la tabla principal.
+- Animar el progreso mientras el análisis está activo.
+- Mantener estos ajustes separados del diseño base de SCAN.
+========================================================= */
+
+.scan-status.is-completed .scan-status__dot {
+  background: var(--scan-success);
+  box-shadow: 0 0 0 4px rgba(35, 115, 77, 0.12);
+}
+
+.scan-status.is-running .scan-status__dot {
+  animation: scan-status-pulse 1.2s ease-in-out infinite;
+}
+
+.scan-status.is-running + .scan-progress .scan-progress__bar {
+  position: relative;
+  overflow: hidden;
+}
+
+.scan-status.is-running + .scan-progress .scan-progress__bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.45), transparent);
+  animation: scan-progress-shine 1.5s linear infinite;
+}
+
+.scan-result-row.has-alert {
+  background: #fffaf0;
+}
+
+.scan-result-row.has-alert:hover {
+  background: #fff4dc;
+}
+
+@keyframes scan-status-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.25); opacity: .65; }
+}
+
+@keyframes scan-progress-shine {
+  to { transform: translateX(100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scan-status.is-running .scan-status__dot,
+  .scan-status.is-running + .scan-progress .scan-progress__bar::after {
+    animation: none;
+  }
+}
