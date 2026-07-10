@@ -5,6 +5,7 @@ Función o funciones:
 - Centralizar referencias DOM del módulo SCAN.
 - Formatear tamaños, fechas y textos de forma segura.
 - Renderizar resúmenes, estados, archivo seleccionado y tabla.
+- Limitar filas visibles para evitar bloqueos con ZIP grandes.
 - Mantener la lógica visual separada del controlador principal.
 ========================================================= */
 
@@ -12,6 +13,8 @@ Función o funciones:
   "use strict";
 
   window.AuditScan = window.AuditScan || {};
+
+  var MAX_RENDER_ROWS = 2000;
 
   function $(id) {
     return document.getElementById(id);
@@ -28,6 +31,14 @@ Función o funciones:
       .replace(/>/g, "&gt;")
       .replace(/\"/g, "&quot;")
       .replace(/'/g, "&#039;");
+  }
+
+  function formatNumber(value) {
+    try {
+      return new Intl.NumberFormat("es-EC").format(Number(value) || 0);
+    } catch (error) {
+      return String(Number(value) || 0);
+    }
   }
 
   function formatBytes(bytes) {
@@ -88,6 +99,7 @@ Función o funciones:
     var status = $("scanStatus");
     var statusText = $("scanStatusText");
     var progress = $("scanProgress");
+    var progressTrack = $("scanProgressTrack");
     var progressBar = $("scanProgressBar");
     var progressValue = $("scanProgressValue");
     var progressLabel = $("scanProgressLabel");
@@ -103,14 +115,24 @@ Función o funciones:
     if (progressBar) progressBar.style.width = value + "%";
     if (progressValue) progressValue.textContent = value + "%";
     if (progressLabel) progressLabel.textContent = state.progressLabel || "Sin iniciar";
+    if (progressTrack) progressTrack.setAttribute("aria-valuenow", String(value));
   }
 
   function renderSummary(summary) {
     summary = summary || {};
-    setText("scanSummaryFiles", summary.files || 0);
-    setText("scanSummaryFolders", summary.folders || 0);
+    setText("scanSummaryFiles", formatNumber(summary.files || 0));
+    setText("scanSummaryFolders", formatNumber(summary.folders || 0));
     setText("scanSummarySize", formatBytes(summary.totalSize || 0));
-    setText("scanSummaryAlerts", summary.alerts || 0);
+    setText("scanSummaryAlerts", formatNumber(summary.alerts || 0));
+
+    var alertsCard = $("scanSummaryAlerts");
+    if (alertsCard) {
+      alertsCard.title = [
+        "Vacíos: " + formatNumber(summary.emptyFiles || 0),
+        "Rutas inseguras: " + formatNumber(summary.unsafePaths || 0),
+        "Rutas duplicadas: " + formatNumber(summary.duplicatePaths || 0)
+      ].join(" · ");
+    }
   }
 
   function getVisibleEntries(state) {
@@ -124,12 +146,19 @@ Función o funciones:
 
       if (!search) return true;
 
-      return [entry.path, entry.name, entry.extension, entry.parent]
+      return [entry.path, entry.originalPath, entry.name, entry.extension, entry.parent]
         .map(text)
         .join(" ")
         .toLowerCase()
         .indexOf(search) >= 0;
     });
+  }
+
+  function getEmptyMessage(state) {
+    if (!state.file) return "Seleccione un ZIP para preparar el escaneo.";
+    if (state.status === "running") return "SCAN está leyendo y organizando el contenido del ZIP.";
+    if (state.status === "completed") return "El ZIP no contiene archivos ni carpetas visibles.";
+    return "El archivo está preparado. Pulse Iniciar escaneo para analizarlo.";
   }
 
   function renderTable(state) {
@@ -138,28 +167,45 @@ Función o funciones:
     if (!body) return;
 
     var entries = getVisibleEntries(state);
-    if (meta) meta.textContent = entries.length + " resultado" + (entries.length === 1 ? "" : "s");
+    var renderedEntries = entries.slice(0, MAX_RENDER_ROWS);
+
+    if (meta) {
+      meta.textContent = entries.length > MAX_RENDER_ROWS
+        ? formatNumber(renderedEntries.length) + " de " + formatNumber(entries.length) + " resultados"
+        : formatNumber(entries.length) + " resultado" + (entries.length === 1 ? "" : "s");
+      meta.title = entries.length > MAX_RENDER_ROWS
+        ? "La tabla limita la vista para mantener el rendimiento. Todos los registros permanecen disponibles para exportación."
+        : "";
+    }
 
     if (!entries.length) {
       body.innerHTML = [
         '<tr class="scan-empty-row">',
         '<td colspan="7">',
-        state.file
-          ? "El archivo está preparado. El contenido aparecerá cuando se ejecute el motor de escaneo."
-          : "Seleccione un ZIP para preparar el escaneo.",
+        escapeHtml(getEmptyMessage(state)),
         "</td>",
         "</tr>"
       ].join("");
       return;
     }
 
-    body.innerHTML = entries.map(function renderEntry(entry, index) {
+    body.innerHTML = renderedEntries.map(function renderEntry(entry, index) {
+      var flags = [];
+      if (entry.unsafePath) flags.push("Ruta insegura normalizada");
+      if (entry.empty) flags.push("Archivo vacío");
+      if (entry.implicit) flags.push("Carpeta inferida");
+
+      var rowClass = flags.length ? ' class="scan-result-row has-alert"' : ' class="scan-result-row"';
+      var pathTitle = entry.originalPath && entry.originalPath !== entry.path
+        ? "Original: " + entry.originalPath + " | Normalizada: " + entry.path
+        : entry.path;
+
       return [
-        "<tr>",
+        "<tr" + rowClass + ' title="' + escapeHtml(flags.join(" · ")) + '">',
         "<td>" + (index + 1) + "</td>",
         '<td><span class="scan-type-pill is-' + escapeHtml(entry.type || "file") + '">' +
           escapeHtml(entry.type === "folder" ? "Carpeta" : "Archivo") + "</span></td>",
-        '<td class="scan-path-cell" title="' + escapeHtml(entry.path) + '">' + escapeHtml(entry.path) + "</td>",
+        '<td class="scan-path-cell" title="' + escapeHtml(pathTitle) + '">' + escapeHtml(entry.path) + "</td>",
         "<td>" + escapeHtml(entry.name) + "</td>",
         "<td>" + escapeHtml(entry.extension || "-") + "</td>",
         "<td>" + escapeHtml(formatBytes(entry.size || 0)) + "</td>",
@@ -177,9 +223,9 @@ Función o funciones:
     setDisabled("scanStartButton", !hasFile || running);
     setDisabled("scanCancelButton", !running);
     setDisabled("scanClearButton", !hasFile && !hasResults);
-    setDisabled("scanExportTxtButton", !hasResults);
-    setDisabled("scanExportPdfButton", !hasResults);
-    setDisabled("scanSaveBlButton", !hasResults);
+    setDisabled("scanExportTxtButton", !hasResults || running);
+    setDisabled("scanExportPdfButton", !hasResults || running);
+    setDisabled("scanSaveBlButton", !hasResults || running);
   }
 
   function renderError(message) {
