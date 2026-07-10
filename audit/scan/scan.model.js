@@ -7,13 +7,13 @@ Función o funciones:
 - Crear registros uniformes de archivos y carpetas.
 - Detectar carpetas implícitas, extensiones, niveles y rutas inseguras.
 - Calcular resúmenes y alertas del escaneo.
-- No depender del menú de Audit ni de BL.
+- Funcionar tanto en la ventana principal como dentro de un Web Worker.
 ========================================================= */
 
-(function attachScanModel(window) {
+(function attachScanModel(root) {
   "use strict";
 
-  window.AuditScan = window.AuditScan || {};
+  root.AuditScan = root.AuditScan || {};
 
   function raw(value) {
     return String(value == null ? "" : value);
@@ -234,7 +234,7 @@ Función o funciones:
     };
   }
 
-  window.AuditScan.Model = {
+  root.AuditScan.Model = {
     raw: raw,
     text: text,
     normalizeSlashes: normalizeSlashes,
@@ -245,4 +245,4 @@ Función o funciones:
     sortEntries: sortEntries,
     createSummary: createSummary
   };
-})(window);
+})(typeof self !== "undefined" ? self : globalThis);
