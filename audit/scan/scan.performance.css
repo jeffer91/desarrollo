@@ -4,6 +4,7 @@ Ruta o ubicación: /audit/scan/scan.performance.css
 Función o funciones:
 - Mostrar visualmente el estado completado del Web Worker.
 - Resaltar filas con alertas sin alterar la tabla principal.
+- Preservar espacios y saltos exactos en nombres y rutas del ZIP.
 - Animar el progreso mientras el análisis está activo.
 - Mantener estos ajustes separados del diseño base de SCAN.
 ========================================================= */
@@ -37,6 +38,11 @@ Función o funciones:
 
 .scan-result-row.has-alert:hover {
   background: #fff4dc;
+}
+
+.scan-exact-text {
+  white-space: pre-wrap;
+  unicode-bidi: plaintext;
 }
 
 @keyframes scan-status-pulse {
