@@ -6,8 +6,9 @@ Función o funciones:
 - Evitar cargar el ZIP completo en memoria.
 - Soportar ZIP clásico, ZIP64, nombres UTF-8 y CP437.
 - Validar comentarios finales, ZIP autoextraíbles y archivos multidisco.
+- Corregir desplazamientos locales cuando existe un prefijo autoextraíble.
+- Interpretar atributos Unix solo cuando el sistema creador corresponde.
 - Limitar cantidad de entradas y tamaño del directorio central.
-- Funcionar en ventana principal y Web Worker.
 ========================================================= */
 
 (function attachArchiveReader(root) {
@@ -442,12 +443,20 @@ Función o funciones:
       var utf8 = Boolean(flags & 0x0800);
       var decodedName = unicodePath(fields) || decode(nameBytes, utf8);
       var decodedComment = decode(commentBytes, utf8);
-      var unixDirectory = ((externalAttributes >>> 16) & 0xf000) === 0x4000;
+      var hostSystem = versionMadeBy >>> 8;
+      var usesUnixAttributes = hostSystem === 3 || hostSystem === 19;
+      var unixDirectory = usesUnixAttributes && (((externalAttributes >>> 16) & 0xf000) === 0x4000);
       var dosDirectory = Boolean(externalAttributes & 0x10);
       var isFolder = /\/$/.test(decodedName) || unixDirectory || dosDirectory;
+      var actualLocalOffset = sizes.localOffset + directory.prependedBytes;
+
+      if (!Number.isSafeInteger(actualLocalOffset) || actualLocalOffset < 0 || actualLocalOffset + 4 > file.size) {
+        throw fail("El desplazamiento local del elemento " + (index + 1) + " está fuera del archivo.", "ScanArchiveCorruptError");
+      }
 
       entries.push(Model.buildEntry({
         id: "scan_zip_" + index + "_" + decodedName,
+        sourcePath: decodedName,
         path: decodedName,
         originalPath: decodedName,
         isFolder: isFolder,
@@ -457,7 +466,8 @@ Función o funciones:
         comment: decodedComment,
         crc32: crc32,
         compressionMethod: compressionMethod,
-        localOffset: sizes.localOffset,
+        declaredLocalOffset: sizes.localOffset,
+        localOffset: actualLocalOffset,
         versionMadeBy: versionMadeBy,
         encrypted: Boolean(flags & 0x0001),
         unsafePath: Model.hasUnsafeSegments(decodedName)
