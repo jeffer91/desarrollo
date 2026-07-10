@@ -1,0 +1,85 @@
+<!-- =========================================================
+Nombre completo: menu.index.html
+Ruta o ubicación: /audit/menu/menu.index.html
+Función o funciones:
+- Mostrar el menú superior independiente del módulo Audit.
+- Mantener visibles las opciones SCAN y BL aunque sus carpetas no existan.
+- Cargar módulos disponibles dentro de un iframe aislado.
+- Mostrar un estado controlado cuando un módulo no esté instalado.
+- Funcionar sin importar código interno de SCAN o BL.
+========================================================= -->
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Audit · Menú</title>
+  <meta name="description" content="Menú superior independiente de Audit." />
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="./menu.css" />
+</head>
+<body>
+  <div class="audit-shell">
+    <header class="audit-topbar">
+      <div class="audit-brand-wrap">
+        <a class="audit-brand" href="../../index.html" title="Volver al panel principal">
+          <span class="audit-brand__mark" aria-hidden="true">A</span>
+          <span class="audit-brand__copy">
+            <strong>Audit</strong>
+            <small>Auditoría y escaneo</small>
+          </span>
+        </a>
+      </div>
+
+      <nav id="auditMenuNav" class="audit-nav" aria-label="Módulos de Audit"></nav>
+
+      <div class="audit-actions">
+        <button id="auditRefreshButton" class="audit-action-button" type="button" title="Actualizar módulo activo">
+          Actualizar
+        </button>
+        <a class="audit-back-link" href="../../index.html">Volver al panel</a>
+      </div>
+    </header>
+
+    <section class="audit-statusbar" aria-live="polite">
+      <span id="auditStatusDot" class="audit-status-dot is-idle" aria-hidden="true"></span>
+      <span id="auditStatusText">Preparando Audit...</span>
+    </section>
+
+    <main class="audit-main">
+      <section id="auditEmptyState" class="audit-empty-state" hidden>
+        <div class="audit-empty-state__icon" aria-hidden="true">!</div>
+        <p class="audit-empty-state__eyebrow">Módulo independiente</p>
+        <h1 id="auditEmptyTitle">Módulo no disponible</h1>
+        <p id="auditEmptyDescription">
+          Esta opción está registrada en el menú, pero todavía no está instalada.
+        </p>
+        <div class="audit-empty-state__details">
+          <span>Ruta esperada</span>
+          <code id="auditEmptyPath">Sin ruta</code>
+        </div>
+        <button id="auditRetryButton" class="audit-primary-button" type="button">
+          Comprobar nuevamente
+        </button>
+      </section>
+
+      <iframe
+        id="auditModuleFrame"
+        class="audit-module-frame"
+        title="Contenido del módulo Audit"
+        referrerpolicy="no-referrer"
+        hidden
+      ></iframe>
+    </main>
+  </div>
+
+  <noscript>
+    <div class="audit-noscript">
+      Audit necesita JavaScript para mostrar el menú superior.
+    </div>
+  </noscript>
+
+  <script src="./menu.routes.js"></script>
+  <script src="./menu.js"></script>
+</body>
+</html>
