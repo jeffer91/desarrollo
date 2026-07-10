@@ -1,0 +1,43 @@
+name: Audit SCAN CI
+
+on:
+  push:
+    paths:
+      - "audit/scan/**"
+      - "tests/audit-scan.test.cjs"
+      - ".github/workflows/audit-scan.yml"
+  pull_request:
+    paths:
+      - "audit/scan/**"
+      - "tests/audit-scan.test.cjs"
+      - ".github/workflows/audit-scan.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Comprobar sintaxis JavaScript
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' file; do
+            echo "Validando $file"
+            node --check "$file"
+          done < <(find audit/scan -maxdepth 1 -type f -name '*.js' -print0 | sort -z)
+
+      - name: Ejecutar pruebas del lector ZIP
+        run: node --test tests/audit-scan.test.cjs
