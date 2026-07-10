@@ -3,11 +3,11 @@ Nombre completo: scan.model.js
 Ruta o ubicación: /audit/scan/scan.model.js
 Función o funciones:
 - Normalizar rutas encontradas dentro de archivos ZIP.
-- Preservar nombres originales, incluidos espacios válidos.
+- Preservar nombres originales, espacios y metadatos técnicos.
 - Crear registros uniformes de archivos y carpetas.
 - Detectar carpetas implícitas, extensiones, niveles y rutas inseguras.
-- Calcular resúmenes y alertas del escaneo.
-- Funcionar tanto en la ventana principal como dentro de un Web Worker.
+- Ordenar colecciones en el mismo arreglo para reducir memoria.
+- Funcionar en ventana principal y Web Worker.
 ========================================================= */
 
 (function attachScanModel(root) {
@@ -121,6 +121,9 @@ Función o funciones:
       modifiedAt: data.modifiedAt || null,
       comment: raw(data.comment),
       crc32: data.crc32 == null ? null : data.crc32,
+      compressionMethod: data.compressionMethod == null ? null : Number(data.compressionMethod),
+      localOffset: data.localOffset == null ? null : Number(data.localOffset),
+      versionMadeBy: data.versionMadeBy == null ? null : Number(data.versionMadeBy),
       encrypted: Boolean(data.encrypted),
       unsafePath: unsafePath,
       implicit: Boolean(data.implicit),
@@ -168,12 +171,27 @@ Función o funciones:
     return folders;
   }
 
+  function appendEntries(target, additions) {
+    var destination = Array.isArray(target) ? target : [];
+    var source = Array.isArray(additions) ? additions : [];
+
+    for (var index = 0; index < source.length; index += 1) {
+      destination.push(source[index]);
+    }
+
+    return destination;
+  }
+
   function sortEntries(entries) {
-    return (entries || []).slice().sort(function compareEntries(a, b) {
+    var list = Array.isArray(entries) ? entries : [];
+
+    list.sort(function compareEntries(a, b) {
       var pathA = raw(a && a.path).toLocaleLowerCase("es");
       var pathB = raw(b && b.path).toLocaleLowerCase("es");
       return pathA.localeCompare(pathB, "es", { numeric: true, sensitivity: "base" });
     });
+
+    return list;
   }
 
   function createSummary(entries, zipMeta) {
@@ -181,7 +199,6 @@ Función o funciones:
     var folders = 0;
     var totalSize = 0;
     var compressedSize = 0;
-    var alerts = 0;
     var emptyFiles = 0;
     var unsafePaths = 0;
     var maxDepth = 0;
@@ -215,14 +232,12 @@ Función o funciones:
       }
     });
 
-    alerts = emptyFiles + unsafePaths + duplicatePaths;
-
     return {
       files: files,
       folders: folders,
       totalSize: totalSize,
       compressedSize: compressedSize,
-      alerts: alerts,
+      alerts: emptyFiles + unsafePaths + duplicatePaths,
       emptyFiles: emptyFiles,
       unsafePaths: unsafePaths,
       duplicatePaths: duplicatePaths,
@@ -242,6 +257,7 @@ Función o funciones:
     hasUnsafeSegments: hasUnsafeSegments,
     buildEntry: buildEntry,
     buildImplicitFolders: buildImplicitFolders,
+    appendEntries: appendEntries,
     sortEntries: sortEntries,
     createSummary: createSummary
   };
