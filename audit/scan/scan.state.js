@@ -3,10 +3,10 @@ Nombre completo: scan.state.js
 Ruta o ubicación: /audit/scan/scan.state.js
 Función o funciones:
 - Administrar el estado visual y operativo de SCAN.
-- Mantener archivo seleccionado, progreso, resultados, resumen y metadatos.
-- Mantener evaluación previa de memoria y tamaño.
-- Mantener filtros y mensajes del análisis.
-- Exponer una API pública sin depender del menú ni de BL.
+- Mantener archivo, progreso, resultados, resumen y metadatos.
+- Evitar duplicar arreglos masivos en cada actualización visual.
+- Exponer las entradas como colección de solo lectura por convenio.
+- Mantener filtros y evaluación previa de riesgos.
 ========================================================= */
 
 (function attachScanState(window) {
@@ -61,7 +61,7 @@ Función o funciones:
       statusMessage: state.statusMessage,
       progress: state.progress,
       progressLabel: state.progressLabel,
-      entries: state.entries.slice(),
+      entries: state.entries,
       metadata: state.metadata ? Object.assign({}, state.metadata) : null,
       summary: Object.assign({}, state.summary),
       filters: Object.assign({}, state.filters),
