@@ -4,9 +4,10 @@ Ruta o ubicación: /audit/scan/scan.dom.js
 Función o funciones:
 - Centralizar referencias DOM del módulo SCAN.
 - Renderizar archivo, progreso, resumen, tabla y acciones.
+- Mostrar ruta y nombre exactos declarados dentro del ZIP.
+- Mostrar la ruta segura en ayudas y alertas cuando fue normalizada.
 - Evitar filtrar, copiar o dibujar colecciones completas.
-- Limitar la tabla a 2.000 filas y detener búsquedas al superar ese límite.
-- Evitar regenerar la tabla cuando solo cambia el estado o el progreso.
+- Limitar la tabla a 2.000 filas y evitar regeneraciones innecesarias.
 ========================================================= */
 
 (function attachScanDom(window, document) {
@@ -42,7 +43,7 @@ Función o funciones:
   function formatNumber(value) {
     try {
       return new Intl.NumberFormat("es-EC").format(Number(value) || 0);
-    } catch (error) {
+    } catch (_error) {
       return String(Number(value) || 0);
     }
   }
@@ -67,7 +68,7 @@ Función o funciones:
         dateStyle: "medium",
         timeStyle: "short"
       }).format(new Date(timestamp));
-    } catch (error) {
+    } catch (_error) {
       return new Date(timestamp).toLocaleString();
     }
   }
@@ -134,7 +135,9 @@ Función o funciones:
     var details = [
       "Vacíos: " + formatNumber(summary.emptyFiles || 0),
       "Rutas inseguras: " + formatNumber(summary.unsafePaths || 0),
-      "Rutas duplicadas: " + formatNumber(summary.duplicatePaths || 0)
+      "Rutas inválidas: " + formatNumber(summary.invalidPaths || 0),
+      "Rutas duplicadas: " + formatNumber(summary.duplicatePaths || 0),
+      "Elementos cifrados: " + formatNumber(summary.encryptedEntries || 0)
     ];
 
     if (summary.suspiciousCompression) details.push("Compresión sospechosa");
@@ -149,7 +152,15 @@ Función o funciones:
     if (type !== "all" && entryType !== type) return false;
     if (!search) return true;
 
-    return [entry.path, entry.originalPath, entry.name, entry.extension, entry.parent]
+    return [
+      entry.sourcePath,
+      entry.sourceName,
+      entry.path,
+      entry.originalPath,
+      entry.name,
+      entry.extension,
+      entry.parent
+    ]
       .map(text)
       .join(" ")
       .toLowerCase()
@@ -254,23 +265,26 @@ Función o funciones:
 
     body.innerHTML = entries.map(function renderEntry(entry, index) {
       var flags = [];
-      if (entry.unsafePath) flags.push("Ruta insegura normalizada");
+      if (entry.unsafePath) flags.push("Ruta insegura controlada");
+      if (entry.invalidPath) flags.push("Ruta inválida");
       if (entry.empty) flags.push("Archivo vacío");
       if (entry.implicit) flags.push("Carpeta inferida");
       if (entry.encrypted) flags.push("Elemento cifrado");
 
       var rowClass = flags.length ? ' class="scan-result-row has-alert"' : ' class="scan-result-row"';
-      var pathTitle = entry.originalPath && entry.originalPath !== entry.path
-        ? "Original: " + entry.originalPath + " | Normalizada: " + entry.path
-        : entry.path;
+      var exactPath = entry.sourcePath || entry.originalPath || entry.path || "";
+      var exactName = entry.sourceName || entry.name || "";
+      var pathTitle = entry.pathChanged
+        ? "Ruta exacta: " + exactPath + " | Ruta segura: " + entry.path
+        : exactPath;
 
       return [
         "<tr" + rowClass + ' title="' + escapeHtml(flags.join(" · ")) + '">',
         "<td>" + (index + 1) + "</td>",
         '<td><span class="scan-type-pill is-' + escapeHtml(entry.type || "file") + '">' +
           escapeHtml(entry.type === "folder" ? "Carpeta" : "Archivo") + "</span></td>",
-        '<td class="scan-path-cell" title="' + escapeHtml(pathTitle) + '">' + escapeHtml(entry.path) + "</td>",
-        "<td>" + escapeHtml(entry.name) + "</td>",
+        '<td class="scan-path-cell" title="' + escapeHtml(pathTitle) + '">' + escapeHtml(exactPath) + "</td>",
+        "<td>" + escapeHtml(exactName) + "</td>",
         "<td>" + escapeHtml(entry.extension || "-") + "</td>",
         "<td>" + escapeHtml(formatBytes(entry.size || 0)) + "</td>",
         "<td>" + escapeHtml(entry.depth == null ? "-" : entry.depth) + "</td>",
