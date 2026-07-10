@@ -4,6 +4,7 @@ Ruta o ubicación: /audit/scan/scan.worker.js
 Función o funciones:
 - Ejecutar el lector progresivo del ZIP fuera del hilo principal.
 - Mantener la interfaz fluida sin cargar todo el archivo en memoria.
+- Imponer límites internos aunque el cliente solicite valores mayores.
 - Transferir resultados por bloques y liberar memoria progresivamente.
 - Informar progreso, cancelaciones y errores normalizados.
 ========================================================= */
@@ -11,6 +12,8 @@ Función o funciones:
 (function bootScanWorker(self) {
   "use strict";
 
+  var MAX_ENTRIES = 500000;
+  var MAX_DIRECTORY_BYTES = 384 * 1024 * 1024;
   var activeJobId = "";
   var dependenciesLoaded = false;
 
@@ -36,6 +39,12 @@ Función o funciones:
 
   function assertActive(jobId) {
     if (!jobId || activeJobId !== jobId) throw createCancelledError();
+  }
+
+  function clamp(value, fallback, maximum) {
+    var number = Number(value);
+    if (!Number.isFinite(number) || number <= 0) number = fallback;
+    return Math.max(1, Math.min(Math.floor(number), maximum));
   }
 
   function loadDependencies() {
@@ -74,13 +83,21 @@ Función o funciones:
     activeJobId = String(message.jobId || "");
     var jobId = activeJobId;
     var file = message.file;
+    var limits = {
+      maxEntries: clamp(message.maxEntries, 180000, MAX_ENTRIES),
+      maxCentralDirectoryBytes: clamp(
+        message.maxCentralDirectoryBytes,
+        128 * 1024 * 1024,
+        MAX_DIRECTORY_BYTES
+      )
+    };
 
     loadDependencies();
     assertActive(jobId);
 
     var result = await self.AuditScan.ArchiveReader.read(file, {
-      maxEntries: Number(message.maxEntries) || 1000000,
-      maxCentralDirectoryBytes: Number(message.maxCentralDirectoryBytes) || 512 * 1024 * 1024,
+      maxEntries: limits.maxEntries,
+      maxCentralDirectoryBytes: limits.maxCentralDirectoryBytes,
       onProgress: function onArchiveProgress(update) {
         assertActive(jobId);
         progress((Number(update && update.value) || 0) * 0.9, update && update.label, jobId);
@@ -119,7 +136,8 @@ Función o funciones:
       summary: result.summary || {},
       metadata: Object.assign({}, result.metadata || {}, {
         processedInWorker: true,
-        processingMode: "web-worker-streaming"
+        processingMode: "web-worker-streaming",
+        appliedLimits: limits
       })
     }, jobId);
   }
