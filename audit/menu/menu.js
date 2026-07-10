@@ -5,8 +5,8 @@ Función o funciones:
 - Renderizar el menú superior de Audit desde un catálogo de rutas.
 - Mantener visibles SCAN y BL aunque sus carpetas no estén instaladas.
 - Comprobar módulos mediante manifiestos locales sin reutilizar datos obsoletos.
-- Validar identidad, disponibilidad y entrada de cada módulo.
-- Marcar un módulo como abierto solo después de cargar su iframe.
+- Validar identidad, independencia y pantalla de entrada de cada módulo.
+- Evitar estados incorrectos al cambiar rápidamente entre iframes.
 - Sincronizar la navegación con location.hash.
 - Funcionar con file://, servidor local y Electron.
 ========================================================= */
@@ -53,6 +53,22 @@ Función o funciones:
 
   function normalizeId(value) {
     return text(value).toLowerCase();
+  }
+
+  function stripQueryAndHash(value) {
+    return String(value == null ? "" : value).replace(/[?#].*$/, "");
+  }
+
+  function resolveUrl(value, base) {
+    try {
+      return new URL(value, base || window.location.href).href;
+    } catch (_error) {
+      return text(value);
+    }
+  }
+
+  function sameResolvedPath(first, second) {
+    return stripQueryAndHash(first) === stripQueryAndHash(second);
   }
 
   function escapeHtml(value) {
@@ -185,6 +201,7 @@ Función o funciones:
       frame.hidden = true;
       frame.removeAttribute("src");
       frame.removeAttribute("data-route-id");
+      frame.removeAttribute("data-expected-url");
       frame.setAttribute("aria-busy", "false");
     }
 
@@ -206,9 +223,11 @@ Función o funciones:
     if (empty) empty.hidden = true;
     if (!frame) return;
 
+    var expectedUrl = resolveUrl(route.href, window.location.href);
     frame.hidden = false;
     frame.title = route.title;
     frame.setAttribute("data-route-id", route.id);
+    frame.setAttribute("data-expected-url", expectedUrl);
     frame.setAttribute("aria-busy", "true");
     setStatus("loading", "Abriendo " + route.label + "...");
     frame.src = route.href;
@@ -225,6 +244,13 @@ Función o funciones:
       var separator = route.probe.indexOf("?") >= 0 ? "&" : "?";
       return route.probe + separator + "audit_probe=" + Date.now();
     }
+  }
+
+  function manifestEntryMatchesRoute(route, manifest) {
+    var probeUrl = resolveUrl(route.probe, window.location.href);
+    var declaredEntry = resolveUrl(manifest.entry, probeUrl);
+    var expectedEntry = resolveUrl(route.href, window.location.href);
+    return sameResolvedPath(declaredEntry, expectedEntry);
   }
 
   function validateManifest(route, manifest) {
@@ -244,8 +270,12 @@ Función o funciones:
       return "El manifiesto no declaró una pantalla de entrada.";
     }
 
-    if (manifest.standalone === false) {
+    if (manifest.standalone !== true) {
       return "El módulo no confirmó que puede funcionar independientemente.";
+    }
+
+    if (!manifestEntryMatchesRoute(route, manifest)) {
+      return "La pantalla declarada por el manifiesto no coincide con la ruta registrada en el menú.";
     }
 
     return "";
@@ -356,6 +386,20 @@ Función o funciones:
     openRoute(route.id, { force: true });
   }
 
+  function frameLoadedExpectedDocument(frame) {
+    var expected = frame.getAttribute("data-expected-url");
+    if (!expected) return false;
+
+    try {
+      var actual = frame.contentWindow && frame.contentWindow.location
+        ? frame.contentWindow.location.href
+        : "";
+      return sameResolvedPath(actual, expected);
+    } catch (_error) {
+      return sameResolvedPath(frame.src, expected);
+    }
+  }
+
   function bindActions() {
     var refreshButton = $("auditRefreshButton");
     var retryButton = $("auditRetryButton");
@@ -372,7 +416,7 @@ Función o funciones:
     if (frame) {
       frame.addEventListener("load", function onModuleLoaded() {
         var routeId = normalizeId(frame.getAttribute("data-route-id"));
-        if (!routeId || routeId !== state.activeId) return;
+        if (!routeId || routeId !== state.activeId || !frameLoadedExpectedDocument(frame)) return;
 
         frame.setAttribute("aria-busy", "false");
         var route = getRouteById(routeId);
@@ -380,7 +424,10 @@ Función o funciones:
       });
 
       frame.addEventListener("error", function onModuleError() {
-        var route = getRouteById(frame.getAttribute("data-route-id")) || getDefaultRoute();
+        var routeId = normalizeId(frame.getAttribute("data-route-id"));
+        if (!routeId || routeId !== state.activeId) return;
+
+        var route = getRouteById(routeId);
         if (route) showUnavailable(route, "La pantalla del módulo no pudo cargarse.");
       });
     }
