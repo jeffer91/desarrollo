@@ -4,10 +4,10 @@ Ruta o ubicación: /audit/scan/scan.index.html
 Función o funciones:
 - Mostrar la interfaz autónoma del módulo SCAN.
 - Permitir seleccionar o arrastrar un archivo ZIP.
-- Leer y analizar la estructura real del archivo comprimido.
+- Leer y analizar la estructura mediante Web Worker.
+- Usar un lector compatible de respaldo cuando el worker no esté disponible.
 - Mostrar metadatos, progreso, resumen, filtros y tabla de resultados.
 - Preparar botones de TXT, PDF y guardado en BL.
-- Funcionar directamente sin depender del menú de Audit.
 ========================================================= -->
 <!doctype html>
 <html lang="es">
@@ -18,6 +18,7 @@ Función o funciones:
   <meta name="description" content="Escaneo autónomo de estructuras de archivos ZIP." />
   <link rel="icon" href="data:," />
   <link rel="stylesheet" href="./scan.css" />
+  <link rel="stylesheet" href="./scan.performance.css" />
 </head>
 <body>
   <div class="scan-shell">
@@ -206,7 +207,7 @@ Función o funciones:
     </main>
   </div>
 
-  <!-- Dependencia aislada del lector ZIP. -->
+  <!-- JSZip permanece en la página para el modo de respaldo. -->
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 
   <!-- Núcleo autónomo de SCAN. -->
@@ -214,7 +215,9 @@ Función o funciones:
   <script src="./scan.state.js"></script>
   <script src="./scan.dom.js"></script>
   <script src="./scan.model.js"></script>
+  <script src="./scan.guard.js"></script>
   <script src="./scan.zip.js"></script>
+  <script src="./scan.worker.client.js"></script>
   <script src="./scan.engine.js"></script>
   <script src="./scan.app.js"></script>
 </body>
