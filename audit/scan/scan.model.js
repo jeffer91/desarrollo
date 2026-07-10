@@ -3,6 +3,7 @@ Nombre completo: scan.model.js
 Ruta o ubicación: /audit/scan/scan.model.js
 Función o funciones:
 - Normalizar rutas encontradas dentro de archivos ZIP.
+- Preservar nombres originales, incluidos espacios válidos.
 - Crear registros uniformes de archivos y carpetas.
 - Detectar carpetas implícitas, extensiones, niveles y rutas inseguras.
 - Calcular resúmenes y alertas del escaneo.
@@ -14,12 +15,16 @@ Función o funciones:
 
   window.AuditScan = window.AuditScan || {};
 
+  function raw(value) {
+    return String(value == null ? "" : value);
+  }
+
   function text(value) {
-    return String(value == null ? "" : value).trim();
+    return raw(value).trim();
   }
 
   function normalizeSlashes(value) {
-    return text(value)
+    return raw(value)
       .replace(/\\+/g, "/")
       .replace(/\/{2,}/g, "/");
   }
@@ -35,13 +40,15 @@ Función o funciones:
     var safe = [];
 
     pieces.forEach(function keepPiece(piece) {
-      var current = text(piece);
-      if (!current || current === ".") return;
+      var current = raw(piece);
+      if (current === "" || current === ".") return;
       if (current === "..") {
         if (safe.length) safe.pop();
         return;
       }
-      safe.push(current.replace(/[\u0000-\u001f\u007f]/g, ""));
+
+      current = current.replace(/[\u0000-\u001f\u007f]/g, "");
+      if (current !== "") safe.push(current);
     });
 
     var result = safe.join("/");
@@ -55,13 +62,17 @@ Función o funciones:
 
   function getName(path, isFolder) {
     var clean = isFolder ? withoutTrailingSlash(path) : normalizeSlashes(path);
-    var parts = clean.split("/").filter(Boolean);
+    var parts = clean.split("/").filter(function keepPart(part) {
+      return part !== "";
+    });
     return parts.length ? parts[parts.length - 1] : "";
   }
 
   function getParent(path, isFolder) {
     var clean = isFolder ? withoutTrailingSlash(path) : normalizeSlashes(path);
-    var parts = clean.split("/").filter(Boolean);
+    var parts = clean.split("/").filter(function keepPart(part) {
+      return part !== "";
+    });
     parts.pop();
     return parts.join("/");
   }
@@ -69,12 +80,14 @@ Función o funciones:
   function getDepth(path, isFolder) {
     var clean = isFolder ? withoutTrailingSlash(path) : normalizeSlashes(path);
     if (!clean) return 0;
-    return clean.split("/").filter(Boolean).length;
+    return clean.split("/").filter(function keepPart(part) {
+      return part !== "";
+    }).length;
   }
 
   function getExtension(name, isFolder) {
     if (isFolder) return "";
-    var value = text(name);
+    var value = raw(name);
     var index = value.lastIndexOf(".");
     if (index <= 0 || index === value.length - 1) return "";
     return value.slice(index + 1).toLowerCase();
@@ -106,7 +119,7 @@ Función o funciones:
       size: isFolder ? 0 : numberOrZero(data.size || data.uncompressedSize),
       compressedSize: isFolder ? 0 : numberOrZero(data.compressedSize),
       modifiedAt: data.modifiedAt || null,
-      comment: text(data.comment),
+      comment: raw(data.comment),
       crc32: data.crc32 == null ? null : data.crc32,
       encrypted: Boolean(data.encrypted),
       unsafePath: unsafePath,
@@ -130,7 +143,9 @@ Función o funciones:
       var clean = entry.type === "folder"
         ? withoutTrailingSlash(entry.path)
         : normalizeSlashes(entry.path);
-      var parts = clean.split("/").filter(Boolean);
+      var parts = clean.split("/").filter(function keepPart(part) {
+        return part !== "";
+      });
       if (entry.type === "file") parts.pop();
 
       var current = [];
@@ -155,8 +170,8 @@ Función o funciones:
 
   function sortEntries(entries) {
     return (entries || []).slice().sort(function compareEntries(a, b) {
-      var pathA = text(a && a.path).toLocaleLowerCase("es");
-      var pathB = text(b && b.path).toLocaleLowerCase("es");
+      var pathA = raw(a && a.path).toLocaleLowerCase("es");
+      var pathB = raw(b && b.path).toLocaleLowerCase("es");
       return pathA.localeCompare(pathB, "es", { numeric: true, sensitivity: "base" });
     });
   }
@@ -193,7 +208,7 @@ Función o funciones:
       if (entry.unsafePath) unsafePaths += 1;
       maxDepth = Math.max(maxDepth, Number(entry.depth) || 0);
 
-      var key = text(entry.path).toLocaleLowerCase("es");
+      var key = raw(entry.path).toLocaleLowerCase("es");
       if (key) {
         pathCounts[key] = (pathCounts[key] || 0) + 1;
         if (pathCounts[key] === 2) duplicatePaths += 1;
@@ -213,13 +228,14 @@ Función o funciones:
       duplicatePaths: duplicatePaths,
       maxDepth: maxDepth,
       extensions: extensionCounts,
-      zipName: text(zipMeta && zipMeta.name),
+      zipName: raw(zipMeta && zipMeta.name),
       zipSize: numberOrZero(zipMeta && zipMeta.size),
       scannedAt: new Date().toISOString()
     };
   }
 
   window.AuditScan.Model = {
+    raw: raw,
     text: text,
     normalizeSlashes: normalizeSlashes,
     sanitizePath: sanitizePath,
