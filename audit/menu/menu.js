@@ -4,9 +4,9 @@ Ruta o ubicación: /audit/menu/menu.js
 Función o funciones:
 - Renderizar el menú superior de Audit desde un catálogo de rutas.
 - Mantener visibles SCAN y BL aunque sus carpetas no estén instaladas.
-- Comprobar cada módulo mediante un manifiesto opcional.
-- Cargar módulos disponibles en un iframe.
-- Mostrar avisos controlados sin romper el menú.
+- Comprobar módulos mediante manifiestos locales sin reutilizar datos obsoletos.
+- Validar identidad, disponibilidad y entrada de cada módulo.
+- Marcar un módulo como abierto solo después de cargar su iframe.
 - Sincronizar la navegación con location.hash.
 - Funcionar con file://, servidor local y Electron.
 ========================================================= */
@@ -66,11 +66,13 @@ Función o funciones:
 
   function cloneRoutes(source) {
     var list = Array.isArray(source) && source.length ? source : DEFAULT_ROUTES;
+    var used = new Set();
 
     return list
       .map(function normalizeRoute(route, index) {
         var id = normalizeId(route && route.id);
-        if (!id) return null;
+        if (!id || used.has(id)) return null;
+        used.add(id);
 
         return {
           id: id,
@@ -104,10 +106,12 @@ Función o funciones:
   }
 
   function writeHashId(id) {
-    var next = "#" + normalizeId(id);
+    var normalized = normalizeId(id);
+    if (!normalized) return;
 
+    var next = "#" + normalized;
     if (window.location.hash === next) {
-      openRoute(id);
+      openRoute(normalized);
       return;
     }
 
@@ -152,7 +156,7 @@ Función o funciones:
 
       return (
         '<a class="audit-nav-button" href="#' + escapeHtml(route.id) + '" ' +
-        'data-route-id="' + escapeHtml(route.id) + '" aria-current="false">' +
+        'data-route-id="' + escapeHtml(route.id) + '">' +
         '<span>' + escapeHtml(route.label) + "</span>" +
         badge +
         "</a>"
@@ -165,7 +169,6 @@ Función o funciones:
         : null;
 
       if (!link) return;
-
       event.preventDefault();
       writeHashId(link.getAttribute("data-route-id"));
     });
@@ -181,6 +184,8 @@ Función o funciones:
     if (frame) {
       frame.hidden = true;
       frame.removeAttribute("src");
+      frame.removeAttribute("data-route-id");
+      frame.setAttribute("aria-busy", "false");
     }
 
     if (title) title.textContent = route.label + " no está disponible";
@@ -202,21 +207,48 @@ Función o funciones:
     if (!frame) return;
 
     frame.hidden = false;
-    frame.src = route.href;
     frame.title = route.title;
-
-    setStatus("ready", "Abierto: " + route.label + ".");
+    frame.setAttribute("data-route-id", route.id);
+    frame.setAttribute("aria-busy", "true");
+    setStatus("loading", "Abriendo " + route.label + "...");
+    frame.src = route.href;
   }
 
   function buildProbeUrl(route) {
     if (!route.probe) return "";
 
-    if (window.location.protocol === "file:") {
-      return route.probe;
+    try {
+      var url = new URL(route.probe, window.location.href);
+      url.searchParams.set("audit_probe", String(Date.now()));
+      return url.href;
+    } catch (_error) {
+      var separator = route.probe.indexOf("?") >= 0 ? "&" : "?";
+      return route.probe + separator + "audit_probe=" + Date.now();
+    }
+  }
+
+  function validateManifest(route, manifest) {
+    if (!manifest || typeof manifest !== "object") {
+      return "El archivo de manifiesto no registró el módulo esperado.";
     }
 
-    var separator = route.probe.indexOf("?") >= 0 ? "&" : "?";
-    return route.probe + separator + "audit_probe=" + Date.now();
+    if (normalizeId(manifest.id) !== route.id) {
+      return "El manifiesto pertenece a un módulo diferente.";
+    }
+
+    if (manifest.available === false) {
+      return "El manifiesto indicó que el módulo no está disponible.";
+    }
+
+    if (!text(manifest.entry)) {
+      return "El manifiesto no declaró una pantalla de entrada.";
+    }
+
+    if (manifest.standalone === false) {
+      return "El módulo no confirmó que puede funcionar independientemente.";
+    }
+
+    return "";
   }
 
   function probeModule(route, force) {
@@ -242,12 +274,13 @@ Función o funciones:
       }
 
       window.AUDIT_MODULES = window.AUDIT_MODULES || {};
+      delete window.AUDIT_MODULES[route.id];
 
       var script = document.createElement("script");
       var finished = false;
       var timeoutId = window.setTimeout(function onProbeTimeout() {
         finish(false, "La comprobación del módulo superó el tiempo permitido.");
-      }, 3500);
+      }, 5000);
 
       function cleanup() {
         window.clearTimeout(timeoutId);
@@ -275,10 +308,10 @@ Función o funciones:
 
       script.onload = function onProbeLoaded() {
         var manifest = window.AUDIT_MODULES && window.AUDIT_MODULES[route.id];
-        var declaredAvailable = Boolean(manifest && manifest.available !== false);
+        var validationError = validateManifest(route, manifest);
 
-        if (!declaredAvailable) {
-          finish(false, "Se encontró el manifiesto, pero no confirmó que el módulo esté disponible.");
+        if (validationError) {
+          finish(false, validationError);
           return;
         }
 
@@ -319,18 +352,6 @@ Función o funciones:
     var route = getRouteById(state.activeId) || getDefaultRoute();
     if (!route) return;
 
-    var availability = state.availability[route.id];
-    var frame = $("auditModuleFrame");
-
-    if (availability && availability.available && frame && !frame.hidden && frame.src) {
-      setStatus("loading", "Actualizando " + route.label + "...");
-      frame.src = route.href;
-      window.setTimeout(function finishRefresh() {
-        setStatus("ready", "Actualizado: " + route.label + ".");
-      }, 250);
-      return;
-    }
-
     delete state.availability[route.id];
     openRoute(route.id, { force: true });
   }
@@ -338,17 +359,29 @@ Función o funciones:
   function bindActions() {
     var refreshButton = $("auditRefreshButton");
     var retryButton = $("auditRetryButton");
+    var frame = $("auditModuleFrame");
 
     if (refreshButton) {
       refreshButton.addEventListener("click", refreshActiveRoute);
     }
 
     if (retryButton) {
-      retryButton.addEventListener("click", function retryActive() {
-        var route = getRouteById(state.activeId) || getDefaultRoute();
-        if (!route) return;
-        delete state.availability[route.id];
-        openRoute(route.id, { force: true });
+      retryButton.addEventListener("click", refreshActiveRoute);
+    }
+
+    if (frame) {
+      frame.addEventListener("load", function onModuleLoaded() {
+        var routeId = normalizeId(frame.getAttribute("data-route-id"));
+        if (!routeId || routeId !== state.activeId) return;
+
+        frame.setAttribute("aria-busy", "false");
+        var route = getRouteById(routeId);
+        setStatus("ready", "Abierto: " + (route ? route.label : routeId.toUpperCase()) + ".");
+      });
+
+      frame.addEventListener("error", function onModuleError() {
+        var route = getRouteById(frame.getAttribute("data-route-id")) || getDefaultRoute();
+        if (route) showUnavailable(route, "La pantalla del módulo no pudo cargarse.");
       });
     }
 
@@ -362,13 +395,14 @@ Función o funciones:
     renderNavigation();
     bindActions();
 
-    var initial = getRouteById(readHashId()) || getDefaultRoute();
+    var requestedId = readHashId();
+    var initial = getRouteById(requestedId) || getDefaultRoute();
     if (!initial) {
       setStatus("error", "No hay rutas configuradas.");
       return;
     }
 
-    if (!readHashId()) {
+    if (requestedId !== initial.id) {
       window.location.hash = "#" + initial.id;
       return;
     }
@@ -383,7 +417,10 @@ Función o funciones:
       });
     },
     open: writeHashId,
-    refresh: refreshActiveRoute
+    refresh: refreshActiveRoute,
+    getActiveId: function getActiveId() {
+      return state.activeId;
+    }
   };
 
   if (document.readyState === "loading") {
