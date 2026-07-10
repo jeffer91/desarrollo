@@ -2,10 +2,10 @@
 Nombre completo: scan.model.js
 Ruta o ubicación: /audit/scan/scan.model.js
 Función o funciones:
-- Normalizar rutas encontradas dentro de archivos ZIP.
-- Preservar nombres originales, espacios y metadatos técnicos.
+- Preservar la ruta y el nombre exactos declarados dentro del ZIP.
+- Generar una ruta normalizada y otra segura para visualización y consultas.
+- Detectar recorridos relativos, rutas absolutas, controles y separadores no estándar.
 - Crear registros uniformes de archivos y carpetas.
-- Detectar carpetas implícitas, extensiones, niveles y rutas inseguras.
 - Ordenar colecciones en el mismo arreglo para reducir memoria.
 - Funcionar en ventana principal y Web Worker.
 ========================================================= */
@@ -14,6 +14,10 @@ Función o funciones:
   "use strict";
 
   root.AuditScan = root.AuditScan || {};
+
+  var pathCollator = typeof Intl !== "undefined" && typeof Intl.Collator === "function"
+    ? new Intl.Collator("es", { numeric: true, sensitivity: "base" })
+    : null;
 
   function raw(value) {
     return String(value == null ? "" : value);
@@ -29,9 +33,18 @@ Función o funciones:
       .replace(/\/{2,}/g, "/");
   }
 
+  function containsControlCharacters(value) {
+    return /[\u0000-\u001f\u007f]/.test(raw(value));
+  }
+
   function hasUnsafeSegments(path) {
-    var value = normalizeSlashes(path);
-    return /(^|\/)\.\.(\/|$)/.test(value) || /^[A-Za-z]:\//.test(value) || /^\//.test(value);
+    var source = raw(path);
+    var normalized = normalizeSlashes(source);
+
+    return containsControlCharacters(source) ||
+      /(^|\/)\.\.(\/|$)/.test(normalized) ||
+      /^[A-Za-z]:\//.test(normalized) ||
+      /^\//.test(normalized);
   }
 
   function sanitizePath(value, isFolder) {
@@ -42,6 +55,7 @@ Función o funciones:
     pieces.forEach(function keepPiece(piece) {
       var current = raw(piece);
       if (current === "" || current === ".") return;
+
       if (current === "..") {
         if (safe.length) safe.pop();
         return;
@@ -66,6 +80,13 @@ Función o funciones:
       return part !== "";
     });
     return parts.length ? parts[parts.length - 1] : "";
+  }
+
+  function getSourceName(path, isFolder) {
+    var clean = raw(path).replace(/[\\/]+$/, "");
+    var parts = clean.split(/[\\/]/);
+    var name = parts.length ? parts[parts.length - 1] : "";
+    return isFolder ? name : name;
   }
 
   function getParent(path, isFolder) {
@@ -102,18 +123,40 @@ Función o funciones:
     data = data || {};
 
     var isFolder = Boolean(data.isFolder || data.dir);
-    var originalPath = normalizeSlashes(data.originalPath || data.path || data.name);
+    var sourcePath = raw(
+      Object.prototype.hasOwnProperty.call(data, "sourcePath")
+        ? data.sourcePath
+        : data.originalPath || data.path || data.name
+    );
+    var originalPath = normalizeSlashes(sourcePath);
     var path = sanitizePath(data.path || originalPath, isFolder);
+    var invalidPath = !path && Boolean(sourcePath);
+
+    if (invalidPath) {
+      path = isFolder ? "[ruta-invalida]/" : "[ruta-invalida]";
+    }
+
     var name = getName(path, isFolder);
-    var unsafePath = Boolean(data.unsafePath || hasUnsafeSegments(originalPath));
+    var sourceName = getSourceName(sourcePath, isFolder);
+    var unsafePath = Boolean(
+      data.unsafePath ||
+      hasUnsafeSegments(sourcePath) ||
+      originalPath !== sourcePath ||
+      path !== originalPath ||
+      invalidPath
+    );
 
     return {
       id: text(data.id) || "scan_entry_" + Math.random().toString(16).slice(2),
       type: isFolder ? "folder" : "file",
-      path: path,
+      sourcePath: sourcePath,
+      sourceName: sourceName,
       originalPath: originalPath || path,
+      path: path,
+      pathChanged: path !== sourcePath,
+      invalidPath: invalidPath,
       name: name,
-      extension: getExtension(name, isFolder),
+      extension: getExtension(sourceName || name, isFolder),
       parent: getParent(path, isFolder),
       depth: getDepth(path, isFolder),
       size: isFolder ? 0 : numberOrZero(data.size || data.uncompressedSize),
@@ -123,6 +166,7 @@ Función o funciones:
       crc32: data.crc32 == null ? null : data.crc32,
       compressionMethod: data.compressionMethod == null ? null : Number(data.compressionMethod),
       localOffset: data.localOffset == null ? null : Number(data.localOffset),
+      declaredLocalOffset: data.declaredLocalOffset == null ? null : Number(data.declaredLocalOffset),
       versionMadeBy: data.versionMadeBy == null ? null : Number(data.versionMadeBy),
       encrypted: Boolean(data.encrypted),
       unsafePath: unsafePath,
@@ -141,7 +185,7 @@ Función o funciones:
     });
 
     (entries || []).forEach(function addParents(entry) {
-      if (!entry || !entry.path) return;
+      if (!entry || !entry.path || entry.invalidPath) return;
 
       var clean = entry.type === "folder"
         ? withoutTrailingSlash(entry.path)
@@ -160,6 +204,7 @@ Función o funciones:
         existing.add(folderPath);
         folders.push(buildEntry({
           id: "scan_folder_" + folderPath,
+          sourcePath: folderPath,
           path: folderPath,
           originalPath: folderPath,
           isFolder: true,
@@ -186,9 +231,13 @@ Función o funciones:
     var list = Array.isArray(entries) ? entries : [];
 
     list.sort(function compareEntries(a, b) {
-      var pathA = raw(a && a.path).toLocaleLowerCase("es");
-      var pathB = raw(b && b.path).toLocaleLowerCase("es");
-      return pathA.localeCompare(pathB, "es", { numeric: true, sensitivity: "base" });
+      var pathA = raw(a && a.path);
+      var pathB = raw(b && b.path);
+
+      if (pathCollator) return pathCollator.compare(pathA, pathB);
+      pathA = pathA.toLowerCase();
+      pathB = pathB.toLowerCase();
+      return pathA < pathB ? -1 : pathA > pathB ? 1 : 0;
     });
 
     return list;
@@ -201,6 +250,8 @@ Función o funciones:
     var compressedSize = 0;
     var emptyFiles = 0;
     var unsafePaths = 0;
+    var invalidPaths = 0;
+    var encryptedEntries = 0;
     var maxDepth = 0;
     var extensionCounts = Object.create(null);
     var pathCounts = Object.create(null);
@@ -223,6 +274,8 @@ Función o funciones:
       }
 
       if (entry.unsafePath) unsafePaths += 1;
+      if (entry.invalidPath) invalidPaths += 1;
+      if (entry.encrypted) encryptedEntries += 1;
       maxDepth = Math.max(maxDepth, Number(entry.depth) || 0);
 
       var key = raw(entry.path).toLocaleLowerCase("es");
@@ -237,9 +290,11 @@ Función o funciones:
       folders: folders,
       totalSize: totalSize,
       compressedSize: compressedSize,
-      alerts: emptyFiles + unsafePaths + duplicatePaths,
+      alerts: emptyFiles + unsafePaths + duplicatePaths + encryptedEntries,
       emptyFiles: emptyFiles,
       unsafePaths: unsafePaths,
+      invalidPaths: invalidPaths,
+      encryptedEntries: encryptedEntries,
       duplicatePaths: duplicatePaths,
       maxDepth: maxDepth,
       extensions: extensionCounts,
