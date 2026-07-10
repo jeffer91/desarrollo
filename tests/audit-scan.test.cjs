@@ -5,6 +5,7 @@ Función o funciones:
 - Probar el lector ZIP progresivo con Node.js.
 - Validar rutas exactas, Unicode, normalización y alertas.
 - Validar ZIP vacío, autoextraíble, límites, cancelación y daño.
+- Validar marcas de cifrado y caracteres de control.
 - Ejecutar también la autoprueba usada dentro de la pantalla SCAN.
 ========================================================= */
 
@@ -64,7 +65,7 @@ function localRecord(entry) {
   const header = new Uint8Array(30);
   write32(header, 0, 0x04034b50);
   write16(header, 4, 20);
-  write16(header, 6, 0x0800);
+  write16(header, 6, entry.flags);
   write16(header, 8, 0);
   write16(header, 10, 0);
   write16(header, 12, 0);
@@ -83,7 +84,7 @@ function centralRecord(entry, localOffset) {
   write32(header, 0, 0x02014b50);
   write16(header, 4, 0x0314);
   write16(header, 6, 20);
-  write16(header, 8, 0x0800);
+  write16(header, 8, entry.flags);
   write16(header, 10, 0);
   write16(header, 12, 0);
   write16(header, 14, 0);
@@ -109,6 +110,7 @@ function buildZip(items, options = {}) {
       sourceName: String(item.name),
       name,
       content,
+      flags: 0x0800 | (item.encrypted ? 0x0001 : 0),
       checksum: crc32(content)
     };
   });
@@ -172,14 +174,15 @@ test("lee ZIP normal y conserva Unicode", async () => {
   assert.equal(file.size, 4);
 });
 
-test("preserva ruta fuente y normaliza recorrido inseguro", async () => {
+test("preserva ruta fuente y normaliza recorridos inseguros", async () => {
+  const backslashName = "raro" + String.fromCharCode(92) + "archivo.txt";
   const result = await read(buildZip([
     { name: "../riesgo.txt", content: "" },
-    { name: "raro\\archivo.txt", content: "x" }
+    { name: backslashName, content: "x" }
   ]));
 
   const traversal = result.entries.find((entry) => entry.sourcePath === "../riesgo.txt");
-  const backslash = result.entries.find((entry) => entry.sourcePath === "raro\\archivo.txt");
+  const backslash = result.entries.find((entry) => entry.sourcePath === backslashName);
 
   assert.ok(traversal);
   assert.equal(traversal.path, "riesgo.txt");
@@ -190,13 +193,26 @@ test("preserva ruta fuente y normaliza recorrido inseguro", async () => {
   assert.ok(result.summary.unsafePaths >= 2);
 });
 
-test("detecta archivos vacíos y cifrado declarado", async () => {
+test("detecta caracteres de control en rutas", async () => {
+  const controlledName = "malo" + String.fromCharCode(1) + ".txt";
+  const result = await read(buildZip([
+    { name: controlledName, content: "x" }
+  ]));
+
+  const entry = result.entries.find((item) => item.sourcePath === controlledName);
+  assert.ok(entry);
+  assert.equal(entry.unsafePath, true);
+  assert.equal(entry.path, "malo.txt");
+});
+
+test("detecta archivos vacíos y elementos cifrados declarados", async () => {
   const result = await read(buildZip([
     { name: "vacío.txt", content: "" },
-    { name: "lleno.txt", content: "contenido" }
+    { name: "protegido.txt", content: "contenido", encrypted: true }
   ]));
 
   assert.equal(result.summary.emptyFiles, 1);
+  assert.equal(result.summary.encryptedEntries, 1);
   assert.equal(result.summary.files, 2);
 });
 
