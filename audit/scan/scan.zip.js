@@ -6,7 +6,8 @@ Función o funciones:
 - Obtener rutas, carpetas, archivos, tamaños, fechas y metadatos.
 - Crear carpetas implícitas cuando no están declaradas en el ZIP.
 - Informar progreso y respetar cancelaciones lógicas.
-- No extraer archivos al disco ni leer su contenido interno.
+- Detectar compresión sospechosa y tamaños expandidos extremos.
+- Funcionar como respaldo cuando el Web Worker no esté disponible.
 ========================================================= */
 
 (function attachScanZipReader(window) {
@@ -24,6 +25,26 @@ Función o funciones:
     if (!window.JSZip || typeof window.JSZip.loadAsync !== "function") {
       throw new Error("No se pudo cargar el lector ZIP. Verifique la conexión o incluya JSZip localmente.");
     }
+  }
+
+  function friendlyError(error) {
+    var message = String(error && error.message ? error.message : error || "Error desconocido");
+    var lower = message.toLowerCase();
+
+    if (lower.indexOf("encrypted") >= 0 || lower.indexOf("password") >= 0) {
+      return "El ZIP está protegido con contraseña o utiliza cifrado no compatible.";
+    }
+    if (lower.indexOf("corrupted") >= 0 || lower.indexOf("central directory") >= 0 || lower.indexOf("signature") >= 0) {
+      return "El archivo ZIP parece estar dañado o incompleto.";
+    }
+    if (lower.indexOf("compression") >= 0 || lower.indexOf("method") >= 0) {
+      return "El ZIP utiliza un método de compresión no compatible.";
+    }
+    if (lower.indexOf("memory") >= 0 || lower.indexOf("allocation") >= 0) {
+      return "No hubo memoria suficiente para analizar este ZIP.";
+    }
+
+    return message;
   }
 
   function throwIfCancelled(control) {
@@ -141,6 +162,26 @@ Función o funciones:
     });
   }
 
+  function enrichRiskSummary(summary, entryCount) {
+    var compressed = Number(summary.compressedSize) || 0;
+    var uncompressed = Number(summary.totalSize) || 0;
+    var ratio = compressed > 0 ? uncompressed / compressed : 0;
+    var suspiciousCompression = ratio >= 500 && uncompressed >= 1024 * 1024 * 1024;
+    var hugeExpandedSize = uncompressed >= 20 * 1024 * 1024 * 1024;
+    var excessiveEntries = entryCount >= 250000;
+
+    summary.compressionRatio = ratio;
+    summary.suspiciousCompression = suspiciousCompression;
+    summary.hugeExpandedSize = hugeExpandedSize;
+    summary.excessiveEntries = excessiveEntries;
+    summary.alerts = Number(summary.alerts || 0) +
+      (suspiciousCompression ? 1 : 0) +
+      (hugeExpandedSize ? 1 : 0) +
+      (excessiveEntries ? 1 : 0);
+
+    return summary;
+  }
+
   async function read(file, options, control) {
     ensureDependencies();
 
@@ -168,8 +209,7 @@ Función o funciones:
         checkCRC32: false
       });
     } catch (error) {
-      var message = error && error.message ? error.message : "Formato ZIP inválido o dañado.";
-      throw new Error("No fue posible abrir el ZIP: " + message);
+      throw new Error(friendlyError(error));
     }
 
     buffer = null;
@@ -184,10 +224,10 @@ Función o funciones:
     var entries = Model.sortEntries(explicitEntries.concat(implicitFolders));
 
     emitProgress(options, 97, "Calculando resumen final");
-    var summary = Model.createSummary(entries, {
+    var summary = enrichRiskSummary(Model.createSummary(entries, {
       name: file.name,
       size: file.size
-    });
+    }), entries.length);
 
     throwIfCancelled(control);
     emitProgress(options, 100, "Escaneo completado");
@@ -201,6 +241,7 @@ Función o funciones:
         lastModified: Number(file.lastModified) || null,
         explicitEntries: explicitEntries.length,
         implicitFolders: implicitFolders.length,
+        totalEntries: entries.length,
         scannedAt: summary.scannedAt
       }
     };
