@@ -5,8 +5,8 @@ Función o funciones:
 - Iniciar la pantalla autónoma de SCAN.
 - Gestionar selección, arrastre y validación del archivo ZIP.
 - Evaluar riesgos y límites según la memoria del equipo.
+- Esperar la autoprueba de forma cancelable antes del escaneo real.
 - Ejecutar el lector progresivo mediante Web Worker o fallback.
-- Incorporar el resultado de la autoprueba al diagnóstico.
 - Aplicar búsqueda con espera para evitar filtros en cada tecla.
 - Preparar puntos públicos para TXT, PDF y BL.
 ========================================================= */
@@ -209,9 +209,9 @@ Función o funciones:
 
     State.patch({
       status: "running",
-      statusMessage: "Verificando el motor y leyendo el directorio central del ZIP...",
+      statusMessage: "Verificando el motor antes de analizar el ZIP...",
       progress: 0,
-      progressLabel: "Preparando lectura progresiva",
+      progressLabel: "Ejecutando verificación interna",
       entries: [],
       metadata: null,
       summary: emptySummary(),
@@ -219,6 +219,17 @@ Función o funciones:
     });
 
     try {
+      if (SelfTest && typeof SelfTest.ensure === "function") {
+        await SelfTest.ensure();
+        if (operationId !== operationSequence) return;
+      }
+
+      State.patch({
+        status: "running",
+        statusMessage: "Leyendo el directorio central del ZIP en un proceso independiente...",
+        progressLabel: "Preparando lectura progresiva"
+      });
+
       var result = await engine.scan(current.file.raw, {
         maxEntries: Number(assessment.maxEntries) || 180000,
         maxCentralDirectoryBytes: Number(assessment.maxCentralDirectoryBytes) || 128 * 1024 * 1024,
@@ -307,8 +318,8 @@ Función o funciones:
       status: "ready",
       statusMessage: cancelled
         ? "Escaneo cancelado. El ZIP continúa preparado."
-        : "No existe un escaneo activo para cancelar.",
-      progressLabel: cancelled ? "Cancelado" : "Sin proceso activo",
+        : "Operación cancelada. El ZIP continúa preparado.",
+      progressLabel: "Cancelado",
       error: ""
     });
   }
