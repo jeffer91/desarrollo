@@ -5,6 +5,7 @@ Función o funciones:
 - Centralizar referencias DOM del módulo SCAN.
 - Formatear tamaños, fechas y textos de forma segura.
 - Renderizar resúmenes, estados, archivo seleccionado y tabla.
+- Mostrar alertas de tamaño, compresión y rutas detectadas.
 - Limitar filas visibles para evitar bloqueos con ZIP grandes.
 - Mantener la lógica visual separada del controlador principal.
 ========================================================= */
@@ -125,13 +126,19 @@ Función o funciones:
     setText("scanSummarySize", formatBytes(summary.totalSize || 0));
     setText("scanSummaryAlerts", formatNumber(summary.alerts || 0));
 
-    var alertsCard = $("scanSummaryAlerts");
-    if (alertsCard) {
-      alertsCard.title = [
+    var alertsValue = $("scanSummaryAlerts");
+    if (alertsValue) {
+      var details = [
         "Vacíos: " + formatNumber(summary.emptyFiles || 0),
         "Rutas inseguras: " + formatNumber(summary.unsafePaths || 0),
         "Rutas duplicadas: " + formatNumber(summary.duplicatePaths || 0)
-      ].join(" · ");
+      ];
+
+      if (summary.suspiciousCompression) details.push("Compresión sospechosa");
+      if (summary.hugeExpandedSize) details.push("Tamaño expandido muy alto");
+      if (summary.excessiveEntries) details.push("Cantidad extrema de elementos");
+
+      alertsValue.title = details.join(" · ");
     }
   }
 
@@ -194,6 +201,7 @@ Función o funciones:
       if (entry.unsafePath) flags.push("Ruta insegura normalizada");
       if (entry.empty) flags.push("Archivo vacío");
       if (entry.implicit) flags.push("Carpeta inferida");
+      if (entry.encrypted) flags.push("Elemento cifrado");
 
       var rowClass = flags.length ? ' class="scan-result-row has-alert"' : ' class="scan-result-row"';
       var pathTitle = entry.originalPath && entry.originalPath !== entry.path
@@ -218,14 +226,22 @@ Función o funciones:
   function renderActions(state) {
     var hasFile = Boolean(state.file);
     var running = state.status === "running";
+    var blocked = Boolean(state.guard && state.guard.allowed === false);
     var hasResults = Array.isArray(state.entries) && state.entries.length > 0;
+    var startButton = $("scanStartButton");
 
-    setDisabled("scanStartButton", !hasFile || running);
+    setDisabled("scanStartButton", !hasFile || running || blocked);
     setDisabled("scanCancelButton", !running);
     setDisabled("scanClearButton", !hasFile && !hasResults);
     setDisabled("scanExportTxtButton", !hasResults || running);
     setDisabled("scanExportPdfButton", !hasResults || running);
     setDisabled("scanSaveBlButton", !hasResults || running);
+
+    if (startButton) {
+      startButton.title = blocked
+        ? "Este ZIP fue bloqueado por la validación de tamaño y memoria."
+        : "";
+    }
   }
 
   function renderError(message) {
