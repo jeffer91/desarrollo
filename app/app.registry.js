@@ -9,6 +9,7 @@ Función o funciones:
 4. Mantiene Certificados como apartado independiente del módulo Incorporaciones.
 5. Mantiene los módulos principales separados para evitar sobrecargar el launcher.
 6. Agrega el módulo Libro como entorno independiente por bloques.
+7. Registra Audit como módulo independiente con menú superior propio.
 =========================================================
 */
 
@@ -18,6 +19,13 @@ Función o funciones:
   window.DESARROLLO = window.DESARROLLO || {};
 
   var modules = [
+    {
+      id: "audit",
+      title: "Audit",
+      group: "Auditoría",
+      description: "Menú independiente para escaneo, almacenamiento local y futuras herramientas de auditoría.",
+      path: "./audit/index.html"
+    },
     {
       id: "curriculo",
       title: "Currículo",
