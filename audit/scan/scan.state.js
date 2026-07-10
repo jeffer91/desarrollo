@@ -4,6 +4,7 @@ Ruta o ubicación: /audit/scan/scan.state.js
 Función o funciones:
 - Administrar el estado visual y operativo de SCAN.
 - Mantener archivo seleccionado, progreso, resultados, resumen y metadatos.
+- Mantener evaluación previa de memoria y tamaño.
 - Mantener filtros y mensajes del análisis.
 - Exponer una API pública sin depender del menú ni de BL.
 ========================================================= */
@@ -18,6 +19,7 @@ Función o funciones:
   function initialState() {
     return {
       file: null,
+      guard: null,
       status: "idle",
       statusMessage: "Seleccione un archivo ZIP para comenzar.",
       progress: 0,
@@ -33,7 +35,10 @@ Función o funciones:
         emptyFiles: 0,
         unsafePaths: 0,
         duplicatePaths: 0,
-        maxDepth: 0
+        maxDepth: 0,
+        suspiciousCompression: false,
+        hugeExpandedSize: false,
+        excessiveEntries: false
       },
       filters: {
         search: "",
@@ -48,6 +53,10 @@ Función o funciones:
   function snapshot() {
     return {
       file: state.file,
+      guard: state.guard ? Object.assign({}, state.guard, {
+        errors: Array.isArray(state.guard.errors) ? state.guard.errors.slice() : [],
+        warnings: Array.isArray(state.guard.warnings) ? state.guard.warnings.slice() : []
+      }) : null,
       status: state.status,
       statusMessage: state.statusMessage,
       progress: state.progress,
