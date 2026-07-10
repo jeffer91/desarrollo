@@ -4,16 +4,17 @@ Ruta o ubicación: /audit/scan/scan.index.html
 Función o funciones:
 - Mostrar la interfaz autónoma del módulo SCAN.
 - Permitir seleccionar o arrastrar un archivo ZIP.
-- Leer y analizar la estructura mediante Web Worker.
-- Usar un lector compatible de respaldo cuando el worker no esté disponible.
+- Analizar el directorio central sin descomprimir ni cargar todo el ZIP.
+- Ejecutar el análisis mediante Web Worker o fallback compatible.
+- Bloquear scripts y conexiones externas mediante CSP.
 - Mostrar metadatos, progreso, resumen, filtros y tabla de resultados.
-- Preparar botones de TXT, PDF y guardado en BL.
 ========================================================= -->
 <!doctype html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; worker-src 'self' blob:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'self'" />
   <title>SCAN · Auditoría de ZIP</title>
   <meta name="description" content="Escaneo autónomo de estructuras de archivos ZIP." />
   <link rel="icon" href="data:," />
@@ -55,7 +56,7 @@ Función o funciones:
           <div class="scan-drop-zone__icon" aria-hidden="true">⇧</div>
           <strong>Arrastre el ZIP aquí</strong>
           <span>o pulse para buscarlo en su equipo</span>
-          <small>SCAN leerá rutas y metadatos sin extraer físicamente los archivos.</small>
+          <small>SCAN leerá el directorio del ZIP sin extraer físicamente sus archivos.</small>
         </div>
 
         <div id="scanAlert" class="scan-alert" role="alert" hidden></div>
@@ -207,14 +208,11 @@ Función o funciones:
     </main>
   </div>
 
-  <!-- JSZip permanece en la página para el modo de respaldo. -->
-  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-
-  <!-- Núcleo autónomo de SCAN. -->
   <script src="./scan.manifest.js"></script>
   <script src="./scan.state.js"></script>
   <script src="./scan.dom.js"></script>
   <script src="./scan.model.js"></script>
+  <script src="./scan.archive.js"></script>
   <script src="./scan.guard.js"></script>
   <script src="./scan.zip.js"></script>
   <script src="./scan.worker.client.js"></script>
