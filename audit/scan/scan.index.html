@@ -4,6 +4,7 @@ Ruta o ubicación: /audit/scan/scan.index.html
 Función o funciones:
 - Mostrar la interfaz autónoma del módulo SCAN.
 - Permitir seleccionar o arrastrar un archivo ZIP.
+- Leer y analizar la estructura real del archivo comprimido.
 - Mostrar metadatos, progreso, resumen, filtros y tabla de resultados.
 - Preparar botones de TXT, PDF y guardado en BL.
 - Funcionar directamente sin depender del menú de Audit.
@@ -42,7 +43,7 @@ Función o funciones:
           <div>
             <p class="scan-eyebrow">Paso 1</p>
             <h2>Seleccionar archivo ZIP</h2>
-            <p>Cargue un archivo comprimido para preparar su análisis completo.</p>
+            <p>Cargue un archivo comprimido para analizar su estructura completa.</p>
           </div>
           <span class="scan-panel__tag">.ZIP</span>
         </div>
@@ -53,7 +54,7 @@ Función o funciones:
           <div class="scan-drop-zone__icon" aria-hidden="true">⇧</div>
           <strong>Arrastre el ZIP aquí</strong>
           <span>o pulse para buscarlo en su equipo</span>
-          <small>En el siguiente bloque se incorporará el motor de lectura interna.</small>
+          <small>SCAN leerá rutas y metadatos sin extraer físicamente los archivos.</small>
         </div>
 
         <div id="scanAlert" class="scan-alert" role="alert" hidden></div>
@@ -105,7 +106,7 @@ Función o funciones:
             <span id="scanProgressLabel">Sin iniciar</span>
             <strong id="scanProgressValue">0%</strong>
           </div>
-          <div class="scan-progress__track" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+          <div id="scanProgressTrack" class="scan-progress__track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
             <div id="scanProgressBar" class="scan-progress__bar"></div>
           </div>
         </div>
@@ -135,7 +136,7 @@ Función o funciones:
           <div>
             <p class="scan-eyebrow">Paso 2</p>
             <h2>Resultados del escaneo</h2>
-            <p>La tabla mostrará rutas, nombres, tipos, extensiones, tamaños y profundidad.</p>
+            <p>La tabla muestra rutas, nombres, tipos, extensiones, tamaños y profundidad.</p>
           </div>
           <span id="scanResultsMeta" class="scan-panel__tag">0 resultados</span>
         </div>
@@ -183,7 +184,7 @@ Función o funciones:
           <div>
             <p class="scan-eyebrow">Paso 3</p>
             <h2>Salida y almacenamiento</h2>
-            <p>Los botones se habilitarán cuando existan resultados reales.</p>
+            <p>Los botones se habilitan automáticamente al completar el análisis.</p>
           </div>
         </div>
 
@@ -205,9 +206,16 @@ Función o funciones:
     </main>
   </div>
 
+  <!-- Dependencia aislada del lector ZIP. -->
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+
+  <!-- Núcleo autónomo de SCAN. -->
   <script src="./scan.manifest.js"></script>
   <script src="./scan.state.js"></script>
   <script src="./scan.dom.js"></script>
+  <script src="./scan.model.js"></script>
+  <script src="./scan.zip.js"></script>
+  <script src="./scan.engine.js"></script>
   <script src="./scan.app.js"></script>
 </body>
 </html>
