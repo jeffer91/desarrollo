@@ -3,11 +3,10 @@ Nombre completo: scan.dom.js
 Ruta o ubicación: /audit/scan/scan.dom.js
 Función o funciones:
 - Centralizar referencias DOM del módulo SCAN.
-- Formatear tamaños, fechas y textos de forma segura.
-- Renderizar resúmenes, estados, archivo seleccionado y tabla.
-- Mostrar alertas de tamaño, compresión y rutas detectadas.
-- Limitar filas visibles para evitar bloqueos con ZIP grandes.
-- Mantener la lógica visual separada del controlador principal.
+- Renderizar archivo, progreso, resumen, tabla y acciones.
+- Evitar filtrar, copiar o dibujar colecciones completas.
+- Limitar la tabla a 2.000 filas y detener búsquedas al superar ese límite.
+- Evitar regenerar la tabla cuando solo cambia el estado o el progreso.
 ========================================================= */
 
 (function attachScanDom(window, document) {
@@ -16,6 +15,12 @@ Función o funciones:
   window.AuditScan = window.AuditScan || {};
 
   var MAX_RENDER_ROWS = 2000;
+  var tableCache = {
+    entries: null,
+    search: "",
+    type: "",
+    emptyKey: ""
+  };
 
   function $(id) {
     return document.getElementById(id);
@@ -46,7 +51,7 @@ Función o funciones:
     var value = Number(bytes) || 0;
     if (value <= 0) return "0 B";
 
-    var units = ["B", "KB", "MB", "GB", "TB"];
+    var units = ["B", "KB", "MB", "GB", "TB", "PB"];
     var index = Math.min(Math.floor(Math.log(value) / Math.log(1024)), units.length - 1);
     var amount = value / Math.pow(1024, index);
     var decimals = index === 0 || amount >= 100 ? 0 : amount >= 10 ? 1 : 2;
@@ -105,10 +110,7 @@ Función o funciones:
     var progressValue = $("scanProgressValue");
     var progressLabel = $("scanProgressLabel");
 
-    if (status) {
-      status.className = "scan-status is-" + (state.status || "idle");
-    }
-
+    if (status) status.className = "scan-status is-" + (state.status || "idle");
     if (statusText) statusText.textContent = state.statusMessage || "";
     if (progress) progress.hidden = state.status === "idle" && !state.file;
 
@@ -127,62 +129,116 @@ Función o funciones:
     setText("scanSummaryAlerts", formatNumber(summary.alerts || 0));
 
     var alertsValue = $("scanSummaryAlerts");
-    if (alertsValue) {
-      var details = [
-        "Vacíos: " + formatNumber(summary.emptyFiles || 0),
-        "Rutas inseguras: " + formatNumber(summary.unsafePaths || 0),
-        "Rutas duplicadas: " + formatNumber(summary.duplicatePaths || 0)
-      ];
+    if (!alertsValue) return;
 
-      if (summary.suspiciousCompression) details.push("Compresión sospechosa");
-      if (summary.hugeExpandedSize) details.push("Tamaño expandido muy alto");
-      if (summary.excessiveEntries) details.push("Cantidad extrema de elementos");
+    var details = [
+      "Vacíos: " + formatNumber(summary.emptyFiles || 0),
+      "Rutas inseguras: " + formatNumber(summary.unsafePaths || 0),
+      "Rutas duplicadas: " + formatNumber(summary.duplicatePaths || 0)
+    ];
 
-      alertsValue.title = details.join(" · ");
-    }
+    if (summary.suspiciousCompression) details.push("Compresión sospechosa");
+    if (summary.hugeExpandedSize) details.push("Tamaño expandido muy alto");
+    if (summary.excessiveEntries) details.push("Cantidad extrema de elementos");
+
+    alertsValue.title = details.join(" · ");
   }
 
-  function getVisibleEntries(state) {
+  function matchesEntry(entry, search, type) {
+    var entryType = text(entry && entry.type) || "file";
+    if (type !== "all" && entryType !== type) return false;
+    if (!search) return true;
+
+    return [entry.path, entry.originalPath, entry.name, entry.extension, entry.parent]
+      .map(text)
+      .join(" ")
+      .toLowerCase()
+      .indexOf(search) >= 0;
+  }
+
+  function collectVisibleEntries(state) {
     var entries = Array.isArray(state.entries) ? state.entries : [];
     var search = text(state.filters && state.filters.search).toLowerCase();
     var type = text(state.filters && state.filters.type) || "all";
 
-    return entries.filter(function filterEntry(entry) {
-      var entryType = text(entry && entry.type) || "file";
-      if (type !== "all" && entryType !== type) return false;
+    if (!search && type === "all") {
+      return {
+        items: entries.slice(0, MAX_RENDER_ROWS),
+        total: entries.length,
+        truncated: entries.length > MAX_RENDER_ROWS
+      };
+    }
 
-      if (!search) return true;
+    var items = [];
+    var matched = 0;
+    var truncated = false;
 
-      return [entry.path, entry.originalPath, entry.name, entry.extension, entry.parent]
-        .map(text)
-        .join(" ")
-        .toLowerCase()
-        .indexOf(search) >= 0;
-    });
+    for (var index = 0; index < entries.length; index += 1) {
+      if (!matchesEntry(entries[index], search, type)) continue;
+
+      matched += 1;
+      if (items.length < MAX_RENDER_ROWS) {
+        items.push(entries[index]);
+      } else {
+        truncated = true;
+        break;
+      }
+    }
+
+    return {
+      items: items,
+      total: matched,
+      truncated: truncated
+    };
   }
 
   function getEmptyMessage(state) {
     if (!state.file) return "Seleccione un ZIP para preparar el escaneo.";
-    if (state.status === "running") return "SCAN está leyendo y organizando el contenido del ZIP.";
-    if (state.status === "completed") return "El ZIP no contiene archivos ni carpetas visibles.";
+    if (state.status === "running") return "SCAN está leyendo y organizando el directorio central del ZIP.";
+    if (state.status === "completed") return "No se encontraron elementos con los filtros actuales.";
     return "El archivo está preparado. Pulse Iniciar escaneo para analizarlo.";
   }
 
+  function shouldRenderTable(state) {
+    var entries = Array.isArray(state.entries) ? state.entries : [];
+    var search = text(state.filters && state.filters.search).toLowerCase();
+    var type = text(state.filters && state.filters.type) || "all";
+    var emptyKey = entries.length ? "results" : [state.status, Boolean(state.file)].join(":");
+
+    if (
+      tableCache.entries === entries &&
+      tableCache.search === search &&
+      tableCache.type === type &&
+      tableCache.emptyKey === emptyKey
+    ) {
+      return false;
+    }
+
+    tableCache.entries = entries;
+    tableCache.search = search;
+    tableCache.type = type;
+    tableCache.emptyKey = emptyKey;
+    return true;
+  }
+
   function renderTable(state) {
+    if (!shouldRenderTable(state)) return;
+
     var body = $("scanResultsBody");
     var meta = $("scanResultsMeta");
     if (!body) return;
 
-    var entries = getVisibleEntries(state);
-    var renderedEntries = entries.slice(0, MAX_RENDER_ROWS);
+    var result = collectVisibleEntries(state);
+    var entries = result.items;
 
     if (meta) {
-      meta.textContent = entries.length > MAX_RENDER_ROWS
-        ? formatNumber(renderedEntries.length) + " de " + formatNumber(entries.length) + " resultados"
-        : formatNumber(entries.length) + " resultado" + (entries.length === 1 ? "" : "s");
-      meta.title = entries.length > MAX_RENDER_ROWS
-        ? "La tabla limita la vista para mantener el rendimiento. Todos los registros permanecen disponibles para exportación."
-        : "";
+      if (result.truncated) {
+        meta.textContent = "Más de " + formatNumber(MAX_RENDER_ROWS) + " resultados";
+        meta.title = "La vista se detiene al alcanzar 2.000 coincidencias. Todos los registros permanecen disponibles para exportación.";
+      } else {
+        meta.textContent = formatNumber(result.total) + " resultado" + (result.total === 1 ? "" : "s");
+        meta.title = "";
+      }
     }
 
     if (!entries.length) {
@@ -196,7 +252,7 @@ Función o funciones:
       return;
     }
 
-    body.innerHTML = renderedEntries.map(function renderEntry(entry, index) {
+    body.innerHTML = entries.map(function renderEntry(entry, index) {
       var flags = [];
       if (entry.unsafePath) flags.push("Ruta insegura normalizada");
       if (entry.empty) flags.push("Archivo vacío");
@@ -239,7 +295,7 @@ Función o funciones:
 
     if (startButton) {
       startButton.title = blocked
-        ? "Este ZIP fue bloqueado por la validación de tamaño y memoria."
+        ? "Este ZIP fue bloqueado por la validación previa."
         : "";
     }
   }
