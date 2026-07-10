@@ -4,8 +4,9 @@ Ruta o ubicación: /audit/scan/scan.worker.client.js
 Función o funciones:
 - Crear y controlar el Web Worker de SCAN desde la interfaz.
 - Recibir progreso y resultados divididos en bloques.
+- Transmitir límites de entradas y directorio central.
 - Cancelar realmente el proceso terminando el worker activo.
-- Informar fallos para que el motor pueda usar un fallback seguro.
+- Evitar operaciones masivas de inserción sobre bloques grandes.
 ========================================================= */
 
 (function attachScanWorkerClient(window) {
@@ -63,13 +64,19 @@ Función o funciones:
     var job = active;
     try {
       job.worker.postMessage({ type: "cancel", jobId: job.id });
-    } catch (error) {
+    } catch (_error) {
       // La terminación posterior garantiza la cancelación.
     }
 
     cleanup(job);
     job.reject(createError("El escaneo fue cancelado.", "ScanCancelledError"));
     return true;
+  }
+
+  function appendChunk(target, chunk) {
+    for (var index = 0; index < chunk.length; index += 1) {
+      target.push(chunk[index]);
+    }
   }
 
   function scan(file, options) {
@@ -127,9 +134,7 @@ Función o funciones:
         }
 
         if (message.type === "entries-chunk") {
-          if (Array.isArray(message.entries)) {
-            Array.prototype.push.apply(job.entries, message.entries);
-          }
+          if (Array.isArray(message.entries)) appendChunk(job.entries, message.entries);
           return;
         }
 
@@ -174,7 +179,9 @@ Función o funciones:
         worker.postMessage({
           type: "scan",
           jobId: job.id,
-          file: file
+          file: file,
+          maxEntries: Number(options.maxEntries) || 1000000,
+          maxCentralDirectoryBytes: Number(options.maxCentralDirectoryBytes) || 512 * 1024 * 1024
         });
       } catch (error) {
         cleanup(job);
