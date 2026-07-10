@@ -4,7 +4,7 @@ Ruta o ubicación: /audit/scan/scan.worker.client.js
 Función o funciones:
 - Crear y controlar el Web Worker de SCAN desde la interfaz.
 - Recibir progreso y resultados divididos en bloques.
-- Transmitir límites de entradas y directorio central.
+- Aplicar límites seguros aunque el llamador solicite valores mayores.
 - Cancelar realmente el proceso terminando el worker activo.
 - Evitar operaciones masivas de inserción sobre bloques grandes.
 ========================================================= */
@@ -16,7 +16,7 @@ Función o funciones:
 
   var active = null;
   var sequence = 0;
-  var MAX_IDLE_MS = 15 * 60 * 1000;
+  var MAX_IDLE_MS = 30 * 60 * 1000;
 
   function supported() {
     return typeof window.Worker === "function";
@@ -26,6 +26,25 @@ Función o funciones:
     var error = new Error(message || "Error del proceso independiente de SCAN.");
     error.name = name || "ScanWorkerError";
     return error;
+  }
+
+  function safeLimits(options) {
+    var guard = window.AuditScan.Guard;
+    var memory = Number(window.navigator && window.navigator.deviceMemory) || null;
+    var calculated = guard && typeof guard.getLimits === "function"
+      ? guard.getLimits(memory)
+      : { maxEntries: 180000, maxCentralDirectoryBytes: 128 * 1024 * 1024 };
+
+    var requestedEntries = Number(options && options.maxEntries) || calculated.maxEntries;
+    var requestedDirectory = Number(options && options.maxCentralDirectoryBytes) || calculated.maxCentralDirectoryBytes;
+
+    return {
+      maxEntries: Math.max(1, Math.min(requestedEntries, calculated.maxEntries)),
+      maxCentralDirectoryBytes: Math.max(
+        1024 * 1024,
+        Math.min(requestedDirectory, calculated.maxCentralDirectoryBytes)
+      )
+    };
   }
 
   function cleanup(job) {
@@ -94,6 +113,7 @@ Función o funciones:
 
     return new Promise(function workerPromise(resolve, reject) {
       var worker;
+      var limits = safeLimits(options);
 
       try {
         worker = new window.Worker("./scan.worker.js");
@@ -142,7 +162,9 @@ Función o funciones:
           var result = {
             entries: job.entries,
             summary: message.summary || {},
-            metadata: message.metadata || null
+            metadata: Object.assign({}, message.metadata || {}, {
+              appliedLimits: limits
+            })
           };
           cleanup(job);
           resolve(result);
@@ -180,8 +202,8 @@ Función o funciones:
           type: "scan",
           jobId: job.id,
           file: file,
-          maxEntries: Number(options.maxEntries) || 1000000,
-          maxCentralDirectoryBytes: Number(options.maxCentralDirectoryBytes) || 512 * 1024 * 1024
+          maxEntries: limits.maxEntries,
+          maxCentralDirectoryBytes: limits.maxCentralDirectoryBytes
         });
       } catch (error) {
         cleanup(job);
@@ -201,6 +223,7 @@ Función o funciones:
     scan: scan,
     cancel: cancel,
     isRunning: isRunning,
-    isSupported: supported
+    isSupported: supported,
+    getSafeLimits: safeLimits
   };
 })(window);
