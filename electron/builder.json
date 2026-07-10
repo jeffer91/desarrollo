@@ -17,6 +17,7 @@
         "index.html",
         "package.json",
         "app/**/*",
+        "audit/**/*",
         "Curriculo/**/*",
         "Docentes/**/*",
         "Documentos/**/*",
