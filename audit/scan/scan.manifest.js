@@ -4,7 +4,7 @@ Ruta o ubicación: /audit/scan/scan.manifest.js
 Función o funciones:
 - Declarar que el módulo SCAN está instalado y disponible.
 - Permitir que el menú de Audit compruebe SCAN sin importar su código interno.
-- Exponer metadatos mínimos del módulo.
+- Exponer metadatos mínimos y capacidades del módulo.
 ========================================================= */
 
 (function registerScanManifest(window) {
@@ -14,9 +14,17 @@ Función o funciones:
   window.AUDIT_MODULES.scan = Object.freeze({
     id: "scan",
     name: "SCAN",
-    version: "1.0.0",
+    version: "1.1.0",
     available: true,
     entry: "./scan.index.html",
-    standalone: true
+    standalone: true,
+    capabilities: Object.freeze([
+      "zip-read",
+      "path-list",
+      "folder-list",
+      "metadata",
+      "progress",
+      "cancel"
+    ])
   });
 })(window);
