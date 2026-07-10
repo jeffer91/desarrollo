@@ -14,7 +14,7 @@ Función o funciones:
   window.AUDIT_MODULES.scan = Object.freeze({
     id: "scan",
     name: "SCAN",
-    version: "1.3.0",
+    version: "1.4.0",
     available: true,
     entry: "./scan.index.html",
     standalone: true,
@@ -22,16 +22,20 @@ Función o funciones:
       "offline",
       "zip-central-directory",
       "zip64",
+      "exact-source-paths",
+      "safe-normalized-paths",
       "path-list",
       "folder-list",
       "metadata",
       "web-worker",
       "streaming-read",
       "main-thread-fallback",
-      "memory-guard",
+      "adaptive-memory-limits",
       "progress",
       "cancel",
-      "risk-detection"
+      "risk-detection",
+      "runtime-self-test",
+      "continuous-integration-tests"
     ])
   });
 })(window);
