@@ -6,7 +6,7 @@ Función o funciones:
 - Mantener archivo, progreso, resultados, resumen y metadatos.
 - Evitar duplicar arreglos masivos en cada actualización visual.
 - Exponer las entradas como colección de solo lectura por convenio.
-- Mantener filtros y evaluación previa de riesgos.
+- Mantener filtros, evaluación previa y diagnóstico interno.
 ========================================================= */
 
 (function attachScanState(window) {
@@ -15,6 +15,25 @@ Función o funciones:
   window.AuditScan = window.AuditScan || {};
 
   var listeners = [];
+
+  function initialSummary() {
+    return {
+      files: 0,
+      folders: 0,
+      totalSize: 0,
+      compressedSize: 0,
+      alerts: 0,
+      emptyFiles: 0,
+      unsafePaths: 0,
+      invalidPaths: 0,
+      encryptedEntries: 0,
+      duplicatePaths: 0,
+      maxDepth: 0,
+      suspiciousCompression: false,
+      hugeExpandedSize: false,
+      excessiveEntries: false
+    };
+  }
 
   function initialState() {
     return {
@@ -26,20 +45,7 @@ Función o funciones:
       progressLabel: "Sin iniciar",
       entries: [],
       metadata: null,
-      summary: {
-        files: 0,
-        folders: 0,
-        totalSize: 0,
-        compressedSize: 0,
-        alerts: 0,
-        emptyFiles: 0,
-        unsafePaths: 0,
-        duplicatePaths: 0,
-        maxDepth: 0,
-        suspiciousCompression: false,
-        hugeExpandedSize: false,
-        excessiveEntries: false
-      },
+      summary: initialSummary(),
       filters: {
         search: "",
         type: "all"
@@ -124,6 +130,7 @@ Función o funciones:
     get: snapshot,
     patch: patch,
     reset: reset,
-    subscribe: subscribe
+    subscribe: subscribe,
+    createEmptySummary: initialSummary
   };
 })(window);
