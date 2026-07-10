@@ -4,10 +4,10 @@ Ruta o ubicación: /audit/scan/scan.app.js
 Función o funciones:
 - Iniciar la pantalla autónoma de SCAN.
 - Gestionar selección, arrastre y validación del archivo ZIP.
-- Evaluar riesgos básicos antes de procesar.
+- Evaluar riesgos y límites según la memoria del equipo.
 - Ejecutar el lector progresivo mediante Web Worker o fallback.
+- Incorporar el resultado de la autoprueba al diagnóstico.
 - Aplicar búsqueda con espera para evitar filtros en cada tecla.
-- Sincronizar controles, progreso, filtros, estado y resultados.
 - Preparar puntos públicos para TXT, PDF y BL.
 ========================================================= */
 
@@ -16,9 +16,11 @@ Función o funciones:
 
   window.AuditScan = window.AuditScan || {};
 
+  var VERSION = "1.4.0";
   var State = window.AuditScan.State;
   var Dom = window.AuditScan.Dom;
   var Guard = window.AuditScan.Guard;
+  var SelfTest = window.AuditScan.SelfTest;
   var operationSequence = 0;
   var searchTimer = null;
   var SEARCH_DELAY_MS = 280;
@@ -53,7 +55,32 @@ Función o funciones:
       errors: [],
       warnings: [],
       risk: "normal",
-      streamingReader: true
+      streamingReader: true,
+      maxEntries: 180000,
+      maxCentralDirectoryBytes: 128 * 1024 * 1024
+    };
+  }
+
+  function emptySummary() {
+    if (State && typeof State.createEmptySummary === "function") {
+      return State.createEmptySummary();
+    }
+
+    return {
+      files: 0,
+      folders: 0,
+      totalSize: 0,
+      compressedSize: 0,
+      alerts: 0,
+      emptyFiles: 0,
+      unsafePaths: 0,
+      invalidPaths: 0,
+      encryptedEntries: 0,
+      duplicatePaths: 0,
+      maxDepth: 0,
+      suspiciousCompression: false,
+      hugeExpandedSize: false,
+      excessiveEntries: false
     };
   }
 
@@ -78,23 +105,6 @@ Función o funciones:
       console.warn("No fue posible cancelar el motor de SCAN.", error);
       return false;
     }
-  }
-
-  function emptySummary() {
-    return {
-      files: 0,
-      folders: 0,
-      totalSize: 0,
-      compressedSize: 0,
-      alerts: 0,
-      emptyFiles: 0,
-      unsafePaths: 0,
-      duplicatePaths: 0,
-      maxDepth: 0,
-      suspiciousCompression: false,
-      hugeExpandedSize: false,
-      excessiveEntries: false
-    };
   }
 
   function selectFile(file) {
@@ -199,7 +209,7 @@ Función o funciones:
 
     State.patch({
       status: "running",
-      statusMessage: "Leyendo el directorio central del ZIP en un proceso independiente...",
+      statusMessage: "Verificando el motor y leyendo el directorio central del ZIP...",
       progress: 0,
       progressLabel: "Preparando lectura progresiva",
       entries: [],
@@ -210,8 +220,8 @@ Función o funciones:
 
     try {
       var result = await engine.scan(current.file.raw, {
-        maxEntries: 1000000,
-        maxCentralDirectoryBytes: 512 * 1024 * 1024,
+        maxEntries: Number(assessment.maxEntries) || 180000,
+        maxCentralDirectoryBytes: Number(assessment.maxCentralDirectoryBytes) || 128 * 1024 * 1024,
         onProgress: function onProgress(progress) {
           if (operationId !== operationSequence) return;
 
@@ -230,8 +240,13 @@ Función o funciones:
       result = result || {};
       var entries = Array.isArray(result.entries) ? result.entries : [];
       var summary = result.summary || {};
+      var selfTestReport = SelfTest && typeof SelfTest.getReport === "function"
+        ? SelfTest.getReport()
+        : null;
       var metadata = Object.assign({}, result.metadata || {}, {
-        preflight: assessment
+        version: VERSION,
+        preflight: assessment,
+        selfTest: selfTestReport
       });
       var modeText = metadata.processedInWorker
         ? "en segundo plano"
@@ -271,11 +286,15 @@ Función o funciones:
         return;
       }
 
+      var diagnosticPrefix = error && error.name === "ScanSelfTestError"
+        ? "La verificación interna de SCAN no fue superada. "
+        : "";
+
       State.patch({
         status: "error",
         statusMessage: "No fue posible completar el escaneo.",
         progressLabel: "Error",
-        error: error && error.message ? error.message : "Ocurrió un error inesperado al analizar el ZIP."
+        error: diagnosticPrefix + (error && error.message ? error.message : "Ocurrió un error inesperado al analizar el ZIP.")
       });
     }
   }
@@ -324,7 +343,7 @@ Función o funciones:
       try {
         window.parent.location.href = new URL("../../index.html", window.parent.location.href).href;
         return;
-      } catch (error) {
+      } catch (_error) {
         // Si el iframe está aislado, se intenta navegación local.
       }
     }
@@ -451,11 +470,18 @@ Función o funciones:
     State.subscribe(Dom.render);
 
     window.dispatchEvent(new CustomEvent("audit-scan:ready", {
-      detail: { version: "1.3.0", standalone: true }
+      detail: {
+        version: VERSION,
+        standalone: true,
+        selfTest: SelfTest && typeof SelfTest.getReport === "function"
+          ? SelfTest.getReport()
+          : null
+      }
     }));
   }
 
   window.AuditScan.App = {
+    version: VERSION,
     selectFile: selectFile,
     start: startScan,
     cancel: cancelScan,
