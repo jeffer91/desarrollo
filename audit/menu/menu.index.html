@@ -4,7 +4,7 @@ Ruta o ubicación: /audit/menu/menu.index.html
 Función o funciones:
 - Mostrar el menú superior independiente del módulo Audit.
 - Mantener visibles las opciones SCAN y BL aunque sus carpetas no existan.
-- Cargar módulos disponibles dentro de un iframe aislado.
+- Cargar únicamente módulos y recursos locales.
 - Mostrar un estado controlado cuando un módulo no esté instalado.
 - Funcionar sin importar código interno de SCAN o BL.
 ========================================================= -->
@@ -13,6 +13,7 @@ Función o funciones:
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' data:; script-src 'self'; style-src 'self'; img-src 'self' data:; frame-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'" />
   <title>Audit · Menú</title>
   <meta name="description" content="Menú superior independiente de Audit." />
   <link rel="icon" href="data:," />
@@ -68,6 +69,7 @@ Función o funciones:
         class="audit-module-frame"
         title="Contenido del módulo Audit"
         referrerpolicy="no-referrer"
+        loading="eager"
         hidden
       ></iframe>
     </main>
