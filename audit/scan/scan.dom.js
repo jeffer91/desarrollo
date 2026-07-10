@@ -4,7 +4,7 @@ Ruta o ubicación: /audit/scan/scan.dom.js
 Función o funciones:
 - Centralizar referencias DOM del módulo SCAN.
 - Renderizar archivo, progreso, resumen, tabla y acciones.
-- Mostrar ruta y nombre exactos declarados dentro del ZIP.
+- Mostrar ruta y nombre exactos, incluidos espacios iniciales o finales.
 - Mostrar la ruta segura en ayudas y alertas cuando fue normalizada.
 - Evitar filtrar, copiar o dibujar colecciones completas.
 - Limitar la tabla a 2.000 filas y evitar regeneraciones innecesarias.
@@ -27,17 +27,25 @@ Función o funciones:
     return document.getElementById(id);
   }
 
-  function text(value) {
-    return String(value == null ? "" : value).trim();
+  function raw(value) {
+    return String(value == null ? "" : value);
   }
 
-  function escapeHtml(value) {
-    return text(value)
+  function text(value) {
+    return raw(value).trim();
+  }
+
+  function escapeRaw(value) {
+    return raw(value)
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
       .replace(/\"/g, "&quot;")
       .replace(/'/g, "&#039;");
+  }
+
+  function escapeHtml(value) {
+    return escapeRaw(text(value));
   }
 
   function formatNumber(value) {
@@ -272,8 +280,8 @@ Función o funciones:
       if (entry.encrypted) flags.push("Elemento cifrado");
 
       var rowClass = flags.length ? ' class="scan-result-row has-alert"' : ' class="scan-result-row"';
-      var exactPath = entry.sourcePath || entry.originalPath || entry.path || "";
-      var exactName = entry.sourceName || entry.name || "";
+      var exactPath = raw(entry.sourcePath || entry.originalPath || entry.path || "");
+      var exactName = raw(entry.sourceName || entry.name || "");
       var pathTitle = entry.pathChanged
         ? "Ruta exacta: " + exactPath + " | Ruta segura: " + entry.path
         : exactPath;
@@ -283,8 +291,8 @@ Función o funciones:
         "<td>" + (index + 1) + "</td>",
         '<td><span class="scan-type-pill is-' + escapeHtml(entry.type || "file") + '">' +
           escapeHtml(entry.type === "folder" ? "Carpeta" : "Archivo") + "</span></td>",
-        '<td class="scan-path-cell" title="' + escapeHtml(pathTitle) + '">' + escapeHtml(exactPath) + "</td>",
-        "<td>" + escapeHtml(exactName) + "</td>",
+        '<td class="scan-path-cell scan-exact-text" title="' + escapeRaw(pathTitle) + '">' + escapeRaw(exactPath) + "</td>",
+        '<td class="scan-exact-text">' + escapeRaw(exactName) + "</td>",
         "<td>" + escapeHtml(entry.extension || "-") + "</td>",
         "<td>" + escapeHtml(formatBytes(entry.size || 0)) + "</td>",
         "<td>" + escapeHtml(entry.depth == null ? "-" : entry.depth) + "</td>",
@@ -334,6 +342,7 @@ Función o funciones:
 
   window.AuditScan.Dom = {
     $: $,
+    raw: raw,
     text: text,
     formatBytes: formatBytes,
     formatDate: formatDate,
