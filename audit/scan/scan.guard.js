@@ -3,8 +3,9 @@ Nombre completo: scan.guard.js
 Ruta o ubicación: /audit/scan/scan.guard.js
 Función o funciones:
 - Evaluar riesgos básicos antes de escanear un ZIP.
-- Adaptar los límites al lector progresivo del directorio central.
-- Advertir sobre archivos extremadamente grandes sin usar límites falsos de RAM.
+- Adaptar límites de entradas y directorio central a la memoria reportada.
+- Permitir ZIP grandes porque se leen progresivamente.
+- Evitar cantidades de registros que puedan cerrar la interfaz.
 - Rechazar archivos vacíos o fuera del rango práctico del navegador.
 ========================================================= */
 
@@ -13,7 +14,8 @@ Función o funciones:
 
   window.AuditScan = window.AuditScan || {};
 
-  var GB = 1024 * 1024 * 1024;
+  var MB = 1024 * 1024;
+  var GB = 1024 * MB;
   var RECOMMENDED_BYTES = 8 * GB;
   var HARD_LIMIT_BYTES = 128 * GB;
 
@@ -22,9 +24,28 @@ Función o funciones:
     return Number.isFinite(value) && value > 0 ? value : null;
   }
 
+  function getLimits(memoryGb) {
+    var memory = Number(memoryGb) || 4;
+
+    if (memory <= 2) {
+      return { maxEntries: 100000, maxCentralDirectoryBytes: 64 * MB };
+    }
+
+    if (memory <= 4) {
+      return { maxEntries: 180000, maxCentralDirectoryBytes: 128 * MB };
+    }
+
+    if (memory <= 8) {
+      return { maxEntries: 300000, maxCentralDirectoryBytes: 256 * MB };
+    }
+
+    return { maxEntries: 500000, maxCentralDirectoryBytes: 384 * MB };
+  }
+
   function evaluate(file) {
     var size = Number(file && file.size) || 0;
     var memoryGb = getDeviceMemoryGb();
+    var limits = getLimits(memoryGb);
     var warnings = [];
     var errors = [];
 
@@ -56,12 +77,15 @@ Función o funciones:
       deviceMemoryGb: memoryGb,
       recommendedBytes: RECOMMENDED_BYTES,
       hardLimitBytes: HARD_LIMIT_BYTES,
+      maxEntries: limits.maxEntries,
+      maxCentralDirectoryBytes: limits.maxCentralDirectoryBytes,
       streamingReader: true,
       risk: errors.length ? "blocked" : warnings.length ? "high" : "normal"
     };
   }
 
   window.AuditScan.Guard = {
-    evaluate: evaluate
+    evaluate: evaluate,
+    getLimits: getLimits
   };
 })(window);
