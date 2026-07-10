@@ -5,8 +5,8 @@ Función o funciones:
 - Generar ZIP mínimos válidos completamente en memoria.
 - Verificar lectura de archivos, carpetas, Unicode y rutas inseguras.
 - Confirmar que un archivo dañado sea rechazado.
-- Ejecutarse una sola vez antes del primer escaneo real.
-- Exponer un reporte técnico mediante AuditScan.SelfTest.
+- Ejecutarse una sola vez al cargar SCAN.
+- Exponer una promesa y un reporte técnico sin modificar el motor.
 ========================================================= */
 
 (function attachScanSelfTest(window) {
@@ -271,15 +271,6 @@ Función o funciones:
     ensure: run,
     getReport: getReport
   };
-
-  var engine = window.AuditScan.Engine;
-  if (engine && typeof engine.scan === "function") {
-    var originalScan = engine.scan.bind(engine);
-    engine.scan = async function verifiedScan(file, options) {
-      await run();
-      return originalScan(file, options);
-    };
-  }
 
   run();
 })(window);
