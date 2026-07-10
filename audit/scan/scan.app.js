@@ -1,0 +1,354 @@
+/* =========================================================
+Nombre completo: scan.app.js
+Ruta o ubicación: /audit/scan/scan.app.js
+Función o funciones:
+- Iniciar la pantalla autónoma de SCAN.
+- Gestionar selección, arrastre y validación del archivo ZIP.
+- Sincronizar controles, filtros, estado y tabla.
+- Preparar puntos públicos de conexión para el futuro motor ZIP, TXT, PDF y BL.
+- Seguir funcionando aunque no existan Audit Menu ni Base Local.
+========================================================= */
+
+(function bootScanApp(window, document) {
+  "use strict";
+
+  window.AuditScan = window.AuditScan || {};
+
+  var State = window.AuditScan.State;
+  var Dom = window.AuditScan.Dom;
+  var dragDepth = 0;
+
+  if (!State || !Dom) {
+    console.error("SCAN no pudo iniciar: faltan scan.state.js o scan.dom.js.");
+    return;
+  }
+
+  function isZipFile(file) {
+    if (!file || typeof file.name !== "string") return false;
+    return /\.zip$/i.test(file.name.trim());
+  }
+
+  function buildFileRecord(file) {
+    return {
+      raw: file,
+      name: file.name || "archivo.zip",
+      size: Number(file.size) || 0,
+      type: file.type || "application/zip",
+      lastModified: Number(file.lastModified) || Date.now()
+    };
+  }
+
+  function resetFileInput() {
+    var input = Dom.$("scanFileInput");
+    if (input) input.value = "";
+  }
+
+  function selectFile(file) {
+    if (!file) return;
+
+    if (!isZipFile(file)) {
+      resetFileInput();
+      State.patch({
+        file: null,
+        status: "error",
+        statusMessage: "El archivo seleccionado no es un ZIP válido.",
+        error: "Seleccione un archivo cuyo nombre termine en .zip.",
+        progress: 0,
+        progressLabel: "Archivo rechazado"
+      });
+      return;
+    }
+
+    var record = buildFileRecord(file);
+    var largeNotice = record.size >= 1024 * 1024 * 1024
+      ? " Archivo grande detectado; el motor usará procesamiento progresivo."
+      : "";
+
+    State.patch({
+      file: record,
+      status: "ready",
+      statusMessage: "ZIP preparado: " + record.name + "." + largeNotice,
+      error: "",
+      progress: 0,
+      progressLabel: "Listo para iniciar",
+      entries: [],
+      summary: {
+        files: 0,
+        folders: 0,
+        totalSize: 0,
+        alerts: 0
+      }
+    });
+
+    window.dispatchEvent(new CustomEvent("audit-scan:file-selected", {
+      detail: { file: file, metadata: record }
+    }));
+  }
+
+  function clearScan() {
+    var engine = window.AuditScan.Engine;
+
+    if (engine && typeof engine.cancel === "function") {
+      try {
+        engine.cancel();
+      } catch (error) {
+        console.warn("No fue posible cancelar el motor de SCAN.", error);
+      }
+    }
+
+    resetFileInput();
+    State.reset();
+
+    var search = Dom.$("scanSearchInput");
+    var type = Dom.$("scanTypeFilter");
+    if (search) search.value = "";
+    if (type) type.value = "all";
+  }
+
+  async function startScan() {
+    var current = State.get();
+    if (!current.file || !current.file.raw) return;
+
+    var engine = window.AuditScan.Engine;
+
+    if (!engine || typeof engine.scan !== "function") {
+      State.patch({
+        status: "ready",
+        statusMessage: "La interfaz está lista. El motor de lectura ZIP se incorporará en el Bloque 3.",
+        progress: 0,
+        progressLabel: "Motor pendiente",
+        error: ""
+      });
+
+      window.dispatchEvent(new CustomEvent("audit-scan:scan-requested", {
+        detail: { file: current.file.raw, metadata: current.file }
+      }));
+      return;
+    }
+
+    State.patch({
+      status: "running",
+      statusMessage: "Analizando el contenido del ZIP...",
+      progress: 0,
+      progressLabel: "Preparando lectura",
+      error: ""
+    });
+
+    try {
+      var result = await engine.scan(current.file.raw, {
+        onProgress: function onProgress(progress) {
+          progress = progress || {};
+          State.patch({
+            status: "running",
+            progress: Number(progress.value) || 0,
+            progressLabel: progress.label || "Procesando"
+          });
+        }
+      });
+
+      result = result || {};
+      State.patch({
+        status: "completed",
+        statusMessage: "Escaneo completado correctamente.",
+        progress: 100,
+        progressLabel: "Completado",
+        entries: Array.isArray(result.entries) ? result.entries : [],
+        summary: result.summary || {},
+        error: ""
+      });
+    } catch (error) {
+      State.patch({
+        status: "error",
+        statusMessage: "No fue posible completar el escaneo.",
+        progressLabel: "Error",
+        error: error && error.message ? error.message : "Ocurrió un error inesperado al analizar el ZIP."
+      });
+    }
+  }
+
+  function cancelScan() {
+    var engine = window.AuditScan.Engine;
+
+    if (engine && typeof engine.cancel === "function") {
+      try {
+        engine.cancel();
+      } catch (error) {
+        console.warn("El motor no pudo cancelar el escaneo.", error);
+      }
+    }
+
+    State.patch({
+      status: "ready",
+      statusMessage: "Escaneo cancelado. El ZIP continúa preparado.",
+      progressLabel: "Cancelado",
+      error: ""
+    });
+  }
+
+  function requestAction(actionName, eventName) {
+    var current = State.get();
+    if (!current.entries.length) return;
+
+    var handled = false;
+    var detail = {
+      state: current,
+      markHandled: function markHandled() {
+        handled = true;
+      }
+    };
+
+    window.dispatchEvent(new CustomEvent(eventName, { detail: detail }));
+
+    window.setTimeout(function reportMissingHandler() {
+      if (handled) return;
+
+      State.patch({
+        status: "ready",
+        statusMessage: actionName + " estará disponible al integrar su generador correspondiente.",
+        error: ""
+      });
+    }, 0);
+  }
+
+  function openPreviousScreen() {
+    if (window.parent && window.parent !== window) {
+      try {
+        if (window.parent.AuditMenu && typeof window.parent.AuditMenu.open === "function") {
+          window.parent.AuditMenu.open("scan");
+          return;
+        }
+      } catch (error) {
+        // El iframe puede estar aislado; se usa navegación local.
+      }
+    }
+
+    if (window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+
+    window.location.href = "../menu/menu.index.html#scan";
+  }
+
+  function bindDropZone() {
+    var zone = Dom.$("scanDropZone");
+    var input = Dom.$("scanFileInput");
+    if (!zone || !input) return;
+
+    zone.addEventListener("click", function openPicker() {
+      input.click();
+    });
+
+    zone.addEventListener("keydown", function openPickerWithKeyboard(event) {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      input.click();
+    });
+
+    input.addEventListener("change", function onFileChange() {
+      selectFile(input.files && input.files[0]);
+    });
+
+    ["dragenter", "dragover"].forEach(function bindDragStart(eventName) {
+      zone.addEventListener(eventName, function onDragStart(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        dragDepth += 1;
+        zone.classList.add("is-dragover");
+      });
+    });
+
+    ["dragleave", "drop"].forEach(function bindDragEnd(eventName) {
+      zone.addEventListener(eventName, function onDragEnd(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        dragDepth = Math.max(0, dragDepth - 1);
+        if (eventName === "drop" || dragDepth === 0) zone.classList.remove("is-dragover");
+      });
+    });
+
+    zone.addEventListener("drop", function onDrop(event) {
+      dragDepth = 0;
+      zone.classList.remove("is-dragover");
+
+      var files = event.dataTransfer && event.dataTransfer.files;
+      if (!files || !files.length) return;
+
+      if (files.length > 1) {
+        State.patch({
+          status: "error",
+          statusMessage: "Solo se puede preparar un ZIP por escaneo.",
+          error: "Arrastre únicamente un archivo ZIP."
+        });
+        return;
+      }
+
+      selectFile(files[0]);
+    });
+  }
+
+  function bindControls() {
+    var start = Dom.$("scanStartButton");
+    var cancel = Dom.$("scanCancelButton");
+    var clear = Dom.$("scanClearButton");
+    var back = Dom.$("scanBackButton");
+    var search = Dom.$("scanSearchInput");
+    var type = Dom.$("scanTypeFilter");
+    var txt = Dom.$("scanExportTxtButton");
+    var pdf = Dom.$("scanExportPdfButton");
+    var bl = Dom.$("scanSaveBlButton");
+
+    if (start) start.addEventListener("click", startScan);
+    if (cancel) cancel.addEventListener("click", cancelScan);
+    if (clear) clear.addEventListener("click", clearScan);
+    if (back) back.addEventListener("click", openPreviousScreen);
+
+    if (search) {
+      search.addEventListener("input", function updateSearch() {
+        State.patch({ filters: { search: search.value || "" } });
+      });
+    }
+
+    if (type) {
+      type.addEventListener("change", function updateType() {
+        State.patch({ filters: { type: type.value || "all" } });
+      });
+    }
+
+    if (txt) txt.addEventListener("click", function requestTxt() {
+      requestAction("La exportación TXT", "audit-scan:export-txt");
+    });
+
+    if (pdf) pdf.addEventListener("click", function requestPdf() {
+      requestAction("La exportación PDF", "audit-scan:export-pdf");
+    });
+
+    if (bl) bl.addEventListener("click", function requestBl() {
+      requestAction("El guardado en BL", "audit-scan:save-bl");
+    });
+  }
+
+  function boot() {
+    bindDropZone();
+    bindControls();
+    State.subscribe(Dom.render);
+
+    window.dispatchEvent(new CustomEvent("audit-scan:ready", {
+      detail: { version: "1.0.0", standalone: true }
+    }));
+  }
+
+  window.AuditScan.App = {
+    selectFile: selectFile,
+    start: startScan,
+    cancel: cancelScan,
+    clear: clearScan,
+    getState: State.get
+  };
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot, { once: true });
+  } else {
+    boot();
+  }
+})(window, document);
