@@ -6,6 +6,7 @@ Función o funciones:
 - Permitir seleccionar o arrastrar un archivo ZIP.
 - Analizar el directorio central sin descomprimir ni cargar todo el ZIP.
 - Ejecutar el análisis mediante Web Worker o fallback compatible.
+- Ejecutar una autoprueba interna antes del primer escaneo real.
 - Bloquear scripts y conexiones externas mediante CSP.
 - Mostrar metadatos, progreso, resumen, filtros y tabla de resultados.
 ========================================================= -->
@@ -14,7 +15,7 @@ Función o funciones:
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; worker-src 'self' blob:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'self'" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; worker-src 'self' blob:; connect-src 'self'; object-src 'none'; base-uri 'self'" />
   <title>SCAN · Auditoría de ZIP</title>
   <meta name="description" content="Escaneo autónomo de estructuras de archivos ZIP." />
   <link rel="icon" href="data:," />
@@ -138,7 +139,7 @@ Función o funciones:
           <div>
             <p class="scan-eyebrow">Paso 2</p>
             <h2>Resultados del escaneo</h2>
-            <p>La tabla muestra rutas, nombres, tipos, extensiones, tamaños y profundidad.</p>
+            <p>La tabla muestra la ruta y el nombre exactos declarados dentro del ZIP.</p>
           </div>
           <span id="scanResultsMeta" class="scan-panel__tag">0 resultados</span>
         </div>
@@ -217,6 +218,7 @@ Función o funciones:
   <script src="./scan.zip.js"></script>
   <script src="./scan.worker.client.js"></script>
   <script src="./scan.engine.js"></script>
+  <script src="./scan.selftest.js"></script>
   <script src="./scan.app.js"></script>
 </body>
 </html>
