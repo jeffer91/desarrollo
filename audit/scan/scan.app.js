@@ -6,6 +6,7 @@ Función o funciones:
 - Gestionar selección, arrastre y validación del archivo ZIP.
 - Ejecutar el motor real de lectura del ZIP.
 - Sincronizar controles, progreso, filtros, estado y resultados.
+- Evitar que un escaneo anterior sobrescriba un ZIP nuevo.
 - Preparar puntos públicos para TXT, PDF y BL.
 - Seguir funcionando aunque no existan Audit Menu ni Base Local.
 ========================================================= */
@@ -17,6 +18,7 @@ Función o funciones:
 
   var State = window.AuditScan.State;
   var Dom = window.AuditScan.Dom;
+  var operationSequence = 0;
 
   if (!State || !Dom) {
     console.error("SCAN no pudo iniciar: faltan scan.state.js o scan.dom.js.");
@@ -58,6 +60,7 @@ Función o funciones:
   function selectFile(file) {
     if (!file) return;
 
+    operationSequence += 1;
     cancelActiveEngine();
 
     if (!isZipFile(file)) {
@@ -108,6 +111,7 @@ Función o funciones:
   }
 
   function clearScan() {
+    operationSequence += 1;
     cancelActiveEngine();
     resetFileInput();
     State.reset();
@@ -135,6 +139,9 @@ Función o funciones:
       return;
     }
 
+    operationSequence += 1;
+    var operationId = operationSequence;
+
     State.patch({
       status: "running",
       statusMessage: "Analizando el contenido del ZIP...",
@@ -159,6 +166,8 @@ Función o funciones:
     try {
       var result = await engine.scan(current.file.raw, {
         onProgress: function onProgress(progress) {
+          if (operationId !== operationSequence) return;
+
           progress = progress || {};
           State.patch({
             status: "running",
@@ -168,6 +177,8 @@ Función o funciones:
           });
         }
       });
+
+      if (operationId !== operationSequence) return;
 
       result = result || {};
       var entries = Array.isArray(result.entries) ? result.entries : [];
@@ -192,6 +203,8 @@ Función o funciones:
         }
       }));
     } catch (error) {
+      if (operationId !== operationSequence) return;
+
       if (error && error.name === "ScanCancelledError") {
         State.patch({
           status: "ready",
@@ -212,14 +225,15 @@ Función o funciones:
   }
 
   function cancelScan() {
+    operationSequence += 1;
     var cancelled = cancelActiveEngine();
 
     State.patch({
       status: "ready",
       statusMessage: cancelled
-        ? "Cancelando escaneo. El ZIP continuará preparado."
+        ? "Escaneo cancelado. El ZIP continúa preparado."
         : "No existe un escaneo activo para cancelar.",
-      progressLabel: cancelled ? "Cancelando" : "Sin proceso activo",
+      progressLabel: cancelled ? "Cancelado" : "Sin proceso activo",
       error: ""
     });
   }
