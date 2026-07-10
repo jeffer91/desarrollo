@@ -1,0 +1,213 @@
+<!-- =========================================================
+Nombre completo: scan.index.html
+Ruta o ubicación: /audit/scan/scan.index.html
+Función o funciones:
+- Mostrar la interfaz autónoma del módulo SCAN.
+- Permitir seleccionar o arrastrar un archivo ZIP.
+- Mostrar metadatos, progreso, resumen, filtros y tabla de resultados.
+- Preparar botones de TXT, PDF y guardado en BL.
+- Funcionar directamente sin depender del menú de Audit.
+========================================================= -->
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>SCAN · Auditoría de ZIP</title>
+  <meta name="description" content="Escaneo autónomo de estructuras de archivos ZIP." />
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="./scan.css" />
+</head>
+<body>
+  <div class="scan-shell">
+    <header class="scan-header">
+      <div class="scan-brand">
+        <span class="scan-brand__mark" aria-hidden="true">S</span>
+        <div>
+          <p class="scan-eyebrow">Audit</p>
+          <h1>SCAN</h1>
+          <p>Escaneo estructural de archivos comprimidos</p>
+        </div>
+      </div>
+
+      <div class="scan-header__actions">
+        <span class="scan-mode-badge">Módulo autónomo</span>
+        <button id="scanBackButton" class="scan-btn scan-btn--ghost" type="button">Volver</button>
+      </div>
+    </header>
+
+    <main class="scan-main">
+      <section class="scan-panel scan-upload-panel">
+        <div class="scan-panel__heading">
+          <div>
+            <p class="scan-eyebrow">Paso 1</p>
+            <h2>Seleccionar archivo ZIP</h2>
+            <p>Cargue un archivo comprimido para preparar su análisis completo.</p>
+          </div>
+          <span class="scan-panel__tag">.ZIP</span>
+        </div>
+
+        <input id="scanFileInput" class="scan-file-input" type="file" accept=".zip,application/zip,application/x-zip-compressed" />
+
+        <div id="scanDropZone" class="scan-drop-zone" tabindex="0" role="button" aria-controls="scanFileInput">
+          <div class="scan-drop-zone__icon" aria-hidden="true">⇧</div>
+          <strong>Arrastre el ZIP aquí</strong>
+          <span>o pulse para buscarlo en su equipo</span>
+          <small>En el siguiente bloque se incorporará el motor de lectura interna.</small>
+        </div>
+
+        <div id="scanAlert" class="scan-alert" role="alert" hidden></div>
+
+        <div id="scanFileEmpty" class="scan-file-empty">
+          Ningún archivo seleccionado.
+        </div>
+
+        <article id="scanFileCard" class="scan-file-card" hidden>
+          <div class="scan-file-card__icon" aria-hidden="true">ZIP</div>
+          <div class="scan-file-card__main">
+            <strong id="scanFileName">Archivo.zip</strong>
+            <span id="scanFileType">application/zip</span>
+          </div>
+          <dl class="scan-file-card__meta">
+            <div>
+              <dt>Tamaño</dt>
+              <dd id="scanFileSize">0 B</dd>
+            </div>
+            <div>
+              <dt>Modificado</dt>
+              <dd id="scanFileModified">Sin fecha</dd>
+            </div>
+          </dl>
+        </article>
+
+        <div class="scan-actions-row">
+          <button id="scanStartButton" class="scan-btn scan-btn--primary" type="button" disabled>Iniciar escaneo</button>
+          <button id="scanCancelButton" class="scan-btn scan-btn--warning" type="button" disabled>Cancelar</button>
+          <button id="scanClearButton" class="scan-btn scan-btn--ghost" type="button" disabled>Limpiar</button>
+        </div>
+      </section>
+
+      <section class="scan-panel">
+        <div class="scan-panel__heading scan-panel__heading--compact">
+          <div>
+            <p class="scan-eyebrow">Estado</p>
+            <h2>Procesamiento</h2>
+          </div>
+        </div>
+
+        <div id="scanStatus" class="scan-status is-idle">
+          <span class="scan-status__dot" aria-hidden="true"></span>
+          <span id="scanStatusText">Seleccione un archivo ZIP para comenzar.</span>
+        </div>
+
+        <div id="scanProgress" class="scan-progress" hidden>
+          <div class="scan-progress__top">
+            <span id="scanProgressLabel">Sin iniciar</span>
+            <strong id="scanProgressValue">0%</strong>
+          </div>
+          <div class="scan-progress__track" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+            <div id="scanProgressBar" class="scan-progress__bar"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="scan-summary-grid" aria-label="Resumen del escaneo">
+        <article class="scan-summary-card">
+          <span>Archivos</span>
+          <strong id="scanSummaryFiles">0</strong>
+        </article>
+        <article class="scan-summary-card">
+          <span>Carpetas</span>
+          <strong id="scanSummaryFolders">0</strong>
+        </article>
+        <article class="scan-summary-card">
+          <span>Tamaño total</span>
+          <strong id="scanSummarySize">0 B</strong>
+        </article>
+        <article class="scan-summary-card">
+          <span>Alertas</span>
+          <strong id="scanSummaryAlerts">0</strong>
+        </article>
+      </section>
+
+      <section class="scan-panel scan-results-panel">
+        <div class="scan-panel__heading">
+          <div>
+            <p class="scan-eyebrow">Paso 2</p>
+            <h2>Resultados del escaneo</h2>
+            <p>La tabla mostrará rutas, nombres, tipos, extensiones, tamaños y profundidad.</p>
+          </div>
+          <span id="scanResultsMeta" class="scan-panel__tag">0 resultados</span>
+        </div>
+
+        <div class="scan-toolbar">
+          <label class="scan-field scan-field--search">
+            <span>Buscar</span>
+            <input id="scanSearchInput" type="search" placeholder="Ruta, nombre o extensión" autocomplete="off" />
+          </label>
+
+          <label class="scan-field">
+            <span>Tipo</span>
+            <select id="scanTypeFilter">
+              <option value="all">Todos</option>
+              <option value="file">Archivos</option>
+              <option value="folder">Carpetas</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="scan-table-wrap">
+          <table class="scan-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Tipo</th>
+                <th>Ruta completa</th>
+                <th>Nombre</th>
+                <th>Extensión</th>
+                <th>Tamaño</th>
+                <th>Nivel</th>
+              </tr>
+            </thead>
+            <tbody id="scanResultsBody">
+              <tr class="scan-empty-row">
+                <td colspan="7">Seleccione un ZIP para preparar el escaneo.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="scan-panel">
+        <div class="scan-panel__heading">
+          <div>
+            <p class="scan-eyebrow">Paso 3</p>
+            <h2>Salida y almacenamiento</h2>
+            <p>Los botones se habilitarán cuando existan resultados reales.</p>
+          </div>
+        </div>
+
+        <div class="scan-export-grid">
+          <button id="scanExportTxtButton" class="scan-export-card" type="button" disabled>
+            <strong>Generar TXT</strong>
+            <span>Listado completo y estructura de rutas.</span>
+          </button>
+          <button id="scanExportPdfButton" class="scan-export-card" type="button" disabled>
+            <strong>Generar PDF</strong>
+            <span>Reporte organizado con resumen y detalles.</span>
+          </button>
+          <button id="scanSaveBlButton" class="scan-export-card" type="button" disabled>
+            <strong>Guardar en BL</strong>
+            <span>Envío opcional hacia la base local independiente.</span>
+          </button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="./scan.manifest.js"></script>
+  <script src="./scan.state.js"></script>
+  <script src="./scan.dom.js"></script>
+  <script src="./scan.app.js"></script>
+</body>
+</html>
