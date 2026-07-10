@@ -3,8 +3,8 @@ Nombre completo: scan.engine.js
 Ruta o ubicación: /audit/scan/scan.engine.js
 Función o funciones:
 - Exponer el motor público de escaneo usado por scan.app.js.
-- Usar Web Worker como modo principal para mantener fluida la interfaz.
-- Usar el lector del hilo principal solo como respaldo compatible.
+- Usar Web Worker progresivo como modo principal.
+- Usar el mismo lector progresivo en el hilo principal como respaldo.
 - Coordinar progreso, cancelación y resultados.
 - Evitar que resultados antiguos sobrescriban un escaneo nuevo.
 ========================================================= */
@@ -58,7 +58,7 @@ Función o funciones:
     if (typeof options.onProgress === "function") {
       options.onProgress({
         value: 1,
-        label: "Worker no disponible; usando modo compatible"
+        label: "Worker no disponible; usando lectura progresiva compatible"
       });
     }
 
@@ -71,9 +71,10 @@ Función o funciones:
     var result = await reader.read(file, options, control);
     if (control.isCancelled()) throw createCancelledError();
 
-    result.metadata = Object.assign({}, result.metadata || {}, {
+    var currentMetadata = result.metadata || {};
+    result.metadata = Object.assign({}, currentMetadata, {
       processedInWorker: false,
-      processingMode: "main-thread-fallback"
+      processingMode: currentMetadata.processingMode || "main-thread-streaming-fallback"
     });
 
     return result;
@@ -105,21 +106,17 @@ Función o funciones:
           var workerResult = await client.scan(file, options);
           if (job.cancelled || activeJob !== job) throw createCancelledError();
 
-          workerResult.metadata = Object.assign({}, workerResult.metadata || {}, {
+          var workerMetadata = workerResult.metadata || {};
+          workerResult.metadata = Object.assign({}, workerMetadata, {
             processedInWorker: true,
-            processingMode: "web-worker"
+            processingMode: workerMetadata.processingMode || "web-worker-streaming"
           });
           return workerResult;
         } catch (workerError) {
-          if (workerError && workerError.name === "ScanCancelledError") {
-            throw workerError;
-          }
-
-          if (!canFallback(workerError)) {
-            throw workerError;
-          }
-
+          if (workerError && workerError.name === "ScanCancelledError") throw workerError;
+          if (!canFallback(workerError)) throw workerError;
           if (job.cancelled || activeJob !== job) throw createCancelledError();
+
           return await scanOnMainThread(file, options, job);
         }
       }
