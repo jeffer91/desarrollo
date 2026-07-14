@@ -1,0 +1,151 @@
+/* =========================================================
+Nombre completo: certi.editable.css
+Ruta o ubicación: /incorporaciones/certificados/certi.editable.css
+Función: Estilos del tercer tipo de certificado editable desde texto.
+========================================================= */
+
+.certi-editable-panel {
+  margin-top: 18px;
+  padding: 20px;
+  border: 1px solid #cbd9ee;
+  border-radius: 18px;
+  background: #f8fbff;
+}
+
+.certi-editable-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.certi-editable-heading h3 {
+  margin: 0 0 6px;
+  color: #062b64;
+  font-size: 18px;
+}
+
+.certi-editable-heading p {
+  margin: 0;
+  color: #53657d;
+  line-height: 1.45;
+}
+
+.certi-editable-textarea {
+  min-height: 250px;
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.5;
+}
+
+.certi-editable-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.certi-editable-status {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #eaf2ff;
+  color: #123d74;
+  font-size: 13px;
+}
+
+.certi-editable-structure {
+  display: grid;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.certi-editable-card {
+  padding: 18px;
+  border: 1px solid #cbd9ee;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(10, 46, 92, 0.06);
+}
+
+.certi-editable-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.certi-editable-card-header strong {
+  color: #062b64;
+}
+
+.certi-editable-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.certi-editable-grid .certi-field-wide {
+  grid-column: 1 / -1;
+}
+
+.certi-editable-grid textarea {
+  min-height: 92px;
+  resize: vertical;
+}
+
+.certi-editable-signatures {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.certi-editable-signature {
+  padding: 12px;
+  border: 1px solid #d8e2f0;
+  border-radius: 12px;
+  background: #f8fbff;
+}
+
+.certi-editable-signature > span {
+  display: block;
+  margin-bottom: 8px;
+  color: #274a76;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.certi-editable-signature input + input {
+  margin-top: 8px;
+}
+
+.certi-editable-example {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-left: 4px solid #174ea6;
+  border-radius: 10px;
+  background: #edf4ff;
+  color: #34516f;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.certi-editable-example code {
+  white-space: pre-wrap;
+  font-family: Consolas, monospace;
+}
+
+@media (max-width: 900px) {
+  .certi-editable-grid,
+  .certi-editable-signatures {
+    grid-template-columns: 1fr;
+  }
+
+  .certi-editable-heading {
+    flex-direction: column;
+  }
+}
