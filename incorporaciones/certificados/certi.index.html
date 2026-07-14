@@ -8,6 +8,7 @@ Función o funciones:
 - No mostrar vista previa del certificado.
 - Permitir generar PDF único, ZIP de todos los certificados y PDF individual por fila.
 - Cargar módulos separados para certificados de capacitación docente.
+- Generar certificados adicionales para capacitadores con firma exclusiva del Rector.
 - Cargar modal para crear, editar y borrar períodos.
 - Cargar automáticamente los períodos guardados al abrir la pantalla.
 - Mostrar estado visual al procesar datos.
@@ -55,6 +56,7 @@ Con qué se une:
 - certi.descargas.visual.fix.js
 - certi.descarga.individual.js
 - certi.seguridad.fix.js
+- certi.capacitadores.js
 ========================================================= -->
 <!DOCTYPE html>
 <html lang="es">
@@ -305,5 +307,8 @@ Con qué se une:
 
   <!-- Parche definitivo Seguridad -->
   <script src="./certi.seguridad.fix.js?v=20260605"></script>
+
+  <!-- Certificados adicionales para capacitadores: solo firma del Rector -->
+  <script src="./certi.capacitadores.js?v=20260714"></script>
 </body>
 </html>
