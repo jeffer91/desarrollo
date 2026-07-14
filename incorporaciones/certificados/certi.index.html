@@ -3,59 +3,25 @@ Nombre completo: certi.index.html
 Ruta o ubicación: /incorporaciones/certificados/certi.index.html
 Función o funciones:
 - Cargar la pantalla independiente del módulo Certificados / Certi.
-- Integrar selector de tipo de certificado, período, calendario, carga de Excel y texto pegado.
-- Cargar todos los archivos JavaScript del módulo en el orden correcto.
-- No mostrar vista previa del certificado.
-- Permitir generar PDF único, ZIP de todos los certificados y PDF individual por fila.
-- Cargar módulos separados para certificados de capacitación docente.
-- Generar certificados adicionales para capacitadores con firma exclusiva del Rector.
-- Cargar modal para crear, editar y borrar períodos.
-- Cargar automáticamente los períodos guardados al abrir la pantalla.
-- Mostrar estado visual al procesar datos.
-- Cargar controlador directo de respaldo para el botón Procesar datos.
-- Cargar controlador directo de descargas PDF, ZIP, descarga individual y modal de alertas.
-- Cargar controlador visual seguro para que las descargas generales esperen el análisis de plantilla.
-- Cargar normalización de nombres propios en firmantes y capacitador.
-- Funcionar como apartado propio, fuera del menú interno de Incorporaciones.
+- Integrar tres tipos: reconocimientos, capacitaciones y certificados editables desde texto.
+- Permitir ordenar automáticamente texto libre o etiquetado antes de generar certificados.
+- Permitir generar PDF único, ZIP y PDF individual por fila.
+- Cargar módulos separados para capacitación, capacitadores y texto editable.
+- Mantener períodos, validaciones, renderizado y descargas existentes.
 Con qué se une:
 - certi.css
-- certi.periodos.modal.css
-- certi.procesar.estado.css
-- certi.descargas.alertas.css
+- certi.editable.css
 - certi.config.js
 - certi.state.js
-- certi.dom.js
-- certi.utils.js
-- certi.catalogo.js
-- certi.excel.js
-- certi.text.js
-- certi.source.js
-- certi.logic.js
-- certi.render.js
-- certi.storage.js
-- certi.periodos.js
-- certi.periodos.modal.js
-- certi.periodos.autoload.js
-- certi.template.smart.js
-- certi.template.center.fix.js
-- certi.template.js
-- certi.pdf.js
-- certi.audit.js
-- certi.validate.js
-- certi.compat.js
-- certi.assets.js
 - certi.tipos.js
-- certi.firmantes.js
-- certi.capacitacion.excel.js
-- certi.capacitacion.logic.js
-- certi.capacitacion.template.js
 - certi.capacitacion.js
+- certi.editable.logic.js
+- certi.editable.template.js
+- certi.editable.js
 - certi.app.js
 - certi.procesar.fallback.js
-- certi.descargas.alertas.js
 - certi.descargas.visual.fix.js
 - certi.descarga.individual.js
-- certi.seguridad.fix.js
 - certi.capacitadores.js
 ========================================================= -->
 <!DOCTYPE html>
@@ -68,6 +34,7 @@ Con qué se une:
   <link rel="stylesheet" href="./certi.periodos.modal.css?v=20260707" />
   <link rel="stylesheet" href="./certi.procesar.estado.css?v=20260707" />
   <link rel="stylesheet" href="./certi.descargas.alertas.css?v=20260707" />
+  <link rel="stylesheet" href="./certi.editable.css?v=20260714" />
 </head>
 <body>
   <header class="certi-topbar">
@@ -90,7 +57,7 @@ Con qué se une:
       <div>
         <p class="certi-eyebrow">Módulo independiente</p>
         <h1>Certi</h1>
-        <p>Generación automática de certificados institucionales de reconocimiento y capacitación docente.</p>
+        <p>Generación automática de certificados institucionales de reconocimiento, capacitación y texto editable.</p>
       </div>
 
       <div class="certi-hero-badge">
@@ -112,7 +79,8 @@ Con qué se une:
           <span>Tipo de certificado</span>
           <select id="certiTipoCertificado">
             <option value="reconocimiento">Reconocimiento a mejores egresados</option>
-            <option value="capacitacion">Certificado de capacitación docente</option>
+            <option value="capacitacion">Certificados de capacitación docente</option>
+            <option value="editable">Certificado editable desde texto</option>
           </select>
         </label>
 
@@ -128,7 +96,7 @@ Con qué se une:
           <input id="certiFechaCertificado" type="date" />
         </label>
 
-        <label class="certi-field">
+        <label id="certiFuenteField" class="certi-field">
           <span>Fuente de datos</span>
           <select id="certiFuenteDatos">
             <option value="auto">Automático</option>
@@ -144,7 +112,7 @@ Con qué se une:
             <span>Excel de mejores egresados</span>
             <input id="certiExcelInput" type="file" accept=".xlsx,.xls" />
           </label>
-          <p class="certi-help-text">Para capacitación, el Excel puede tener columnas como Cargo, Nombre, capacitación y Calificación.</p>
+          <p class="certi-help-text">Para capacitación, el Excel puede tener columnas como Cargo, Nombre, capacitación, Capacitador y Calificación.</p>
         </div>
 
         <div id="certiBloqueTexto" class="certi-source-card certi-source-card-text">
@@ -162,6 +130,38 @@ Con qué se une:
         </div>
       </div>
 
+      <section id="certiEditablePanel" class="certi-editable-panel certi-hidden">
+        <div class="certi-editable-heading">
+          <div>
+            <h3>Texto libre del certificado</h3>
+            <p>Pegue el contenido completo. Puede usar etiquetas o escribirlo libremente; Certi separará y ordenará cada parte.</p>
+          </div>
+        </div>
+
+        <label class="certi-field">
+          <span>Contenido que desea ordenar</span>
+          <textarea
+            id="certiEditableTexto"
+            class="certi-editable-textarea"
+            placeholder="Ejemplo:\nTÍTULO: CERTIFICADO DE RECONOCIMIENTO\nBENEFICIARIOS:\nAna Pérez\nCarlos Ruiz\nTEXTO: Por su destacada participación...\nFECHA: 14 de julio de 2026\nFIRMANTE: Dr. León Tito\nCARGO: RECTOR"
+          ></textarea>
+        </label>
+
+        <div class="certi-editable-actions">
+          <button id="certiEditableOrdenar" class="certi-btn certi-btn-secondary" type="button">Ordenar texto automáticamente</button>
+          <button id="certiEditableAgregar" class="certi-btn certi-btn-ghost" type="button">Agregar otro certificado</button>
+        </div>
+
+        <div class="certi-editable-example">
+          <strong>Etiquetas opcionales:</strong>
+          <code>TÍTULO, BENEFICIARIOS, INTRODUCCIÓN, TEXTO, DESTACADO, DETALLE, CIERRE, CIUDAD, FECHA, FIRMANTE 1, CARGO 1.</code>
+          Para varios certificados completos, separe cada bloque con una línea que contenga <code>---</code>.
+        </div>
+
+        <div id="certiEditableEstado" class="certi-editable-status">Pegue un texto y presione “Ordenar texto automáticamente”.</div>
+        <div id="certiEditableEstructura" class="certi-editable-structure"></div>
+      </section>
+
       <div class="certi-actions">
         <button id="certiBtnProcesar" class="certi-btn certi-btn-primary" type="button">Procesar datos</button>
         <button id="certiBtnLimpiar" class="certi-btn certi-btn-ghost" type="button">Limpiar pantalla</button>
@@ -177,22 +177,10 @@ Con qué se une:
       </div>
 
       <div id="certiResumenCards" class="certi-summary-grid">
-        <article class="certi-summary-card">
-          <span>Registros leídos</span>
-          <strong>0</strong>
-        </article>
-        <article class="certi-summary-card">
-          <span>Carreras detectadas</span>
-          <strong>0</strong>
-        </article>
-        <article class="certi-summary-card">
-          <span>Certificados listos</span>
-          <strong>0</strong>
-        </article>
-        <article class="certi-summary-card">
-          <span>Alertas</span>
-          <strong>0</strong>
-        </article>
+        <article class="certi-summary-card"><span>Registros leídos</span><strong>0</strong></article>
+        <article class="certi-summary-card"><span>Carreras detectadas</span><strong>0</strong></article>
+        <article class="certi-summary-card"><span>Certificados listos</span><strong>0</strong></article>
+        <article class="certi-summary-card"><span>Alertas</span><strong>0</strong></article>
       </div>
 
       <div id="certiAlertas" class="certi-alerts" aria-live="polite"></div>
@@ -237,9 +225,7 @@ Con qué se une:
             </tr>
           </thead>
           <tbody id="certiTablaBody">
-            <tr>
-              <td colspan="4" class="certi-empty">Cargue y procese los datos para ver los resultados.</td>
-            </tr>
+            <tr><td colspan="4" class="certi-empty">Cargue y procese los datos para ver los resultados.</td></tr>
           </tbody>
         </table>
       </div>
@@ -256,10 +242,8 @@ Con qué se une:
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js" data-certi-jszip="1"></script>
 
-  <!-- Configuración base -->
+  <!-- Configuración y núcleo -->
   <script src="./certi.config.js"></script>
-
-  <!-- Núcleo del módulo -->
   <script src="./certi.state.js"></script>
   <script src="./certi.dom.js"></script>
   <script src="./certi.utils.js?v=20260712"></script>
@@ -276,39 +260,32 @@ Con qué se une:
   <script src="./certi.template.center.fix.js?v=20260711"></script>
   <script src="./certi.template.js?v=20260711"></script>
   <script src="./certi.pdf.js"></script>
-
-  <!-- Complementos del módulo -->
   <script src="./certi.audit.js"></script>
   <script src="./certi.validate.js"></script>
   <script src="./certi.compat.js"></script>
   <script src="./certi.assets.js"></script>
 
-  <!-- Tipos de certificados y capacitación docente -->
-  <script src="./certi.tipos.js?v=20260707"></script>
+  <!-- Tipos y capacitación -->
+  <script src="./certi.tipos.js?v=20260714"></script>
   <script src="./certi.firmantes.js?v=20260712"></script>
   <script src="./certi.capacitacion.excel.js?v=20260707"></script>
   <script src="./certi.capacitacion.logic.js?v=20260707"></script>
   <script src="./certi.capacitacion.template.js?v=20260712"></script>
   <script src="./certi.capacitacion.js?v=20260707"></script>
 
-  <!-- Inicio de la app -->
+  <!-- Tercer tipo: certificado editable desde texto -->
+  <script src="./certi.editable.logic.js?v=20260714"></script>
+  <script src="./certi.editable.template.js?v=20260714"></script>
+  <script src="./certi.editable.js?v=20260714"></script>
+
+  <!-- Inicio y respaldos existentes -->
   <script src="./certi.app.js?v=20260707"></script>
-
-  <!-- Carga automática de períodos guardados -->
   <script src="./certi.periodos.autoload.js?v=20260707"></script>
-
-  <!-- Controlador directo de respaldo para Procesar datos -->
   <script src="./certi.procesar.fallback.js?v=20260707"></script>
-
-  <!-- Controladores directos de descargas, ZIP, descarga individual y modal de alertas -->
   <script src="./certi.descargas.alertas.js?v=20260707"></script>
   <script src="./certi.descargas.visual.fix.js?v=20260713"></script>
   <script src="./certi.descarga.individual.js?v=20260712"></script>
-
-  <!-- Parche definitivo Seguridad -->
   <script src="./certi.seguridad.fix.js?v=20260605"></script>
-
-  <!-- Certificados adicionales para capacitadores: solo firma del Rector -->
   <script src="./certi.capacitadores.js?v=20260714"></script>
 </body>
 </html>
