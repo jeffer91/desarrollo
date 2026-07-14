@@ -4,9 +4,11 @@ Ruta o ubicación: /incorporaciones/certificados/certi.editable.mode.js
 Función o funciones:
 - Mantener visibles únicamente las entradas correspondientes al tipo seleccionado.
 - Restaurar correctamente Excel y texto al salir del modo editable.
+- Reaplicar el modo después de cada actualización del estado central.
 - Ejecutarse al final para resolver cambios realizados por controladores anteriores.
 Con qué se une:
 - certi.index.html
+- certi.state.js
 - certi.capacitacion.js
 - certi.editable.js
 ========================================================= */
@@ -28,6 +30,17 @@ Con qué se une:
       fuente.dataset.certiEditableMode = "1";
       fuente.addEventListener("change", function () {
         setTimeout(sincronizar, 0);
+      });
+    }
+
+    if (
+      window.CertiState &&
+      typeof window.CertiState.suscribir === "function" &&
+      !window.__certiEditableModeSuscrito
+    ) {
+      window.__certiEditableModeSuscrito = true;
+      window.CertiState.suscribir(function () {
+        sincronizar();
       });
     }
 
