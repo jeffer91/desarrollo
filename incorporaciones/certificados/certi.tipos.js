@@ -277,7 +277,6 @@ Con qué se une:
 
       if (!inv) {
         if (panel) panel.classList.add("certi-hidden");
-        if (fuente) fuente.disabled = false;
         if (fechaLabel) fechaLabel.textContent = "Fecha del certificado";
         return;
       }
@@ -426,6 +425,7 @@ Con qué se une:
         estadoProceso("Procesando invitaciones...", "info");
         const contexto = contextoActual();
         validarContexto(contexto);
+        recogerSesiones();
         const lectura = await leerExcelActual();
         I.participaciones = lectura.participaciones;
         I.sesiones = preservarSesiones(lectura.sesiones);
