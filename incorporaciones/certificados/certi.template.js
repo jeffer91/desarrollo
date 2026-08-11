@@ -101,7 +101,7 @@ Con qué se une:
     const ancho = config.pdf.ancho || 297;
 
     const nombre = limpiarNombre(certificado.nombre).toUpperCase();
-    const carrera = String(certificado.carrera || "").toUpperCase();
+    const carrera = limpiarCarreraParaCertificado(certificado.carrera).toUpperCase();
     const promedio = certificado.promedio;
     const periodo = String(certificado.periodo || "").toUpperCase();
     const fecha = certificado.fecha || "";
@@ -138,11 +138,11 @@ Con qué se une:
       {
         texto: nombre,
         font: "times",
-        style: "bold",
+        style: "bolditalic",
         size: calcularTamanoNombre(nombre),
-        minSize: 13.2,
-        lineHeight: 8,
-        minLineHeight: 5.2,
+        minSize: 14,
+        lineHeight: 8.2,
+        minLineHeight: 5.3,
         color: [6, 25, 65],
         gapAfter: 9,
         minGapAfter: 4,
@@ -273,6 +273,16 @@ Con qué se une:
     }
 
     return String(valor == null ? "" : valor).replace(/\s+/g, " ").trim();
+  }
+
+  function limpiarCarreraParaCertificado(valor) {
+    return String(valor == null ? "" : valor)
+      .replace(/\(\s*ONLINE\s*\)/gi, " ")
+      .replace(/\bONLINE\b/gi, " ")
+      .replace(/\bON\s*LINE\b/gi, " ")
+      .replace(/\bEN\s+L[ÍI]NEA\b/gi, " ")
+      .replace(/\s+/g, " ")
+      .trim();
   }
 
   window.CertiTemplate = {
