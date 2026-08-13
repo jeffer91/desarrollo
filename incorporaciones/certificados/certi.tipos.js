@@ -638,10 +638,17 @@ Con qué se une:
 
       doc.setTextColor(40,40,40);
       y=parrafo(doc,`para participar en el evento de incorporación correspondiente a la promoción ${c.periodoTexto}.`,X,y,TW,11.1,5.1)+8;
-      y=parrafo(doc,parrafoParticipaciones(invitado.participaciones),X,y,TW,10.9,5.0)+8;
-      y=parrafo(doc,"Agradecemos profundamente su valiosa participación y su compromiso con la excelencia académica en este acto solemne de incorporación.",X,y,TW,10.8,5.0);
+      y=parrafo(doc,parrafoParticipaciones(invitado.participaciones),X,y,TW,10.9,5.0)+7;
 
-      const fy=Math.max(208,Math.min(226,y+20));
+      doc.setFont("times","bold");
+      doc.setFontSize(10.8);
+      doc.text("Responsabilidades asignadas:", X, y);
+      y+=5.2;
+      y=parrafo(doc,parrafoResponsabilidades(invitado.participaciones),X,y,TW,10.4,4.8)+7;
+
+      y=parrafo(doc,"Agradecemos profundamente su valiosa participación y su compromiso con la excelencia académica en este acto solemne de incorporación.",X,y,TW,10.5,4.9);
+
+      const fy=Math.max(212,Math.min(230,y+18));
       doc.setFont("times","normal");
       doc.setFontSize(11.1);
       doc.text("Atentamente,",W/2,fy,{align:"center"});
@@ -659,8 +666,37 @@ Con qué se une:
     function parrafoParticipaciones(lista) {
       const g={};
       lista.forEach(function(p){ const k=p.sesionClave; if(!g[k]) g[k]={fecha:p.fecha,hora:p.hora,cargos:[]}; if(!g[k].cargos.some(function(c){return clave(c)===clave(p.cargo)})) g[k].cargos.push(p.cargo); });
-      const fs=Object.values(g).sort(function(a,b){return `${a.fecha} ${a.hora}`.localeCompare(`${b.fecha} ${b.hora}`)}).map(function(s){return `${fechaConDia(s.fecha)}, a las ${s.hora}, para ${unir(s.cargos.map(redactarCargo))}`});
+      const fs=Object.values(g).sort(function(a,b){return `${a.fecha} ${a.hora}`.localeCompare(`${b.fecha} ${b.hora}`)}).map(function(s){return `${fechaConDia(s.fecha)}, a las ${formatearHoraVisible(s.hora)}, para ${unir(s.cargos.map(redactarCargo))}`});
       return fs.length===1?`Su presencia será requerida el ${fs[0]}.`:`Su presencia será requerida en las siguientes sesiones: ${fs.join("; ")}.`;
+    }
+
+    function parrafoResponsabilidades(lista) {
+      const cargos=[];
+      (lista||[]).forEach(function(p){
+        const k=clave(p.cargo);
+        if(!cargos.some(function(c){return clave(c)===k;})) cargos.push(p.cargo);
+      });
+      const textos=cargos.map(responsabilidadCargo).filter(Boolean);
+      return unirResponsabilidades(textos);
+    }
+
+    function responsabilidadCargo(cargo) {
+      const k=clave(cargo), o=limpiar(cargo);
+      if(/^MESA DIRECTIVA\s*1$/.test(k)) return "presidir la mesa directiva, velar por el cumplimiento del orden protocolario y conducir institucionalmente la ceremonia";
+      if(/^MESA DIRECTIVA\s*\d+$/.test(k)||k==="MESA DIRECTIVA") return "integrar la mesa directiva, participar en los momentos protocolarios previstos y mantener la solemnidad institucional del acto";
+      if(k.includes("MAESTRO DE CEREMONIA")||k.includes("MAESTRA DE CEREMONIA")) return "conducir el programa, anunciar cada intervención y coordinar la secuencia protocolaria de la ceremonia";
+      if(k.includes("BIENVENIDA")) return "ofrecer las palabras de bienvenida institucional conforme al programa";
+      if(k.includes("INTERVENCION OFICIAL")) return "realizar la intervención oficial conforme al programa y al tiempo asignado";
+      if(k.includes("PROMESA SOLEMNE")) return "dirigir la promesa solemne de los graduados y conducir este momento protocolario";
+      if(k.includes("MENSAJE A LOS NUEVOS PROFESIONALES")) return "brindar el mensaje dirigido a los nuevos profesionales conforme al programa de la ceremonia";
+      return `cumplir la responsabilidad correspondiente a ${o}`;
+    }
+
+    function unirResponsabilidades(a){
+      if(!a.length) return "Participar conforme a las disposiciones establecidas para el acto de incorporación.";
+      if(a.length===1) return `${a[0]}.`;
+      if(a.length===2) return `${a[0]}; y ${a[1]}.`;
+      return `${a.slice(0,-1).join("; ")}; y ${a[a.length-1]}.`;
     }
 
     function redactarCargo(cargo) {
@@ -681,8 +717,45 @@ Con qué se une:
     function prioridad(c){ const k=clave(c); if(/^MESA DIRECTIVA\s*1$/.test(k))return 10; if(/^MESA DIRECTIVA/.test(k))return 20; if(k.includes("MAESTRO DE CEREMONIA"))return 30; if(k.includes("BIENVENIDA"))return 40; if(k.includes("INTERVENCION OFICIAL"))return 50; if(k.includes("PROMESA SOLEMNE"))return 60; if(k.includes("MENSAJE A LOS NUEVOS"))return 70; return 100; }
     function clavePersona(n){ let k=clave(n), pref=["MAGISTER","MGS","MASTER","MSC","DOCTOR","DOCTORA","DR","DRA","LICENCIADO","LICENCIADA","LIC","INGENIERO","INGENIERA","ING"]; let cambio=true; while(cambio){cambio=false;pref.forEach(function(p){if(k.startsWith(p+" ")){k=k.slice(p.length).trim();cambio=true;}})} return k; }
     function puntuarNombre(n){ return (/^(MAGISTER|MGS|MASTER|MSC|DOCTOR|DOCTORA|DR|DRA|LICENCIADO|LICENCIADA|LIC|INGENIERO|INGENIERA|ING)\b/.test(clave(n))?100:0)+limpiar(n).length; }
-    function pareceSesion(v){ const k=clave(v); return /\b(LUNES|MARTES|MIERCOLES|JUEVES|VIERNES|SABADO|DOMINGO)\b/.test(k)||/\b\d{1,2}(:\d{2})?\s*(AM|PM)\b/.test(k)||/\b\d{1,2}:\d{2}\b/.test(k); }
-    function extraerHora(v){ const t=limpiar(v).toLowerCase(); let m=t.match(/\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/i); if(m){let h=+m[1],min=+(m[2]||0);if(m[3].toLowerCase()==="pm"&&h<12)h+=12;if(m[3].toLowerCase()==="am"&&h===12)h=0;return `${String(h).padStart(2,"0")}:${String(min).padStart(2,"0")}`;} m=t.match(/\b(\d{1,2}):(\d{2})\b/); return m?`${String(+m[1]).padStart(2,"0")}:${m[2]}`:""; }
+
+    function normalizarMeridiano(v) {
+      return limpiar(v).toLowerCase().replace(/\b([ap])\s*\.?\s*m\s*\.?/g, "$1m");
+    }
+
+    function pareceSesion(v){
+      const original=limpiar(v);
+      const k=clave(original);
+      if(/\b(LUNES|MARTES|MIERCOLES|JUEVES|VIERNES|SABADO|DOMINGO)\b/.test(k)) return true;
+      const t=normalizarMeridiano(original);
+      return /\b\d{1,2}(?::\d{2})?\s*(am|pm)\b/i.test(t)||/\b\d{1,2}:\d{2}\b/.test(t);
+    }
+
+    function extraerHora(v){
+      const t=normalizarMeridiano(v);
+      let m=t.match(/\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/i);
+      if(m){
+        let h=+m[1],min=+(m[2]||0);
+        const meridiano=m[3].toLowerCase();
+        if(meridiano==="pm"&&h<12)h+=12;
+        if(meridiano==="am"&&h===12)h=0;
+        return `${String(h).padStart(2,"0")}:${String(min).padStart(2,"0")}`;
+      }
+      m=t.match(/\b(\d{1,2}):(\d{2})\b/);
+      return m?`${String(+m[1]).padStart(2,"0")}:${m[2]}`:"";
+    }
+
+    function formatearHoraVisible(v){
+      const hora=limpiar(v);
+      const m=hora.match(/^(\d{1,2}):(\d{2})$/);
+      if(!m) return hora;
+      const h=+m[1],min=m[2];
+      if(h<0||h>23) return hora;
+      const sufijo=h<12?"a. m.":"p. m.";
+      let h12=h%12;
+      if(h12===0)h12=12;
+      return `${h12}:${min} ${sufijo}`;
+    }
+
     function fechaLarga(f){ if(!f)return ""; const p=f.split("-").map(Number),m=["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"]; return p.length===3?`${p[2]} de ${m[p[1]-1]} de ${p[0]}`:f; }
     function fechaConDia(f){ const d=new Date(`${f}T12:00:00`),ds=["domingo","lunes","martes","miércoles","jueves","viernes","sábado"]; return Number.isNaN(d.getTime())?fechaLarga(f):`${ds[d.getDay()]}, ${fechaLarga(f)}`; }
     function exigirResultado(){ if(!I.resultado||!I.resultado.invitados.length)throw new Error("Procese primero las invitaciones."); return I.resultado; }
@@ -700,6 +773,6 @@ Con qué se une:
     function nombreArchivo(v){ if(window.CertiUtils&&typeof window.CertiUtils.crearNombreArchivo==="function")return window.CertiUtils.crearNombreArchivo(v);return clave(v).replace(/[^A-Z0-9]+/g,"_").toLowerCase()||"archivo"; }
     function descargarBlob(blob,n){ const u=URL.createObjectURL(blob),a=document.createElement("a");a.href=u;a.download=n;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(u)},1000); }
 
-    window.CertiInvitaciones = { analizarMatriz, agrupar, redactarCargo, parrafoParticipaciones, dibujarInvitacion, procesarInvitaciones };
+    window.CertiInvitaciones = { analizarMatriz, agrupar, redactarCargo, parrafoParticipaciones, parrafoResponsabilidades, dibujarInvitacion, procesarInvitaciones };
   }
 })();
