@@ -365,8 +365,10 @@ Con qué se une:
 
     function esCabecera(fila) {
       if (!fila || fila.length < 2) return false;
-      const c = clave(fila[0]);
-      return /^(CARGO|ACTIVIDAD|FUNCION|ROL)$/.test(c) && fila.slice(1).some(pareceSesion);
+      const valores = fila.map(limpiar);
+      const sesiones = valores.slice(1).filter(Boolean);
+      if (!sesiones.length) return false;
+      return sesiones.every(pareceSesion);
     }
 
     function cabeceraSecundaria(fila, cantidad) {
