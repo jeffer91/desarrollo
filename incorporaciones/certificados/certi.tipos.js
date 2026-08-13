@@ -24,6 +24,7 @@ Con qué se une:
   const TIPO_EDITABLE = "editable";
   const TIPO_INVITACION = "invitacion";
   const STORAGE_TIPO = "certi.tipoCertificado";
+  const OPACIDAD_PLANTILLA_INVITACION = 0.80;
 
   const plantillas = {
     reconocimiento: "./assets/certi-plantilla-certificado.png",
@@ -519,6 +520,34 @@ Con qué se une:
       estadoProceso("Pantalla de invitaciones limpiada.", "info");
     }
 
+    function ajustarOpacidadPlantilla(dataUrl, opacidad) {
+      return new Promise(function (resolve, reject) {
+        const imagen = new Image();
+        imagen.onload = function () {
+          try {
+            const canvas = document.createElement("canvas");
+            canvas.width = imagen.naturalWidth || imagen.width;
+            canvas.height = imagen.naturalHeight || imagen.height;
+            const ctx = canvas.getContext("2d");
+            if (!ctx) throw new Error("No se pudo preparar la plantilla de invitación.");
+
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.globalAlpha = Math.max(0, Math.min(1, Number(opacidad) || 1));
+            ctx.drawImage(imagen, 0, 0, canvas.width, canvas.height);
+            ctx.globalAlpha = 1;
+            resolve(canvas.toDataURL("image/png"));
+          } catch (error) {
+            reject(error);
+          }
+        };
+        imagen.onerror = function () {
+          reject(new Error("No se pudo ajustar la opacidad de la plantilla de invitación."));
+        };
+        imagen.src = dataUrl;
+      });
+    }
+
     function obtenerPlantillaInvitacionDataUrl() {
       if (plantillaInvitacionDataUrl) return Promise.resolve(plantillaInvitacionDataUrl);
       if (plantillaInvitacionPromise) return plantillaInvitacionPromise;
@@ -541,8 +570,11 @@ Con qué se une:
           });
         })
         .then(function (dataUrl) {
-          plantillaInvitacionDataUrl = dataUrl;
-          return dataUrl;
+          return ajustarOpacidadPlantilla(dataUrl, OPACIDAD_PLANTILLA_INVITACION);
+        })
+        .then(function (dataUrlAjustado) {
+          plantillaInvitacionDataUrl = dataUrlAjustado;
+          return dataUrlAjustado;
         })
         .catch(function (error) {
           plantillaInvitacionPromise = null;
