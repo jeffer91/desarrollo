@@ -29,7 +29,7 @@ Con qué se une:
     reconocimiento: "./assets/certi-plantilla-certificado.png",
     capacitacion: "./assets/certi-plantilla-capacitacion.png",
     editable: "./assets/certi-plantilla-certificado.png",
-    invitacion: ""
+    invitacion: "./assets/certi-plantilla-fondo.png"
   };
 
   const tipos = {
@@ -69,7 +69,7 @@ Con qué se une:
       nombre: "Invitaciones de incorporación",
       descripcion: "Generación automática de invitaciones de incorporación agrupadas por persona y sesión.",
       fuente: "excel",
-      plantilla: "",
+      plantilla: plantillas.invitacion,
       pdfUnicoPrefijo: "Invitaciones_Incorporacion",
       pdfZipPrefijo: "Invitaciones_Incorporacion_ZIP",
       pdfIndividualPrefijo: "Invitacion"
@@ -104,6 +104,7 @@ Con qué se une:
     config.rutas.plantillaReconocimiento = config.rutas.plantillaReconocimiento || config.rutas.plantillaCertificado || plantillas.reconocimiento;
     config.rutas.plantillaCapacitacion = config.rutas.plantillaCapacitacion || plantillas.capacitacion;
     config.rutas.plantillaEditable = config.rutas.plantillaEditable || plantillas.editable;
+    config.rutas.plantillaInvitacion = config.rutas.plantillaInvitacion || plantillas.invitacion;
   }
 
   function normalizar(tipo) {
@@ -178,6 +179,8 @@ Con qué se une:
       sesiones: [], participaciones: [], invitados: [], resultado: null,
       procesando: false, descargando: false
     };
+    let plantillaInvitacionDataUrl = null;
+    let plantillaInvitacionPromise = null;
 
     document.addEventListener("click", function (e) {
       if (!esInvitacion()) return;
@@ -514,6 +517,39 @@ Con qué se une:
       estadoProceso("Pantalla de invitaciones limpiada.", "info");
     }
 
+    function obtenerPlantillaInvitacionDataUrl() {
+      if (plantillaInvitacionDataUrl) return Promise.resolve(plantillaInvitacionDataUrl);
+      if (plantillaInvitacionPromise) return plantillaInvitacionPromise;
+
+      const ruta = (window.CertiConfig && window.CertiConfig.rutas && window.CertiConfig.rutas.plantillaInvitacion)
+        ? window.CertiConfig.rutas.plantillaInvitacion
+        : plantillas.invitacion;
+
+      plantillaInvitacionPromise = fetch(ruta, { cache: "no-store" })
+        .then(function (respuesta) {
+          if (!respuesta.ok) throw new Error(`No se pudo cargar la plantilla de invitación: ${ruta}`);
+          return respuesta.blob();
+        })
+        .then(function (blob) {
+          return new Promise(function (resolve, reject) {
+            const reader = new FileReader();
+            reader.onload = function () { resolve(reader.result); };
+            reader.onerror = function () { reject(new Error("No se pudo convertir la plantilla de invitación.")); };
+            reader.readAsDataURL(blob);
+          });
+        })
+        .then(function (dataUrl) {
+          plantillaInvitacionDataUrl = dataUrl;
+          return dataUrl;
+        })
+        .catch(function (error) {
+          plantillaInvitacionPromise = null;
+          throw error;
+        });
+
+      return plantillaInvitacionPromise;
+    }
+
     async function descargarTodoPdf() {
       const r = exigirResultado();
       if (I.descargando) return;
@@ -521,8 +557,12 @@ Con qué se une:
       try {
         bloquearDescargas(true);
         const jsPDF = obtenerJsPdf();
+        const plantillaDataUrl = await obtenerPlantillaInvitacionDataUrl();
         const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-        r.invitados.forEach(function (x, i) { if (i) doc.addPage(); dibujarInvitacion(doc, x, r.contexto); });
+        r.invitados.forEach(function (x, i) {
+          if (i) doc.addPage();
+          dibujarInvitacion(doc, x, r.contexto, plantillaDataUrl);
+        });
         doc.save(`Invitaciones_Incorporacion_${nombreArchivo(r.contexto.periodoTexto)}_${r.contexto.fechaEmision}.pdf`);
         estadoProceso("PDF único generado correctamente.", "success");
       } catch (error) { estadoProceso(error.message, "error"); }
@@ -537,11 +577,12 @@ Con qué se une:
         bloquearDescargas(true);
         if (!window.JSZip) throw new Error("No está disponible JSZip.");
         const jsPDF = obtenerJsPdf();
+        const plantillaDataUrl = await obtenerPlantillaInvitacionDataUrl();
         const zip = new window.JSZip();
         const usados = {};
         r.invitados.forEach(function (x) {
           const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-          dibujarInvitacion(doc, x, r.contexto);
+          dibujarInvitacion(doc, x, r.contexto, plantillaDataUrl);
           let n = `Invitacion_${nombreArchivo(x.nombre)}.pdf`;
           if (usados[n]) { usados[n] += 1; n = n.replace(/\.pdf$/i, `_${usados[n]}.pdf`); } else usados[n] = 1;
           zip.file(n, doc.output("arraybuffer"));
@@ -552,35 +593,65 @@ Con qué se une:
       finally { I.descargando = false; bloquearDescargas(false); }
     }
 
-    function descargarUno(indice) {
+    async function descargarUno(indice) {
       const r = exigirResultado();
       const x = r.invitados[indice];
       if (!x) return;
-      const jsPDF = obtenerJsPdf();
-      const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-      dibujarInvitacion(doc, x, r.contexto);
-      doc.save(`Invitacion_${nombreArchivo(x.nombre)}.pdf`);
+      try {
+        const jsPDF = obtenerJsPdf();
+        const plantillaDataUrl = await obtenerPlantillaInvitacionDataUrl();
+        const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+        dibujarInvitacion(doc, x, r.contexto, plantillaDataUrl);
+        doc.save(`Invitacion_${nombreArchivo(x.nombre)}.pdf`);
+      } catch (error) {
+        estadoProceso(error.message || "No se pudo generar la invitación.", "error");
+      }
     }
 
-    function dibujarInvitacion(doc, invitado, c) {
-      const W = 210, H = 297, X = 24, TW = 162;
-      doc.setFillColor(255,255,255); doc.rect(0,0,W,H,"F");
-      doc.setDrawColor(190,150,67); doc.setLineWidth(1.5); doc.line(14,14,58,14); doc.line(14,14,14,48);
-      doc.setTextColor(190,150,67); doc.setFont("times","bold"); doc.setFontSize(23); doc.text("ITSQMET", W-24, 24, {align:"right"});
-      doc.setTextColor(30,48,78); doc.setFont("helvetica","normal"); doc.setFontSize(7); doc.text("INSTITUTO SUPERIOR UNIVERSITARIO",W-24,29,{align:"right"}); doc.text("QUITO METROPOLITANO",W-24,33,{align:"right"});
-      doc.setTextColor(40,40,40); doc.setFont("times","normal"); doc.setFontSize(11.2); doc.text(`Quito, ${fechaLarga(c.fechaEmision)}`, W-X, 50, {align:"right"});
-      let y=65;
-      y=parrafo(doc,`El Órgano Colegiado Superior del Instituto Superior Universitario Quito Metropolitano, en sesión celebrada el día ${fechaLarga(c.fechaResolucion)}, RESOLVIÓ:`,X,y,TW,11.4,5.2)+7;
-      doc.setFont("times","bold"); doc.setFontSize(13); doc.text("Designar a:",W/2,y,{align:"center"}); y+=8;
-      const nom=limpiar(invitado.nombre).toUpperCase(); doc.setTextColor(10,28,63); doc.setFontSize(nom.length>48?12.5:nom.length>36?14:15.5);
-      const nl=doc.splitTextToSize(nom,150); nl.forEach(function(l,i){doc.text(l,W/2,y+i*6,{align:"center"});}); y+=nl.length*6+7;
-      doc.setTextColor(40,40,40); y=parrafo(doc,`para participar en el evento de incorporación correspondiente a la promoción ${c.periodoTexto}.`,X,y,TW,11.4,5.2)+7;
-      y=parrafo(doc,parrafoParticipaciones(invitado.participaciones),X,y,TW,11.2,5.1)+8;
-      y=parrafo(doc,"Agradecemos profundamente su valiosa participación y su compromiso con la excelencia académica en este acto solemne de incorporación.",X,y,TW,11.3,5.2);
-      const fy=Math.max(205,Math.min(228,y+18)); doc.setFont("times","normal"); doc.setFontSize(11.3); doc.text("Atentamente,",W/2,fy,{align:"center"});
-      doc.setDrawColor(85,85,85); doc.setLineWidth(.3); doc.line(67,fy+26,143,fy+26); doc.setFont("times","bold"); doc.setFontSize(11); doc.text(c.firmante,W/2,fy+33,{align:"center"}); doc.setFont("times","normal"); doc.setFontSize(10.3); doc.text(c.cargoFirmante,W/2,fy+38.5,{align:"center"});
-      doc.setDrawColor(235,236,238); doc.setLineWidth(.6); doc.rect(8,220,58,62); doc.line(8,242,66,242); doc.line(8,260,66,260); doc.line(28,220,28,282); doc.line(48,220,48,282);
-      doc.setDrawColor(190,150,67); doc.ellipse(178,273,4,13,"S"); doc.ellipse(190,260,4,14,"S"); doc.line(165,287,194,245);
+    function dibujarInvitacion(doc, invitado, c, plantillaDataUrl) {
+      const W = 210, H = 297, X = 30, TW = 150;
+      if (!plantillaDataUrl) throw new Error("La plantilla institucional de invitación no está disponible.");
+
+      doc.addImage(plantillaDataUrl, "PNG", 0, 0, W, H, undefined, "FAST");
+
+      doc.setTextColor(40,40,40);
+      doc.setFont("times","normal");
+      doc.setFontSize(11.2);
+      doc.text(`Quito, ${fechaLarga(c.fechaEmision)}`, W-X, 54, {align:"right"});
+
+      let y=70;
+      y=parrafo(doc,`El Órgano Colegiado Superior del Instituto Superior Universitario Quito Metropolitano, en sesión celebrada el día ${fechaLarga(c.fechaResolucion)}, RESOLVIÓ:`,X,y,TW,11.2,5.2)+8;
+      doc.setFont("times","bold");
+      doc.setFontSize(13);
+      doc.text("Designar a:",W/2,y,{align:"center"});
+      y+=9;
+
+      const nom=limpiar(invitado.nombre).toUpperCase();
+      doc.setTextColor(10,28,63);
+      doc.setFont("times","bold");
+      doc.setFontSize(nom.length>52?12.5:nom.length>40?14:15.5);
+      const nl=doc.splitTextToSize(nom,140);
+      nl.forEach(function(l,i){doc.text(l,W/2,y+i*6.2,{align:"center"});});
+      y+=nl.length*6.2+8;
+
+      doc.setTextColor(40,40,40);
+      y=parrafo(doc,`para participar en el evento de incorporación correspondiente a la promoción ${c.periodoTexto}.`,X,y,TW,11.1,5.1)+8;
+      y=parrafo(doc,parrafoParticipaciones(invitado.participaciones),X,y,TW,10.9,5.0)+8;
+      y=parrafo(doc,"Agradecemos profundamente su valiosa participación y su compromiso con la excelencia académica en este acto solemne de incorporación.",X,y,TW,10.8,5.0);
+
+      const fy=Math.max(208,Math.min(226,y+20));
+      doc.setFont("times","normal");
+      doc.setFontSize(11.1);
+      doc.text("Atentamente,",W/2,fy,{align:"center"});
+      doc.setDrawColor(85,85,85);
+      doc.setLineWidth(.3);
+      doc.line(72,fy+25,138,fy+25);
+      doc.setFont("times","bold");
+      doc.setFontSize(10.8);
+      doc.text(c.firmante,W/2,fy+32,{align:"center"});
+      doc.setFont("times","normal");
+      doc.setFontSize(9.9);
+      doc.text(c.cargoFirmante,W/2,fy+37.5,{align:"center"});
     }
 
     function parrafoParticipaciones(lista) {
