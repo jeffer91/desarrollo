@@ -5,8 +5,8 @@ Ruta o ubicación: /incorporaciones/certificados/certi.logic.js
 Función o funciones:
 - Procesar registros de Excel o texto pegado de mejores egresados.
 - Elegir automáticamente el mayor promedio por carrera.
-- No depender del catálogo externo para aceptar o rechazar carreras.
-- Usar la fuente cargada como base para carreras, nombres y promedios.
+- Respetar el nivel oficial de la carrera cuando la fuente indica Tecnología Superior o Tecnología Superior Universitaria.
+- Eliminar la modalidad ONLINE / EN LÍNEA de la denominación usada en certificados.
 - Preparar los datos finales para generación de certificados.
 Con qué se une:
 - certi.excel.js
@@ -27,7 +27,6 @@ Con qué se une:
   function procesar(registros, opciones) {
     const config = opciones || {};
     const empatesSeleccionados = config.empatesSeleccionados || {};
-
     const registrosValidos = [];
     const incompletos = [];
 
@@ -40,7 +39,6 @@ Con qué se une:
           ...normalizado,
           errores: validacion.errores
         });
-
         return;
       }
 
@@ -55,27 +53,20 @@ Con qué se une:
     const empates = [];
 
     Object.keys(grupos).forEach(function (carreraOficial) {
-      const grupo = grupos[carreraOficial];
-
-      const ordenados = grupo.slice().sort(function (a, b) {
+      const ordenados = grupos[carreraOficial].slice().sort(function (a, b) {
         return Number(b.promedio) - Number(a.promedio);
       });
 
       const mejor = ordenados[0];
-
-      if (!mejor) {
-        return;
-      }
+      if (!mejor) return;
 
       const maximo = redondearPromedio(mejor.promedio);
-
       const candidatosMaximos = ordenados.filter(function (registro) {
         return redondearPromedio(registro.promedio) === maximo;
       });
 
       if (candidatosMaximos.length > 1) {
         const indiceSeleccionado = empatesSeleccionados[carreraOficial];
-
         const elegido = candidatosMaximos.find(function (item) {
           return Number(item.indice) === Number(indiceSeleccionado);
         });
@@ -92,7 +83,6 @@ Con qué se une:
           estadoCertificado: elegido ? "listo" : "empate_pendiente",
           requiereAccion: !elegido
         });
-
         return;
       }
 
@@ -135,8 +125,10 @@ Con qué se une:
 
   function normalizarRegistro(registro, index) {
     const base = registro || {};
-    const carreraOriginal = obtenerCarreraDesdeRegistro(base);
-    const nombre = limpiarNombre(base.nombre || obtenerValorRaw(base.raw, ["nombre", "estudiante", "egresado"]));
+    const carreraOriginal = limpiarCarreraModalidad(obtenerCarreraDesdeRegistro(base));
+    const nombre = limpiarNombre(
+      base.nombre || obtenerValorRaw(base.raw, ["nombre", "estudiante", "egresado"])
+    );
     const promedio = convertirPromedio(base.promedio);
     const carreraOficial = normalizarCarreraInstitucional(carreraOriginal);
 
@@ -156,7 +148,18 @@ Con qué se une:
   }
 
   function obtenerCarreraDesdeRegistro(registro) {
-    const directa = limpiarTexto(registro.carreraOriginal);
+    const directa = limpiarCarreraModalidad(
+      registro.carreraOriginal ||
+      registro.carrera ||
+      obtenerValorRaw(registro.raw, ["carrera", "programa", "oferta", "titulo", "título"])
+    );
+
+    // Si la fuente trae una denominación explícita, se respeta antes de usar heurísticas.
+    // Esto evita convertir una carrera UNIVERSITARIA en una carrera SUPERIOR.
+    if (!esVacio(directa)) {
+      return directa;
+    }
+
     const textos = obtenerTextosRegistro(registro);
     const textoCompleto = textos.join(" ");
 
@@ -168,16 +171,12 @@ Con qué se une:
       return "SEGURIDAD CIUDADANA Y ORDEN PÚBLICO";
     }
 
-    if (!esVacio(directa)) {
-      return directa;
-    }
-
     return extraerCarreraProbable(textos);
   }
 
   function extraerCarreraProbable(textos) {
     const candidatos = (textos || [])
-      .map(limpiarTexto)
+      .map(limpiarCarreraModalidad)
       .filter(function (texto) {
         return pareceCarrera(texto);
       })
@@ -189,19 +188,19 @@ Con qué se une:
   }
 
   function normalizarCarreraInstitucional(nombre) {
-    const original = limpiarTexto(nombre);
+    const original = limpiarCarreraModalidad(nombre);
     const clave = claveTexto(original);
 
-    if (!clave) {
-      return "";
-    }
+    if (!clave) return "";
+
+    const nivel = detectarNivelCarrera(original);
 
     if (clave.includes("SEGURIDAD") && (clave.includes("RIESGO") || clave.includes("PREVENCION") || clave.includes("LABORAL"))) {
-      return "TECNOLOGÍA SUPERIOR EN SEGURIDAD Y PREVENCIÓN DE RIESGOS LABORALES";
+      return construirCarrera("SEGURIDAD Y PREVENCIÓN DE RIESGOS LABORALES", nivel, "superior");
     }
 
     if (clave.includes("SEGURIDAD") && clave.includes("CIUDADANA")) {
-      return "TECNOLOGÍA SUPERIOR EN SEGURIDAD CIUDADANA Y ORDEN PÚBLICO";
+      return construirCarrera("SEGURIDAD CIUDADANA Y ORDEN PÚBLICO", nivel, "superior");
     }
 
     if (clave.includes("ENFERMERIA")) {
@@ -209,76 +208,122 @@ Con qué se une:
     }
 
     if (clave.includes("ADMINISTRACION") && clave.includes("EMPRESAS") && clave.includes("INTELIGENCIA")) {
-      return "TECNOLOGÍA SUPERIOR UNIVERSITARIA EN ADMINISTRACIÓN DE EMPRESAS E INTELIGENCIA DE NEGOCIOS";
+      return construirCarrera("ADMINISTRACIÓN DE EMPRESAS E INTELIGENCIA DE NEGOCIOS", nivel, "universitaria");
     }
 
     if (clave.includes("ADMINISTRACION") && clave.includes("TALENTO")) {
-      return "TECNOLOGÍA SUPERIOR UNIVERSITARIA EN ADMINISTRACIÓN DE TALENTO HUMANO";
+      return construirCarrera("ADMINISTRACIÓN DE TALENTO HUMANO", nivel, "universitaria");
     }
 
     if (clave.includes("ADMINISTRACION")) {
-      return "TECNOLOGÍA SUPERIOR EN ADMINISTRACIÓN";
+      return construirCarrera("ADMINISTRACIÓN", nivel, "superior");
     }
 
     if (clave.includes("CONTABILIDAD") && clave.includes("TRIBUTACION")) {
-      return "TECNOLOGÍA SUPERIOR UNIVERSITARIA EN CONTABILIDAD Y TRIBUTACIÓN";
+      return construirCarrera("CONTABILIDAD Y TRIBUTACIÓN", nivel, "universitaria");
     }
 
     if (clave.includes("CONTABILIDAD")) {
-      return "TECNOLOGÍA SUPERIOR EN CONTABILIDAD";
+      return construirCarrera("CONTABILIDAD", nivel, "superior");
     }
 
     if (clave.includes("DESARROLLO") && clave.includes("SOFTWARE")) {
-      return "TECNOLOGÍA SUPERIOR EN DESARROLLO DE SOFTWARE";
+      return construirCarrera("DESARROLLO DE SOFTWARE", nivel, "superior");
     }
 
     if (clave.includes("EDUCACION") && clave.includes("BASICA")) {
-      return "TECNOLOGÍA SUPERIOR EN EDUCACIÓN BÁSICA";
+      return construirCarrera("EDUCACIÓN BÁSICA", nivel, "superior");
     }
 
     if (clave.includes("EDUCACION") && clave.includes("INICIAL")) {
-      return "TECNOLOGÍA SUPERIOR EN EDUCACIÓN INICIAL";
+      return construirCarrera("EDUCACIÓN INICIAL", nivel, "superior");
     }
 
     if (clave.includes("ESTETICA") && clave.includes("INTEGRAL")) {
-      return "TECNOLOGÍA SUPERIOR EN ESTÉTICA INTEGRAL";
+      return construirCarrera("ESTÉTICA INTEGRAL", nivel, "superior");
     }
 
     if (clave.includes("GESTION") && clave.includes("TALENTO")) {
-      return "TECNOLOGÍA SUPERIOR EN GESTIÓN DEL TALENTO HUMANO";
+      return construirCarrera("GESTIÓN DEL TALENTO HUMANO", nivel, "superior");
     }
 
     if (clave.includes("MARKETING") && clave.includes("COMERCIO")) {
-      return "TECNOLOGÍA SUPERIOR EN MARKETING DIGITAL Y COMERCIO ELECTRÓNICO";
+      return construirCarrera("MARKETING DIGITAL Y COMERCIO ELECTRÓNICO", nivel, "superior");
     }
 
     if (clave.includes("MARKETING")) {
-      return "TECNOLOGÍA SUPERIOR UNIVERSITARIA EN MARKETING DIGITAL";
+      return construirCarrera("MARKETING DIGITAL", nivel, "universitaria");
     }
 
     if (clave.includes("REDES") && clave.includes("TELECOMUNICACIONES")) {
-      return "TECNOLOGÍA SUPERIOR EN REDES Y TELECOMUNICACIONES";
+      return construirCarrera("REDES Y TELECOMUNICACIONES", nivel, "superior");
     }
 
     if (clave.includes("MECANICA") && clave.includes("AUTOMOTRIZ")) {
-      return "TECNOLOGÍA SUPERIOR EN MECÁNICA AUTOMOTRIZ";
+      return construirCarrera("MECÁNICA AUTOMOTRIZ", nivel, "superior");
     }
 
     if (clave.includes("PROCESAMIENTO") && clave.includes("ALIMENTOS")) {
-      return "TECNOLOGÍA SUPERIOR EN PROCESAMIENTO DE ALIMENTOS";
+      return construirCarrera("PROCESAMIENTO DE ALIMENTOS", nivel, "superior");
     }
 
     if (clave.includes("PEDAGOGIA")) {
-      return "TECNOLOGÍA SUPERIOR UNIVERSITARIA EN PEDAGOGÍA";
+      return construirCarrera("PEDAGOGÍA", nivel, "universitaria");
     }
 
     const base = quitarPrefijoCarrera(original);
+    return construirCarrera(base.toLocaleUpperCase("es-EC"), nivel, "superior");
+  }
 
-    if (claveTexto(base).startsWith("TECNOLOGIA") || claveTexto(base).startsWith("TECNICA")) {
-      return base.toLocaleUpperCase("es-EC");
+  function detectarNivelCarrera(nombre) {
+    const clave = claveTexto(nombre);
+
+    if (
+      clave.includes("TECNOLOGIA SUPERIOR UNIVERSITARIA") ||
+      clave.includes("TECNOLOGIA UNIVERSITARIA") ||
+      /(?:^|\s)TSU(?:\s|$)/.test(clave)
+    ) {
+      return "universitaria";
     }
 
-    return `TECNOLOGÍA SUPERIOR EN ${base.toLocaleUpperCase("es-EC")}`;
+    if (clave.includes("TECNICA SUPERIOR")) {
+      return "tecnica";
+    }
+
+    if (clave.includes("TECNOLOGIA SUPERIOR")) {
+      return "superior";
+    }
+
+    return "";
+  }
+
+  function construirCarrera(programa, nivelDetectado, nivelPredeterminado) {
+    const programaLimpio = limpiarTexto(programa)
+      .replace(/^EN\s+/i, "")
+      .toLocaleUpperCase("es-EC");
+
+    const nivel = nivelDetectado || nivelPredeterminado || "superior";
+
+    if (nivel === "universitaria") {
+      return `TECNOLOGÍA SUPERIOR UNIVERSITARIA EN ${programaLimpio}`;
+    }
+
+    if (nivel === "tecnica") {
+      return `TÉCNICA SUPERIOR EN ${programaLimpio}`;
+    }
+
+    return `TECNOLOGÍA SUPERIOR EN ${programaLimpio}`;
+  }
+
+  function limpiarCarreraModalidad(valor) {
+    return limpiarTexto(valor)
+      .replace(/\(\s*(?:ONLINE|ON\s*LINE|EN\s+L[ÍI]NEA)\s*\)/gi, " ")
+      .replace(/\bONLINE\b/gi, " ")
+      .replace(/\bON\s*LINE\b/gi, " ")
+      .replace(/\bEN\s+L[ÍI]NEA\b/gi, " ")
+      .replace(/\s+/g, " ")
+      .replace(/[\s\-–—|/,:;]+$/g, "")
+      .trim();
   }
 
   function validarRegistroBase(registro) {
@@ -400,7 +445,7 @@ Con qué se une:
       .map(function (item) {
         return {
           nombre: item.nombre,
-          carrera: item.carreraOficial,
+          carrera: limpiarCarreraModalidad(item.carreraOficial),
           promedio: formatearPromedio(item.promedio),
           periodo: periodoTexto,
           fecha: fechaLarga,
@@ -426,15 +471,8 @@ Con qué se une:
   function agruparPor(lista, obtenerClave) {
     return (lista || []).reduce(function (acc, item) {
       const clave = obtenerClave(item);
-
-      if (!clave) {
-        return acc;
-      }
-
-      if (!acc[clave]) {
-        acc[clave] = [];
-      }
-
+      if (!clave) return acc;
+      if (!acc[clave]) acc[clave] = [];
       acc[clave].push(item);
       return acc;
     }, {});
@@ -443,16 +481,13 @@ Con qué se une:
   function obtenerTextosRegistro(registro) {
     const salida = [];
     recolectarTextos(registro, salida, 0);
-
     return salida.filter(function (texto) {
       return !esVacio(texto);
     });
   }
 
   function recolectarTextos(valor, salida, profundidad) {
-    if (profundidad > 4 || valor === null || valor === undefined) {
-      return;
-    }
+    if (profundidad > 4 || valor === null || valor === undefined) return;
 
     if (typeof valor === "string" || typeof valor === "number") {
       salida.push(limpiarTexto(valor));
@@ -463,7 +498,6 @@ Con qué se une:
       valor.forEach(function (item) {
         recolectarTextos(item, salida, profundidad + 1);
       });
-
       return;
     }
 
@@ -476,23 +510,18 @@ Con qué se une:
   }
 
   function obtenerValorRaw(raw, candidatos) {
-    if (!raw || typeof raw !== "object") {
-      return "";
-    }
+    if (!raw || typeof raw !== "object") return "";
 
     const keys = Object.keys(raw);
 
     for (let i = 0; i < keys.length; i += 1) {
       const key = keys[i];
       const claveKey = claveTexto(key);
-
       const coincide = candidatos.some(function (candidato) {
         return claveKey.includes(claveTexto(candidato));
       });
 
-      if (coincide && !esVacio(raw[key])) {
-        return raw[key];
-      }
+      if (coincide && !esVacio(raw[key])) return raw[key];
     }
 
     return "";
@@ -500,34 +529,14 @@ Con qué se une:
 
   function pareceCarrera(valor) {
     const clave = claveTexto(valor);
-
-    if (!clave || clave.length < 5) {
-      return false;
-    }
-
-    if (convertirPromedio(valor) !== null) {
-      return false;
-    }
+    if (!clave || clave.length < 5) return false;
+    if (convertirPromedio(valor) !== null) return false;
 
     const palabras = [
-      "TECNOLOGIA",
-      "TECNICA",
-      "SUPERIOR",
-      "ENFERMERIA",
-      "ADMINISTRACION",
-      "CONTABILIDAD",
-      "SOFTWARE",
-      "EDUCACION",
-      "ESTETICA",
-      "MECANICA",
-      "REDES",
-      "TELECOMUNICACIONES",
-      "ALIMENTOS",
-      "SEGURIDAD",
-      "RIESGOS",
-      "TALENTO",
-      "MARKETING",
-      "PEDAGOGIA"
+      "TECNOLOGIA", "TECNICA", "SUPERIOR", "UNIVERSITARIA", "ENFERMERIA",
+      "ADMINISTRACION", "CONTABILIDAD", "SOFTWARE", "EDUCACION", "ESTETICA",
+      "MECANICA", "REDES", "TELECOMUNICACIONES", "ALIMENTOS", "SEGURIDAD",
+      "RIESGOS", "TALENTO", "MARKETING", "PEDAGOGIA"
     ];
 
     return palabras.some(function (palabra) {
@@ -542,6 +551,7 @@ Con qué se une:
     if (clave.includes("TECNOLOGIA")) puntos += 4;
     if (clave.includes("TECNICA")) puntos += 4;
     if (clave.includes("SUPERIOR")) puntos += 3;
+    if (clave.includes("UNIVERSITARIA")) puntos += 4;
     if (clave.includes("ENFERMERIA")) puntos += 5;
     if (clave.includes("SEGURIDAD")) puntos += 5;
     if (clave.includes("RIESGO")) puntos += 5;
@@ -557,34 +567,26 @@ Con qué se une:
 
   function contieneSeguridadRiesgos(texto) {
     const clave = claveTexto(texto);
-
-    return (
-      clave.includes("SEGURIDAD") &&
-      (
-        clave.includes("RIESGO") ||
-        clave.includes("RIESGOS") ||
-        clave.includes("PREVENCION") ||
-        clave.includes("PREVENCION DE RIESGOS") ||
-        clave.includes("RIESGOS LABORALES")
-      )
+    return clave.includes("SEGURIDAD") && (
+      clave.includes("RIESGO") ||
+      clave.includes("RIESGOS") ||
+      clave.includes("PREVENCION") ||
+      clave.includes("RIESGOS LABORALES")
     );
   }
 
   function contieneSeguridadCiudadana(texto) {
     const clave = claveTexto(texto);
-
-    return (
-      clave.includes("SEGURIDAD") &&
-      clave.includes("CIUDADANA") &&
-      !contieneSeguridadRiesgos(texto)
-    );
+    return clave.includes("SEGURIDAD") && clave.includes("CIUDADANA") && !contieneSeguridadRiesgos(texto);
   }
 
   function quitarPrefijoCarrera(nombre) {
-    return limpiarTexto(nombre)
+    return limpiarCarreraModalidad(nombre)
       .replace(/^TECNOLOG[IÍ]A\s+SUPERIOR\s+UNIVERSITARIA\s+(EN\s+)?/i, "")
+      .replace(/^TECNOLOG[IÍ]A\s+UNIVERSITARIA\s+(EN\s+)?/i, "")
       .replace(/^TECNOLOG[IÍ]A\s+SUPERIOR\s+(EN\s+)?/i, "")
       .replace(/^T[EÉ]CNICA\s+SUPERIOR\s+(EN\s+)?/i, "")
+      .replace(/^TSU\s+(EN\s+)?/i, "")
       .replace(/^SUPERIOR\s+(EN\s+)?/i, "")
       .trim();
   }
@@ -600,11 +602,7 @@ Con qué se une:
 
   function redondearPromedio(valor) {
     const numero = Number(valor);
-
-    if (!Number.isFinite(numero)) {
-      return null;
-    }
-
+    if (!Number.isFinite(numero)) return null;
     return Math.round(numero * 1000) / 1000;
   }
 
@@ -613,9 +611,7 @@ Con qué se une:
       return U.limpiarEspacios(valor);
     }
 
-    return String(valor == null ? "" : valor)
-      .replace(/\s+/g, " ")
-      .trim();
+    return String(valor == null ? "" : valor).replace(/\s+/g, " ").trim();
   }
 
   function limpiarNombre(valor) {
@@ -638,9 +634,7 @@ Con qué se une:
       .replace(/[^0-9.-]/g, "");
 
     if (!texto) return null;
-
     const numero = Number(texto);
-
     return Number.isFinite(numero) ? numero : null;
   }
 
@@ -650,9 +644,7 @@ Con qué se une:
     }
 
     const numero = Number(valor);
-
     if (!Number.isFinite(numero)) return "";
-
     return numero.toFixed(3);
   }
 
