@@ -191,10 +191,11 @@ Con qué se une:
     const valorTipo = tipo ? tipo.value : "reconocimiento";
 
     if (valorTipo === "editable") {
-      if (bloqueExcel) bloqueExcel.style.display = "none";
+      if (bloqueExcel) bloqueExcel.style.display = "";
       if (bloqueTexto) bloqueTexto.style.display = "none";
       if (panelEditable) panelEditable.classList.remove("certi-hidden");
       if (campoFuente) campoFuente.style.display = "none";
+      ajustarEtiquetasEditable();
       return;
     }
 
@@ -226,6 +227,22 @@ Con qué se une:
     const valorFuente = fuente ? fuente.value : "auto";
     if (bloqueExcel) bloqueExcel.style.display = valorFuente === "texto" ? "none" : "";
     if (bloqueTexto) bloqueTexto.style.display = valorFuente === "excel" ? "none" : "";
+  }
+
+  function ajustarEtiquetasEditable() {
+    const labelExcel = document.querySelector("#certiBloqueExcel .certi-file-field span");
+    const ayudaExcel = document.querySelector("#certiBloqueExcel .certi-help-text");
+    const descripcion = document.querySelector(".certi-hero p:not(.certi-eyebrow)");
+    const badge = document.querySelector(".certi-hero-badge strong");
+
+    if (labelExcel) labelExcel.textContent = "Excel de certificados editables";
+    if (ayudaExcel) {
+      ayudaExcel.textContent = "Use la plantilla descargable: fila 1 encabezados, fila 2 instrucciones y fila 3 en adelante datos.";
+    }
+    if (descripcion) {
+      descripcion.textContent = "Cargue la plantilla Excel o pegue texto libre; Certi ordenará la información antes de generar los certificados.";
+    }
+    if (badge) badge.textContent = "Excel + Texto editable";
   }
 
   function ajustarEtiquetasInvitacion() {
