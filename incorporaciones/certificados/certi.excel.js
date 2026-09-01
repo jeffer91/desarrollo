@@ -287,6 +287,11 @@ Con qué se une:
 
     for (let i = indiceEncabezado + 1; i < matriz.length; i += 1) {
       const filaArray = matriz[i] || [];
+
+      if (esFilaExplicacionPlantilla(filaArray)) {
+        continue;
+      }
+
       const filaObjeto = {
         __filaExcel: i + 1
       };
@@ -309,6 +314,24 @@ Con qué se une:
     }
 
     return filas;
+  }
+
+  function esFilaExplicacionPlantilla(fila) {
+    if (window.CertiPlantillasExcel && typeof window.CertiPlantillasExcel.esFilaExplicacion === "function") {
+      return window.CertiPlantillasExcel.esFilaExplicacion(fila);
+    }
+
+    const valores = (fila || []).map(limpiarTexto).filter(function (valor) {
+      return !esVacio(valor);
+    });
+
+    if (!valores.length) return false;
+
+    const instrucciones = valores.filter(function (valor) {
+      return /^INSTRUCCI[ÓO]N\s*:/i.test(valor) || /^EXPLICACI[ÓO]N\s*:/i.test(valor);
+    });
+
+    return instrucciones.length >= Math.max(1, Math.ceil(valores.length * 0.5));
   }
 
   function crearEncabezadoUnico(encabezado, index, usados) {
