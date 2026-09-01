@@ -4,6 +4,7 @@ Ruta o ubicación: /incorporaciones/certificados/certi.index.html
 Función o funciones:
 - Cargar la pantalla independiente del módulo Certificados / Certi.
 - Integrar cuatro tipos: reconocimientos, capacitaciones, certificados editables e invitaciones de incorporación.
+- Descargar una plantilla Excel compatible para cada tipo, con encabezados e instrucciones.
 - Permitir ordenar automáticamente texto libre o etiquetado antes de generar certificados.
 - Permitir generar PDF único, ZIP y PDF individual por fila.
 - Mantener períodos, validaciones, renderizado y descargas existentes.
@@ -129,6 +130,15 @@ Con qué se une:
             <span>Carrera: Administración / Carlos Ruiz Mera - 9.91</span>
           </div>
         </div>
+      </div>
+
+      <div class="certi-actions certi-template-actions">
+        <button id="certiBtnDescargarPlantillaExcel" class="certi-btn certi-btn-secondary" type="button">
+          Descargar plantilla Excel
+        </button>
+        <span id="certiPlantillaExcelAyuda" class="certi-help-text">
+          La plantilla cambia automáticamente según el tipo de certificado seleccionado.
+        </span>
       </div>
 
       <section id="certiEditablePanel" class="certi-editable-panel certi-hidden">
@@ -289,5 +299,6 @@ Con qué se une:
   <script src="./certi.seguridad.fix.js?v=20260605"></script>
   <script src="./certi.capacitadores.js?v=20260714"></script>
   <script src="./certi.editable.mode.js?v=20260714"></script>
+  <script src="./certi.plantillas.excel.js?v=20260901"></script>
 </body>
 </html>
