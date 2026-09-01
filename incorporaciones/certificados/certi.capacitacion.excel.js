@@ -137,6 +137,11 @@ Con qué se une:
 
     for (let i = encabezado.indice + 1; i < filas.length; i += 1) {
       const fila = filas[i] || [];
+
+      if (esFilaExplicacionPlantilla(fila)) {
+        continue;
+      }
+
       const registro = normalizarFila(fila, encabezado.columnas, nombreHoja, i, indiceInicial + registros.length);
       if (registro.__vacia) continue;
       registros.push(registro);
@@ -146,6 +151,21 @@ Con qué se une:
       registros,
       totalFilas: Math.max(0, filas.length - encabezado.indice - 1)
     };
+  }
+
+  function esFilaExplicacionPlantilla(fila) {
+    if (window.CertiPlantillasExcel && typeof window.CertiPlantillasExcel.esFilaExplicacion === "function") {
+      return window.CertiPlantillasExcel.esFilaExplicacion(fila);
+    }
+
+    const valores = (fila || []).map(limpiarTexto).filter(Boolean);
+    if (!valores.length) return false;
+
+    const instrucciones = valores.filter(function (valor) {
+      return /^INSTRUCCI[ÓO]N\s*:/i.test(valor) || /^EXPLICACI[ÓO]N\s*:/i.test(valor);
+    });
+
+    return instrucciones.length >= Math.max(1, Math.ceil(valores.length * 0.5));
   }
 
   function detectarFilaEncabezado(filas) {
