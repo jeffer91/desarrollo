@@ -338,6 +338,7 @@ Con qué se une:
       for (let i = hi + 1; i < filas.length; i += 1) {
         const fila = filas[i];
         if (!fila.some(Boolean)) continue;
+        if (esFilaExplicacionPlantilla(fila)) continue;
         if (esCabecera(fila)) {
           sesiones = sesionesDeCabecera(fila, 1);
           sesiones.forEach(function (s) { mapa[s.clave] = mapa[s.clave] || s; });
@@ -362,6 +363,21 @@ Con qué se une:
       const usadas = Object.values(mapa).filter(function (s) { return participaciones.some(function (p) { return p.sesionClave === s.clave; }); });
       if (!participaciones.length) throw new Error("No se encontraron participantes en el Excel.");
       return { sesiones: usadas, participaciones };
+    }
+
+    function esFilaExplicacionPlantilla(fila) {
+      if (window.CertiPlantillasExcel && typeof window.CertiPlantillasExcel.esFilaExplicacion === "function") {
+        return window.CertiPlantillasExcel.esFilaExplicacion(fila);
+      }
+
+      const valores = (fila || []).map(limpiar).filter(Boolean);
+      if (!valores.length) return false;
+
+      const instrucciones = valores.filter(function (valor) {
+        return /^INSTRUCCI[ÓO]N\s*:/i.test(valor) || /^EXPLICACI[ÓO]N\s*:/i.test(valor);
+      });
+
+      return instrucciones.length >= Math.max(1, Math.ceil(valores.length * 0.5));
     }
 
     function esCabecera(fila) {
