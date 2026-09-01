@@ -111,13 +111,18 @@ Con qué se une:
     }
 
     if (panel) panel.classList.remove("certi-hidden");
-    if (bloqueExcel) bloqueExcel.style.display = "none";
+    if (bloqueExcel) bloqueExcel.style.display = "";
     if (bloqueTexto) bloqueTexto.style.display = "none";
     if (fuenteField) fuenteField.style.display = "none";
     if (btnProcesar) btnProcesar.textContent = "Ordenar y procesar";
-    if (descripcion) descripcion.textContent = "Pegue texto libre o etiquetado y Certi lo ordenará automáticamente antes de generar los certificados.";
-    if (badge) badge.textContent = "Texto editable";
-    if (subtitulo) subtitulo.textContent = "Seleccione período y fecha; luego pegue el contenido que desea convertir en uno o varios certificados.";
+    if (descripcion) descripcion.textContent = "Cargue la plantilla Excel o pegue texto libre; Certi ordenará la información antes de generar los certificados.";
+    if (badge) badge.textContent = "Excel + Texto editable";
+    if (subtitulo) subtitulo.textContent = "Seleccione período y fecha; luego cargue un Excel o pegue el contenido que desea convertir en uno o varios certificados.";
+
+    const labelExcel = document.querySelector("#certiBloqueExcel .certi-file-field span");
+    const ayudaExcel = document.querySelector("#certiBloqueExcel .certi-help-text");
+    if (labelExcel) labelExcel.textContent = "Excel de certificados editables";
+    if (ayudaExcel) ayudaExcel.textContent = "Use la plantilla descargable: fila 1 encabezados, fila 2 instrucciones y fila 3 en adelante datos.";
 
     ocultarPanelesAcademicos();
     asegurarBloqueInicial();
@@ -191,15 +196,35 @@ Con qué se une:
       mostrarEstadoProceso("Ordenando texto y preparando certificados editables...", "info");
 
       const textarea = document.getElementById("certiEditableTexto");
-      const textoActual = textarea ? textarea.value || "" : "";
-      let bloques = recogerBloquesDesdeTarjetas();
+      let textoActual = textarea ? textarea.value || "" : "";
+      const archivoExcel = obtenerArchivoExcelEditable();
+      let bloques = [];
 
-      if (!bloques.length || (textoActual.trim() && textoActual !== estadoLocal.textoOrdenado)) {
-        bloques = ordenarTextoDesdeDom(false);
+      if (archivoExcel) {
+        if (!window.CertiPlantillasExcel || typeof window.CertiPlantillasExcel.leerEditable !== "function") {
+          throw new Error("No está disponible el lector de la plantilla Excel editable.");
+        }
+
+        mostrarEstadoProceso("Leyendo plantilla Excel y preparando certificados editables...", "info");
+        bloques = await window.CertiPlantillasExcel.leerEditable(archivoExcel, obtenerContextoBase());
+        estadoLocal.bloques = bloques;
+        estadoLocal.textoOrdenado = "";
+        textoActual = "";
+        renderizarEstructura(bloques);
+        mostrarEstadoEditable(
+          `Excel leído: ${bloques.length} fila(s) preparada(s). Revise los campos antes de descargar.`,
+          "success"
+        );
+      } else {
+        bloques = recogerBloquesDesdeTarjetas();
+
+        if (!bloques.length || (textoActual.trim() && textoActual !== estadoLocal.textoOrdenado)) {
+          bloques = ordenarTextoDesdeDom(false);
+        }
       }
 
       if (!bloques.length) {
-        throw new Error("No existen bloques editables para procesar.");
+        throw new Error("No existen bloques editables para procesar. Cargue el Excel o pegue texto.");
       }
 
       const Logic = window.CertiEditableLogic;
@@ -210,7 +235,7 @@ Con qué se une:
         throw new Error(resultado.errores[0]);
       }
 
-      guardarEnEstado(resultado, bloques, textoActual);
+      guardarEnEstado(resultado, bloques, textoActual, archivoExcel);
       renderizarResultado(resultado);
       mostrarEstadoProceso(
         `Procesamiento terminado: ${resultado.resumen.certificadosListos} certificado(s) editable(s) listo(s).`,
@@ -226,16 +251,18 @@ Con qué se une:
     }
   }
 
-  function guardarEnEstado(resultado, bloques, textoOriginal) {
+  function guardarEnEstado(resultado, bloques, textoOriginal, archivoExcel) {
+    const desdeExcel = Boolean(archivoExcel);
+    const nombreOrigen = desdeExcel ? (archivoExcel.name || "Excel editable") : "Texto editable";
     const lectura = {
-      nombreArchivo: "Texto editable",
-      hoja: "Texto editable",
-      hojasLeidas: ["Texto editable"],
+      nombreArchivo: nombreOrigen,
+      hoja: desdeExcel ? "Certificado editable" : "Texto editable",
+      hojasLeidas: [desdeExcel ? "Certificado editable" : "Texto editable"],
       totalFilas: bloques.length,
       registros: resultado.certificados.slice(),
       alertas: resultado.alertas.slice(),
       origen: TIPO_EDITABLE,
-      fuente: "texto_editable"
+      fuente: desdeExcel ? "excel" : "texto_editable"
     };
 
     if (!window.CertiState) return;
@@ -244,7 +271,7 @@ Con qué se une:
       window.CertiState.establecerTextoPegado(textoOriginal || "");
     }
     if (typeof window.CertiState.establecerFuenteDatos === "function") {
-      window.CertiState.establecerFuenteDatos("texto");
+      window.CertiState.establecerFuenteDatos(desdeExcel ? "excel" : "texto");
     }
     if (typeof window.CertiState.establecerLecturaDatos === "function") {
       window.CertiState.establecerLecturaDatos(lectura);
@@ -568,6 +595,11 @@ Con qué se une:
     });
   }
 
+  function obtenerArchivoExcelEditable() {
+    const input = document.getElementById("certiExcelInput");
+    return input && input.files && input.files[0] ? input.files[0] : null;
+  }
+
   function obtenerContextoBase() {
     const periodo = document.getElementById("certiPeriodo");
     const fechaInput = document.getElementById("certiFechaCertificado");
@@ -598,7 +630,9 @@ Con qué se une:
   function limpiarEditable() {
     const textarea = document.getElementById("certiEditableTexto");
     const estructura = document.getElementById("certiEditableEstructura");
+    const excelInput = document.getElementById("certiExcelInput");
     if (textarea) textarea.value = "";
+    if (excelInput) excelInput.value = "";
     if (estructura) estructura.innerHTML = "";
     estadoLocal.bloques = [];
     estadoLocal.textoOrdenado = "";
